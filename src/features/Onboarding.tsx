@@ -8,11 +8,14 @@ import { colors } from '../theme';
 
 type Step = 'name' | 'pin' | 'confirm';
 
-/** Ouverture du compte : prénom, puis choix du code d'accès à 4 chiffres (saisi deux fois). */
-export function Onboarding() {
-  const { openAccount } = useBank();
-  const [step, setStep] = useState<Step>('name');
-  const [name, setName] = useState('');
+/**
+ * Ouverture du compte : prénom, puis choix du code d'accès à 4 chiffres (saisi deux fois).
+ * Avec `existingHolder`, le compte existe déjà (ancienne version) : on choisit seulement le code.
+ */
+export function Onboarding({ existingHolder }: { existingHolder?: string }) {
+  const { openAccount, createPin } = useBank();
+  const [step, setStep] = useState<Step>(existingHolder ? 'pin' : 'name');
+  const [name, setName] = useState(existingHolder ?? '');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const valid = name.trim().length > 0;
@@ -25,7 +28,7 @@ export function Onboarding() {
           title={step === 'pin' ? 'Choisis ton code d’accès' : 'Confirme ton code'}
           subtitle={
             step === 'pin'
-              ? '4 chiffres, demandés à chaque ouverture de l’appli et pour chaque virement.'
+              ? `${existingHolder ? 'Nouveau : ton compte est protégé par un code. ' : ''}4 chiffres, demandés à chaque ouverture de l’appli et pour chaque virement.`
               : 'Tape le même code une seconde fois.'
           }
           error={error}
@@ -41,7 +44,8 @@ export function Onboarding() {
               setStep('pin');
               return false;
             }
-            await openAccount(name.trim(), entered);
+            if (existingHolder) await createPin(entered);
+            else await openAccount(name.trim(), entered);
             return true;
           }}
         />

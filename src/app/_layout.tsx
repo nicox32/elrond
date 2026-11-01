@@ -9,7 +9,7 @@ import { BankProvider, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 
 function Gate() {
-  const { loading, account, locked } = useBank();
+  const { loading, account, locked, needsPin } = useBank();
 
   if (loading) {
     return (
@@ -19,6 +19,7 @@ function Gate() {
     );
   }
   if (!account) return <Onboarding />;
+  if (needsPin) return <Onboarding existingHolder={account.holder} />;
 
   // Le verrou se superpose à la navigation : on retrouve l'écran où l'on était après le code.
   return (

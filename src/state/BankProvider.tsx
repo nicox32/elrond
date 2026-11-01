@@ -4,7 +4,7 @@ import { AppState } from 'react-native';
 import { createAccount, recordBalance } from '../logic/ledger';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
-import { clearPin, setPin } from '../security';
+import { clearPin, hasPin, setPin } from '../security';
 import { clearAccount, loadAccount, loadCachedQuote, saveAccount, saveQuote } from '../storage';
 
 interface BankContextValue {
@@ -16,7 +16,11 @@ interface BankContextValue {
   priceError: string | null;
   /** Le compte est verrouillé : le code est demandé. */
   locked: boolean;
+  /** Compte repris d'une ancienne version, sans code d'accès : il faut en choisir un. */
+  needsPin: boolean;
   unlock: () => void;
+  /** Crée le code d'accès d'un compte existant qui n'en a pas encore. */
+  createPin: (pin: string) => Promise<void>;
   refreshPrices: () => Promise<void>;
   /** Applique une opération au compte avec les cours actuels. Lève une LedgerError si elle est refusée. */
   commit: (op: (account: Account, prices: Prices) => Account) => Account;
@@ -47,6 +51,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const [refreshing, setRefreshing] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [locked, setLocked] = useState(true);
+  const [needsPin, setNeedsPin] = useState(false);
 
   // Références pour lire l'état à jour dans les écouteurs (AppState, promesses).
   // Elles sont tenues à jour à chaque modification (persist, chargement des cours).
@@ -91,13 +96,14 @@ export function BankProvider({ children }: { children: ReactNode }) {
   // Ouverture de l'appli : compte, derniers cours connus, puis cours réels.
   useEffect(() => {
     (async () => {
-      const [acc, cached] = await Promise.all([loadAccount(), loadCachedQuote()]);
+      const [acc, cached, pinSet] = await Promise.all([loadAccount(), loadCachedQuote(), hasPin()]);
       if (cached) {
         quoteRef.current = cached;
         setQuote(cached);
       }
       accountRef.current = acc;
       setAccount(acc);
+      setNeedsPin(!!acc && !pinSet);
       setLoading(false);
       refreshPrices();
     })();
@@ -133,10 +139,17 @@ export function BankProvider({ children }: { children: ReactNode }) {
     async (holder: string, pin: string) => {
       await setPin(pin);
       persist(recordBalance(createAccount(holder), quoteRef.current.prices));
+      setNeedsPin(false);
       setLocked(false);
     },
     [persist],
   );
+
+  const createPin = useCallback(async (pin: string) => {
+    await setPin(pin);
+    setNeedsPin(false);
+    setLocked(false);
+  }, []);
 
   const updateSettings = useCallback(
     (settings: Partial<Settings>) => {
@@ -160,7 +173,9 @@ export function BankProvider({ children }: { children: ReactNode }) {
       refreshing,
       priceError,
       locked,
+      needsPin,
       unlock: () => setLocked(false),
+      createPin,
       refreshPrices,
       commit,
       openAccount,
@@ -174,6 +189,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
       refreshing,
       priceError,
       locked,
+      needsPin,
+      createPin,
       refreshPrices,
       commit,
       openAccount,
