@@ -4,68 +4,147 @@ import { test } from 'node:test';
 
 import {
   accountValue,
+  addBeneficiary,
+  buy,
   convert,
   createAccount,
-  deposit,
+  isValidIban,
   LedgerError,
+  migrateAccount,
+  recordBalance,
+  sell,
   SPREAD,
-  transfer,
-  withdraw,
+  transferToIban,
+  transferToMember,
+  TROY_OUNCE,
+  unrealizedGain,
 } from '../src/logic/ledger.ts';
-import { nextPrices } from '../src/logic/prices.ts';
+import { fetchLivePrices, usdOunceToEurGram } from '../src/logic/prices.ts';
 
-const prices = { gold: 100, silver: 1 };
+const prices = { gold: 100, silver: 1, platinum: 30 };
 const close = (a: number, b: number, eps = 1e-4) => assert.ok(Math.abs(a - b) < eps, `${a} ≉ ${b}`);
+const VALID_IBAN = 'FR76 3000 6000 0112 3456 7890 189';
 
-test('un dépôt est réparti entre or et argent selon la répartition', () => {
-  const acc = deposit({ ...createAccount('Test'), goldAllocation: 70 }, prices, 1000);
-  close(acc.goldGrams, 700 / (100 * (1 + SPREAD)));
-  close(acc.silverGrams, 300 / (1 + SPREAD));
-  assert.equal(acc.transactions.length, 1);
-  assert.equal(acc.transactions[0].kind, 'deposit');
+test('achat en euros, en grammes et en onces', () => {
+  let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'eur', value: 1000 });
+  close(acc.holdings.gold, 1000 / (100 * (1 + SPREAD)));
+  close(acc.transactions[0].eur, 1000, 0.01);
+
+  acc = buy(createAccount('Test'), prices, 'silver', { unit: 'g', value: 50 });
+  close(acc.holdings.silver, 50);
+  close(acc.transactions[0].eur, 50 * (1 + SPREAD), 0.01);
+
+  acc = buy(createAccount('Test'), prices, 'platinum', { unit: 'oz', value: 1 });
+  close(acc.holdings.platinum, TROY_OUNCE);
 });
 
-test('dépôt puis retrait total coûte exactement l’écart', () => {
-  let acc = deposit(createAccount('Test'), prices, 1000);
+test('acheter puis tout revendre coûte exactement l’écart', () => {
+  let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'eur', value: 1000 });
   const value = accountValue(acc, prices).total;
   close(value, (1000 * (1 - SPREAD)) / (1 + SPREAD), 1e-3);
-  acc = withdraw(acc, prices, value);
-  close(acc.goldGrams, 0);
-  close(acc.silverGrams, 0);
+  acc = sell(acc, prices, 'gold', { unit: 'eur', value });
+  close(acc.holdings.gold, 0);
 });
 
-test('retrait supérieur au solde refusé', () => {
-  const acc = deposit(createAccount('Test'), prices, 100);
-  assert.throws(() => withdraw(acc, prices, 200), LedgerError);
-  assert.throws(() => withdraw(acc, prices, 50, 'silver'), LedgerError);
+test('vente supérieure au solde refusée', () => {
+  const acc = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 1 });
+  assert.throws(() => sell(acc, prices, 'gold', { unit: 'g', value: 2 }), LedgerError);
+  assert.throws(() => sell(acc, prices, 'silver', { unit: 'g', value: 1 }), LedgerError);
 });
 
 test('montants invalides refusés', () => {
   const acc = createAccount('Test');
-  assert.throws(() => deposit(acc, prices, 0), LedgerError);
-  assert.throws(() => deposit(acc, prices, Number.NaN), LedgerError);
-  assert.throws(() => deposit(acc, prices, -5), LedgerError);
+  for (const value of [0, -5, Number.NaN]) {
+    assert.throws(() => buy(acc, prices, 'gold', { unit: 'eur', value }), LedgerError);
+  }
 });
 
-test('conversion or → argent', () => {
-  let acc = deposit({ ...createAccount('Test'), goldAllocation: 100 }, prices, 1000);
-  const gold = acc.goldGrams;
-  acc = convert(acc, prices, 'gold', 1);
-  close(acc.goldGrams, gold - 1);
-  close(acc.silverGrams, (100 * (1 - SPREAD)) / (1 + SPREAD));
+test('conversion or → platine', () => {
+  let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
+  acc = convert(acc, prices, 'gold', 'platinum', { unit: 'g', value: 3 });
+  close(acc.holdings.gold, 7);
+  close(acc.holdings.platinum, (300 * (1 - SPREAD)) / (30 * (1 + SPREAD)));
+  assert.throws(() => convert(acc, prices, 'gold', 'gold', { unit: 'g', value: 1 }), LedgerError);
 });
 
-test('virement de métal sans frais, bénéficiaire obligatoire', () => {
-  let acc = deposit({ ...createAccount('Test'), goldAllocation: 0 }, prices, 100);
-  const silver = acc.silverGrams;
-  assert.throws(() => transfer(acc, prices, 'silver', 1, '  '), LedgerError);
-  acc = transfer(acc, prices, 'silver', 10, 'Alice');
-  close(acc.silverGrams, silver - 10);
+test('virement à un membre : gratuit, en grammes', () => {
+  let acc = buy(createAccount('Test'), prices, 'silver', { unit: 'g', value: 100 });
+  const { account, beneficiary } = addBeneficiary(acc, 'member', 'Alice', 'alice@example.com');
+  acc = transferToMember(account, prices, 'silver', { unit: 'g', value: 40 }, beneficiary);
+  close(acc.holdings.silver, 60);
   assert.equal(acc.transactions[0].label, 'Virement à Alice');
+  assert.equal(acc.beneficiaries.length, 1);
 });
 
-test('les cours restent positifs', () => {
-  let p = prices;
-  for (let i = 0; i < 10000; i++) p = nextPrices(p);
-  assert.ok(p.gold > 0 && p.silver > 0);
+test('virement SEPA : vend le métal, IBAN vérifié', () => {
+  assert.ok(isValidIban(VALID_IBAN));
+  assert.ok(!isValidIban('FR76 3000 6000 0112 3456 7890 188'));
+  for (let i = 0; i < 20; i++) assert.ok(isValidIban(createAccount('X').iban));
+  const start = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
+  assert.throws(() => addBeneficiary(start, 'iban', 'Bob', 'FR00 1234'), LedgerError);
+  const { account, beneficiary } = addBeneficiary(start, 'iban', 'Bob', VALID_IBAN.replace(/ /g, ''));
+  assert.equal(beneficiary.identifier, VALID_IBAN);
+  const acc = transferToIban(account, prices, 'gold', { unit: 'eur', value: 199 }, beneficiary);
+  close(acc.holdings.gold, 10 - 199 / (100 * (1 - SPREAD)));
+});
+
+test('historique du solde : un point par minute au plus', () => {
+  let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 1 });
+  const t0 = new Date('2026-01-01T10:00:00Z');
+  acc = recordBalance(acc, prices, t0);
+  acc = recordBalance(acc, prices, new Date(t0.getTime() + 10_000));
+  assert.equal(acc.balanceHistory.length, 1);
+  acc = recordBalance(acc, prices, new Date(t0.getTime() + 120_000));
+  assert.equal(acc.balanceHistory.length, 2);
+  close(acc.balanceHistory[1].total, 100 * (1 - SPREAD), 0.01);
+});
+
+test('migration d’un compte de la première version', () => {
+  const v1 = {
+    holder: 'Nico',
+    iban: 'FR76 1111',
+    goldGrams: 2,
+    silverGrams: 50,
+    goldAllocation: 70,
+    transactions: [{ id: 'a', kind: 'deposit', date: '2026-01-01', goldDelta: 2, silverDelta: 50, eur: 260, label: 'Dépôt' }],
+  };
+  const acc = migrateAccount(v1);
+  assert.ok(acc);
+  assert.equal(acc.version, 2);
+  assert.deepEqual(acc.holdings, { gold: 2, silver: 50, platinum: 0 });
+  assert.equal(acc.transactions[0].kind, 'buy');
+  assert.equal(acc.iban, 'FR76 1111');
+  assert.equal(migrateAccount(null), null);
+});
+
+test('cours réels : conversion USD/once → EUR/gramme', async () => {
+  close(usdOunceToEurGram(TROY_OUNCE, 0.5), 0.5);
+  const fakeFetch = (async (url: string) => {
+    const body = url.includes('XAU')
+      ? { price: 3110.34768 }
+      : url.includes('XAG')
+        ? { price: 31.1034768 }
+        : url.includes('XPT')
+          ? { price: 1000 }
+          : { rates: { EUR: 0.9 } };
+    return { ok: true, status: 200, json: async () => body };
+  }) as unknown as typeof fetch;
+  const quote = await fetchLivePrices(fakeFetch);
+  assert.equal(quote.source, 'live');
+  close(quote.prices.gold, 90);
+  close(quote.prices.silver, 0.9);
+});
+
+test('cours réels : échec réseau signalé', async () => {
+  const failing = (async () => ({ ok: false, status: 503, json: async () => ({}) })) as unknown as typeof fetch;
+  await assert.rejects(fetchLivePrices(failing));
+});
+
+test('plus-value : valeur actuelle moins euros nets placés', () => {
+  let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'eur', value: 1000 });
+  acc = sell(acc, prices, 'gold', { unit: 'eur', value: 200 });
+  const higher = { ...prices, gold: 110 };
+  const r = unrealizedGain(acc, higher);
+  close(r.invested, 800, 0.01);
+  close(r.gain, acc.holdings.gold * 110 * (1 - SPREAD) - 800, 0.01);
 });

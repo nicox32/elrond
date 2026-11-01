@@ -1,29 +1,77 @@
-import type { Prices } from './types';
+import { TROY_OUNCE } from './ledger.ts';
+import { type Metal, METALS, type PriceQuote, type Prices } from './types.ts';
 
-/** Cours de départ approximatifs, en euros par gramme. La simulation part de là. */
-export const INITIAL_PRICES: Prices = { gold: 105, silver: 1.25 };
+/**
+ * Cours indicatifs (€/g) utilisés uniquement si aucun cours réel n'a jamais pu être chargé.
+ * L'appli l'indique alors clairement à l'écran.
+ */
+export const REFERENCE_PRICES: Prices = { gold: 105, silver: 1.25, platinum: 32 };
 
-/** Volatilité par tick (écart-type relatif). */
-const VOLATILITY: Prices = { gold: 0.0015, silver: 0.0025 };
+const SYMBOL: Record<Metal, string> = { gold: 'XAU', silver: 'XAG', platinum: 'XPT' };
 
-/** Tirage gaussien (Box-Muller). */
-function gaussian(random: () => number): number {
-  const u = 1 - random();
-  const v = random();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+const TIMEOUT_MS = 10_000;
+
+type Fetch = typeof fetch;
+
+async function getJson(fetchFn: Fetch, url: string): Promise<any> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetchFn(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status} sur ${url}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-/** Fait avancer les cours d'un pas (marche aléatoire lognormale, sans tendance). */
-export function nextPrices(current: Prices, random: () => number = Math.random): Prices {
-  return {
-    gold: current.gold * Math.exp(VOLATILITY.gold * gaussian(random)),
-    silver: current.silver * Math.exp(VOLATILITY.silver * gaussian(random)),
-  };
+function positive(n: unknown): number {
+  const v = typeof n === 'string' ? Number(n) : n;
+  if (typeof v !== 'number' || !Number.isFinite(v) || v <= 0) throw new Error('Valeur invalide');
+  return v;
 }
 
-/** Génère un historique fictif pour que les graphiques ne soient pas vides au démarrage. */
-export function seedHistory(length: number, start: Prices = INITIAL_PRICES): Prices[] {
-  const history: Prices[] = [start];
-  for (let i = 1; i < length; i++) history.push(nextPrices(history[i - 1]));
-  return history;
+/** Cours au comptant en dollars par once troy (api.gold-api.com, gratuit, sans clé). */
+async function fetchUsdPerOunce(fetchFn: Fetch, metal: Metal): Promise<number> {
+  const data = await getJson(fetchFn, `https://api.gold-api.com/price/${SYMBOL[metal]}`);
+  return positive(data?.price);
+}
+
+/** Taux de change USD → EUR, avec une seconde source en secours. */
+async function fetchUsdToEur(fetchFn: Fetch): Promise<number> {
+  const sources: [string, (d: any) => unknown][] = [
+    ['https://api.frankfurter.dev/v1/latest?base=USD&symbols=EUR', (d) => d?.rates?.EUR],
+    ['https://open.er-api.com/v6/latest/USD', (d) => d?.rates?.EUR],
+  ];
+  let lastError: unknown;
+  for (const [url, pick] of sources) {
+    try {
+      return positive(pick(await getJson(fetchFn, url)));
+    } catch (e) {
+      lastError = e;
+    }
+  }
+  throw lastError;
+}
+
+/** Convertit un cours en dollars par once en euros par gramme. */
+export function usdOunceToEurGram(usdPerOunce: number, usdToEur: number): number {
+  return (usdPerOunce * usdToEur) / TROY_OUNCE;
+}
+
+/** Charge les cours réels de l'or, de l'argent et du platine, en euros par gramme. */
+export async function fetchLivePrices(fetchFn: Fetch = fetch, now = new Date()): Promise<PriceQuote> {
+  const [rate, ...usd] = await Promise.all([
+    fetchUsdToEur(fetchFn),
+    ...METALS.map((m) => fetchUsdPerOunce(fetchFn, m)),
+  ]);
+  const prices = {} as Prices;
+  METALS.forEach((m, i) => {
+    prices[m] = usdOunceToEurGram(usd[i], rate);
+  });
+  return { prices, fetchedAt: now.toISOString(), source: 'live' };
+}
+
+export function referenceQuote(now = new Date()): PriceQuote {
+  return { prices: { ...REFERENCE_PRICES }, fetchedAt: now.toISOString(), source: 'reference' };
 }

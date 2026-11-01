@@ -1,41 +1,62 @@
-# Elrond — compte adossé à l'or et à l'argent (démo)
+# Elrond — compte adossé à l'or, à l'argent et au platine (démo)
 
-Application mobile (Expo / React Native) qui simule un compte bancaire dont chaque euro
-est converti en grammes d'or et d'argent. **Tout est fictif** : aucun argent réel, cours simulés.
+Application mobile (Expo / React Native) qui simule un compte dont le solde est détenu en
+métaux précieux. **Les cours sont réels**, mais les achats, ventes et virements sont fictifs :
+aucun argent ni métal réel n'est échangé.
 
 <p>
-  <img src="docs/accueil.png" width="260" alt="Écran du compte" />
-  <img src="docs/operations.png" width="260" alt="Écran des opérations" />
+  <img src="docs/compte.png" width="220" alt="Écran du compte" />
+  <img src="docs/operations.png" width="220" alt="Achat en onces" />
+  <img src="docs/virement.png" width="220" alt="Virement à un membre" />
 </p>
+<p>
+  <img src="docs/confirmation.png" width="220" alt="Confirmation par code" />
+  <img src="docs/coffre.png" width="220" alt="Coffre or" />
+  <img src="docs/verrouillage.png" width="220" alt="Code d'accès" />
+</p>
+
+## Installer sur Android
+
+Télécharge l'APK depuis ton téléphone :
+**https://github.com/nicox32/elrond/releases/latest/download/elrond.apk**
+
+Il est reconstruit automatiquement à chaque modification (voir `.github/workflows/android-apk.yml`).
 
 ## Fonctionnalités
 
-- **Dépôt** : les euros sont convertis en or et en argent selon une répartition choisie (0 à 100 % d'or).
-- **Retrait** : vend de l'or, de l'argent ou les deux au prorata.
-- **Conversion** : or → argent ou argent → or.
-- **Virement** : envoie des grammes de métal à un bénéficiaire, sans frais.
-- **Cours en direct simulés** (mis à jour toutes les 3 s) avec mini-graphiques.
-- Écart achat/vente de 0,5 %, historique des opérations, données sauvegardées sur le téléphone.
+- **Cours réels** de l'or, de l'argent et du platine (au comptant, en dollars par once, convertis en
+  euros par gramme). Actualisés à l'ouverture de l'appli, au retour dans l'appli, à sa fermeture et
+  d'un appui sur la barre des cours. Hors ligne, l'appli garde les derniers cours connus et le signale.
+- **Trois coffres** : or, argent, platine, avec leur valeur et le détail des mouvements.
+- **Achat et vente en euros, en grammes ou en onces troy** (1 oz = 31,1035 g). Affichage au choix
+  en grammes ou en onces.
+- **Conversion** d'un métal à l'autre.
+- **Virements**, sur le modèle des comptes adossés aux métaux :
+  - **à un membre** (identifiant, e-mail ou téléphone) : le métal passe de coffre à coffre, immédiat et sans frais ;
+  - **vers un IBAN** : le métal est vendu puis les euros partent par virement SEPA (IBAN vérifié).
+- **Sécurité** : code à 4 chiffres à chaque ouverture et pour valider chaque virement, déverrouillage
+  par empreinte en option, blocage de 30 s après 5 codes faux. Seule une empreinte salée du code est
+  conservée, dans le trousseau sécurisé du téléphone.
+- **Graphique d'évolution du solde** (24 h, 7 j, 30 j, tout) et **plus-value latente**.
+- Écart achat/vente de 0,5 % sur le cours réel.
 
-## Lancer l'appli
+Sources des cours : [gold-api.com](https://gold-api.com) (métaux) et
+[Frankfurter](https://frankfurter.dev) / [open.er-api.com](https://open.er-api.com) (taux USD → EUR).
+
+## Développement
 
 ```bash
 npm install
-npx expo start
-```
-
-Scanne le QR code avec l'appli **Expo Go** (Android / iPhone), ou appuie sur `w` pour l'ouvrir dans le navigateur.
-
-## Vérifications
-
-```bash
-npm test          # tests de la logique du compte
-npm run typecheck # vérification TypeScript
+npx expo start      # puis scanne le QR code avec Expo Go
+npm test            # tests de la logique du compte
+npm run typecheck   # vérification TypeScript
+npm run lint        # lint
 ```
 
 ## Organisation du code
 
-- `src/logic/` : logique pure (comptes, cours, formatage), testée dans `scripts/ledger.test.ts`
-- `src/screens/` : écrans Compte, Opérations, Historique
-- `src/components/` : composants réutilisables
-- `App.tsx` : écran d'accueil, navigation par onglets, simulation des cours
+- `src/app/` : écrans (Expo Router) — onglets Compte, Opérer, Virements, Historique, Profil, et `coffre/[metal]`
+- `src/logic/` : logique pure (compte, cours, formatage), testée dans `scripts/ledger.test.ts`
+- `src/state/BankProvider.tsx` : état du compte, actualisation des cours, verrouillage
+- `src/security.ts` : code d'accès et empreinte
+- `src/components/`, `src/features/` : composants, ouverture de compte et déverrouillage

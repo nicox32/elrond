@@ -37,10 +37,11 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
-      - name: Tests et typage
+      - name: Tests, typage et lint
         run: |
           npm test
           npm run typecheck
+          npm run lint
 
       - name: Générer le projet Android
         run: npx expo prebuild --platform android --no-install
@@ -66,5 +67,5 @@ jobs:
           make_latest: true
           files: elrond.apk
           body: |
-            Appli de démonstration Elrond (compte adossé à l'or et à l'argent).
+            Appli de démonstration Elrond (compte adossé à l'or, à l'argent et au platine).
             Télécharge **elrond.apk** ci-dessous depuis ton téléphone Android pour l'installer.

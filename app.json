@@ -22,6 +22,20 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "scheme": "elrond",
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Elrond utilise Face ID pour déverrouiller ton compte et confirmer tes virements."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
