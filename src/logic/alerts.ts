@@ -209,7 +209,7 @@ export function evaluateAlerts(
       metal: a.metal,
       kind: a.kind,
       date: now.toISOString(),
-      title: `Alerte ${METAL_LABEL[a.metal].toLowerCase()} · ${describeAlert(a)}`,
+      title: `Alerte ${a.metal === 'gold' ? METAL_LABEL[a.metal] : METAL_LABEL[a.metal].toLowerCase()} · ${describeAlert(a)}`,
       body: result,
     });
     return { ...a, armed: false, lastTriggeredAt: now.toISOString() };

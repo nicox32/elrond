@@ -30,18 +30,18 @@ const BALANCE_MERGE_MS = 60_000;
 export class LedgerError extends Error {}
 
 export const METAL_LABEL: Record<Metal, string> = {
-  gold: 'Or',
+  gold: 'Gold Spot',
   silver: 'Argent',
   platinum: 'Platine',
-  ecu: 'Écu Orvia',
+  ecu: 'Gold Oriental',
 };
 
 /** « d'or », « d'argent », « de platine ». */
 export const METAL_OF: Record<Metal, string> = {
-  gold: 'd’or',
+  gold: 'de Gold Spot',
   silver: 'd’argent',
   platinum: 'de platine',
-  ecu: 'd’Écus Orvia',
+  ecu: 'de Gold Oriental',
 };
 
 export function emptyHoldings(): Holdings {

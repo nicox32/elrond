@@ -121,7 +121,7 @@ export default function AllocationScreen() {
               </Pressable>
             ))}
           </View>
-          <Hint>Or / argent / platine. Votre répartition sert à chaque achat réparti.</Hint>
+          <Hint>Gold Spot / argent / platine. Votre répartition sert à chaque achat réparti.</Hint>
           {dirty && <Button title="Enregistrer ma répartition" variant="ghost" onPress={save} disabled={!valid} />}
         </Card>
 

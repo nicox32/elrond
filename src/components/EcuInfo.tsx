@@ -19,7 +19,7 @@ export function EcuInfo() {
 
   return (
     <>
-      <SectionTitle>Qu’est-ce que l’Écu Orvia ?</SectionTitle>
+      <SectionTitle>Qu’est-ce que le Gold Oriental ?</SectionTitle>
       <Card style={{ gap: 8 }}>
         <Text style={styles.para}>
           Un jeton d’investissement frappé pour Orvia : {ECU.goldGrams} g d’or fin {ECU.fineness}, conservé au coffre à
@@ -30,7 +30,7 @@ export function EcuInfo() {
         <Row label={`Or contenu (${ECU.goldGrams} g au cours du moment)`} value={formatEur(gold)} />
         <Row label={`Prime Orvia (${pct(premium)})`} value={`+ ${formatEur(gold * premium)}`} />
         <View style={styles.sep} />
-        <Row label="Prix d’un écu" value={formatUnitPrice(quote.prices.ecu, 'g', 'ecu')} strong />
+        <Row label="Prix d’un jeton" value={formatUnitPrice(quote.prices.ecu, 'g', 'ecu')} strong />
         <Text style={styles.muted}>
           Le prix bouge tout seul avec le cours de l’or, en direct. La prime couvre la frappe et reflète la demande :
           vous la retrouvez à la revente.
@@ -68,7 +68,7 @@ export function EcuInfo() {
           </Pressable>
         )}
         <Hint>
-          La prime compte à l’achat comme à la revente : si elle baisse après votre achat, votre écu perd un peu de
+          La prime compte à l’achat comme à la revente : si elle baisse après votre achat, votre jeton perd un peu de
           valeur même si l’or ne bouge pas ; si elle monte, il en gagne.
         </Hint>
       </Card>

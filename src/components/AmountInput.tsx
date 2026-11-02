@@ -23,7 +23,7 @@ const UNIT_LABEL: Record<AmountUnit, string> = { eur: 'Euros', g: 'Grammes', oz:
 export function AmountInput({ text, onChangeText, unit, onUnitChange, units = ['eur', 'g', 'oz'], metal }: Props) {
   const ecu = metal === 'ecu';
   const shown = ecu ? units.filter((u) => u !== 'oz') : units;
-  const label = (u: AmountUnit) => (ecu && u === 'g' ? 'Écus' : UNIT_LABEL[u]);
+  const label = (u: AmountUnit) => (ecu && u === 'g' ? 'Jetons' : UNIT_LABEL[u]);
   // Les écus ne se comptent pas en onces.
   useEffect(() => {
     if (ecu && unit === 'oz') onUnitChange('g');
@@ -41,7 +41,7 @@ export function AmountInput({ text, onChangeText, unit, onUnitChange, units = ['
           style={[ui.input, styles.input]}
           accessibilityLabel={`Montant en ${label(unit).toLowerCase()}`}
         />
-        <Text style={styles.unit}>{unit === 'eur' ? '€' : ecu ? 'écu' : unit}</Text>
+        {!(ecu && unit !== 'eur') && <Text style={styles.unit}>{unit === 'eur' ? '€' : unit}</Text>}
       </View>
     </View>
   );

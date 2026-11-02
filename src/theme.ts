@@ -23,4 +23,4 @@ export const metalColor: Record<Metal, string> = {
   ecu: '#F0C75E',
 };
 
-export const metalSymbol: Record<Metal, string> = { gold: 'Au', silver: 'Ag', platinum: 'Pt', ecu: 'Éc' };
+export const metalSymbol: Record<Metal, string> = { gold: 'Au', silver: 'Ag', platinum: 'Pt', ecu: 'GO' };

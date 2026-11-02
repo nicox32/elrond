@@ -19,7 +19,7 @@ export const ALLOCATION_PRESETS: { label: string; value: Allocation }[] = [
   { label: '50 / 25 / 25', value: { gold: 50, silver: 25, platinum: 25 } },
   { label: '60 / 20 / 20', value: { gold: 60, silver: 20, platinum: 20 } },
   { label: '40 / 30 / 30', value: { gold: 40, silver: 30, platinum: 30 } },
-  { label: '100 % or', value: { gold: 100, silver: 0, platinum: 0 } },
+  { label: '100 % Gold Spot', value: { gold: 100, silver: 0, platinum: 0 } },
 ];
 
 export type SplitMode = 'percent' | 'target';

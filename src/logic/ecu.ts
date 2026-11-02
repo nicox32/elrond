@@ -9,7 +9,7 @@
 import type { Prices, SpotPrices } from './types.ts';
 
 export const ECU = {
-  name: 'Écu Orvia',
+  name: 'Gold Oriental',
   /** Or fin contenu dans un écu, en grammes. */
   goldGrams: 1,
   fineness: '999,9',

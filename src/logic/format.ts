@@ -13,7 +13,7 @@ function decimalsFor(abs: number): number {
 
 function formatEcus(n: number): string {
   const text = n.toFixed(Math.abs(n) >= 100 ? 2 : 3).replace('.', ',');
-  return `${text} écu${Math.abs(n) >= 2 ? 's' : ''}`;
+  return `${text} jeton${Math.abs(n) >= 2 ? 's' : ''}`;
 }
 
 /** Formate un poids donné en grammes, dans l'unité choisie ; pour l'Écu Orvia, un nombre d'écus. */
@@ -29,14 +29,14 @@ export function formatWeightDelta(grams: number, unit: WeightUnit = 'g', metal?:
   return `${grams > 0 ? '+' : grams < 0 ? '−' : ''}${formatWeight(Math.abs(grams), unit, metal)}`;
 }
 
-/** « 2,500 g d’or », « 3,000 écus Orvia ». */
+/** « 2,500 g de Gold Spot », « 3,000 jetons Gold Oriental ». */
 export function formatQty(metal: Metal, grams: number, unit: WeightUnit = 'g'): string {
-  return metal === 'ecu' ? `${formatEcus(grams)} Orvia` : `${formatWeight(grams, unit)} ${METAL_OF[metal]}`;
+  return metal === 'ecu' ? `${formatEcus(grams)} Gold Oriental` : `${formatWeight(grams, unit)} ${METAL_OF[metal]}`;
 }
 
 /** Prix par unité de poids (€/g ou €/oz). */
 export function formatUnitPrice(eurPerGram: number, unit: WeightUnit = 'g', metal?: Metal): string {
-  if (metal === 'ecu') return `${formatEur(eurPerGram)}/écu`;
+  if (metal === 'ecu') return `${formatEur(eurPerGram)}/jeton`;
   return `${formatEur(unit === 'oz' ? eurPerGram * TROY_OUNCE : eurPerGram)}/${unit}`;
 }
 

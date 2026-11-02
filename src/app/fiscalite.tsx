@@ -36,7 +36,7 @@ const OPERATIONS = [
     text: 'Échanger un métal contre un autre est une vente du premier : l’impôt est retenu avant le rachat et réduit le métal reçu.',
   },
   {
-    title: 'Vente d’Écus Orvia',
+    title: 'Vente de Gold Oriental',
     taxed: true,
     text: 'Régime des jetons : aucun impôt pour une vente jusqu’à 5 000 € ; au-delà, 6,5 % du prix de vente (6 % + 0,5 % de CRDS), ou le régime des plus-values s’il coûte moins cher. Calculé et retenu automatiquement.',
   },
@@ -151,7 +151,7 @@ export default function TaxScreen() {
         </Bullet>
         <Bullet>
           Pas de seuil d’exonération pour l’or, l’argent et le platine : celui de 5 000 € concerne les bijoux, objets
-          d’art ou de collection et les jetons comme l’Écu Orvia. La taxe forfaitaire se déclare sur le formulaire
+          d’art ou de collection et les jetons comme le Gold Oriental. La taxe forfaitaire se déclare sur le formulaire
           2091-SD, la plus-value sur le 2048-M ; le professionnel qui rachète le métal s’en charge en général.
         </Bullet>
         <Bullet>
@@ -238,7 +238,7 @@ function MetalCard({ m, unit, outlook }: { m: MetalTax; unit: 'g' | 'oz'; outloo
       </Text>
       {m.tokenExempt ? (
         <Text style={[styles.para, { color: colors.up }]}>
-          Aucun impôt : une vente d’Écus Orvia jusqu’à 5 000 € est exonérée (au-delà : 6,5 % du prix de vente).
+          Aucun impôt : une vente de Gold Oriental jusqu’à 5 000 € est exonérée (au-delà : 6,5 % du prix de vente).
         </Text>
       ) : (
         <View style={styles.regimes}>

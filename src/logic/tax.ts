@@ -306,7 +306,7 @@ export function gramsForNet(
 
 /** Phrase courte pour l'aperçu d'une opération. */
 export function describeTax(t: SaleTax): string {
-  if (t.tokenExempt) return `Pas d’impôt : vente d’Écus Orvia jusqu’à 5 000 €.`;
+  if (t.tokenExempt) return `Pas d’impôt : vente de Gold Oriental jusqu’à 5 000 €.`;
   if (t.tax <= 0) {
     return t.gain <= 0
       ? 'Pas d’impôt : pas de plus-value sur ce métal (régime des plus-values).'

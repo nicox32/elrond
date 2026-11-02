@@ -24,7 +24,9 @@ export default function VaultScreen() {
   return (
     <Screen testID="screen-coffre">
       <Stack.Screen
-        options={{ title: metal === 'ecu' ? 'Coffre Écu Orvia' : `Coffre ${METAL_LABEL[metal].toLowerCase()}` }}
+        options={{
+          title: `Coffre ${metal === 'silver' || metal === 'platinum' ? METAL_LABEL[metal].toLowerCase() : METAL_LABEL[metal]}`,
+        }}
       />
       <PriceStatus />
 

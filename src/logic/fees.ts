@@ -38,11 +38,11 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
   {
     title: 'Achat de métaux précieux',
     rows: [
-      { label: 'Or : conversion d’euros en grammes d’or', orvia: pct(FEES.buy.gold) },
+      { label: 'Gold Spot : conversion d’euros en grammes d’or', orvia: pct(FEES.buy.gold) },
       { label: 'Argent : conversion d’euros en grammes d’argent', orvia: pct(FEES.buy.silver) },
       { label: 'Platine : conversion d’euros en grammes de platine', orvia: pct(FEES.buy.platinum) },
       {
-        label: 'Écu Orvia (1 g d’or fin) : frais d’achat, en plus de la prime incluse dans son prix',
+        label: 'Gold Oriental (jeton d’1 g d’or fin) : frais d’achat, en plus de la prime incluse dans son prix',
         orvia: pct(FEES.buy.ecu),
       },
     ],

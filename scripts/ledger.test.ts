@@ -413,7 +413,7 @@ test('alertes : seuils, variation 24 h, moyenne 30 j, sans répétition', async 
   const below = createAlert({ metal: 'gold', kind: 'below', value: 3500, unit: 'oz' });
   const drop = createAlert({ metal: 'gold', kind: 'drop', value: 5, window: '24h' });
   const avg = createAlert({ metal: 'gold', kind: 'belowAvg30', value: 5 });
-  assert.equal(describeAlert(below).replace(/\s/g, ' '), 'Or sous 3 500,00 €/oz');
+  assert.equal(describeAlert(below).replace(/\s/g, ' '), 'Gold Spot sous 3 500,00 €/oz');
   let alerts = [below, drop, avg];
 
   // or à 3 600 : rien
