@@ -71,6 +71,12 @@ export default function ProfileScreen() {
           border
         />
         <LinkRow label="Comptes enfants" hint={`${account.children.length} compte(s) · gratuit`} to="/enfants" border />
+        <LinkRow
+          label="Plus-value et impôts"
+          hint="Gain latent avant et après impôt, règles françaises"
+          to="/fiscalite"
+          border
+        />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 
@@ -123,7 +129,7 @@ function LinkRow({
 }: {
   label: string;
   hint: string;
-  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes' | '/repartition';
+  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes' | '/repartition' | '/fiscalite';
   border?: boolean;
 }) {
   return (

@@ -10,7 +10,8 @@ import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
-import { accountValue, METAL_LABEL, REFERRAL, unrealizedGain } from '../../logic/ledger';
+import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
+import { estimateTax } from '../../logic/tax';
 import { METALS } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { colors, metalColor, metalSymbol } from '../../theme';
@@ -39,7 +40,7 @@ export default function AccountScreen() {
   const { quote } = useBank();
   const unit = account.settings.unit;
   const value = accountValue(account, quote.prices);
-  const perf = unrealizedGain(account, quote.prices);
+  const tax = estimateTax(account, quote.prices);
 
   return (
     <Screen testID="screen-compte">
@@ -52,11 +53,20 @@ export default function AccountScreen() {
         <Text style={styles.balance}>{formatEur(value.total)}</Text>
         <Text style={styles.louis}>soit {formatLouis(toLouis(value.total, quote.prices))}</Text>
         <Text style={styles.sub}>Valeur de revente au cours actuel · 1 LOU = 1 €</Text>
-        {perf.invested > 0 && (
-          <Text style={[styles.gain, { color: perf.gain >= 0 ? colors.up : colors.down }]}>
-            {perf.gain >= 0 ? 'Plus-value' : 'Moins-value'} : {perf.gain >= 0 ? '+' : '−'}
-            {formatEur(Math.abs(perf.gain))} ({formatPercent(perf.percent)})
+        {tax.cost > 0 && (
+          <Text style={[styles.gain, { color: tax.gain >= 0 ? colors.up : colors.down }]}>
+            {tax.gain >= 0 ? 'Plus-value latente' : 'Moins-value latente'} : {tax.gain >= 0 ? '+' : '−'}
+            {formatEur(Math.abs(tax.gain))} ({formatPercent(tax.gainPercent)})
           </Text>
+        )}
+        {tax.cost > 0 && (
+          <Pressable onPress={() => router.push('/fiscalite')} accessibilityRole="button" style={styles.taxRow}>
+            <Text style={styles.taxText}>
+              Après impôt : {tax.netGain >= 0 ? '+' : '−'}
+              {formatEur(Math.abs(tax.netGain))} ({formatPercent(tax.netGainPercent)})
+            </Text>
+            <Text style={styles.taxLink}>Détail ›</Text>
+          </Pressable>
         )}
         <View style={styles.split}>
           {METALS.map((m) =>
@@ -204,6 +214,9 @@ export default function AccountScreen() {
 }
 
 const styles = StyleSheet.create({
+  taxRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
+  taxText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  taxLink: { color: colors.gold, fontSize: 13, fontWeight: '700' },
   hello: { color: colors.textMuted, fontSize: 15 },
   balanceCard: {
     backgroundColor: colors.surface,
