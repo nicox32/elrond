@@ -19,7 +19,7 @@ export function EcuInfo() {
 
   return (
     <>
-      <SectionTitle>Qu’est-ce que le Gold Oriental ?</SectionTitle>
+      <SectionTitle>Qu’est-ce que le Gold Oria ?</SectionTitle>
       <Card style={{ gap: 8 }}>
         <Text style={styles.para}>
           Un jeton d’investissement frappé pour Orvia : {ECU.goldGrams} g d’or fin {ECU.fineness}, conservé au coffre à

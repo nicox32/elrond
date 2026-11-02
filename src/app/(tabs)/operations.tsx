@@ -189,7 +189,7 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
               ? `Les euros sont versés sur votre compte bancaire en France (fictif). Frais de revente : ${pct(FEES.sale)}. L’impôt est calculé et retenu automatiquement, au régime le moins cher.`
               : `Frais de conversion : ${pct(FEES.conversion)} + frais d’achat du métal reçu.`}{' '}
           {metal === 'ecu'
-            ? 'Un jeton Gold Oriental = 1 g d’or fin, au cours du Gold Spot plus la prime Orvia (détail dans son coffre).'
+            ? 'Un jeton Gold Oria = 1 g d’or fin, au cours du Gold Spot plus la prime Orvia (détail dans son coffre).'
             : '1 once troy = 31,1035 g.'}
         </Hint>
         <Pressable onPress={() => router.push('/tarifs')} accessibilityRole="link">

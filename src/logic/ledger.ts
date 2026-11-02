@@ -33,7 +33,7 @@ export const METAL_LABEL: Record<Metal, string> = {
   gold: 'Gold Spot',
   silver: 'Argent',
   platinum: 'Platine',
-  ecu: 'Gold Oriental',
+  ecu: 'Gold Oria',
 };
 
 /** « d'or », « d'argent », « de platine ». */
@@ -41,7 +41,7 @@ export const METAL_OF: Record<Metal, string> = {
   gold: 'de Gold Spot',
   silver: 'd’argent',
   platinum: 'de platine',
-  ecu: 'de Gold Oriental',
+  ecu: 'de Gold Oria',
 };
 
 export function emptyHoldings(): Holdings {

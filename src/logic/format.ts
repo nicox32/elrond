@@ -29,9 +29,9 @@ export function formatWeightDelta(grams: number, unit: WeightUnit = 'g', metal?:
   return `${grams > 0 ? '+' : grams < 0 ? '−' : ''}${formatWeight(Math.abs(grams), unit, metal)}`;
 }
 
-/** « 2,500 g de Gold Spot », « 3,000 jetons Gold Oriental ». */
+/** « 2,500 g de Gold Spot », « 3,000 jetons Gold Oria ». */
 export function formatQty(metal: Metal, grams: number, unit: WeightUnit = 'g'): string {
-  return metal === 'ecu' ? `${formatEcus(grams)} Gold Oriental` : `${formatWeight(grams, unit)} ${METAL_OF[metal]}`;
+  return metal === 'ecu' ? `${formatEcus(grams)} Gold Oria` : `${formatWeight(grams, unit)} ${METAL_OF[metal]}`;
 }
 
 /** Prix par unité de poids (€/g ou €/oz). */

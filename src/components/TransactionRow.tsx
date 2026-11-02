@@ -22,7 +22,7 @@ const ICON: Record<TransactionKind, string> = {
 export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit }) {
   const parts = METALS.filter((m) => tx.deltas[m]).map((m) =>
     m === 'ecu'
-      ? `${formatWeightDelta(tx.deltas[m], unit, m)} Gold Oriental`
+      ? `${formatWeightDelta(tx.deltas[m], unit, m)} Gold Oria`
       : `${formatWeightDelta(tx.deltas[m], unit)} ${m === 'gold' ? METAL_LABEL[m] : METAL_LABEL[m].toLowerCase()}`,
   );
   const incoming = tx.kind === 'buy' || tx.kind === 'family_in' || tx.kind === 'referral_bonus';
