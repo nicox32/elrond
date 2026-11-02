@@ -69,7 +69,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Écu Orvia** (`src/logic/ecu.ts`, `docs/ecu-orvia.png`) : jeton d'investissement maison, 1 g d'or fin 999,9 conservé
   au coffre. Prix d'un écu = 1 g × cours de l'or × (1 + prime), en direct ; prime par défaut de 4 %, réglable de 0 à
   15 % dans son coffre (démonstration). S'achète en euros ou en écus (frais d'achat 1 %), se revend, se convertit,
-  s'envoie et se verse aux enfants ; impôt calculé comme pour l'or. Compte comme de l'or dans la répartition.
+  s'envoie et se verse aux enfants. Fiscalité des jetons : vente exonérée jusqu'à 5 000 €, au-delà 6,5 % du prix de
+  vente ou régime des plus-values si moins cher. Compte comme de l'or dans la répartition.
 - **Carte Orvia** (simulée) : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).

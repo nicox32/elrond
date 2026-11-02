@@ -74,8 +74,8 @@ export function EcuInfo() {
       </Card>
 
       <Hint>
-        Fiscalité : l’Écu Orvia est traité comme de l’or d’investissement (taxe forfaitaire ou régime des plus-values,
-        le moins cher), tant que le régime particulier des jetons n’est pas confirmé par un texte officiel.
+        Fiscalité des jetons : aucun impôt pour une vente jusqu’à 5 000 € ; au-delà, 6,5 % du prix de vente (6 % + 0,5 %
+        de CRDS), ou le régime des plus-values s’il coûte moins cher.
       </Hint>
     </>
   );

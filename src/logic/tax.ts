@@ -26,6 +26,10 @@ export const TAX = {
   allowancePerYear: 0.05,
   allowanceFromYear: 3,
   exemptAfterYears: 22,
+  /** Écu Orvia, régime des jetons : taxe forfaitaire de 6 % + 0,5 % de CRDS sur le prix de vente… */
+  tokenFlat: 0.065,
+  /** … et aucune taxe pour une vente jusqu'à ce montant. */
+  tokenExemptUpTo: 5000,
 } as const;
 
 export const GAIN_RATE = TAX.incomeTax + TAX.social;
@@ -108,6 +112,8 @@ export interface MetalTax {
   /** Abattement moyen appliqué (0 à 1), pondéré par la plus-value. */
   allowance: number;
   best: 'flat' | 'gain';
+  /** Écu Orvia vendu pour 5 000 € au plus : exonéré. */
+  tokenExempt?: boolean;
   tax: number;
   net: number;
   netGain: number;
@@ -152,6 +158,7 @@ export function estimateTax(
       avgYears: t.years,
       allowance: t.allowance,
       best: t.regime,
+      tokenExempt: t.tokenExempt,
       tax: t.tax,
       net: t.net,
       netGain: r2(t.net - t.cost),
@@ -199,6 +206,10 @@ export interface SaleTax {
   tax: number;
   /** Ce qui reste après impôt. */
   net: number;
+  /** Vente d'Écus Orvia jusqu'à 5 000 € : exonérée. */
+  tokenExempt?: boolean;
+  /** Écu Orvia : régime des jetons (taxe forfaitaire de 6,5 %). */
+  token?: boolean;
 }
 
 /**
@@ -237,8 +248,11 @@ export function saleTax(
     left -= g;
   }
   const proven = left <= 1e-6;
-  const flatTax = r2(Math.max(0, price) * TAX.flat);
-  const gainTax = proven ? r2(Math.max(0, taxable) * GAIN_RATE) : null;
+  // Écu Orvia : régime des jetons, exonéré jusqu'à 5 000 € de prix de vente, puis 6,5 %.
+  const token = metal === 'ecu';
+  const exempt = token && price <= TAX.tokenExemptUpTo + 1e-9;
+  const flatTax = exempt ? 0 : r2(Math.max(0, price) * (token ? TAX.tokenFlat : TAX.flat));
+  const gainTax = exempt ? 0 : proven ? r2(Math.max(0, taxable) * GAIN_RATE) : null;
   const regime: TaxRegime = gainTax !== null && gainTax <= flatTax ? 'gain' : 'flat';
   const tax = regime === 'gain' ? gainTax! : flatTax;
   return {
@@ -253,6 +267,8 @@ export function saleTax(
     regime,
     tax,
     net: r2(price - tax),
+    tokenExempt: exempt,
+    token,
   };
 }
 
@@ -273,6 +289,9 @@ export function gramsForNet(
     const price = g * perGram - fixed;
     return price - saleTax(wallet, metal, g, Math.max(0, price), now, lots).tax;
   };
+  // Sans impôt (vente exonérée ou sans plus-value) : calcul direct.
+  const direct = (target + fixed) / perGram;
+  if (saleTax(wallet, metal, direct, target, now, lots).tax === 0) return direct;
   const owned = lots.reduce((sum, l) => sum + l.grams, 0);
   let lo = 0;
   // Tout le métal suffit (au centime près) : on cherche dans ce qu'on possède, sinon au-delà (solde insuffisant).
@@ -287,6 +306,7 @@ export function gramsForNet(
 
 /** Phrase courte pour l'aperçu d'une opération. */
 export function describeTax(t: SaleTax): string {
+  if (t.tokenExempt) return `Pas d’impôt : vente d’Écus Orvia jusqu’à 5 000 €.`;
   if (t.tax <= 0) {
     return t.gain <= 0
       ? 'Pas d’impôt : pas de plus-value sur ce métal (régime des plus-values).'
@@ -297,9 +317,10 @@ export function describeTax(t: SaleTax): string {
   }
   const other =
     t.regime === 'gain'
-      ? `au lieu de ${formatMoney(t.flatTax)} en taxe forfaitaire`
+      ? `au lieu de ${formatMoney(t.flatTax)} en taxe forfaitaire${t.token ? ' des jetons' : ''}`
       : `au lieu de ${formatMoney(t.gainTax)} au régime des plus-values`;
-  return `Impôt retenu : ${formatMoney(t.tax)} (${REGIME_LABEL[t.regime]}, le moins cher, ${other}).`;
+  const label = t.token && t.regime === 'flat' ? 'taxe forfaitaire des jetons, 6,5 %' : REGIME_LABEL[t.regime];
+  return `Impôt retenu : ${formatMoney(t.tax)} (${label}, le moins cher, ${other}).`;
 }
 
 const money = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });

@@ -200,9 +200,46 @@ test('Écu Orvia : prix = 1 g d’or × (1 + prime), achat, vente avec impôt, a
   // L'or monte : l'écu suit, l'impôt s'applique comme pour l'or
   const p2026 = withEcu({ gold: 150, silver: 1, platinum: 30 });
   acc = sell(acc, p2026, 'ecu', { unit: 'g', value: 1 }, 'deferred', new Date('2026-11-02'));
-  assert.ok((acc.transactions[0].tax ?? 0) > 0);
+  // Régime des jetons : vente jusqu'à 5 000 € exonérée
+  assert.ok(!acc.transactions[0].tax);
   close(acc.holdings.ecu, 2, 1e-9);
   // Compte enregistré avant l'écu : solde à zéro ajouté
   const old = migrateAccount({ ...createAccount('V'), holdings: { gold: 1, silver: 0, platinum: 0 } });
   assert.equal(old!.holdings.ecu, 0);
+});
+
+test('Écu Orvia : régime des jetons (exonéré jusqu’à 5 000 €, puis 6,5 % ou plus-values)', async () => {
+  const { withEcu } = await import('../src/logic/ecu.ts');
+  const { saleTax, gramsForNet } = await import('../src/logic/tax.ts');
+  const now = new Date('2026-11-02');
+  const p = withEcu({ gold: 111.99, silver: 1, platinum: 30 });
+  // Exemple d'une once : 31,1035 écus achetés 1 600 € en 2021
+  let acc = createAccount('T');
+  acc = buy(
+    acc,
+    withEcu({ gold: 49.5, silver: 1, platinum: 30 }),
+    'ecu',
+    { unit: 'eur', value: 1600 },
+    new Date('2021-03-01'),
+  );
+  const price = acc.holdings.ecu * p.ecu * (1 - FEES.sale);
+  const small = saleTax(acc, 'ecu', acc.holdings.ecu, price, now);
+  assert.ok(price < 5000);
+  assert.equal(small.tax, 0);
+  assert.equal(small.tokenExempt, true);
+  // Au-delà de 5 000 € : 6,5 % du prix ou plus-values (le moins cher)
+  const big = buy(
+    createAccount('T'),
+    withEcu({ gold: 100, silver: 1, platinum: 30 }),
+    'ecu',
+    { unit: 'g', value: 60 },
+    new Date('2021-03-01'),
+  );
+  const bigPrice = 60 * p.ecu * (1 - FEES.sale);
+  const t = saleTax(big, 'ecu', 60, bigPrice, now);
+  assert.ok(bigPrice > 5000);
+  close(t.flatTax, bigPrice * 0.065);
+  close(t.tax, Math.min(t.flatTax, t.gainTax ?? Infinity));
+  // Saisie en euros juste sous le seuil : montant exact, sans impôt
+  close(gramsForNet(big, 'ecu', 4990, p.ecu * (1 - FEES.sale), 0, now) * p.ecu * (1 - FEES.sale), 4990);
 });

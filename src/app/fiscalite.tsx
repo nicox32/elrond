@@ -36,6 +36,11 @@ const OPERATIONS = [
     text: 'Échanger un métal contre un autre est une vente du premier : l’impôt est retenu avant le rachat et réduit le métal reçu.',
   },
   {
+    title: 'Vente d’Écus Orvia',
+    taxed: true,
+    text: 'Régime des jetons : aucun impôt pour une vente jusqu’à 5 000 € ; au-delà, 6,5 % du prix de vente (6 % + 0,5 % de CRDS), ou le régime des plus-values s’il coûte moins cher. Calculé et retenu automatiquement.',
+  },
+  {
     title: 'Virement de métal à un membre',
     taxed: false,
     text: 'Le métal change de main sans être vendu : pas d’impôt sur la plus-value. Si c’est un cadeau, c’est un don : petit cadeau d’anniversaire ou de fêtes (présent d’usage, raisonnable par rapport à vos revenus) sans formalité ; sinon droits de donation après abattement (100 000 € par parent et par enfant, 31 865 € par grand-parent et petit-enfant, 15 932 € entre frères et sœurs, 7 967 € pour un neveu ou une nièce, tous les 15 ans ; aucun abattement entre personnes non parentes) et déclaration du don (formulaire 2735 ou en ligne). S’il paie un achat entre particuliers, c’est une cession imposable à déclarer vous-même.',
@@ -145,9 +150,9 @@ export default function TaxScreen() {
           justificatif. Pour la durée de détention, le métal acheté en premier est considéré comme vendu en premier.
         </Bullet>
         <Bullet>
-          Pas de seuil d’exonération pour les métaux précieux : celui de 5 000 € ne concerne que les bijoux et objets
-          d’art ou de collection. La taxe forfaitaire se déclare sur le formulaire 2091-SD, la plus-value sur le 2048-M
-          ; le professionnel qui rachète le métal s’en charge en général.
+          Pas de seuil d’exonération pour l’or, l’argent et le platine : celui de 5 000 € concerne les bijoux, objets
+          d’art ou de collection et les jetons comme l’Écu Orvia. La taxe forfaitaire se déclare sur le formulaire
+          2091-SD, la plus-value sur le 2048-M ; le professionnel qui rachète le métal s’en charge en général.
         </Bullet>
         <Bullet>
           Sont concernés l’or, l’argent et le platine (lingots, barres, pièces frappées après 1800). Le palladium n’en
@@ -231,17 +236,27 @@ function MetalCard({ m, unit, outlook }: { m: MetalTax; unit: 'g' | 'oz'; outloo
         Détention moyenne : {m.avgYears} an{m.avgYears > 1 ? 's' : ''}
         {m.allowance > 0 ? ` · abattement ${rate(m.allowance)}` : ' · pas encore d’abattement'}
       </Text>
-      <View style={styles.regimes}>
-        <Regime title="Taxe forfaitaire" amount={m.flatTax} chosen={m.best === 'flat'} />
-        <Regime title="Régime des plus-values" amount={m.gainTax} chosen={m.best === 'gain'} />
-      </View>
+      {m.tokenExempt ? (
+        <Text style={[styles.para, { color: colors.up }]}>
+          Aucun impôt : une vente d’Écus Orvia jusqu’à 5 000 € est exonérée (au-delà : 6,5 % du prix de vente).
+        </Text>
+      ) : (
+        <View style={styles.regimes}>
+          <Regime
+            title={m.metal === 'ecu' ? 'Taxe des jetons (6,5 %)' : 'Taxe forfaitaire'}
+            amount={m.flatTax}
+            chosen={m.best === 'flat'}
+          />
+          <Regime title="Régime des plus-values" amount={m.gainTax} chosen={m.best === 'gain'} />
+        </View>
+      )}
       <Row
         label="Plus-value nette après impôt"
         value={`${signed(m.netGain)} · ${formatPercent(m.netGainPercent)}`}
         valueStyle={tone(m.netGain)}
         strong
       />
-      {outlook && <Outlook o={outlook} />}
+      {outlook && !m.tokenExempt && <Outlook o={outlook} />}
     </Card>
   );
 }
