@@ -1,17 +1,32 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AmountInput } from '../../components/AmountInput';
 import { MetalPicker } from '../../components/MetalPicker';
 import { PriceStatus } from '../../components/PriceStatus';
 import { Segmented } from '../../components/Segmented';
-import { Button, Hint, Label, Message, Screen, Title } from '../../components/ui';
+import { SpeedPicker } from '../../components/SpeedPicker';
+import { Button, Hint, Label, Message, Screen, styles as ui, Title } from '../../components/ui';
 import { formatEur, formatUnitPrice, formatWeight, parseAmount } from '../../logic/format';
-import { buy, buyPrice, convert, LedgerError, METAL_OF, sell, sellPrice, SPREAD, toGrams } from '../../logic/ledger';
+import { FEES, type SaleSpeed } from '../../logic/fees';
+import {
+  buy,
+  buyPrice,
+  convert,
+  LedgerError,
+  METAL_OF,
+  quoteBuy,
+  quoteConvert,
+  quoteSale,
+  sell,
+  sellPrice,
+} from '../../logic/ledger';
 import { type AmountUnit, type Metal, METALS } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { colors } from '../../theme';
+
+const pct = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })}\u00a0%`;
 
 type Mode = 'buy' | 'sell' | 'convert';
 
@@ -42,22 +57,28 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
   const target: Metal = chosenTarget !== metal ? chosenTarget : (METALS.find((m) => m !== metal) ?? 'silver');
   const [amountUnit, setAmountUnit] = useState<AmountUnit>('eur');
   const [text, setText] = useState('');
+  const [speed, setSpeed] = useState<SaleSpeed>('deferred');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const value = parseAmount(text);
   const prices = quote.prices;
-  const unitPrice = mode === 'buy' ? buyPrice(prices, metal) : sellPrice(prices, metal);
+  const unitPrice = mode === 'buy' ? buyPrice(prices, metal) : sellPrice(prices, metal, speed);
 
+  // Aperçu chiffré, frais compris.
   const preview = useMemo(() => {
     if (!Number.isFinite(value) || value <= 0) return null;
-    const grams = toGrams({ unit: amountUnit, value }, unitPrice);
-    if (mode === 'buy')
-      return `Tu achètes ${formatWeight(grams, unit)} ${METAL_OF[metal]} pour ${formatEur(grams * unitPrice)}.`;
-    if (mode === 'sell')
-      return `Tu vends ${formatWeight(grams, unit)} ${METAL_OF[metal]} et reçois ${formatEur(grams * unitPrice)}.`;
-    const received = (grams * unitPrice) / buyPrice(prices, target);
-    return `${formatWeight(grams, unit)} ${METAL_OF[metal]} deviennent ${formatWeight(received, unit)} ${METAL_OF[target]}.`;
-  }, [value, amountUnit, unitPrice, mode, metal, target, prices, unit]);
+    const q = { unit: amountUnit, value };
+    if (mode === 'buy') {
+      const r = quoteBuy(prices, metal, q);
+      return `Tu achètes ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} pour ${formatEur(r.paid)}, dont ${formatEur(r.fees)} de frais (${pct(FEES.buy[metal])}).`;
+    }
+    if (mode === 'sell') {
+      const r = quoteSale(prices, metal, q, speed);
+      return `Tu vends ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} et reçois ${formatEur(r.received)}, après ${formatEur(r.fees)} de frais.`;
+    }
+    const r = quoteConvert(prices, metal, target, q);
+    return `${formatWeight(r.grams, unit)} ${METAL_OF[metal]} deviennent ${formatWeight(r.received, unit)} ${METAL_OF[target]}, après ${formatEur(r.fees)} de frais (${pct(FEES.conversion)} + ${pct(FEES.buy[target])}).`;
+  }, [value, amountUnit, mode, metal, target, prices, unit, speed]);
 
   function submit() {
     const q = { unit: amountUnit, value };
@@ -66,7 +87,7 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
         mode === 'buy'
           ? buy(acc, p, metal, q)
           : mode === 'sell'
-            ? sell(acc, p, metal, q)
+            ? sell(acc, p, metal, q, speed)
             : convert(acc, p, metal, target, q),
       );
       setText('');
@@ -103,6 +124,8 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
           </Hint>
         </View>
 
+        {mode === 'sell' && <SpeedPicker value={speed} onChange={setSpeed} />}
+
         {mode === 'convert' && (
           <View style={styles.block}>
             <Label>Vers</Label>
@@ -112,7 +135,11 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
 
         <View style={styles.block}>
           <Label>
-            {mode === 'buy' ? 'Montant à acheter' : mode === 'sell' ? 'Montant à vendre' : 'Quantité à convertir'}
+            {mode === 'buy'
+              ? 'Montant à acheter (en euros : montant payé)'
+              : mode === 'sell'
+                ? 'Montant à vendre (en euros : montant reçu)'
+                : 'Quantité à convertir'}
           </Label>
           <AmountInput
             text={text}
@@ -137,13 +164,15 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
 
         <Hint>
           {mode === 'buy'
-            ? 'Paiement par carte bancaire (fictive). '
+            ? `Paiement par carte bancaire (fictive). Frais d’achat : ${pct(FEES.buy[metal])} du montant.`
             : mode === 'sell'
-              ? 'Les euros sont versés sur ton compte bancaire (fictif). '
-              : ''}
-          Écart achat/vente de {(SPREAD * 100).toLocaleString('fr-FR')}
-          {'\u00a0'}% sur le cours réel. 1 once troy = 31,1035 g.
+              ? `Les euros sont versés sur ton compte bancaire en France (fictif). Frais de revente : ${pct(FEES.sale)}.`
+              : `Frais de conversion : ${pct(FEES.conversion)} + frais d’achat du métal reçu.`}{' '}
+          1 once troy = 31,1035 g.
         </Hint>
+        <Pressable onPress={() => router.push('/tarifs')} accessibilityRole="link">
+          <Text style={ui.link}>Voir tous les tarifs</Text>
+        </Pressable>
       </Screen>
     </KeyboardAvoidingView>
   );

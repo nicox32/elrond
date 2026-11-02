@@ -49,6 +49,9 @@ function AppStack() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="coffre/[metal]" options={{ title: 'Coffre' }} />
+      <Stack.Screen name="enfants/index" options={{ title: 'Comptes enfants' }} />
+      <Stack.Screen name="enfants/[id]" options={{ title: 'Compte enfant' }} />
+      <Stack.Screen name="tarifs" options={{ title: 'Tarifs' }} />
     </Stack>
   );
 }

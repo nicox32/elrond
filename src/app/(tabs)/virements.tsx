@@ -5,6 +5,8 @@ import { AmountInput } from '../../components/AmountInput';
 import { MetalPicker } from '../../components/MetalPicker';
 import { PinConfirm } from '../../components/PinConfirm';
 import { Segmented } from '../../components/Segmented';
+import { SpeedPicker } from '../../components/SpeedPicker';
+import { FEES, type SaleSpeed } from '../../logic/fees';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui, Title } from '../../components/ui';
 import { formatEur, formatWeight, parseAmount } from '../../logic/format';
 import {
@@ -12,7 +14,8 @@ import {
   LedgerError,
   METAL_OF,
   removeBeneficiary,
-  sellPrice,
+  isForeignIban,
+  quoteSale,
   toGrams,
   transferToIban,
   transferToMember,
@@ -34,6 +37,7 @@ export default function TransfersScreen() {
   const [metal, setMetal] = useState<Metal>('gold');
   const [amountUnit, setAmountUnit] = useState<AmountUnit>('g');
   const [text, setText] = useState('');
+  const [speed, setSpeed] = useState<SaleSpeed>('deferred');
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -49,16 +53,19 @@ export default function TransfersScreen() {
   }
 
   const value = parseAmount(text);
-  // Membre : le métal change de main au cours réel, sans frais. IBAN : le métal est vendu.
-  const rate = kind === 'member' ? quote.prices[metal] : sellPrice(quote.prices, metal);
-  const grams = Number.isFinite(value) && value > 0 ? toGrams({ unit: amountUnit, value }, rate) : 0;
+  const valid = Number.isFinite(value) && value > 0;
+  // Membre : le métal change de main au cours réel, sans frais. IBAN : le métal est vendu (frais de revente).
+  const abroad = kind === 'iban' && !!selected && isForeignIban(selected.identifier);
+  const sale =
+    valid && kind === 'iban' ? quoteSale(quote.prices, metal, { unit: amountUnit, value }, speed, abroad) : null;
+  const grams = !valid ? 0 : sale ? sale.grams : toGrams({ unit: amountUnit, value }, quote.prices[metal]);
 
   const summary =
     !selected || grams <= 0
       ? ''
       : kind === 'member'
-        ? `Envoyer ${formatWeight(grams, unit)} ${METAL_OF[metal]} (${formatEur(grams * rate)}) à ${selected.name}, gratuitement.`
-        : `Vendre ${formatWeight(grams, unit)} ${METAL_OF[metal]} et virer ${formatEur(grams * rate)} à ${selected.name} (${selected.identifier}).`;
+        ? `Envoyer ${formatWeight(grams, unit)} ${METAL_OF[metal]} (${formatEur(grams * quote.prices[metal])}) à ${selected.name}, gratuitement.`
+        : `Vendre ${formatWeight(grams, unit)} ${METAL_OF[metal]} : ${selected.name} reçoit ${formatEur(sale?.received ?? 0)} (${selected.identifier}), après ${formatEur(sale?.fees ?? 0)} de frais${abroad ? `, dont ${FEES.saleAbroadFixed} € pour un compte à l’étranger` : ''}.`;
 
   function saveBeneficiary() {
     try {
@@ -82,6 +89,9 @@ export default function TransfersScreen() {
     setMessage(null);
     if (!selected) return setMessage({ ok: false, text: 'Choisis un bénéficiaire.' });
     if (grams <= 0) return setMessage({ ok: false, text: 'Indique un montant.' });
+    if (sale && sale.received <= 0) {
+      return setMessage({ ok: false, text: 'Montant trop faible pour couvrir les frais du virement.' });
+    }
     if (grams > account.holdings[metal] + 1e-9) {
       return setMessage({ ok: false, text: `Solde ${METAL_OF[metal]} insuffisant.` });
     }
@@ -94,7 +104,9 @@ export default function TransfersScreen() {
     const q = { unit: amountUnit, value };
     try {
       commit((acc, p) =>
-        kind === 'member' ? transferToMember(acc, p, metal, q, selected) : transferToIban(acc, p, metal, q, selected),
+        kind === 'member'
+          ? transferToMember(acc, p, metal, q, selected)
+          : transferToIban(acc, p, metal, q, selected, speed),
       );
       setText('');
       setMessage({ ok: true, text: `Virement envoyé à ${selected.name}.` });
@@ -125,7 +137,7 @@ export default function TransfersScreen() {
         <Hint>
           {kind === 'member'
             ? 'Le métal passe directement de ton coffre à celui du membre : immédiat et sans frais.'
-            : 'Le métal est vendu au cours du moment, puis les euros partent par virement SEPA.'}
+            : `Le métal est vendu au cours du moment, puis les euros partent par virement SEPA. Frais : ${(FEES.sale * 100).toLocaleString('fr-FR')}\u00a0% (+ ${FEES.saleAbroadFixed}\u00a0€ vers un compte hors de France).`}
         </Hint>
 
         <SectionTitle
@@ -218,8 +230,10 @@ export default function TransfersScreen() {
           <Hint>Disponible : {formatWeight(account.holdings[metal], unit)}</Hint>
         </View>
 
+        {kind === 'iban' && <SpeedPicker value={speed} onChange={setSpeed} />}
+
         <View style={styles.block}>
-          <Label>Montant</Label>
+          <Label>{kind === 'iban' ? 'Montant (en euros : montant reçu par le bénéficiaire)' : 'Montant'}</Label>
           <AmountInput text={text} onChangeText={setText} unit={amountUnit} onUnitChange={setAmountUnit} />
         </View>
 

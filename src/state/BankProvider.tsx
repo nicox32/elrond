@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
-import { createAccount, recordBalance } from '../logic/ledger';
+import { applyDormancy, createAccount, recordBalance } from '../logic/ledger';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
@@ -136,8 +136,12 @@ export function BankProvider({ children }: { children: ReactNode }) {
         quoteRef.current = cached;
         setQuote(cached);
       }
-      accountRef.current = acc;
-      setAccount(acc);
+      // Ouverture : prélève les frais d'oxydation dus depuis la dernière visite.
+      const prices = (cached ?? quoteRef.current).prices;
+      const charged = acc ? applyDormancy(acc, prices) : null;
+      if (charged && charged !== acc) saveAccount(charged);
+      accountRef.current = charged;
+      setAccount(charged);
       setNeedsPin(!!acc && !pinSet);
       setLoading(false);
       refreshPrices();
@@ -182,7 +186,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
       const acc = accountRef.current;
       if (!acc) throw new Error('Aucun compte ouvert.');
       const prices = quoteRef.current.prices;
-      const next = recordBalance(op(acc, prices), prices);
+      // Les frais d'oxydation dus sont prélevés avant l'opération (qui, elle, remet le compteur à zéro).
+      const next = recordBalance(op(applyDormancy(acc, prices), prices), prices);
       persist(next);
       return next;
     },

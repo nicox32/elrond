@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Platform, StyleSheet, Switch, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
@@ -46,6 +47,11 @@ export default function ProfileScreen() {
         <Row label="Compte ouvert le" value={formatDate(account.createdAt)} />
       </Card>
 
+      <Card style={{ paddingVertical: 4 }}>
+        <LinkRow label="Comptes enfants" hint={`${account.children.length} compte(s) · gratuit`} to="/enfants" />
+        <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
+      </Card>
+
       <SectionTitle>Affichage</SectionTitle>
       <Label>Unité de poids</Label>
       <Segmented
@@ -84,6 +90,32 @@ export default function ProfileScreen() {
   );
 }
 
+function LinkRow({
+  label,
+  hint,
+  to,
+  border,
+}: {
+  label: string;
+  hint: string;
+  to: '/enfants' | '/tarifs';
+  border?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={() => router.push(to)}
+      style={[styles.link, border && styles.linkBorder]}
+      accessibilityRole="link"
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={styles.switchLabel}>{label}</Text>
+        <Hint>{hint}</Hint>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </Pressable>
+  );
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <View>
@@ -98,6 +130,9 @@ function Row({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   rowLabel: { color: colors.textMuted, fontSize: 11 },
   rowValue: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  link: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10 },
+  linkBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  chevron: { color: colors.textMuted, fontSize: 22 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   switchLabel: { color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 2 },
 });

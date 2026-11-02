@@ -1,5 +1,7 @@
+import { DEFERRED_DAYS, FEES, type SaleSpeed } from './fees.ts';
 import {
   type Account,
+  type ChildAccount,
   type BalancePoint,
   type Beneficiary,
   type Holdings,
@@ -9,10 +11,8 @@ import {
   type Quantity,
   type Transaction,
   type TransactionKind,
+  type Wallet,
 } from './types.ts';
-
-/** Écart achat/vente appliqué aux achats, ventes, conversions et virements vers IBAN (0,5 %). */
-export const SPREAD = 0.005;
 
 /** Une once troy, en grammes. */
 export const TROY_OUNCE = 31.1034768;
@@ -45,16 +45,18 @@ export function emptyHoldings(): Holdings {
   return { gold: 0, silver: 0, platinum: 0 };
 }
 
+/** Prix effectif d'un gramme à l'achat, frais de gestion compris (frais en part du montant payé). */
 export function buyPrice(prices: Prices, metal: Metal): number {
-  return prices[metal] * (1 + SPREAD);
+  return prices[metal] / (1 - FEES.buy[metal]);
 }
 
-export function sellPrice(prices: Prices, metal: Metal): number {
-  return prices[metal] * (1 - SPREAD);
+/** Prix net d'un gramme à la revente par virement, hors frais fixe vers l'étranger. */
+export function sellPrice(prices: Prices, metal: Metal, speed: SaleSpeed = 'deferred'): number {
+  return prices[metal] * (1 - FEES.sale - (speed === 'immediate' ? FEES.immediateSpread : 0));
 }
 
-/** Valeur de revente du compte en euros, par métal et au total. */
-export function accountValue(account: Pick<Account, 'holdings'>, prices: Prices) {
+/** Valeur de revente d'un compte en euros (virement différé en France), par métal et au total. */
+export function accountValue(account: Pick<Wallet, 'holdings'>, prices: Prices) {
   const byMetal = emptyHoldings();
   let total = 0;
   for (const m of METALS) {
@@ -91,6 +93,7 @@ export function createAccount(holder: string, now = new Date()): Account {
     holdings: emptyHoldings(),
     transactions: [],
     beneficiaries: [],
+    children: [],
     balanceHistory: [],
     settings: { unit: 'g', biometrics: false },
   };
@@ -100,7 +103,10 @@ export function createAccount(holder: string, now = new Date()): Account {
 export function migrateAccount(raw: unknown): Account | null {
   if (!raw || typeof raw !== 'object') return null;
   const a = raw as Record<string, any>;
-  if (a.version === 2) return a as Account;
+  if (a.version === 2) {
+    // Champs ajoutés au fil des versions.
+    return { ...(a as Account), children: Array.isArray(a.children) ? a.children : [] };
+  }
   if (typeof a.holder !== 'string') return null;
 
   // Version 1 : or et argent seulement, champs goldGrams / silverGrams.
@@ -138,15 +144,16 @@ export function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function apply(
-  account: Account,
+function apply<W extends Wallet>(
+  wallet: W,
   kind: TransactionKind,
   deltas: Partial<Holdings>,
   eur: number,
   label: string,
   now: Date,
-): Account {
-  const holdings = { ...account.holdings };
+  fees = 0,
+): W {
+  const holdings = { ...wallet.holdings };
   const full = emptyHoldings();
   for (const m of METALS) {
     const d = deltas[m] ?? 0;
@@ -165,7 +172,8 @@ function apply(
     eur: round(eur, 2),
     label,
   };
-  return { ...account, holdings, transactions: [tx, ...account.transactions] };
+  if (fees > 0) tx.fees = round(fees, 2);
+  return { ...wallet, holdings, transactions: [tx, ...wallet.transactions] };
 }
 
 function assertPositive(n: number, what: string) {
@@ -186,23 +194,68 @@ export function toGrams(q: Quantity, pricePerGram: number): number {
   }
 }
 
-/** Achète du métal, payé par carte bancaire (fictive). Saisie en euros, grammes ou onces. */
+const SPEED_LABEL: Record<SaleSpeed, string> = {
+  immediate: 'virement immédiat',
+  deferred: `virement différé J+${DEFERRED_DAYS}`,
+};
+
+/** Détail chiffré d'un achat, pour l'aperçu et l'opération. */
+export function quoteBuy(prices: Prices, metal: Metal, q: Quantity) {
+  const grams = toGrams(q, buyPrice(prices, metal));
+  const paid = grams * buyPrice(prices, metal);
+  return { grams, paid, fees: paid - grams * prices[metal] };
+}
+
+/** Achète du métal, payé par carte bancaire (fictive). Saisie en euros (montant payé), grammes ou onces. */
 export function buy(account: Account, prices: Prices, metal: Metal, q: Quantity, now = new Date()): Account {
   assertPositive(q.value, 'La quantité');
-  const price = buyPrice(prices, metal);
-  const grams = toGrams(q, price);
-  return apply(account, 'buy', { [metal]: grams }, grams * price, `Achat ${METAL_OF[metal]}`, now);
+  const { grams, paid, fees } = quoteBuy(prices, metal, q);
+  return apply(account, 'buy', { [metal]: grams }, paid, `Achat ${METAL_OF[metal]}`, now, fees);
 }
 
-/** Vend du métal ; les euros sont versés sur le compte bancaire du titulaire (fictif). */
-export function sell(account: Account, prices: Prices, metal: Metal, q: Quantity, now = new Date()): Account {
+/**
+ * Détail chiffré d'une revente par virement. Saisie en euros = montant reçu net de frais.
+ * `abroad` : compte bancaire hors de France (frais fixe en plus).
+ */
+export function quoteSale(prices: Prices, metal: Metal, q: Quantity, speed: SaleSpeed, abroad = false) {
+  const net = sellPrice(prices, metal, speed);
+  const fixed = abroad ? FEES.saleAbroadFixed : 0;
+  const grams = q.unit === 'eur' ? (q.value + fixed) / net : toGrams(q, net);
+  const received = grams * net - fixed;
+  return { grams, received, fees: grams * prices[metal] - received };
+}
+
+/** Vend du métal ; les euros sont versés sur le compte bancaire du titulaire (fictif, en France). */
+export function sell(
+  account: Account,
+  prices: Prices,
+  metal: Metal,
+  q: Quantity,
+  speed: SaleSpeed = 'deferred',
+  now = new Date(),
+): Account {
   assertPositive(q.value, 'La quantité');
-  const price = sellPrice(prices, metal);
-  const grams = toGrams(q, price);
-  return apply(account, 'sell', { [metal]: -grams }, grams * price, `Vente ${METAL_OF[metal]}`, now);
+  const { grams, received, fees } = quoteSale(prices, metal, q, speed);
+  return apply(
+    account,
+    'sell',
+    { [metal]: -grams },
+    received,
+    `Vente ${METAL_OF[metal]} · ${SPEED_LABEL[speed]}`,
+    now,
+    fees,
+  );
 }
 
-/** Convertit un métal en un autre : vente puis achat, l'écart s'applique deux fois. */
+/** Détail chiffré d'une conversion : revente (frais de conversion) puis achat (frais d'achat du métal reçu). */
+export function quoteConvert(prices: Prices, from: Metal, to: Metal, q: Quantity) {
+  const grams = toGrams(q, prices[from]);
+  const gross = grams * prices[from];
+  const received = (gross * (1 - FEES.conversion) * (1 - FEES.buy[to])) / prices[to];
+  return { grams, gross, received, fees: gross - received * prices[to] };
+}
+
+/** Convertit un métal en un autre. Saisie en euros = valeur au cours du métal cédé. */
 export function convert(
   account: Account,
   prices: Prices,
@@ -213,16 +266,15 @@ export function convert(
 ): Account {
   assertPositive(q.value, 'La quantité');
   if (from === to) throw new LedgerError('Choisis deux métaux différents.');
-  const grams = toGrams(q, sellPrice(prices, from));
-  const eur = grams * sellPrice(prices, from);
-  const received = eur / buyPrice(prices, to);
+  const { grams, gross, received, fees } = quoteConvert(prices, from, to, q);
   return apply(
     account,
     'convert',
     { [from]: -grams, [to]: received },
-    eur,
+    gross,
     `${METAL_LABEL[from]} → ${METAL_LABEL[to]}`,
     now,
+    fees,
   );
 }
 
@@ -251,26 +303,33 @@ export function transferToMember(
   );
 }
 
-/** Virement en euros vers un IBAN : le métal est vendu, puis les euros sont envoyés. */
+/** Un IBAN hors de France entraîne le frais fixe de virement vers l'étranger. */
+export function isForeignIban(iban: string): boolean {
+  return !iban.replace(/\s/g, '').toUpperCase().startsWith('FR');
+}
+
+/** Virement en euros vers un IBAN : le métal est vendu, puis les euros sont envoyés. Saisie en euros = montant reçu. */
 export function transferToIban(
   account: Account,
   prices: Prices,
   metal: Metal,
   q: Quantity,
   beneficiary: Beneficiary,
+  speed: SaleSpeed = 'deferred',
   now = new Date(),
 ): Account {
   assertPositive(q.value, 'Le montant');
   if (beneficiary.kind !== 'iban') throw new LedgerError('Ce bénéficiaire n’a pas d’IBAN.');
-  const price = sellPrice(prices, metal);
-  const grams = toGrams(q, price);
+  const { grams, received, fees } = quoteSale(prices, metal, q, speed, isForeignIban(beneficiary.identifier));
+  if (received <= 0) throw new LedgerError('Montant trop faible pour couvrir les frais du virement.');
   return apply(
     account,
     'transfer_iban',
     { [metal]: -grams },
-    grams * price,
-    `Virement SEPA à ${beneficiary.name}`,
+    received,
+    `Virement SEPA à ${beneficiary.name} · ${SPEED_LABEL[speed]}`,
     now,
+    fees,
   );
 }
 
@@ -318,20 +377,20 @@ export function removeBeneficiary(account: Account, id: string): Account {
 }
 
 /**
- * Euros nets placés sur le compte : achats − ventes − virements sortants.
- * Les conversions ne déplacent pas d'argent (leur coût apparaît dans la plus-value).
+ * Euros nets placés sur le compte : achats − ventes − virements sortants ± transferts familiaux.
+ * Conversions et frais d'oxydation ne déplacent pas d'argent : leur coût apparaît dans la plus-value.
  */
-export function netInvested(account: Pick<Account, 'transactions'>): number {
+export function netInvested(account: Pick<Wallet, 'transactions'>): number {
   let total = 0;
   for (const tx of account.transactions) {
-    if (tx.kind === 'buy') total += tx.eur;
-    else if (tx.kind !== 'convert') total -= tx.eur;
+    if (tx.kind === 'buy' || tx.kind === 'family_in') total += tx.eur;
+    else if (tx.kind !== 'convert' && tx.kind !== 'fee_dormancy') total -= tx.eur;
   }
   return round(total, 2);
 }
 
 /** Plus ou moins-value latente : valeur de revente actuelle − euros nets placés. */
-export function unrealizedGain(account: Account, prices: Prices) {
+export function unrealizedGain(account: Wallet, prices: Prices) {
   const invested = netInvested(account);
   const gain = accountValue(account, prices).total - invested;
   return { invested, gain, percent: invested > 0 ? (gain / invested) * 100 : 0 };
@@ -351,4 +410,136 @@ export function recordBalance(account: Account, prices: Prices, now = new Date()
     history.push(point);
   }
   return { ...account, balanceHistory: history.slice(-MAX_BALANCE_POINTS) };
+}
+
+// ——— Comptes enfants ———————————————————————————————————————————————
+
+export function addChild(account: Account, name: string, now = new Date()) {
+  const clean = name.trim();
+  if (!clean) throw new LedgerError('Indique le prénom de l’enfant.');
+  const child: ChildAccount = {
+    id: newId(),
+    name: clean,
+    createdAt: now.toISOString(),
+    holdings: emptyHoldings(),
+    transactions: [],
+  };
+  return { account: { ...account, children: [...account.children, child] }, child };
+}
+
+function findChild(account: Account, childId: string): ChildAccount {
+  const child = account.children.find((c) => c.id === childId);
+  if (!child) throw new LedgerError('Compte enfant introuvable.');
+  return child;
+}
+
+function replaceChild(account: Account, child: ChildAccount): Account {
+  return { ...account, children: account.children.map((c) => (c.id === child.id ? child : c)) };
+}
+
+/** Verse du métal du compte principal vers un compte enfant. Gratuit. */
+export function fundChild(
+  account: Account,
+  prices: Prices,
+  childId: string,
+  metal: Metal,
+  q: Quantity,
+  now = new Date(),
+): Account {
+  assertPositive(q.value, 'La quantité');
+  const child = findChild(account, childId);
+  const grams = toGrams(q, prices[metal]);
+  const value = grams * prices[metal];
+  const parent = apply(account, 'family_out', { [metal]: -grams }, value, `Vers le compte de ${child.name}`, now);
+  const credited = apply(child, 'family_in', { [metal]: grams }, value, `Versement de ${account.holder}`, now);
+  return replaceChild(parent, credited);
+}
+
+/** Reprend du métal d'un compte enfant vers le compte principal. Gratuit. */
+export function withdrawFromChild(
+  account: Account,
+  prices: Prices,
+  childId: string,
+  metal: Metal,
+  q: Quantity,
+  now = new Date(),
+): Account {
+  assertPositive(q.value, 'La quantité');
+  const child = findChild(account, childId);
+  const grams = toGrams(q, prices[metal]);
+  const value = grams * prices[metal];
+  const debited = apply(child, 'family_out', { [metal]: -grams }, value, `Vers le compte de ${account.holder}`, now);
+  const parent = apply(account, 'family_in', { [metal]: grams }, value, `Depuis le compte de ${child.name}`, now);
+  return replaceChild(parent, debited);
+}
+
+/** Ferme un compte enfant vide. */
+export function removeChild(account: Account, childId: string): Account {
+  const child = findChild(account, childId);
+  if (METALS.some((m) => child.holdings[m] > DUST)) {
+    throw new LedgerError('Vide d’abord ce compte enfant vers ton compte.');
+  }
+  return { ...account, children: account.children.filter((c) => c.id !== childId) };
+}
+
+// ——— Frais d'oxydation (compte inactif) ————————————————————————————
+
+const DAY_MS = 86_400_000;
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date.getTime());
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+/** Date du dernier mouvement (les frais d'oxydation eux-mêmes ne comptent pas). */
+export function lastMovement(wallet: Wallet): Date {
+  let last = new Date(wallet.createdAt).getTime();
+  for (const tx of wallet.transactions) {
+    if (tx.kind === 'fee_dormancy') continue;
+    last = Math.max(last, new Date(tx.date).getTime());
+  }
+  return new Date(last);
+}
+
+/** Où en est le compte vis-à-vis de l'inactivité. */
+export function dormancyStatus(wallet: Wallet, now = new Date()) {
+  const inactiveFrom = addMonths(lastMovement(wallet), FEES.dormancyAfterMonths);
+  const daysLeft = Math.ceil((inactiveFrom.getTime() - now.getTime()) / DAY_MS);
+  return { inactive: now >= inactiveFrom, inactiveFrom, daysLeft };
+}
+
+/**
+ * Prélève les frais d'oxydation dus : 0,02 % du solde par jour d'inactivité (au-delà de 6 mois sans mouvement),
+ * en métal, jour après jour. N'agit que sur les jours entiers pas encore facturés.
+ */
+export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now = new Date()): W {
+  const { inactive, inactiveFrom } = dormancyStatus(wallet, now);
+  if (!inactive) return wallet;
+  const charged = wallet.dormancyChargedThrough ? new Date(wallet.dormancyChargedThrough).getTime() : 0;
+  const start = Math.max(inactiveFrom.getTime(), charged);
+  const days = Math.floor((now.getTime() - start) / DAY_MS);
+  if (days < 1) return wallet;
+  const through = new Date(start + days * DAY_MS).toISOString();
+  const share = 1 - (1 - FEES.dormancyDaily) ** days;
+  const deltas: Partial<Holdings> = {};
+  let value = 0;
+  for (const m of METALS) {
+    const fee = wallet.holdings[m] * share;
+    if (fee > 0) {
+      deltas[m] = -fee;
+      value += fee * prices[m];
+    }
+  }
+  if (value <= 0) return { ...wallet, dormancyChargedThrough: through };
+  const label = `Frais d’oxydation · ${days} jour${days > 1 ? 's' : ''} d’inactivité`;
+  return { ...apply(wallet, 'fee_dormancy', deltas, value, label, now, value), dormancyChargedThrough: through };
+}
+
+/** Applique les frais d'oxydation au compte principal et à chaque compte enfant. */
+export function applyDormancy(account: Account, prices: Prices, now = new Date()): Account {
+  const parent = chargeDormancy(account, prices, now);
+  const children = account.children.map((c) => chargeDormancy(c, prices, now));
+  const changed = parent !== account || children.some((c, i) => c !== account.children[i]);
+  return changed ? { ...parent, children } : account;
 }

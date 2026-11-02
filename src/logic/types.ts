@@ -28,7 +28,18 @@ export interface Quantity {
   value: number;
 }
 
-export type TransactionKind = 'buy' | 'sell' | 'convert' | 'transfer_member' | 'transfer_iban';
+export type TransactionKind =
+  | 'buy'
+  | 'sell'
+  | 'convert'
+  | 'transfer_member'
+  | 'transfer_iban'
+  /** Métal envoyé vers un autre compte de la famille (parent ↔ enfant). */
+  | 'family_out'
+  /** Métal reçu d'un autre compte de la famille. */
+  | 'family_in'
+  /** Frais d'oxydation prélevés sur un compte inactif. */
+  | 'fee_dormancy';
 
 export interface Transaction {
   id: string;
@@ -36,8 +47,13 @@ export interface Transaction {
   date: string; // ISO
   /** Variation des grammes détenus, par métal (négatif = sortie). */
   deltas: Holdings;
-  /** Montant en euros de l'opération. */
+  /**
+   * Montant en euros de l'opération : payé (achat), reçu ou envoyé net de frais (vente, virement SEPA),
+   * valeur au cours du moment (conversion, virement de métal, frais d'oxydation).
+   */
   eur: number;
+  /** Frais facturés sur l'opération, en euros. */
+  fees?: number;
   label: string;
 }
 
@@ -61,16 +77,29 @@ export interface Settings {
   biometrics: boolean;
 }
 
-export interface Account {
+/** Ce qu'un compte détient et son historique (compte principal ou compte enfant). */
+export interface Wallet {
+  holdings: Holdings;
+  transactions: Transaction[];
+  createdAt: string;
+  /** Les frais d'oxydation ont été prélevés jusqu'à cette date (ISO). */
+  dormancyChargedThrough?: string;
+}
+
+/** Compte enfant, géré depuis le compte principal. Gratuit. */
+export interface ChildAccount extends Wallet {
+  id: string;
+  name: string;
+}
+
+export interface Account extends Wallet {
   version: 2;
   holder: string;
   /** Identifiant membre, utilisé pour recevoir des virements de métal. */
   memberId: string;
   iban: string;
-  createdAt: string;
-  holdings: Holdings;
-  transactions: Transaction[];
   beneficiaries: Beneficiary[];
+  children: ChildAccount[];
   balanceHistory: BalancePoint[];
   settings: Settings;
 }

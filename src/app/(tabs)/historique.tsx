@@ -13,7 +13,7 @@ type Filter = 'all' | 'trade' | 'transfer';
 const MATCH: Record<Filter, (k: TransactionKind) => boolean> = {
   all: () => true,
   trade: (k) => k === 'buy' || k === 'sell' || k === 'convert',
-  transfer: (k) => k === 'transfer_member' || k === 'transfer_iban',
+  transfer: (k) => k === 'transfer_member' || k === 'transfer_iban' || k === 'family_out' || k === 'family_in',
 };
 
 export default function HistoryScreen() {

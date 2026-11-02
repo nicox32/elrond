@@ -11,14 +11,18 @@ const ICON: Record<TransactionKind, string> = {
   convert: '⇄',
   transfer_member: '→',
   transfer_iban: '↗',
+  family_out: '↘',
+  family_in: '↙',
+  fee_dormancy: '!',
 };
 
 export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit }) {
   const parts = METALS.filter((m) => tx.deltas[m]).map(
     (m) => `${formatWeightDelta(tx.deltas[m], unit)} ${METAL_LABEL[m].toLowerCase()}`,
   );
-  const incoming = tx.kind === 'buy';
+  const incoming = tx.kind === 'buy' || tx.kind === 'family_in';
   const neutral = tx.kind === 'convert';
+  const fee = tx.kind === 'fee_dormancy';
 
   return (
     <View style={styles.row}>
@@ -30,9 +34,10 @@ export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit
           {tx.label}
         </Text>
         <Text style={styles.detail}>{parts.join(' · ')}</Text>
+        {tx.fees && !fee ? <Text style={styles.fees}>dont {formatEur(tx.fees)} de frais</Text> : null}
       </View>
       <View style={styles.right}>
-        <Text style={[styles.amount, incoming && { color: colors.up }]}>
+        <Text style={[styles.amount, incoming && { color: colors.up }, fee && { color: colors.down }]}>
           {neutral ? '' : incoming ? '+' : '−'}
           {formatEur(tx.eur)}
         </Text>
@@ -56,6 +61,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, minWidth: 0 },
   label: { color: colors.text, fontSize: 15, fontWeight: '600' },
   detail: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  fees: { color: colors.textMuted, fontSize: 11, marginTop: 1, fontStyle: 'italic' },
   right: { alignItems: 'flex-end' },
   amount: { color: colors.text, fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   date: { color: colors.textMuted, fontSize: 11, marginTop: 2 },

@@ -13,36 +13,45 @@ import {
   migrateAccount,
   recordBalance,
   sell,
-  SPREAD,
   transferToIban,
   transferToMember,
   TROY_OUNCE,
   unrealizedGain,
 } from '../src/logic/ledger.ts';
+import { FEES } from '../src/logic/fees.ts';
 import { fetchLivePrices, usdOunceToEurGram } from '../src/logic/prices.ts';
 
 const prices = { gold: 100, silver: 1, platinum: 30 };
 const close = (a: number, b: number, eps = 1e-4) => assert.ok(Math.abs(a - b) < eps, `${a} ≉ ${b}`);
 const VALID_IBAN = 'FR76 3000 6000 0112 3456 7890 189';
 
-test('achat en euros, en grammes et en onces', () => {
+test('achat en euros, en grammes et en onces : frais en part du montant payé', () => {
   let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'eur', value: 1000 });
-  close(acc.holdings.gold, 1000 / (100 * (1 + SPREAD)));
+  close(acc.holdings.gold, (1000 * (1 - FEES.buy.gold)) / 100); // 2,8 % → 9,72 g
   close(acc.transactions[0].eur, 1000, 0.01);
+  close(acc.transactions[0].fees ?? 0, 28, 0.01);
 
   acc = buy(createAccount('Test'), prices, 'silver', { unit: 'g', value: 50 });
   close(acc.holdings.silver, 50);
-  close(acc.transactions[0].eur, 50 * (1 + SPREAD), 0.01);
+  close(acc.transactions[0].eur, 50 / (1 - FEES.buy.silver), 0.01); // 6,8 %
 
   acc = buy(createAccount('Test'), prices, 'platinum', { unit: 'oz', value: 1 });
   close(acc.holdings.platinum, TROY_OUNCE);
 });
 
-test('acheter puis tout revendre coûte exactement l’écart', () => {
-  let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'eur', value: 1000 });
-  const value = accountValue(acc, prices).total;
-  close(value, (1000 * (1 - SPREAD)) / (1 + SPREAD), 1e-3);
-  acc = sell(acc, prices, 'gold', { unit: 'eur', value });
+test('revente : 0,8 % en différé, 0,8 % + 2,8 % en immédiat', () => {
+  const start = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
+  let acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'deferred');
+  close(acc.transactions[0].eur, 100 * (1 - 0.008), 0.01);
+  close(acc.transactions[0].fees ?? 0, 0.8, 0.01);
+  acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'immediate');
+  close(acc.transactions[0].eur, 100 * (1 - 0.008 - 0.028), 0.01);
+  // saisie en euros = montant reçu
+  acc = sell(start, prices, 'gold', { unit: 'eur', value: 99.2 }, 'deferred');
+  close(acc.holdings.gold, 9);
+  // tout revendre
+  const value = accountValue(start, prices).total;
+  acc = sell(start, prices, 'gold', { unit: 'eur', value }, 'deferred');
   close(acc.holdings.gold, 0);
 });
 
@@ -59,11 +68,12 @@ test('montants invalides refusés', () => {
   }
 });
 
-test('conversion or → platine', () => {
+test('conversion or → platine : 0,8 % + frais d’achat du métal reçu', () => {
   let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
   acc = convert(acc, prices, 'gold', 'platinum', { unit: 'g', value: 3 });
   close(acc.holdings.gold, 7);
-  close(acc.holdings.platinum, (300 * (1 - SPREAD)) / (30 * (1 + SPREAD)));
+  // 0,8 % de frais de conversion puis 6,8 % de frais d'achat du platine
+  close(acc.holdings.platinum, (300 * (1 - 0.008) * (1 - 0.068)) / 30);
   assert.throws(() => convert(acc, prices, 'gold', 'gold', { unit: 'g', value: 1 }), LedgerError);
 });
 
@@ -76,7 +86,7 @@ test('virement à un membre : gratuit, en grammes', () => {
   assert.equal(acc.beneficiaries.length, 1);
 });
 
-test('virement SEPA : vend le métal, IBAN vérifié', () => {
+test('virement SEPA : vend le métal, IBAN vérifié, frais fixe vers l’étranger', () => {
   assert.ok(isValidIban(VALID_IBAN));
   assert.ok(!isValidIban('FR76 3000 6000 0112 3456 7890 188'));
   for (let i = 0; i < 20; i++) assert.ok(isValidIban(createAccount('X').iban));
@@ -84,8 +94,19 @@ test('virement SEPA : vend le métal, IBAN vérifié', () => {
   assert.throws(() => addBeneficiary(start, 'iban', 'Bob', 'FR00 1234'), LedgerError);
   const { account, beneficiary } = addBeneficiary(start, 'iban', 'Bob', VALID_IBAN.replace(/ /g, ''));
   assert.equal(beneficiary.identifier, VALID_IBAN);
-  const acc = transferToIban(account, prices, 'gold', { unit: 'eur', value: 199 }, beneficiary);
-  close(acc.holdings.gold, 10 - 199 / (100 * (1 - SPREAD)));
+  // France, différé : Bob reçoit 198,40 € pour 2 g
+  let acc = transferToIban(account, prices, 'gold', { unit: 'g', value: 2 }, beneficiary, 'deferred');
+  close(acc.transactions[0].eur, 198.4, 0.01);
+  // Étranger (Belgique), immédiat : saisie en euros = montant reçu, + 30 € de frais fixe
+  const be = addBeneficiary(account, 'iban', 'Zoé', 'BE68539007547034');
+  acc = transferToIban(be.account, prices, 'gold', { unit: 'eur', value: 100 }, be.beneficiary, 'immediate');
+  close(acc.holdings.gold, 10 - 130 / (100 * (1 - 0.036)));
+  close(acc.transactions[0].eur, 100, 0.01);
+  // trop faible pour couvrir les 30 €
+  assert.throws(
+    () => transferToIban(be.account, prices, 'gold', { unit: 'g', value: 0.1 }, be.beneficiary, 'deferred'),
+    LedgerError,
+  );
 });
 
 test('historique du solde : un point par minute au plus', () => {
@@ -96,7 +117,7 @@ test('historique du solde : un point par minute au plus', () => {
   assert.equal(acc.balanceHistory.length, 1);
   acc = recordBalance(acc, prices, new Date(t0.getTime() + 120_000));
   assert.equal(acc.balanceHistory.length, 2);
-  close(acc.balanceHistory[1].total, 100 * (1 - SPREAD), 0.01);
+  close(acc.balanceHistory[1].total, 100 * (1 - FEES.sale), 0.01);
 });
 
 test('migration d’un compte de la première version', () => {
@@ -145,8 +166,8 @@ test('plus-value : valeur actuelle moins euros nets placés', () => {
   acc = sell(acc, prices, 'gold', { unit: 'eur', value: 200 });
   const higher = { ...prices, gold: 110 };
   const r = unrealizedGain(acc, higher);
-  close(r.invested, 800, 0.01);
-  close(r.gain, acc.holdings.gold * 110 * (1 - SPREAD) - 800, 0.01);
+  close(r.invested, 1000 - acc.transactions[0].eur, 0.01);
+  close(r.gain, acc.holdings.gold * 110 * (1 - FEES.sale) - (1000 - acc.transactions[0].eur), 0.01);
 });
 
 test('relevés de cours : 24 h gardées, relevés rapprochés fusionnés, cours non réels ignorés', async () => {
@@ -186,4 +207,52 @@ test('cours réels : taux de change gardé 10 minutes', async () => {
   assert.equal(fxCalls, 1);
   await fetchLivePrices(fetchFn, new Date(t + 11 * 60_000));
   assert.equal(fxCalls, 2);
+});
+
+test('comptes enfants : gratuits, alimentés et repris depuis le compte principal', async () => {
+  const { addChild, fundChild, withdrawFromChild, removeChild } = await import('../src/logic/ledger.ts');
+  let acc = buy(createAccount('Parent'), prices, 'gold', { unit: 'g', value: 10 });
+  const r = addChild(acc, 'Léo');
+  acc = r.account;
+  assert.throws(() => addChild(acc, '  '), LedgerError);
+  acc = fundChild(acc, prices, r.child.id, 'gold', { unit: 'g', value: 4 });
+  close(acc.holdings.gold, 6);
+  close(acc.children[0].holdings.gold, 4);
+  assert.equal(acc.children[0].transactions[0].kind, 'family_in');
+  assert.equal(acc.children[0].transactions[0].fees, undefined); // gratuit
+  assert.throws(() => fundChild(acc, prices, r.child.id, 'gold', { unit: 'g', value: 100 }), LedgerError);
+  assert.throws(() => removeChild(acc, r.child.id), LedgerError); // pas vide
+  acc = withdrawFromChild(acc, prices, r.child.id, 'gold', { unit: 'g', value: 4 });
+  close(acc.holdings.gold, 10);
+  acc = removeChild(acc, r.child.id);
+  assert.equal(acc.children.length, 0);
+});
+
+test('frais d’oxydation : 0,02 %/jour après 6 mois sans mouvement, sur chaque compte', async () => {
+  const { applyDormancy, dormancyStatus, addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const t0 = new Date('2026-01-10T12:00:00Z');
+  const day = 86_400_000;
+  let acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
+  const r = addChild(acc, 'Léa', t0);
+  acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 50 }, t0);
+  // 5 mois plus tard : rien
+  const m5 = new Date('2026-06-10T12:00:00Z');
+  assert.equal(applyDormancy(acc, prices, m5), acc);
+  assert.ok(!dormancyStatus(acc, m5).inactive);
+  // 6 mois + 10 jours : 10 jours facturés sur les deux comptes
+  const inactiveFrom = new Date('2026-07-10T12:00:00Z');
+  const later = new Date(inactiveFrom.getTime() + 10 * day);
+  const charged = applyDormancy(acc, prices, later);
+  const share = 1 - (1 - 0.0002) ** 10;
+  close(charged.holdings.gold, 50 * (1 - share));
+  close(charged.children[0].holdings.gold, 50 * (1 - share));
+  assert.equal(charged.transactions[0].kind, 'fee_dormancy');
+  // relancé le même jour : pas de double facturation
+  assert.equal(applyDormancy(charged, prices, new Date(later.getTime() + 3_600_000)), charged);
+  // 5 jours de plus : seuls ces 5 jours sont facturés
+  const again = applyDormancy(charged, prices, new Date(later.getTime() + 5 * day));
+  close(again.holdings.gold, 50 * (1 - share) * (1 - 0.0002) ** 5);
+  // les frais ne comptent pas comme un mouvement ; un vrai mouvement remet le compteur à zéro
+  const moved = buy(again, prices, 'gold', { unit: 'g', value: 1 }, new Date(later.getTime() + 5 * day));
+  assert.ok(!dormancyStatus(moved, new Date(later.getTime() + 6 * day)).inactive);
 });

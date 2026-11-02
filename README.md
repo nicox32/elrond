@@ -48,7 +48,15 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   par empreinte en option, blocage de 30 s après 5 codes faux. Seule une empreinte salée du code est
   conservée, dans le trousseau sécurisé du téléphone.
 - **Graphique d'évolution du solde** (24 h, 7 j, 30 j, tout) et **plus-value latente**.
-- Écart achat/vente de 0,5 % sur le cours réel.
+- **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
+  achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;
+  écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
+  envois et réceptions entre membres gratuits.
+- **Comptes enfants gratuits** : un coffre par enfant, alimenté et repris depuis le compte principal
+  sans frais (`docs/compte-enfant.png`).
+- **Frais d'oxydation** : 0,02 % du solde par jour, prélevés en métal, quand un compte (principal ou
+  enfant) n'a connu aucun mouvement depuis plus de 6 mois glissants. L'appli prévient un mois avant
+  (`docs/oxydation.png`).
 
 Sources des cours : [gold-api.com](https://gold-api.com) (métaux) et
 [Frankfurter](https://frankfurter.dev) / [open.er-api.com](https://open.er-api.com) (taux USD → EUR).

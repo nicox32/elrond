@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BalanceChart } from '../../components/BalanceChart';
+import { DormancyNotice } from '../../components/DormancyNotice';
 import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
@@ -42,6 +43,7 @@ export default function AccountScreen() {
     <Screen testID="screen-compte">
       <Text style={styles.hello}>Bonjour {account.holder}</Text>
       <PriceStatus />
+      <DormancyNotice wallet={account} />
 
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Solde total</Text>
@@ -80,6 +82,24 @@ export default function AccountScreen() {
       <Card>
         <BalanceChart points={account.balanceHistory} />
       </Card>
+
+      <SectionTitle
+        right={
+          <Pressable onPress={() => router.push('/enfants')}>
+            <Text style={ui.link}>{account.children.length ? 'Gérer' : 'Ouvrir'}</Text>
+          </Pressable>
+        }
+      >
+        Comptes enfants
+      </SectionTitle>
+      <Pressable onPress={() => router.push('/enfants')} style={styles.kids} accessibilityRole="button">
+        <Text style={styles.kidsText}>
+          {account.children.length === 0
+            ? 'Ouvre gratuitement un compte en or, argent ou platine pour chacun de tes enfants.'
+            : account.children.map((c) => `${c.name} · ${formatEur(accountValue(c, quote.prices).total)}`).join('\n')}
+        </Text>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
 
       <SectionTitle>Mes coffres</SectionTitle>
       <Card style={{ paddingVertical: 4 }}>
@@ -176,5 +196,16 @@ const styles = StyleSheet.create({
   vaultWeight: { color: colors.text, fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   vaultValue: { color: colors.textMuted, fontSize: 12, fontVariant: ['tabular-nums'] },
   chevron: { color: colors.textMuted, fontSize: 22, marginLeft: 2 },
+  kids: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  kidsText: { color: colors.text, fontSize: 14, lineHeight: 21, flex: 1 },
   empty: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
 });
