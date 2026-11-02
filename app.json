@@ -34,10 +34,11 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Orvia utilise Face ID pour déverrouiller ton compte et confirmer tes virements."
+          "faceIDPermission": "Orvia utilise Face ID pour déverrouiller votre compte et confirmer vos virements."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

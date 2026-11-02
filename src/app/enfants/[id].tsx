@@ -7,6 +7,7 @@ import { ChildRules } from '../../components/ChildRules';
 import { CodeConfirm } from '../../components/CodeConfirm';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { MetalPicker } from '../../components/MetalPicker';
+import { StatementCard } from '../../components/Statement';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import {
@@ -524,10 +525,11 @@ export default function ChildScreen() {
       ) : (
         <Card style={{ paddingVertical: 0 }}>
           {child.transactions.slice(0, 20).map((tx) => (
-            <TransactionRow key={tx.id} tx={tx} unit={unit} />
+            <TransactionRow key={tx.id} tx={tx} unit={unit} walletName={`Compte de ${name}`} />
           ))}
         </Card>
       )}
+      <StatementCard wallet={child} walletName={`Compte de ${name}`} />
 
       {stage === 'minor' && empty && <Button title={`Fermer le compte de ${name}`} variant="danger" onPress={close} />}
       {message && <Message {...message} />}

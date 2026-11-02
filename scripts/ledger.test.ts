@@ -692,3 +692,47 @@ test('fidélité : points modestes pour l’épargne régulière, échange contr
   assert.throws(() => redeemLoyalty(r, p, 50, 'gold', now), LedgerError);
   assert.equal(LOYALTY.minRedeem, 10);
 });
+
+test('relevés PDF : opérations de la période, soldes de début et de fin, avis d’opération', async () => {
+  const { statementHtml, operationHtml } = await import('../src/logic/statement.ts');
+  const { creditCash } = await import('../src/logic/ledger.ts');
+  const p = { gold: 100, silver: 1, platinum: 30, ecu: 104 };
+  let acc = createAccount('Nicolas', new Date('2026-09-01'));
+  acc = buy(acc, p, 'gold', { unit: 'g', value: 2 }, new Date('2026-09-10'));
+  acc = creditCash(acc, 500, 'transfer', new Date('2026-10-03'));
+  acc = buy(acc, p, 'silver', { unit: 'eur', value: 100 }, new Date('2026-10-05'), 'cash');
+  acc = sell(acc, p, 'gold', { unit: 'g', value: 0.5 }, 'deferred', new Date('2026-11-01'));
+  const now = new Date('2026-11-02T12:00:00');
+  const last = statementHtml({
+    account: acc,
+    wallet: acc,
+    walletName: 'Compte principal',
+    scope: { kind: 'all' },
+    period: 'lastMonth',
+    prices: p,
+    now,
+  });
+  assert.match(last, /Relevé de compte · Compte principal/);
+  assert.match(last, /Crédit du compte d’attente/);
+  assert.match(last, /Achat d’argent · compte d’attente/);
+  assert.doesNotMatch(last, /Vente/); // novembre : hors période
+  assert.match(last, /2 opération\(s\)/);
+  // Solde de début (1er octobre) : 2 g d'or ; de fin (31 octobre) : 400 € en attente
+  assert.match(last, /Solde au 01 octobre 2026<\/div><div>Gold Spot<b>2,000 g/);
+  assert.match(last, /Compte d’attente<b>400,00/);
+  // Coffre Gold Spot seul : l'achat d'argent n'y figure pas
+  const vault = statementHtml({
+    account: acc,
+    wallet: acc,
+    walletName: 'Coffre Gold Spot',
+    scope: { kind: 'metal', metal: 'gold' },
+    period: 'all',
+    prices: p,
+    now,
+  });
+  assert.doesNotMatch(vault, /Achat d’argent/);
+  assert.match(vault, /Vente de Gold Spot/);
+  const avis = operationHtml(acc, 'Compte principal', acc.transactions[0]);
+  assert.match(avis, /Avis d’opération/);
+  assert.match(avis, new RegExp(acc.transactions[0].id));
+});

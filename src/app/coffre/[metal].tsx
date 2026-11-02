@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CustodyNote } from '../../components/Custody';
 import { PriceStatus } from '../../components/PriceStatus';
+import { StatementCard } from '../../components/Statement';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Button, Card, Hint, Screen, SectionTitle } from '../../components/ui';
 import { EcuInfo } from '../../components/EcuInfo';
@@ -74,6 +75,8 @@ export default function VaultScreen() {
       </View>
 
       <CustodyNote />
+
+      <StatementCard walletName={`Coffre ${METAL_LABEL[metal]}`} scope={{ kind: 'metal', metal }} />
 
       <SectionTitle>Mouvements</SectionTitle>
       {txs.length === 0 ? (

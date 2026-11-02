@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } fro
 
 import { PinConfirm } from '../components/PinConfirm';
 import { Segmented } from '../components/Segmented';
+import { StatementCard } from '../components/Statement';
 import { TransactionRow } from '../components/TransactionRow';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { formatEur, parseAmount } from '../logic/format';
@@ -126,13 +127,15 @@ export default function CashScreen() {
           <Label>Les euros en attente ne sont pas investis : ils ne prennent ni ne perdent de valeur.</Label>
         </Card>
 
+        <StatementCard walletName="Compte d’attente" scope={{ kind: 'cash' }} />
+
         <SectionTitle>Mouvements</SectionTitle>
         {txs.length === 0 ? (
           <Hint>Aucun mouvement pour l’instant.</Hint>
         ) : (
           <Card style={{ paddingVertical: 0 }}>
             {txs.map((tx) => (
-              <TransactionRow key={tx.id} tx={tx} unit={account.settings.unit} />
+              <TransactionRow key={tx.id} tx={tx} unit={account.settings.unit} walletName="Compte d’attente" />
             ))}
           </Card>
         )}

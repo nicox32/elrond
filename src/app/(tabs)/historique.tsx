@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { Segmented } from '../../components/Segmented';
+import { StatementCard } from '../../components/Statement';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Title } from '../../components/ui';
 import type { TransactionKind } from '../../logic/types';
@@ -31,6 +32,8 @@ export default function HistoryScreen() {
       ListHeaderComponent={
         <View style={styles.header}>
           <Title>Historique</Title>
+          <StatementCard walletName="Compte principal" />
+          <Text style={styles.tip}>Touchez une opération pour son détail et son avis en PDF.</Text>
           <Segmented
             value={filter}
             onChange={setFilter}
@@ -54,4 +57,5 @@ const styles = StyleSheet.create({
   header: { gap: 14, marginBottom: 6 },
   separator: { height: 1, backgroundColor: colors.border },
   empty: { color: colors.textMuted, fontSize: 14, marginTop: 8 },
+  tip: { color: colors.textMuted, fontSize: 12 },
 });

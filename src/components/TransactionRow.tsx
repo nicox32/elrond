@@ -1,9 +1,11 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatDate, formatEur, formatWeightDelta } from '../logic/format';
 import { METAL_LABEL } from '../logic/ledger';
 import { METALS, type Transaction, type TransactionKind, type WeightUnit } from '../logic/types';
 import { colors } from '../theme';
+import { OperationSheet } from './Statement';
 
 const ICON: Record<TransactionKind, string> = {
   buy: '+',
@@ -22,7 +24,17 @@ const ICON: Record<TransactionKind, string> = {
   loyalty_redeem: '★',
 };
 
-export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit }) {
+export function TransactionRow({
+  tx,
+  unit,
+  walletName = 'Compte principal',
+}: {
+  tx: Transaction;
+  unit: WeightUnit;
+  /** Compte concerné, repris dans l'avis d'opération. */
+  walletName?: string;
+}) {
+  const [open, setOpen] = useState(false);
   const parts = METALS.filter((m) => tx.deltas[m]).map((m) =>
     m === 'ecu'
       ? `${formatWeightDelta(tx.deltas[m], unit, m)} Gold Oria`
@@ -41,7 +53,12 @@ export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit
   const fee = tx.kind === 'fee_dormancy';
 
   return (
-    <View style={styles.row}>
+    <Pressable
+      style={styles.row}
+      onPress={() => setOpen(true)}
+      accessibilityRole="button"
+      accessibilityHint="Détail et avis d’opération en PDF"
+    >
       <View style={styles.icon}>
         <Text style={styles.iconText}>{ICON[tx.kind]}</Text>
       </View>
@@ -64,7 +81,8 @@ export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit
         </Text>
         <Text style={styles.date}>{formatDate(tx.date)}</Text>
       </View>
-    </View>
+      <OperationSheet tx={open ? tx : null} walletName={walletName} onClose={() => setOpen(false)} />
+    </Pressable>
   );
 }
 

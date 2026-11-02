@@ -81,6 +81,10 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   l'épargne régulière — 1 LOU par mois avec au moins 50 € investis (+5 LOU tous les 12 mois consécutifs), 1 LOU par
   500 € achetés, 1 LOU par 250 € payés avec la carte, 1 LOU par anniversaire du compte ; rien sur les ventes,
   conversions ou virements. 1 LOU s'échange contre 1 € de métal sans frais, dès 10 LOU.
+- **Relevés PDF** (`src/logic/statement.ts`, `docs/exemple-releve.pdf`) : relevé de compte par période (ce mois, mois
+  dernier, 12 mois, tout) pour le compte principal (Historique), chaque coffre, chaque compte enfant et le compte
+  d'attente, avec soldes de début et de fin ; avis d'opération en touchant une opération. Téléphone : PDF partagé ou
+  enregistré (expo-print, expo-sharing) ; navigateur : impression « Enregistrer au format PDF ».
 - **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).
