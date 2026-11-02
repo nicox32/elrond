@@ -58,7 +58,7 @@ export function holdingAllowance(years: number): number {
  * au cours du jour ; bonus de parrainage : coût nul.
  */
 export function holdingLots(wallet: Pick<Wallet, 'transactions'>): Record<Metal, Lot[]> {
-  const lots = { gold: [], silver: [], platinum: [] } as Record<Metal, Lot[]>;
+  const lots: Record<Metal, Lot[]> = { gold: [], silver: [], platinum: [], ecu: [] };
   const txs = [...wallet.transactions].sort((a, b) => a.date.localeCompare(b.date));
   for (const tx of txs) {
     const inflows = METALS.filter((m) => tx.deltas[m] > 0);

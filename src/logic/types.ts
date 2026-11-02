@@ -1,13 +1,21 @@
 import type { AlertEvent, PriceAlert } from './alerts.ts';
 
-export type Metal = 'gold' | 'silver' | 'platinum';
+/** Métaux cotés en direct. */
+export type SpotMetal = 'gold' | 'silver' | 'platinum';
 
-export const METALS: Metal[] = ['gold', 'silver', 'platinum'];
+export const SPOT_METALS: SpotMetal[] = ['gold', 'silver', 'platinum'];
 
-/** Prix en euros par gramme, pour chaque métal. */
+/** Actifs détenus : les trois métaux et l'Écu Orvia (jeton d'1 g d'or fin, voir ecu.ts). */
+export type Metal = SpotMetal | 'ecu';
+
+export const METALS: Metal[] = ['gold', 'silver', 'platinum', 'ecu'];
+
+export type SpotPrices = Record<SpotMetal, number>;
+
+/** Prix en euros par gramme pour chaque métal ; pour l'écu, prix d'un écu. */
 export type Prices = Record<Metal, number>;
 
-/** Quantités en grammes, pour chaque métal. */
+/** Quantités en grammes pour chaque métal ; pour l'écu, nombre d'écus (1 écu = 1 g d'or fin). */
 export type Holdings = Record<Metal, number>;
 
 export type PriceSource = 'live' | 'cache' | 'reference';
@@ -90,7 +98,9 @@ export interface Settings {
   unit: WeightUnit;
   biometrics: boolean;
   /** Répartition cible des achats, en % par métal (total 100). */
-  allocation?: Record<Metal, number>;
+  allocation?: Record<SpotMetal, number>;
+  /** Prime de l'Écu Orvia sur l'or contenu (réglage de démonstration). */
+  ecuPremium?: number;
 }
 
 /** Ce qu'un compte détient et son historique (compte principal ou compte enfant). */

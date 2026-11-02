@@ -182,10 +182,10 @@ export default function AccountScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.vaultName}>{METAL_LABEL[m]}</Text>
-              <Text style={styles.vaultPrice}>{formatUnitPrice(quote.prices[m], unit)}</Text>
+              <Text style={styles.vaultPrice}>{formatUnitPrice(quote.prices[m], unit, m)}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.vaultWeight}>{formatWeight(account.holdings[m], unit)}</Text>
+              <Text style={styles.vaultWeight}>{formatWeight(account.holdings[m], unit, m)}</Text>
               <Text style={styles.vaultValue}>{formatEur(value.byMetal[m])}</Text>
             </View>
             <Text style={styles.chevron}>›</Text>

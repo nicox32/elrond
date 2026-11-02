@@ -33,6 +33,7 @@ export const METAL_LABEL: Record<Metal, string> = {
   gold: 'Or',
   silver: 'Argent',
   platinum: 'Platine',
+  ecu: 'Écu Orvia',
 };
 
 /** « d'or », « d'argent », « de platine ». */
@@ -40,10 +41,11 @@ export const METAL_OF: Record<Metal, string> = {
   gold: 'd’or',
   silver: 'd’argent',
   platinum: 'de platine',
+  ecu: 'd’Écus Orvia',
 };
 
 export function emptyHoldings(): Holdings {
-  return { gold: 0, silver: 0, platinum: 0 };
+  return { gold: 0, silver: 0, platinum: 0, ecu: 0 };
 }
 
 /** Prix effectif d'un gramme à l'achat, frais de gestion compris (frais en part du montant payé). */
@@ -61,7 +63,8 @@ export function accountValue(account: Pick<Wallet, 'holdings'>, prices: Prices) 
   const byMetal = emptyHoldings();
   let total = 0;
   for (const m of METALS) {
-    byMetal[m] = account.holdings[m] * sellPrice(prices, m);
+    const held = account.holdings[m] ?? 0;
+    byMetal[m] = held > 0 ? held * sellPrice(prices, m) : 0;
     total += byMetal[m];
   }
   return { byMetal, total };
@@ -107,9 +110,14 @@ export function migrateAccount(raw: unknown): Account | null {
   const a = raw as Record<string, any>;
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
+    // L'Écu Orvia est arrivé après : solde à zéro sur les comptes existants.
+    const withEcu = <W extends { holdings: Record<string, number> }>(w: W): W => ({
+      ...w,
+      holdings: { ...emptyHoldings(), ...w.holdings },
+    });
     return {
-      ...(a as Account),
-      children: Array.isArray(a.children) ? a.children : [],
+      ...withEcu(a as Account),
+      children: Array.isArray(a.children) ? a.children.map(withEcu) : [],
       referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
     };
   }
@@ -128,7 +136,7 @@ export function migrateAccount(raw: unknown): Account | null {
         id: String(t.id),
         kind: kindMap[t.kind] ?? 'buy',
         date: String(t.date),
-        deltas: { gold: Number(t.goldDelta) || 0, silver: Number(t.silverDelta) || 0, platinum: 0 },
+        deltas: { gold: Number(t.goldDelta) || 0, silver: Number(t.silverDelta) || 0, platinum: 0, ecu: 0 },
         eur: Number(t.eur) || 0,
         label: String(t.label ?? ''),
       }))
@@ -136,7 +144,7 @@ export function migrateAccount(raw: unknown): Account | null {
   return {
     ...base,
     iban: typeof a.iban === 'string' ? a.iban : base.iban,
-    holdings: { gold: Number(a.goldGrams) || 0, silver: Number(a.silverGrams) || 0, platinum: 0 },
+    holdings: { gold: Number(a.goldGrams) || 0, silver: Number(a.silverGrams) || 0, platinum: 0, ecu: 0 },
     transactions,
   };
 }

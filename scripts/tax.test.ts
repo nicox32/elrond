@@ -186,3 +186,23 @@ test('compte enfant : le don compte à sa valeur et à sa date de versement', as
     1e-6,
   );
 });
+
+test('Écu Orvia : prix = 1 g d’or × (1 + prime), achat, vente avec impôt, ancien compte migré', async () => {
+  const { ECU, ecuPrice, withEcu } = await import('../src/logic/ecu.ts');
+  const { migrateAccount } = await import('../src/logic/ledger.ts');
+  close(ecuPrice(100), 100 * (1 + ECU.defaultPremium), 1e-9);
+  close(ecuPrice(100, 0.1), 110, 1e-9);
+  close(ecuPrice(100, 0.5), 100 * (1 + ECU.maxPremium), 1e-9); // prime plafonnée
+  const p2021 = withEcu({ gold: 100, silver: 1, platinum: 30 });
+  let acc = buy(createAccount('T'), p2021, 'ecu', { unit: 'g', value: 3 }, new Date('2021-06-01'));
+  assert.equal(acc.holdings.ecu, 3);
+  close(acc.transactions[0].eur, (3 * 104) / (1 - FEES.buy.ecu));
+  // L'or monte : l'écu suit, l'impôt s'applique comme pour l'or
+  const p2026 = withEcu({ gold: 150, silver: 1, platinum: 30 });
+  acc = sell(acc, p2026, 'ecu', { unit: 'g', value: 1 }, 'deferred', new Date('2026-11-02'));
+  assert.ok((acc.transactions[0].tax ?? 0) > 0);
+  close(acc.holdings.ecu, 2, 1e-9);
+  // Compte enregistré avant l'écu : solde à zéro ajouté
+  const old = migrateAccount({ ...createAccount('V'), holdings: { gold: 1, silver: 0, platinum: 0 } });
+  assert.equal(old!.holdings.ecu, 0);
+});

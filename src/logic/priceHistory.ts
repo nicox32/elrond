@@ -1,4 +1,4 @@
-import { type Metal, METALS, type PriceQuote, type Prices } from './types.ts';
+import { type Metal, type PriceQuote, type Prices, SPOT_METALS } from './types.ts';
 
 /** Un relevé de cours réels, pour les mini-courbes « en direct ». */
 export interface PricePoint {
@@ -40,7 +40,9 @@ export interface MetalTrend {
 
 /** Évolution d'un métal sur les relevés gardés (jusqu'à 24 h), terminée par le cours actuel. */
 export function metalTrend(history: PricePoint[], metal: Metal, current: Prices): MetalTrend {
-  const values = history.map((p) => p.prices[metal]);
+  // L'écu suit l'or : sa courbe est celle de l'or, à la prime actuelle.
+  const ecuRatio = current.gold > 0 ? current.ecu / current.gold : 0;
+  const values = history.map((p) => (metal === 'ecu' ? p.prices.gold * ecuRatio : p.prices[metal]));
   if (values.length === 0 || values[values.length - 1] !== current[metal]) values.push(current[metal]);
   const first = values[0];
   return {
@@ -53,6 +55,8 @@ export function metalTrend(history: PricePoint[], metal: Metal, current: Prices)
 export function isPriceHistory(raw: unknown): raw is PricePoint[] {
   return (
     Array.isArray(raw) &&
-    raw.every((p) => p && typeof p.t === 'string' && p.prices && METALS.every((m) => typeof p.prices[m] === 'number'))
+    raw.every(
+      (p) => p && typeof p.t === 'string' && p.prices && SPOT_METALS.every((m) => typeof p.prices[m] === 'number'),
+    )
   );
 }

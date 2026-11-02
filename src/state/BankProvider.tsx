@@ -5,6 +5,7 @@ import { applyDormancy, createAccount, recordBalance } from '../logic/ledger';
 import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
+import { withEcu } from '../logic/ecu';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
 import { clearPin, hasPin, setPin } from '../security';
@@ -89,6 +90,12 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const historyRef = useRef<PricePoint[]>([]);
   const hourlyRef = useRef<PricePoint[]>([]);
 
+  /** Cours avec le prix de l'Écu Orvia, selon la prime réglée (et pour d'anciens cours enregistrés sans écu). */
+  const pricesNow = useCallback(
+    (q: PriceQuote = quoteRef.current) => withEcu(q.prices, accountRef.current?.settings.ecuPremium),
+    [],
+  );
+
   const persist = useCallback((next: Account | null) => {
     accountRef.current = next;
     setAccount(next);
@@ -98,8 +105,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
   /** Ajoute un point au graphique du solde avec les cours actuels. */
   const snapshot = useCallback(() => {
     const acc = accountRef.current;
-    if (acc) persist(recordBalance(acc, quoteRef.current.prices));
-  }, [persist]);
+    if (acc) persist(recordBalance(acc, pricesNow()));
+  }, [persist, pricesNow]);
 
   const refreshPrices = useCallback(
     (periodic = false) => {
@@ -163,7 +170,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
         setQuote(cached);
       }
       // Ouverture : prélève les frais d'oxydation dus depuis la dernière visite.
-      const prices = (cached ?? quoteRef.current).prices;
+      const prices = withEcu((cached ?? quoteRef.current).prices, acc?.settings.ecuPremium);
       const charged = acc ? applyDormancy(acc, prices) : null;
       if (charged && charged !== acc) saveAccount(charged);
       accountRef.current = charged;
@@ -211,23 +218,23 @@ export function BankProvider({ children }: { children: ReactNode }) {
     (op) => {
       const acc = accountRef.current;
       if (!acc) throw new Error('Aucun compte ouvert.');
-      const prices = quoteRef.current.prices;
+      const prices = pricesNow();
       // Les frais d'oxydation dus sont prélevés avant l'opération (qui, elle, remet le compteur à zéro).
       const next = recordBalance(op(applyDormancy(acc, prices), prices), prices);
       persist(next);
       return next;
     },
-    [persist],
+    [persist, pricesNow],
   );
 
   const openAccount = useCallback(
     async (holder: string, pin: string) => {
       await setPin(pin);
-      persist(recordBalance(createAccount(holder), quoteRef.current.prices));
+      persist(recordBalance(createAccount(holder), pricesNow()));
       setNeedsPin(false);
       setLocked(false);
     },
-    [persist],
+    [persist, pricesNow],
   );
 
   const createPin = useCallback(async (pin: string) => {
@@ -258,11 +265,14 @@ export function BankProvider({ children }: { children: ReactNode }) {
     setLocked(true);
   }, [persist]);
 
+  const ecuPremium = account?.settings.ecuPremium;
+  const pricedQuote = useMemo(() => ({ ...quote, prices: withEcu(quote.prices, ecuPremium) }), [quote, ecuPremium]);
+
   const value = useMemo<BankContextValue>(
     () => ({
       loading,
       account,
-      quote,
+      quote: pricedQuote,
       priceHistory,
       hourlyHistory,
       updateAccount,
@@ -281,7 +291,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
     [
       loading,
       account,
-      quote,
+      pricedQuote,
       priceHistory,
       hourlyHistory,
       updateAccount,

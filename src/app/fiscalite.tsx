@@ -217,7 +217,7 @@ function MetalCard({ m, unit, outlook }: { m: MetalTax; unit: 'g' | 'oz'; outloo
     <Card style={{ gap: 8 }}>
       <View style={styles.rowBetween}>
         <Text style={[styles.metal, { color: metalColor[m.metal] }]}>{METAL_LABEL[m.metal]}</Text>
-        <Text style={styles.muted}>{formatWeight(m.grams, unit)}</Text>
+        <Text style={styles.muted}>{formatWeight(m.grams, unit, m.metal)}</Text>
       </View>
       <Row label="Prix de revient" value={formatEur(m.cost)} />
       <Row label="Valeur de revente" value={formatEur(m.value)} />

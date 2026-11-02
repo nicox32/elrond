@@ -9,26 +9,32 @@ interface Props {
   onChange: (metal: Metal) => void;
   /** Métal à ne pas proposer (ex. le métal de départ d'une conversion). */
   exclude?: Metal;
+  /** Actifs proposés (par défaut : les trois métaux et l'Écu Orvia). */
+  metals?: Metal[];
 }
 
-export function MetalPicker({ value, onChange, exclude }: Props) {
+export function MetalPicker({ value, onChange, exclude, metals = METALS }: Props) {
   return (
     <View style={styles.row}>
-      {METALS.filter((m) => m !== exclude).map((m) => {
-        const active = m === value;
-        return (
-          <Pressable
-            key={m}
-            onPress={() => onChange(m)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            style={[styles.item, active && { borderColor: metalColor[m], backgroundColor: colors.surfaceAlt }]}
-          >
-            <View style={[styles.dot, { backgroundColor: metalColor[m] }]} />
-            <Text style={[styles.text, active && { color: colors.text }]}>{METAL_LABEL[m]}</Text>
-          </Pressable>
-        );
-      })}
+      {metals
+        .filter((m) => m !== exclude)
+        .map((m) => {
+          const active = m === value;
+          return (
+            <Pressable
+              key={m}
+              onPress={() => onChange(m)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              style={[styles.item, active && { borderColor: metalColor[m], backgroundColor: colors.surfaceAlt }]}
+            >
+              <View style={[styles.dot, { backgroundColor: metalColor[m] }]} />
+              <Text style={[styles.text, active && { color: colors.text }]} numberOfLines={1}>
+                {m === 'ecu' ? 'Écu' : METAL_LABEL[m]}
+              </Text>
+            </Pressable>
+          );
+        })}
     </View>
   );
 }

@@ -132,7 +132,7 @@ test('migration d’un compte de la première version', () => {
   const acc = migrateAccount(v1);
   assert.ok(acc);
   assert.equal(acc.version, 2);
-  assert.deepEqual(acc.holdings, { gold: 2, silver: 50, platinum: 0 });
+  assert.deepEqual(acc.holdings, { gold: 2, silver: 50, platinum: 0, ecu: 0 });
   assert.equal(acc.transactions[0].kind, 'buy');
   assert.equal(acc.iban, 'FR76 1111');
   assert.equal(migrateAccount(null), null);

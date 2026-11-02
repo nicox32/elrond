@@ -19,7 +19,7 @@ import {
 } from '../logic/allocation';
 import { formatEur, formatWeight, parseAmount } from '../logic/format';
 import { LedgerError, METAL_LABEL } from '../logic/ledger';
-import { METALS } from '../logic/types';
+import { SPOT_METALS } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors, metalColor } from '../theme';
 
@@ -39,8 +39,8 @@ export default function AllocationScreen() {
   const current = currentAllocation(account, quote.prices);
   const total = allocationTotal(target);
   const valid = isValidAllocation(target);
-  const dirty = METALS.some((m) => target[m] !== saved[m]);
-  const hasHoldings = METALS.some((m) => account.holdings[m] > 0);
+  const dirty = SPOT_METALS.some((m) => target[m] !== saved[m]);
+  const hasHoldings = SPOT_METALS.some((m) => account.holdings[m] > 0);
 
   const amount = parseAmount(text);
   const amounts = valid && amount > 0 ? splitAmount(amount, target, mode, account, quote.prices) : null;
@@ -75,7 +75,7 @@ export default function AllocationScreen() {
 
         <SectionTitle>Ma répartition</SectionTitle>
         <Card style={{ gap: 12 }}>
-          {METALS.map((m) => (
+          {SPOT_METALS.map((m) => (
             <View key={m} style={{ gap: 6 }}>
               <View style={styles.rowBetween}>
                 <Text style={[styles.metal, { color: metalColor[m] }]}>{METAL_LABEL[m]}</Text>

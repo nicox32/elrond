@@ -1,5 +1,5 @@
-import { TROY_OUNCE } from './ledger.ts';
-import type { WeightUnit } from './types.ts';
+import { METAL_OF, TROY_OUNCE as TROY_OUNCE } from './ledger.ts';
+import type { Metal, WeightUnit } from './types.ts';
 
 const eurFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
 
@@ -11,20 +11,32 @@ function decimalsFor(abs: number): number {
   return abs >= 100 ? 2 : abs >= 1 ? 3 : 4;
 }
 
-/** Formate un poids donné en grammes, dans l'unité choisie. */
-export function formatWeight(grams: number, unit: WeightUnit = 'g'): string {
+function formatEcus(n: number): string {
+  const text = n.toFixed(Math.abs(n) >= 100 ? 2 : 3).replace('.', ',');
+  return `${text} écu${Math.abs(n) >= 2 ? 's' : ''}`;
+}
+
+/** Formate un poids donné en grammes, dans l'unité choisie ; pour l'Écu Orvia, un nombre d'écus. */
+export function formatWeight(grams: number, unit: WeightUnit = 'g', metal?: Metal): string {
+  if (metal === 'ecu') return formatEcus(grams);
   const value = unit === 'oz' ? grams / TROY_OUNCE : grams;
   const text = value.toFixed(decimalsFor(Math.abs(value))).replace('.', ',');
   return `${text} ${unit === 'oz' ? 'oz' : 'g'}`;
 }
 
 /** Variation de poids avec son signe. */
-export function formatWeightDelta(grams: number, unit: WeightUnit = 'g'): string {
-  return `${grams > 0 ? '+' : grams < 0 ? '−' : ''}${formatWeight(Math.abs(grams), unit)}`;
+export function formatWeightDelta(grams: number, unit: WeightUnit = 'g', metal?: Metal): string {
+  return `${grams > 0 ? '+' : grams < 0 ? '−' : ''}${formatWeight(Math.abs(grams), unit, metal)}`;
+}
+
+/** « 2,500 g d’or », « 3,000 écus Orvia ». */
+export function formatQty(metal: Metal, grams: number, unit: WeightUnit = 'g'): string {
+  return metal === 'ecu' ? `${formatEcus(grams)} Orvia` : `${formatWeight(grams, unit)} ${METAL_OF[metal]}`;
 }
 
 /** Prix par unité de poids (€/g ou €/oz). */
-export function formatUnitPrice(eurPerGram: number, unit: WeightUnit = 'g'): string {
+export function formatUnitPrice(eurPerGram: number, unit: WeightUnit = 'g', metal?: Metal): string {
+  if (metal === 'ecu') return `${formatEur(eurPerGram)}/écu`;
   return `${formatEur(unit === 'oz' ? eurPerGram * TROY_OUNCE : eurPerGram)}/${unit}`;
 }
 

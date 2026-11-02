@@ -1,13 +1,14 @@
 import { TROY_OUNCE } from './ledger.ts';
-import { type Metal, METALS, type PriceQuote, type Prices } from './types.ts';
+import { withEcu } from './ecu.ts';
+import { type PriceQuote, type Prices, SPOT_METALS, type SpotMetal, type SpotPrices } from './types.ts';
 
 /**
  * Cours indicatifs (€/g) utilisés uniquement si aucun cours réel n'a jamais pu être chargé.
  * L'appli l'indique alors clairement à l'écran.
  */
-export const REFERENCE_PRICES: Prices = { gold: 105, silver: 1.25, platinum: 32 };
+export const REFERENCE_PRICES: Prices = withEcu({ gold: 105, silver: 1.25, platinum: 32 });
 
-const SYMBOL: Record<Metal, string> = { gold: 'XAU', silver: 'XAG', platinum: 'XPT' };
+const SYMBOL: Record<SpotMetal, string> = { gold: 'XAU', silver: 'XAG', platinum: 'XPT' };
 
 const TIMEOUT_MS = 10_000;
 
@@ -32,7 +33,7 @@ function positive(n: unknown): number {
 }
 
 /** Cours au comptant en dollars par once troy (api.gold-api.com, gratuit, sans clé). */
-async function fetchUsdPerOunce(fetchFn: Fetch, metal: Metal): Promise<number> {
+async function fetchUsdPerOunce(fetchFn: Fetch, metal: SpotMetal): Promise<number> {
   const data = await getJson(fetchFn, `https://api.gold-api.com/price/${SYMBOL[metal]}`);
   return positive(data?.price);
 }
@@ -78,12 +79,14 @@ export function usdOunceToEurGram(usdPerOunce: number, usdToEur: number): number
 export async function fetchLivePrices(fetchFn: Fetch = fetch, now = new Date()): Promise<PriceQuote> {
   const [rate, ...usd] = await Promise.all([
     usdToEur(fetchFn, now),
-    ...METALS.map((m) => fetchUsdPerOunce(fetchFn, m)),
+    ...SPOT_METALS.map((m) => fetchUsdPerOunce(fetchFn, m)),
   ]);
-  const prices = {} as Prices;
-  METALS.forEach((m, i) => {
-    prices[m] = usdOunceToEurGram(usd[i], rate);
+  const spot = {} as SpotPrices;
+  SPOT_METALS.forEach((m, i) => {
+    spot[m] = usdOunceToEurGram(usd[i], rate);
   });
+  // Le prix de l'écu suit l'or ; la prime réglée par Orvia est appliquée par BankProvider.
+  const prices = withEcu(spot);
   return { prices, fetchedAt: now.toISOString(), source: 'live' };
 }
 

@@ -20,7 +20,7 @@ import {
   transferChildAccount,
   undoableDeposits,
 } from '../../logic/childRules';
-import { formatDate, formatEur, formatPercent, formatWeight, parseAmount } from '../../logic/format';
+import { formatDate, formatEur, formatPercent, formatQty, formatWeight, parseAmount } from '../../logic/format';
 import { estimateTax } from '../../logic/tax';
 import {
   accountValue,
@@ -28,7 +28,6 @@ import {
   LedgerError,
   majorityDate,
   METAL_LABEL,
-  METAL_OF,
   parseBirthDate,
   removeChild,
   setChildBirthDate,
@@ -249,7 +248,7 @@ export default function ChildScreen() {
           {METALS.map((m) => (
             <View key={m} style={{ alignItems: 'center', flex: 1 }}>
               <Text style={[styles.metalName, { color: metalColor[m] }]}>{METAL_LABEL[m]}</Text>
-              <Text style={styles.metalWeight}>{formatWeight(child.holdings[m], unit)}</Text>
+              <Text style={styles.metalWeight}>{formatWeight(child.holdings[m], unit, m)}</Text>
             </View>
           ))}
         </View>
@@ -396,7 +395,7 @@ export default function ChildScreen() {
 
           <SectionTitle>Verser à {name}</SectionTitle>
           <MetalPicker value={metal} onChange={setMetal} />
-          <Hint>Disponible sur votre compte : {formatWeight(account.holdings[metal], unit)}</Hint>
+          <Hint>Disponible sur votre compte : {formatWeight(account.holdings[metal], unit, metal)}</Hint>
           <AmountInput
             text={text}
             onChangeText={(t) => {
@@ -404,12 +403,13 @@ export default function ChildScreen() {
               setFundMsg(null);
             }}
             unit={amountUnit}
+            metal={metal}
             onUnitChange={setAmountUnit}
           />
           {grams > 0 && (
             <Text style={styles.preview}>
-              {formatWeight(grams, unit)} {METAL_OF[metal]} ({formatEur(grams * quote.prices[metal])}) passent sur le
-              compte de {name}, sans frais. C’est un don : ce métal lui appartiendra.
+              {formatQty(metal, grams, unit)} ({formatEur(grams * quote.prices[metal])}) passent sur le compte de {name}
+              , sans frais. C’est un don : ce métal lui appartiendra.
             </Text>
           )}
           <Button title={`Verser à ${name}`} onPress={fund} />
@@ -461,7 +461,7 @@ export default function ChildScreen() {
               />
               <MetalPicker value={wMetal} onChange={setWMetal} />
               <Hint>
-                Sur le compte de {name} : {formatWeight(child.holdings[wMetal], unit)}
+                Sur le compte de {name} : {formatWeight(child.holdings[wMetal], unit, wMetal)}
               </Hint>
               <AmountInput
                 text={wText}
@@ -470,11 +470,12 @@ export default function ChildScreen() {
                   setWMsg(null);
                 }}
                 unit={wUnit}
+                metal={wMetal}
                 onUnitChange={setWUnit}
               />
               {wGrams > 0 && (
                 <Text style={styles.preview}>
-                  {formatWeight(wGrams, unit)} {METAL_OF[wMetal]} ({formatEur(wGrams * quote.prices[wMetal])}) pour :{' '}
+                  {formatQty(wMetal, wGrams, unit)} ({formatEur(wGrams * quote.prices[wMetal])}) pour :{' '}
                   {purpose ? PURPOSE_LABEL[purpose] : 'choisissez la dépense'}.
                 </Text>
               )}
@@ -488,7 +489,7 @@ export default function ChildScreen() {
             <Card key={r.id} style={{ gap: 8, borderColor: colors.gold }}>
               <Text style={styles.label}>En attente de {child.coParent?.name ?? 'validation'}</Text>
               <Text style={styles.para}>
-                {formatWeight(r.grams, unit)} {METAL_OF[r.metal]} (≈ {formatEur(r.eur)}) · {PURPOSE_LABEL[r.purpose]}
+                {formatQty(r.metal, r.grams, unit)} (≈ {formatEur(r.eur)}) · {PURPOSE_LABEL[r.purpose]}
                 {r.note ? ` (${r.note})` : ''}
               </Text>
               <View style={styles.row2}>
@@ -538,7 +539,7 @@ export default function ChildScreen() {
         title={`Code de ${child.coParent?.name ?? 'second parent'}`}
         summary={
           approvingReq
-            ? `${child.coParent?.name} valide le retrait de ${formatWeight(approvingReq.grams, unit)} ${METAL_OF[approvingReq.metal]} pour : ${PURPOSE_LABEL[approvingReq.purpose]}.`
+            ? `${child.coParent?.name} valide le retrait de ${formatQty(approvingReq.metal, approvingReq.grams, unit)} pour : ${PURPOSE_LABEL[approvingReq.purpose]}.`
             : ''
         }
         verify={(pin) => verifySecret(pin, child.coParent?.secret)}

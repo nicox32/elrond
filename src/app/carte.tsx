@@ -7,7 +7,7 @@ import { PinConfirm } from '../components/PinConfirm';
 import { Segmented } from '../components/Segmented';
 import { TransactionRow } from '../components/TransactionRow';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
-import { formatEur, formatWeight, parseAmount } from '../logic/format';
+import { formatEur, formatQty, formatWeight, parseAmount } from '../logic/format';
 import {
   CARD,
   cardPay,
@@ -15,7 +15,6 @@ import {
   cardWithdraw,
   issueCard,
   LedgerError,
-  METAL_OF,
   setCardFrozen,
   setCardMetal,
 } from '../logic/ledger';
@@ -78,8 +77,8 @@ export default function CardScreen() {
   const usedCash = cardUsage(account, 'card_withdrawal', 7);
   const summary = valid
     ? mode === 'pay'
-      ? `Payer ${formatEur(amount)} chez ${merchant.trim() || 'un commerçant'} : ${formatWeight(grams, unit)} ${METAL_OF[metal]} vendus, sans frais. ${tax ? describeTax(tax) : ''}`
-      : `Retirer ${formatEur(amount)} au distributeur : ${formatWeight(grams, unit)} ${METAL_OF[metal]} vendus, sans frais. ${tax ? describeTax(tax) : ''}`
+      ? `Payer ${formatEur(amount)} chez ${merchant.trim() || 'un commerçant'} : ${formatQty(metal, grams, unit)} vendus, sans frais. ${tax ? describeTax(tax) : ''}`
+      : `Retirer ${formatEur(amount)} au distributeur : ${formatQty(metal, grams, unit)} vendus, sans frais. ${tax ? describeTax(tax) : ''}`
     : '';
   const cardTx = account.transactions.filter((t) => t.kind === 'card_payment' || t.kind === 'card_withdrawal');
 
@@ -123,7 +122,7 @@ export default function CardScreen() {
               commit((acc) => setCardMetal(acc, m));
             }}
           />
-          <Hint>Disponible : {formatWeight(account.holdings[metal], unit)}</Hint>
+          <Hint>Disponible : {formatWeight(account.holdings[metal], unit, metal)}</Hint>
         </View>
 
         <Card style={{ gap: 10 }}>

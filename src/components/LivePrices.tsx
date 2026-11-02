@@ -44,8 +44,10 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
             </View>
             <Sparkline values={trend.values} color={metalColor[m]} />
             <View style={styles.prices}>
-              <Text style={styles.price}>{formatUnitPrice(quote.prices[m], unit)}</Text>
-              <Text style={styles.priceOther}>{formatUnitPrice(quote.prices[m], other)}</Text>
+              <Text style={styles.price}>{formatUnitPrice(quote.prices[m], unit, m)}</Text>
+              <Text style={styles.priceOther}>
+                {m === 'ecu' ? '1 g d’or fin + prime' : formatUnitPrice(quote.prices[m], other)}
+              </Text>
             </View>
           </View>
         );

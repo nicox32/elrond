@@ -9,7 +9,7 @@ import { SpeedPicker } from '../../components/SpeedPicker';
 import { formatLouis, toLouis } from '../../logic/currency';
 import { FEES, type SaleSpeed } from '../../logic/fees';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui, Title } from '../../components/ui';
-import { formatEur, formatWeight, parseAmount } from '../../logic/format';
+import { formatEur, formatQty, formatWeight, parseAmount } from '../../logic/format';
 import {
   addBeneficiary,
   LedgerError,
@@ -68,8 +68,8 @@ export default function TransfersScreen() {
     !selected || grams <= 0
       ? ''
       : kind === 'member'
-        ? `Envoyer ${formatWeight(grams, unit)} ${METAL_OF[metal]}, soit ${formatLouis(toLouis(grams * quote.prices[metal], quote.prices))} (${formatEur(grams * quote.prices[metal])}), à ${selected.name}, gratuitement. Pas une vente : pas d’impôt sur la plus-value (un don suit les règles des donations).`
-        : `Vendre ${formatWeight(grams, unit)} ${METAL_OF[metal]} : ${selected.name} reçoit ${formatEur(sale?.received ?? 0)} (${selected.identifier}), après ${formatEur(sale?.fees ?? 0)} de frais${abroad ? `, dont ${FEES.saleAbroadFixed} € pour un compte à l’étranger` : ''}. ${sale?.tax ? describeTax(sale.tax) : ''}`;
+        ? `Envoyer ${formatQty(metal, grams, unit)}, soit ${formatLouis(toLouis(grams * quote.prices[metal], quote.prices))} (${formatEur(grams * quote.prices[metal])}), à ${selected.name}, gratuitement. Pas une vente : pas d’impôt sur la plus-value (un don suit les règles des donations).`
+        : `Vendre ${formatQty(metal, grams, unit)} : ${selected.name} reçoit ${formatEur(sale?.received ?? 0)} (${selected.identifier}), après ${formatEur(sale?.fees ?? 0)} de frais${abroad ? `, dont ${FEES.saleAbroadFixed} € pour un compte à l’étranger` : ''}. ${sale?.tax ? describeTax(sale.tax) : ''}`;
 
   function saveBeneficiary() {
     try {
@@ -231,14 +231,20 @@ export default function TransfersScreen() {
         <View style={styles.block}>
           <Label>Métal débité</Label>
           <MetalPicker value={metal} onChange={setMetal} />
-          <Hint>Disponible : {formatWeight(account.holdings[metal], unit)}</Hint>
+          <Hint>Disponible : {formatWeight(account.holdings[metal], unit, metal)}</Hint>
         </View>
 
         {kind === 'iban' && <SpeedPicker value={speed} onChange={setSpeed} />}
 
         <View style={styles.block}>
           <Label>{kind === 'iban' ? 'Montant (en euros : montant reçu par le bénéficiaire)' : 'Montant'}</Label>
-          <AmountInput text={text} onChangeText={setText} unit={amountUnit} onUnitChange={setAmountUnit} />
+          <AmountInput
+            text={text}
+            onChangeText={setText}
+            unit={amountUnit}
+            onUnitChange={setAmountUnit}
+            metal={metal}
+          />
         </View>
 
         {summary ? <Text style={styles.preview}>{summary}</Text> : null}

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { MetalPicker } from '../components/MetalPicker';
+import { SPOT_METALS } from '../logic/types';
 import { Segmented } from '../components/Segmented';
 import { ServerAlerts } from '../components/ServerAlerts';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
@@ -103,7 +104,7 @@ export default function AlertsScreen() {
       )}
 
       <SectionTitle>Nouvelle alerte</SectionTitle>
-      <MetalPicker value={metal} onChange={setMetal} />
+      <MetalPicker value={metal} onChange={setMetal} metals={SPOT_METALS} />
       <Segmented
         value={family}
         onChange={(f) => {

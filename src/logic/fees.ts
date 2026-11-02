@@ -6,7 +6,7 @@ import type { Metal } from './types.ts';
  */
 export const FEES = {
   /** Frais de gestion à l'achat, en part du montant payé. */
-  buy: { gold: 0.028, silver: 0.068, platinum: 0.068 } as Record<Metal, number>,
+  buy: { gold: 0.028, silver: 0.068, platinum: 0.068, ecu: 0.01 } as Record<Metal, number>,
   /** Frais de gestion sur revente par virement vers un compte bancaire. */
   sale: 0.008,
   /** Supplément fixe pour un virement vers un compte bancaire hors de France. */
@@ -41,6 +41,10 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Or : conversion d’euros en grammes d’or', orvia: pct(FEES.buy.gold) },
       { label: 'Argent : conversion d’euros en grammes d’argent', orvia: pct(FEES.buy.silver) },
       { label: 'Platine : conversion d’euros en grammes de platine', orvia: pct(FEES.buy.platinum) },
+      {
+        label: 'Écu Orvia (1 g d’or fin) : frais d’achat, en plus de la prime incluse dans son prix',
+        orvia: pct(FEES.buy.ecu),
+      },
     ],
   },
   {
