@@ -144,4 +144,6 @@ export interface Account extends Wallet {
   alerts?: PriceAlert[];
   /** Alertes déclenchées (les plus récentes d'abord). */
   alertEvents?: AlertEvent[];
+  /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
+  ntfyTopic?: string;
 }

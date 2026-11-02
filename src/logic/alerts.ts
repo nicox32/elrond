@@ -220,3 +220,26 @@ export function evaluateAlerts(
 export function addEvents(existing: AlertEvent[], events: AlertEvent[]): AlertEvent[] {
   return events.length ? [...events, ...existing].slice(0, MAX_EVENTS) : existing;
 }
+
+// ——— Serveur d'alertes (GitHub Actions + ntfy) ——————————————————————
+
+/** Configuration à copier dans server/alerts.json : seulement les alertes actives, sans leur état. */
+export function alertConfigForServer(alerts: PriceAlert[]) {
+  return alerts
+    .filter((a) => a.enabled)
+    .map((a) => ({
+      metal: a.metal,
+      kind: a.kind,
+      value: a.value,
+      ...(a.unit ? { unit: a.unit } : {}),
+      ...(a.window ? { window: a.window } : {}),
+    }));
+}
+
+/** Nom de canal ntfy difficile à deviner. */
+export function generateNtfyTopic(): string {
+  const alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < 20; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `orvia-${s}`;
+}

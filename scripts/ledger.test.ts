@@ -440,3 +440,54 @@ test('alertes : seuils, variation 24 h, moyenne 30 j, sans répétition', async 
   assert.equal(r.events.length, 0);
   assert.throws(() => createAlert({ metal: 'gold', kind: 'drop', value: 0 }));
 });
+
+test('serveur d’alertes : configuration, état conservé, une notification ntfy par franchissement', async () => {
+  const { parseConfig, runOnce, sendNtfy, alertKey } = await import('../server/alertServer.ts');
+  const { clearFxCache } = await import('../src/logic/prices.ts');
+  clearFxCache();
+  const logs: string[] = [];
+  const config = parseConfig(
+    { alerts: [{ metal: 'gold', kind: 'below', value: 3500, unit: 'oz' }, { metal: 'gold', kind: 'nope', value: 1 }] },
+    (m) => logs.push(m),
+  );
+  assert.equal(config.length, 1);
+  assert.equal(logs.length, 1);
+  let goldOz = 3600;
+  const fakeFetch = (async (url: string) => ({
+    ok: true,
+    status: 200,
+    json: async () => (url.includes('gold-api') ? { price: url.includes('XAU') ? goldOz : 40 } : { rates: { EUR: 1 } }),
+  })) as unknown as typeof fetch;
+  const t = Date.parse('2026-11-02T12:00:00Z');
+  let r = await runOnce({ config, state: { hourly: [], alerts: {} }, fetchFn: fakeFetch, now: new Date(t) });
+  assert.equal(r.notifications.length, 0);
+  goldOz = 3450;
+  r = await runOnce({ config, state: r.state, fetchFn: fakeFetch, now: new Date(t + 15 * 60_000) });
+  assert.equal(r.notifications.length, 1);
+  assert.match(r.notifications[0].body, /3\s450,00/);
+  // 15 minutes plus tard, toujours sous le seuil : pas de répétition (état conservé)
+  r = await runOnce({ config, state: JSON.parse(JSON.stringify(r.state)), fetchFn: fakeFetch, now: new Date(t + 30 * 60_000) });
+  assert.equal(r.notifications.length, 0);
+  assert.ok(r.state.alerts[alertKey(config[0])]);
+  // envoi ntfy
+  const calls: { url: string; init: RequestInit }[] = [];
+  const ntfy = (async (url: string, init: RequestInit) => {
+    calls.push({ url, init });
+    return { ok: true, status: 200 };
+  }) as unknown as typeof fetch;
+  await sendNtfy('orvia-test', { title: 'Alerte or · Or sous 3 500 €/oz', body: 'Cours actuel : 3 450 €/oz.' }, ntfy);
+  assert.equal(calls[0].url, 'https://ntfy.sh/orvia-test');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.match(String((calls[0].init.headers as Record<string, string>).Title), /^=\?UTF-8\?B\?/);
+});
+
+test('export des alertes vers le serveur : actives seulement, lisibles par le serveur', async () => {
+  const { alertConfigForServer, createAlert, generateNtfyTopic } = await import('../src/logic/alerts.ts');
+  const { parseConfig } = await import('../server/alertServer.ts');
+  const a = createAlert({ metal: 'silver', kind: 'drop', value: 5, window: '7d' });
+  const b = { ...createAlert({ metal: 'gold', kind: 'above', value: 4000, unit: 'oz' }), enabled: false };
+  const out = alertConfigForServer([a, b]);
+  assert.deepEqual(out, [{ metal: 'silver', kind: 'drop', value: 5, window: '7d' }]);
+  assert.equal(parseConfig({ alerts: out }).length, 1);
+  assert.match(generateNtfyTopic(), /^orvia-[a-z2-9]{20}$/);
+});

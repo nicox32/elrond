@@ -1,0 +1,46 @@
+# Serveur d'alertes Orvia : vérifie les cours toutes les 15 minutes et envoie les alertes par ntfy.
+# Réglages (une fois) : secret NTFY_TOPIC = ton canal ntfy ; alertes dans server/alerts.json.
+name: Alertes de prix
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alertes
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # L'état (relevés horaires, alertes déjà envoyées) passe d'une exécution à l'autre par le cache.
+      - name: Récupérer l'état précédent
+        uses: actions/cache/restore@v4
+        with:
+          path: .alert-state
+          key: alert-state-${{ github.run_id }}
+          restore-keys: alert-state-
+
+      - name: Vérifier les cours et envoyer les alertes
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node server/check-alerts.ts
+
+      - name: Garder l'état
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .alert-state
+          key: alert-state-${{ github.run_id }}

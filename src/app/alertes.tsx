@@ -4,6 +4,7 @@ import { Alert, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View }
 
 import { MetalPicker } from '../components/MetalPicker';
 import { Segmented } from '../components/Segmented';
+import { ServerAlerts } from '../components/ServerAlerts';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { type AlertKind, type AlertWindow, createAlert, describeAlert } from '../logic/alerts';
 import { formatDate, parseAmount } from '../logic/format';
@@ -242,9 +243,11 @@ export default function AlertsScreen() {
         ))
       )}
 
+      <SectionTitle>Même appli fermée</SectionTitle>
+      <ServerAlerts />
       <Hint>
-        Version web : les alertes ne sont vérifiées que lorsque l’appli est ouverte (ou encore active en arrière-plan).
-        Des alertes 24 h/24 demanderont un serveur, prévu dans une prochaine version.
+        Sans le serveur, les alertes ne sont vérifiées que lorsque l’appli est ouverte (ou encore active en
+        arrière-plan).
       </Hint>
     </Screen>
   );

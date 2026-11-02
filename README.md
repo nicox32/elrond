@@ -62,6 +62,10 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   moyenne 30 jours, pour chaque métal ; notification une seule fois par franchissement (6 h minimum entre deux),
   historique avec raccourcis Acheter / Vendre (`docs/alertes.png`). Ce sont les conditions de l'utilisateur, pas
   des conseils d'investissement. Version web : vérifiées quand l'appli est ouverte (pas encore de serveur).
+- **Alertes 24 h/24** : `.github/workflows/alertes.yml` vérifie les cours toutes les 15 minutes avec la même
+  logique que l'appli (`server/alertServer.ts`) et envoie les alertes par [ntfy](https://ntfy.sh). Réglages :
+  secret `NTFY_TOPIC` (canal secret généré dans l'appli), alertes dans `server/alerts.json` (export depuis l'écran
+  Alertes). L'état (relevés, alertes déjà envoyées) est gardé dans le cache GitHub Actions.
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
   achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;
   écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
