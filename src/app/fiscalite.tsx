@@ -128,14 +128,22 @@ export default function TaxScreen() {
           justificatif. Pour la durée de détention, le métal acheté en premier est considéré comme vendu en premier.
         </Bullet>
         <Bullet>
-          Pas de seuil d’exonération pour les métaux d’investissement (celui de 5 000 € concerne les bijoux et objets
-          d’art). La déclaration (formulaire 2092-SD ou 2048-M) et le paiement sont en général faits par le
-          professionnel qui rachète le métal.
+          Pas de seuil d’exonération pour les métaux précieux : celui de 5 000 € ne concerne que les bijoux et objets
+          d’art ou de collection. La taxe forfaitaire se déclare sur le formulaire 2091-SD, la plus-value sur le 2048-M
+          ; le professionnel qui rachète le métal s’en charge en général.
+        </Bullet>
+        <Bullet>
+          Sont concernés l’or, l’argent et le platine (lingots, barres, pièces frappées après 1800). Le palladium n’en
+          fait pas partie. Un don ou une succession n’est pas une vente : pas de taxe forfaitaire, mais les règles des
+          donations.
         </Bullet>
         <Text style={styles.note}>
-          Code général des impôts, art. 150 VI à 150 VM ; prélèvements sociaux à 18,6 % depuis la loi de financement de
-          la Sécurité sociale pour 2026. Estimation pour un particulier résidant en France, sans valeur de conseil
-          fiscal : à faire confirmer par un conseiller avant une vente importante.
+          Vérifié sur les textes officiels : taxe forfaitaire et seuil (CGI art. 150 VI à 150 VM, BOFiP), abattement de
+          5 % par an au-delà de la 2e année et exonération après 22 ans (CGI art. 150 VC, applicable depuis 2014). À
+          confirmer : le taux des prélèvements sociaux sur cette plus-value en 2026 (18,6 % retenu par prudence depuis
+          la loi de financement de la Sécurité sociale pour 2026, 17,2 % si elle n’est pas concernée par la hausse).
+          Estimation pour un particulier résidant en France, sans valeur de conseil fiscal : à faire confirmer par un
+          conseiller ou par votre centre des finances publiques (impots.gouv.fr) avant une vente importante.
         </Text>
       </Card>
     </Screen>

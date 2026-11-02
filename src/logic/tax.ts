@@ -5,7 +5,8 @@
  * - taxe forfaitaire sur les métaux précieux (TMP), par défaut : 11 % + 0,5 % de CRDS = 11,5 % du prix de vente,
  *   gain ou perte ;
  * - régime des plus-values, sur option, si l'on peut prouver la date et le prix d'achat (facture, relevé) :
- *   19 % d'impôt + 18,6 % de prélèvements sociaux (LFSS 2026) = 37,6 % de la plus-value, avec un abattement de
+ *   19 % d'impôt + 18,6 % de prélèvements sociaux (LFSS 2026, taux à confirmer : 17,2 % si non concerné) = 37,6 %
+ *   de la plus-value, avec un abattement (CGI art. 150 VC) de
  *   5 % par année de détention au-delà de la 2e : exonération totale après 22 ans. Pas d'impôt en cas de perte.
  * Pas de seuil d'exonération pour l'or, l'argent et le platine d'investissement (le seuil de 5 000 € vise les bijoux
  * et objets d'art). Estimation indicative : à faire confirmer par un conseiller fiscal.
@@ -19,6 +20,7 @@ export const TAX = {
   /** Impôt sur le revenu au taux forfaitaire, sur la plus-value. */
   incomeTax: 0.19,
   /** Prélèvements sociaux 2026 (CSG, CRDS, prélèvement de solidarité), sur la plus-value. */
+  /** Hausse de la CSG de la LFSS 2026 : application à cette plus-value à confirmer (17,2 % sinon). */
   social: 0.186,
   /** Abattement par année pleine de détention au-delà de la 2e. */
   allowancePerYear: 0.05,
