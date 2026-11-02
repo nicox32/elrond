@@ -33,6 +33,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Cours réels** de l'or, de l'argent et du platine (au comptant, en dollars par once, convertis en
   euros par gramme). Actualisés à l'ouverture de l'appli, au retour dans l'appli, à sa fermeture et
   d'un appui sur la barre des cours. Hors ligne, l'appli garde les derniers cours connus et le signale.
+- **Cours en direct** des trois métaux sur l'écran du compte, actualisés toutes les 30 s, avec leur
+  variation et leur courbe sur les dernières 24 h (voir `docs/cours-en-direct.png`).
 - **Trois coffres** : or, argent, platine, avec leur valeur et le détail des mouvements.
 - **Achat et vente en euros, en grammes ou en onces troy** (1 oz = 31,1035 g). Affichage au choix
   en grammes ou en onces.

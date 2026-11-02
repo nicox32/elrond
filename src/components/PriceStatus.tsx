@@ -20,7 +20,7 @@ export function PriceStatus() {
 
   return (
     <Pressable
-      onPress={refreshPrices}
+      onPress={() => refreshPrices()}
       style={styles.wrap}
       accessibilityRole="button"
       accessibilityHint="Actualiser les cours"

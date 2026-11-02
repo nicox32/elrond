@@ -148,3 +148,42 @@ test('plus-value : valeur actuelle moins euros nets placés', () => {
   close(r.invested, 800, 0.01);
   close(r.gain, acc.holdings.gold * 110 * (1 - SPREAD) - 800, 0.01);
 });
+
+test('relevés de cours : 24 h gardées, relevés rapprochés fusionnés, cours non réels ignorés', async () => {
+  const { addPricePoint, metalTrend, PRICE_HISTORY_MS } = await import('../src/logic/priceHistory.ts');
+  const q = (iso: string, gold: number, source: 'live' | 'cache' = 'live') => ({
+    prices: { gold, silver: 1, platinum: 30 },
+    fetchedAt: iso,
+    source,
+  });
+  const t0 = Date.parse('2026-11-02T10:00:00Z');
+  const at = (ms: number) => new Date(t0 + ms).toISOString();
+  let h = addPricePoint([], q(at(0), 100));
+  h = addPricePoint(h, q(at(10_000), 101)); // fusionné avec le précédent
+  assert.equal(h.length, 1);
+  assert.equal(h[0].prices.gold, 101);
+  h = addPricePoint(h, q(at(30_000), 102));
+  h = addPricePoint(h, q(at(60_000), 999, 'cache')); // ignoré
+  assert.equal(h.length, 2);
+  h = addPricePoint(h, q(at(PRICE_HISTORY_MS + 20_000), 110)); // le premier relevé sort des 24 h
+  assert.deepEqual(h.map((p) => p.prices.gold), [102, 110]);
+  const trend = metalTrend(h, 'gold', { gold: 110, silver: 1, platinum: 30 });
+  assert.deepEqual(trend.values, [102, 110]);
+  close(trend.changePct, (8 / 102) * 100);
+});
+
+test('cours réels : taux de change gardé 10 minutes', async () => {
+  const { clearFxCache } = await import('../src/logic/prices.ts');
+  clearFxCache();
+  let fxCalls = 0;
+  const fetchFn = (async (url: string) => {
+    if (!url.includes('gold-api')) fxCalls++;
+    return { ok: true, status: 200, json: async () => (url.includes('gold-api') ? { price: 100 } : { rates: { EUR: 0.9 } }) };
+  }) as unknown as typeof fetch;
+  const t = Date.parse('2026-11-02T10:00:00Z');
+  await fetchLivePrices(fetchFn, new Date(t));
+  await fetchLivePrices(fetchFn, new Date(t + 5 * 60_000));
+  assert.equal(fxCalls, 1);
+  await fetchLivePrices(fetchFn, new Date(t + 11 * 60_000));
+  assert.equal(fxCalls, 2);
+});

@@ -1,11 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { migrateAccount } from './logic/ledger';
+import { isPriceHistory, type PricePoint } from './logic/priceHistory';
 import type { Account, PriceQuote } from './logic/types';
 
 const ACCOUNT_KEY = 'elrond.account.v2';
 const LEGACY_ACCOUNT_KEY = 'elrond.account.v1';
 const QUOTE_KEY = 'elrond.quote.v1';
+const PRICE_HISTORY_KEY = 'elrond.priceHistory.v1';
 
 async function readJson(key: string): Promise<unknown> {
   try {
@@ -51,4 +53,14 @@ export async function loadCachedQuote(): Promise<PriceQuote | null> {
 
 export function saveQuote(quote: PriceQuote): Promise<void> {
   return writeJson(QUOTE_KEY, quote);
+}
+
+/** Relevés de cours des dernières 24 h (mini-courbes « en direct »). */
+export async function loadPriceHistory(): Promise<PricePoint[]> {
+  const raw = await readJson(PRICE_HISTORY_KEY);
+  return isPriceHistory(raw) ? raw : [];
+}
+
+export function savePriceHistory(history: PricePoint[]): Promise<void> {
+  return writeJson(PRICE_HISTORY_KEY, history);
 }

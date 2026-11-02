@@ -54,6 +54,21 @@ async function fetchUsdToEur(fetchFn: Fetch): Promise<number> {
   throw lastError;
 }
 
+/** Le taux de change bouge peu : on le garde 10 minutes pour ne pas l'interroger à chaque actualisation. */
+const FX_MAX_AGE_MS = 10 * 60_000;
+let fxCache: { rate: number; at: number } | null = null;
+
+export function clearFxCache(): void {
+  fxCache = null;
+}
+
+async function usdToEur(fetchFn: Fetch, now: Date): Promise<number> {
+  if (fxCache && now.getTime() - fxCache.at < FX_MAX_AGE_MS) return fxCache.rate;
+  const rate = await fetchUsdToEur(fetchFn);
+  fxCache = { rate, at: now.getTime() };
+  return rate;
+}
+
 /** Convertit un cours en dollars par once en euros par gramme. */
 export function usdOunceToEurGram(usdPerOunce: number, usdToEur: number): number {
   return (usdPerOunce * usdToEur) / TROY_OUNCE;
@@ -62,7 +77,7 @@ export function usdOunceToEurGram(usdPerOunce: number, usdToEur: number): number
 /** Charge les cours réels de l'or, de l'argent et du platine, en euros par gramme. */
 export async function fetchLivePrices(fetchFn: Fetch = fetch, now = new Date()): Promise<PriceQuote> {
   const [rate, ...usd] = await Promise.all([
-    fetchUsdToEur(fetchFn),
+    usdToEur(fetchFn, now),
     ...METALS.map((m) => fetchUsdPerOunce(fetchFn, m)),
   ]);
   const prices = {} as Prices;

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BalanceChart } from '../../components/BalanceChart';
+import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
@@ -71,6 +72,9 @@ export default function AccountScreen() {
           </Pressable>
         ))}
       </View>
+
+      <SectionTitle>Cours en direct</SectionTitle>
+      <LivePrices unit={unit} />
 
       <SectionTitle>Évolution du solde</SectionTitle>
       <Card>

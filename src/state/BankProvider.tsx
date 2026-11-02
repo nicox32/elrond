@@ -2,15 +2,32 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { AppState } from 'react-native';
 
 import { createAccount, recordBalance } from '../logic/ledger';
+import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
 import { clearPin, hasPin, setPin } from '../security';
-import { clearAccount, loadAccount, loadCachedQuote, saveAccount, saveQuote } from '../storage';
+import {
+  clearAccount,
+  loadAccount,
+  loadCachedQuote,
+  loadPriceHistory,
+  saveAccount,
+  savePriceHistory,
+  saveQuote,
+} from '../storage';
+
+/** Actualisation automatique des cours tant que l'appli est à l'écran. */
+export const LIVE_REFRESH_MS = 30_000;
+
+/** Pendant l'actualisation automatique, un point du graphique du solde au plus tous les quarts d'heure. */
+const PERIODIC_BALANCE_MS = 15 * 60_000;
 
 interface BankContextValue {
   loading: boolean;
   account: Account | null;
   quote: PriceQuote;
+  /** Relevés de cours réels des dernières 24 h. */
+  priceHistory: PricePoint[];
   refreshing: boolean;
   /** Dernière erreur de chargement des cours, s'il y en a une. */
   priceError: string | null;
@@ -21,7 +38,8 @@ interface BankContextValue {
   unlock: () => void;
   /** Crée le code d'accès d'un compte existant qui n'en a pas encore. */
   createPin: (pin: string) => Promise<void>;
-  refreshPrices: () => Promise<void>;
+  /** `periodic` : actualisation automatique, discrète (pas d'indicateur de chargement). */
+  refreshPrices: (periodic?: boolean) => Promise<void>;
   /** Applique une opération au compte avec les cours actuels. Lève une LedgerError si elle est refusée. */
   commit: (op: (account: Account, prices: Prices) => Account) => Account;
   openAccount: (holder: string, pin: string) => Promise<void>;
@@ -48,6 +66,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<Account | null>(null);
   const [quote, setQuote] = useState<PriceQuote>(() => referenceQuote());
+  const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [locked, setLocked] = useState(true);
@@ -58,6 +77,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const accountRef = useRef(account);
   const quoteRef = useRef(quote);
   const inFlight = useRef<Promise<void> | null>(null);
+  const historyRef = useRef<PricePoint[]>([]);
 
   const persist = useCallback((next: Account | null) => {
     accountRef.current = next;
@@ -71,32 +91,47 @@ export function BankProvider({ children }: { children: ReactNode }) {
     if (acc) persist(recordBalance(acc, quoteRef.current.prices));
   }, [persist]);
 
-  const refreshPrices = useCallback(() => {
-    if (inFlight.current) return inFlight.current;
-    setRefreshing(true);
-    const run = (async () => {
-      try {
-        const live = await fetchLivePrices();
-        quoteRef.current = live;
-        setQuote(live);
-        setPriceError(null);
-        saveQuote(live);
-        snapshot();
-      } catch {
-        setPriceError('Impossible de charger les cours réels. Vérifie ta connexion.');
-      } finally {
-        setRefreshing(false);
-        inFlight.current = null;
-      }
-    })();
-    inFlight.current = run;
-    return run;
-  }, [snapshot]);
+  const refreshPrices = useCallback(
+    (periodic = false) => {
+      if (inFlight.current) return inFlight.current;
+      if (!periodic) setRefreshing(true);
+      const run = (async () => {
+        try {
+          const live = await fetchLivePrices();
+          quoteRef.current = live;
+          setQuote(live);
+          setPriceError(null);
+          saveQuote(live);
+          const history = addPricePoint(historyRef.current, live);
+          historyRef.current = history;
+          setPriceHistory(history);
+          savePriceHistory(history);
+          const last = accountRef.current?.balanceHistory.at(-1);
+          if (!periodic || !last || Date.now() - new Date(last.date).getTime() >= PERIODIC_BALANCE_MS) snapshot();
+        } catch {
+          setPriceError('Impossible de charger les cours réels. Vérifie ta connexion.');
+        } finally {
+          setRefreshing(false);
+          inFlight.current = null;
+        }
+      })();
+      inFlight.current = run;
+      return run;
+    },
+    [snapshot],
+  );
 
   // Ouverture de l'appli : compte, derniers cours connus, puis cours réels.
   useEffect(() => {
     (async () => {
-      const [acc, cached, pinSet] = await Promise.all([loadAccount(), loadCachedQuote(), hasPin()]);
+      const [acc, cached, pinSet, history] = await Promise.all([
+        loadAccount(),
+        loadCachedQuote(),
+        hasPin(),
+        loadPriceHistory(),
+      ]);
+      historyRef.current = history;
+      setPriceHistory(history);
       if (cached) {
         quoteRef.current = cached;
         setQuote(cached);
@@ -108,6 +143,25 @@ export function BankProvider({ children }: { children: ReactNode }) {
       refreshPrices();
     })();
   }, [refreshPrices]);
+
+  // Cours en direct : actualisation toutes les 30 s tant que l'appli est au premier plan.
+  useEffect(() => {
+    if (loading) return;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (!timer) timer = setInterval(() => refreshPrices(true), LIVE_REFRESH_MS);
+    };
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    };
+    if (AppState.currentState !== 'background') start();
+    const sub = AppState.addEventListener('change', (state) => (state === 'active' ? start() : stop()));
+    return () => {
+      stop();
+      sub.remove();
+    };
+  }, [loading, refreshPrices]);
 
   // Retour dans l'appli : nouveaux cours et code demandé. Fermeture : on enregistre le solde.
   useEffect(() => {
@@ -170,6 +224,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
       loading,
       account,
       quote,
+      priceHistory,
       refreshing,
       priceError,
       locked,
@@ -186,6 +241,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
       loading,
       account,
       quote,
+      priceHistory,
       refreshing,
       priceError,
       locked,
