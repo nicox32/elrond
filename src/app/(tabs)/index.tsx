@@ -50,7 +50,7 @@ export default function AccountScreen() {
         <Text style={styles.balanceLabel}>Solde total</Text>
         <Text style={styles.balance}>{formatEur(value.total)}</Text>
         <Text style={styles.louis}>soit {formatLouis(toLouis(value.total, quote.prices))}</Text>
-        <Text style={styles.sub}>Valeur de revente au cours actuel · 1 louis = 1 g d’or</Text>
+        <Text style={styles.sub}>Valeur de revente au cours actuel · 1 LOU = 1 €</Text>
         {perf.invested > 0 && (
           <Text style={[styles.gain, { color: perf.gain >= 0 ? colors.up : colors.down }]}>
             {perf.gain >= 0 ? 'Plus-value' : 'Moins-value'} : {perf.gain >= 0 ? '+' : '−'}

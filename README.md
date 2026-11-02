@@ -48,7 +48,7 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   par empreinte en option, blocage de 30 s après 5 codes faux. Seule une empreinte salée du code est
   conservée, dans le trousseau sécurisé du téléphone.
 - **Graphique d'évolution du solde** (24 h, 7 j, 30 j, tout) et **plus-value latente**.
-- **Le louis (LOU)**, monnaie interne d'Orvia : 1 louis = la valeur d'un gramme d'or au cours du moment ;
+- **Le louis (LOU)**, monnaie interne d'Orvia : 1 LOU = 1 € de métal précieux au cours du moment ;
   le solde s'affiche aussi en louis.
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
   achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;

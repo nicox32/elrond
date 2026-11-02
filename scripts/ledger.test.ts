@@ -305,6 +305,6 @@ test('opérations qui évitent les frais : achat et échanges de louis, pas les 
   assert.equal(dormancyStatus(sold, later).lastMovement.toISOString(), t0.toISOString()); // la vente ne compte pas
   const converted = convert(acc, prices, 'gold', 'silver', { unit: 'g', value: 1 }, later);
   assert.equal(dormancyStatus(converted, later).lastMovement.toISOString(), later.toISOString()); // échange : compte
-  // 1 louis = la valeur d'un gramme d'or
-  close(toLouis(250, prices), 2.5);
+  // 1 louis = 1 euro
+  close(toLouis(250, prices), 250);
 });

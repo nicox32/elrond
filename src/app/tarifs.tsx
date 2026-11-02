@@ -9,7 +9,7 @@ export default function FeesScreen() {
     <Screen testID="screen-tarifs">
       <Hint>
         Tous les tarifs d’Orvia. Les frais sont calculés sur le cours réel du métal au moment de l’opération. Le louis
-        (LOU), monnaie interne d’Orvia, vaut un gramme d’or au cours du moment.
+        (LOU), monnaie interne d’Orvia, vaut 1 € de métal précieux au cours du moment.
       </Hint>
 
       {FEE_TABLE.map((section) => (
