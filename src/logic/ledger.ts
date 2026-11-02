@@ -492,48 +492,77 @@ function addMonths(date: Date, months: number): Date {
   return d;
 }
 
-/** Date du dernier mouvement (les frais d'oxydation eux-mêmes ne comptent pas). */
+/** Montant minimal d'une opération pour qu'elle compte comme un mouvement (et évite les frais d'oxydation). */
+export const MIN_MOVEMENT_EUR = 1;
+
+/** Une opération d'au moins 1 € compte comme un mouvement ; les frais d'oxydation eux-mêmes, jamais. */
+export function isMovement(tx: Transaction): boolean {
+  return tx.kind !== 'fee_dormancy' && tx.eur >= MIN_MOVEMENT_EUR;
+}
+
+/** Date du dernier mouvement (opération d'au moins 1 €), ou de l'ouverture du compte. */
 export function lastMovement(wallet: Wallet): Date {
   let last = new Date(wallet.createdAt).getTime();
   for (const tx of wallet.transactions) {
-    if (tx.kind === 'fee_dormancy') continue;
-    last = Math.max(last, new Date(tx.date).getTime());
+    if (isMovement(tx)) last = Math.max(last, new Date(tx.date).getTime());
   }
   return new Date(last);
 }
 
-/** Où en est le compte vis-à-vis de l'inactivité. */
+/**
+ * Où en est le compte vis-à-vis de l'inactivité. Les périodes d'inactivité durent 6 mois calendaires
+ * à partir du dernier mouvement ; `nextChargeAt` est la fin de la prochaine période non facturée.
+ */
 export function dormancyStatus(wallet: Wallet, now = new Date()) {
-  const inactiveFrom = addMonths(lastMovement(wallet), FEES.dormancyAfterMonths);
-  const daysLeft = Math.ceil((inactiveFrom.getTime() - now.getTime()) / DAY_MS);
-  return { inactive: now >= inactiveFrom, inactiveFrom, daysLeft };
+  const last = lastMovement(wallet);
+  const inactiveFrom = addMonths(last, FEES.dormancyAfterMonths);
+  const charged = wallet.dormancyChargedThrough ? new Date(wallet.dormancyChargedThrough).getTime() : 0;
+  let k = 1;
+  while (addMonths(last, FEES.dormancyAfterMonths * k).getTime() <= Math.max(charged, last.getTime())) k++;
+  const nextChargeAt = addMonths(last, FEES.dormancyAfterMonths * k);
+  const daysLeft = Math.ceil((nextChargeAt.getTime() - now.getTime()) / DAY_MS);
+  return { inactive: now >= inactiveFrom, inactiveFrom, nextChargeAt, daysLeft, lastMovement: last };
 }
 
 /**
- * Prélève les frais d'oxydation dus : 0,02 % du solde par jour d'inactivité (au-delà de 6 mois sans mouvement),
- * en métal, jour après jour. N'agit que sur les jours entiers pas encore facturés.
+ * Prélève les frais d'oxydation dus. Chaque période de 6 mois calendaires sans mouvement, une fois écoulée,
+ * est facturée 0,02 % du solde par jour de la période (environ 3,6 % pour 6 mois), en métal.
+ * Une période déjà facturée ne l'est jamais deux fois.
  */
 export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now = new Date()): W {
-  const { inactive, inactiveFrom } = dormancyStatus(wallet, now);
-  if (!inactive) return wallet;
+  const last = lastMovement(wallet);
   const charged = wallet.dormancyChargedThrough ? new Date(wallet.dormancyChargedThrough).getTime() : 0;
-  const start = Math.max(inactiveFrom.getTime(), charged);
-  const days = Math.floor((now.getTime() - start) / DAY_MS);
-  if (days < 1) return wallet;
-  const through = new Date(start + days * DAY_MS).toISOString();
-  const share = 1 - (1 - FEES.dormancyDaily) ** days;
-  const deltas: Partial<Holdings> = {};
-  let value = 0;
-  for (const m of METALS) {
-    const fee = wallet.holdings[m] * share;
-    if (fee > 0) {
-      deltas[m] = -fee;
-      value += fee * prices[m];
+  let result = wallet;
+  for (let k = 1; ; k++) {
+    const periodStart = addMonths(last, FEES.dormancyAfterMonths * (k - 1));
+    const periodEnd = addMonths(last, FEES.dormancyAfterMonths * k);
+    if (periodEnd.getTime() > now.getTime()) break;
+    if (periodEnd.getTime() <= charged) continue;
+    const days = Math.round((periodEnd.getTime() - periodStart.getTime()) / DAY_MS);
+    const share = Math.min(1, FEES.dormancyDaily * days);
+    const deltas: Partial<Holdings> = {};
+    let value = 0;
+    for (const m of METALS) {
+      const fee = result.holdings[m] * share;
+      if (fee > 0) {
+        deltas[m] = -fee;
+        value += fee * prices[m];
+      }
+    }
+    const through = periodEnd.toISOString();
+    if (value > 0) {
+      const from = periodStart.toLocaleDateString('fr-FR');
+      const to = periodEnd.toLocaleDateString('fr-FR');
+      const label = `Frais d’oxydation · ${days} jours d’inactivité (${from} → ${to})`;
+      result = {
+        ...apply(result, 'fee_dormancy', deltas, value, label, periodEnd, value),
+        dormancyChargedThrough: through,
+      };
+    } else {
+      result = { ...result, dormancyChargedThrough: through };
     }
   }
-  if (value <= 0) return { ...wallet, dormancyChargedThrough: through };
-  const label = `Frais d’oxydation · ${days} jour${days > 1 ? 's' : ''} d’inactivité`;
-  return { ...apply(wallet, 'fee_dormancy', deltas, value, label, now, value), dormancyChargedThrough: through };
+  return result;
 }
 
 /** Applique les frais d'oxydation au compte principal et à chaque compte enfant. */

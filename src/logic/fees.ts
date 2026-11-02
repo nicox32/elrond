@@ -15,7 +15,7 @@ export const FEES = {
   immediateSpread: 0.028,
   /** Frais de gestion sur la revente lors d'une conversion (s'ajoutent aux frais d'achat du métal reçu). */
   conversion: 0.008,
-  /** Frais d'oxydation : part du solde prélevée chaque jour d'inactivité. */
+  /** Frais d'oxydation : part du solde facturée par jour d'une période de 6 mois sans mouvement. */
   dormancyDaily: 0.0002,
   /** Un compte est inactif après ce nombre de mois sans mouvement. */
   dormancyAfterMonths: 6,
@@ -66,8 +66,8 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Réception de métaux d’un membre', orvia: 'Gratuit' },
       { label: 'Compte enfant (ouverture, tenue, alimentation)', orvia: 'Gratuit' },
       {
-        label: `Frais d’oxydation : compte sans mouvement depuis plus de ${FEES.dormancyAfterMonths} mois`,
-        orvia: `${pct(FEES.dormancyDaily)} du solde par jour`,
+        label: `Frais d’oxydation : ${FEES.dormancyAfterMonths} mois calendaires sans opération d’au moins 1 €`,
+        orvia: `${pct(FEES.dormancyDaily)} du solde par jour, sur ces ${FEES.dormancyAfterMonths} mois`,
       },
     ],
   },

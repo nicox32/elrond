@@ -5,20 +5,24 @@ import { dormancyStatus } from '../logic/ledger';
 import type { Wallet } from '../logic/types';
 import { colors } from '../theme';
 
-/** Préviens quand un compte approche (ou a dépassé) les 6 mois sans mouvement. */
+const fmt = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/** Prévient quand une période de 6 mois sans opération d'au moins 1 € arrive à son terme (ou est dépassée). */
 export function DormancyNotice({ wallet, name }: { wallet: Wallet; name?: string }) {
   const status = dormancyStatus(wallet);
+  // Visible tant que le compte est inactif, ou dans le mois qui précède un prélèvement.
   if (!status.inactive && status.daysLeft > 30) return null;
   const who = name ? `Le compte de ${name}` : 'Ton compte';
-  const date = status.inactiveFrom.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
   const rate = `${(FEES.dormancyDaily * 100).toLocaleString('fr-FR')} %`;
+  const months = FEES.dormancyAfterMonths;
+  const total = `${(Math.round(FEES.dormancyDaily * 182 * 1000) / 10).toLocaleString('fr-FR')} %`;
   return (
     <View style={[styles.box, status.inactive && styles.boxInactive]}>
       <Text style={styles.title}>{status.inactive ? `${who} est inactif` : `${who} sera bientôt inactif`}</Text>
       <Text style={styles.text}>
         {status.inactive
-          ? `Aucun mouvement depuis plus de ${FEES.dormancyAfterMonths} mois : des frais d’oxydation de ${rate} du solde par jour s’appliquent depuis le ${date}. Une opération suffit à les arrêter.`
-          : `Sans mouvement d’ici le ${date}, des frais d’oxydation de ${rate} du solde par jour s’appliqueront. Une opération suffit à remettre le compteur à zéro.`}
+          ? `Aucune opération d’au moins 1 € depuis le ${fmt(status.lastMovement)} : des frais d’oxydation ont été prélevés pour ces ${months} mois. Sans opération d’ici le ${fmt(status.nextChargeAt)}, les ${months} mois suivants seront facturés à leur tour (${rate} du solde par jour).`
+          : `Sans opération d’au moins 1 € d’ici le ${fmt(status.nextChargeAt)}, des frais d’oxydation de ${rate} du solde par jour seront prélevés pour ces ${months} mois (environ ${total} du solde). Une opération suffit à remettre le compteur à zéro.`}
       </Text>
     </View>
   );

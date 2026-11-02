@@ -26,15 +26,19 @@ export default function FeesScreen() {
       <SectionTitle>Frais d’oxydation, en détail</SectionTitle>
       <Card style={{ gap: 6 }}>
         <Text style={styles.para}>
-          Un compte est considéré comme inactif s’il n’a connu aucun mouvement pendant plus de{' '}
-          {FEES.dormancyAfterMonths} mois glissants (achat, vente, conversion, virement ou versement familial).
+          Un compte laissé inactif pendant {FEES.dormancyAfterMonths} mois calendaires subit des frais de gestion de{' '}
+          {(FEES.dormancyDaily * 100).toLocaleString('fr-FR')} % par jour, appliqués pour ces {FEES.dormancyAfterMonths}{' '}
+          mois inactifs (environ {(Math.round(FEES.dormancyDaily * 182 * 1000) / 10).toLocaleString('fr-FR')} % du
+          solde), prélevés en métal.
         </Text>
         <Text style={styles.para}>
-          À partir de là, {(FEES.dormancyDaily * 100).toLocaleString('fr-FR')} % du solde est prélevé chaque jour, en
-          métal, jusqu’au prochain mouvement. Les frais eux-mêmes ne comptent pas comme un mouvement.
+          Pour éviter ces frais, il suffit de réaliser une opération à partir d’un euro : achat, vente, conversion,
+          virement ou versement sur un compte enfant. Les frais eux-mêmes ne comptent pas comme une opération.
         </Text>
         <Text style={styles.para}>
-          La règle s’applique à chaque compte séparément, comptes enfants compris. L’appli te prévient un mois avant.
+          Si l’inactivité continue, chaque nouvelle période de {FEES.dormancyAfterMonths} mois est facturée de la même
+          façon. La règle s’applique à chaque compte séparément, comptes enfants compris. L’appli te prévient un mois
+          avant.
         </Text>
       </Card>
 

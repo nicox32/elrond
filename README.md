@@ -54,9 +54,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   envois et réceptions entre membres gratuits.
 - **Comptes enfants gratuits** : un coffre par enfant, alimenté et repris depuis le compte principal
   sans frais (`docs/compte-enfant.png`).
-- **Frais d'oxydation** : 0,02 % du solde par jour, prélevés en métal, quand un compte (principal ou
-  enfant) n'a connu aucun mouvement depuis plus de 6 mois glissants. L'appli prévient un mois avant
-  (`docs/oxydation.png`).
+- **Frais d'oxydation** : un compte (principal ou enfant) laissé 6 mois calendaires sans opération d'au
+  moins 1 € est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
+  période de 6 mois d'inactivité est facturée de même. L'appli prévient un mois avant (`docs/oxydation.png`).
 
 Sources des cours : [gold-api.com](https://gold-api.com) (métaux) et
 [Frankfurter](https://frankfurter.dev) / [open.er-api.com](https://open.er-api.com) (taux USD → EUR).

@@ -228,7 +228,7 @@ test('comptes enfants : gratuits, alimentés et repris depuis le compte principa
   assert.equal(acc.children.length, 0);
 });
 
-test('frais d’oxydation : 0,02 %/jour après 6 mois sans mouvement, sur chaque compte', async () => {
+test('frais d’oxydation : 0,02 %/jour facturés pour chaque période de 6 mois sans opération d’au moins 1 €', async () => {
   const { applyDormancy, dormancyStatus, addChild, fundChild } = await import('../src/logic/ledger.ts');
   const t0 = new Date('2026-01-10T12:00:00Z');
   const day = 86_400_000;
@@ -239,20 +239,23 @@ test('frais d’oxydation : 0,02 %/jour après 6 mois sans mouvement, sur chaque
   const m5 = new Date('2026-06-10T12:00:00Z');
   assert.equal(applyDormancy(acc, prices, m5), acc);
   assert.ok(!dormancyStatus(acc, m5).inactive);
-  // 6 mois + 10 jours : 10 jours facturés sur les deux comptes
-  const inactiveFrom = new Date('2026-07-10T12:00:00Z');
-  const later = new Date(inactiveFrom.getTime() + 10 * day);
-  const charged = applyDormancy(acc, prices, later);
-  const share = 1 - (1 - 0.0002) ** 10;
+  // Une opération de moins de 1 € ne compte pas comme un mouvement
+  const tiny = buy(acc, prices, 'gold', { unit: 'eur', value: 0.5 }, m5);
+  assert.equal(dormancyStatus(tiny, m5).lastMovement.toISOString(), t0.toISOString());
+  // 6 mois écoulés (10 janvier → 10 juillet = 181 jours) : facturés d'un coup, sur chaque compte
+  const m6 = new Date('2026-07-12T12:00:00Z');
+  const charged = applyDormancy(acc, prices, m6);
+  const share = 0.0002 * 181;
   close(charged.holdings.gold, 50 * (1 - share));
   close(charged.children[0].holdings.gold, 50 * (1 - share));
   assert.equal(charged.transactions[0].kind, 'fee_dormancy');
-  // relancé le même jour : pas de double facturation
-  assert.equal(applyDormancy(charged, prices, new Date(later.getTime() + 3_600_000)), charged);
-  // 5 jours de plus : seuls ces 5 jours sont facturés
-  const again = applyDormancy(charged, prices, new Date(later.getTime() + 5 * day));
-  close(again.holdings.gold, 50 * (1 - share) * (1 - 0.0002) ** 5);
-  // les frais ne comptent pas comme un mouvement ; un vrai mouvement remet le compteur à zéro
-  const moved = buy(again, prices, 'gold', { unit: 'g', value: 1 }, new Date(later.getTime() + 5 * day));
-  assert.ok(!dormancyStatus(moved, new Date(later.getTime() + 6 * day)).inactive);
+  // relancé plus tard dans la même période : pas de double facturation
+  assert.equal(applyDormancy(charged, prices, new Date(m6.getTime() + 60 * day)), charged);
+  // 6 mois de plus sans opération (10 juillet → 10 janvier = 184 jours) : la période suivante est facturée
+  const m12 = new Date('2027-01-11T12:00:00Z');
+  const again = applyDormancy(charged, prices, m12);
+  close(again.holdings.gold, 50 * (1 - share) * (1 - 0.0002 * 184));
+  // une opération d'au moins 1 € remet le compteur à zéro
+  const moved = buy(again, prices, 'gold', { unit: 'eur', value: 1 }, m12);
+  assert.ok(!dormancyStatus(moved, new Date(m12.getTime() + 30 * day)).inactive);
 });
