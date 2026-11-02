@@ -60,10 +60,6 @@ export default function CardScreen() {
             commit((acc) => issueCard(acc));
           }}
         />
-        <Hint>
-          Démonstration : la carte est simulée. Une carte réelle nécessitera un partenaire émetteur agréé et un réseau
-          de paiement.
-        </Hint>
       </Screen>
     );
   }
@@ -130,7 +126,7 @@ export default function CardScreen() {
           <Usage label="Retraits · 7 jours" used={usedCash} limit={CARD.withdrawalLimit7d} />
         </Card>
 
-        <SectionTitle>Simuler une opération</SectionTitle>
+        <SectionTitle>Payer ou retirer</SectionTitle>
         <Segmented
           value={mode}
           onChange={(m) => {
@@ -187,7 +183,6 @@ export default function CardScreen() {
             ))}
           </Card>
         )}
-        <Hint>Démonstration : la carte est simulée, aucun paiement réel n’est effectué.</Hint>
 
         <PinConfirm visible={confirming} summary={summary} onConfirm={execute} onCancel={() => setConfirming(false)} />
       </Screen>

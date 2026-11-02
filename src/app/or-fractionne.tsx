@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Hint, Screen, SectionTitle } from '../components/ui';
+import { Button, Card, Screen, SectionTitle } from '../components/ui';
 import { formatEur } from '../logic/format';
 import { TROY_OUNCE } from '../logic/ledger';
 import { useBank } from '../state/BankProvider';
@@ -70,7 +70,6 @@ export default function FractionalGoldScreen() {
         title="Acheter de l’or"
         onPress={() => router.push({ pathname: '/operations', params: { mode: 'buy', t: Date.now() } })}
       />
-      <Hint>Compte de démonstration : le coffre, l’assurance et l’audit sont simulés.</Hint>
     </Screen>
   );
 }

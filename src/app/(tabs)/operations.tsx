@@ -184,9 +184,9 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
 
         <Hint>
           {mode === 'buy'
-            ? `Paiement par carte bancaire (fictive). Frais d’achat : ${pct(FEES.buy[metal])} du montant.`
+            ? `Paiement par carte bancaire. Frais d’achat : ${pct(FEES.buy[metal])} du montant.`
             : mode === 'sell'
-              ? `Les euros sont versés sur votre compte bancaire en France (fictif). Frais de revente : ${pct(FEES.sale)}. L’impôt est calculé et retenu automatiquement, au régime le moins cher.`
+              ? `Les euros sont versés sur votre compte bancaire en France. Frais de revente : ${pct(FEES.sale)}. L’impôt est calculé et retenu automatiquement, au régime le moins cher.`
               : `Frais de conversion : ${pct(FEES.conversion)} + frais d’achat du métal reçu.`}{' '}
           {metal === 'ecu'
             ? '1 g de Gold Oria = 1 g d’or fin 999,9, au cours du Gold Spot plus la prime Orvia. Vente exonérée d’impôt jusqu’à 5 000 € (détail dans son coffre).'

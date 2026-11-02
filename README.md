@@ -1,10 +1,9 @@
-# Orvia — compte adossé à l'or, à l'argent et au platine (démo)
+# Orvia — compte adossé à l'or, à l'argent et au platine
 
 <img src="assets/logo.png" width="160" alt="Logo Orvia : louis d'or" />
 
-Application mobile (Expo / React Native) qui simule un compte dont le solde est détenu en
-métaux précieux. **Les cours sont réels**, mais les achats, ventes et virements sont fictifs :
-aucun argent ni métal réel n'est échangé.
+Application mobile (Expo / React Native) : un compte dont le solde est détenu en métaux précieux,
+aux **cours réels** de l'or, de l'argent et du platine.
 
 <p>
   <img src="docs/compte.png" width="220" alt="Écran du compte" />
@@ -67,8 +66,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Le louis (LOU)**, monnaie interne d'Orvia : 1 LOU = 1 € de métal précieux au cours du moment ;
   le solde s'affiche aussi en louis.
 - **Gold Oria** (jeton maison, `src/logic/ecu.ts`, `docs/ecu-orvia.png`) : 1 g d'or fin 999,9 conservé au coffre ;
-  l'or classique s'appelle **Gold Spot**. Prix d'un gramme = 1 g × cours de l'or × (1 + prime), en direct ; prime automatique (marché simulé : cours de l'or face à sa
-  moyenne 30 j, demande simulée des autres investisseurs, vos achats et ventes sur 7 jours ; , entre 1 et 12 %) , ajustable par
+  l'or classique s'appelle **Gold Spot**. Prix d'un gramme = 1 g × cours de l'or × (1 + prime), en direct ; prime automatique (cours de l'or face à sa moyenne 30 j,
+  demande des autres investisseurs, vos achats et ventes sur 7 jours ; entre 1 et 12 %), ajustable par
   Orvia dans l'**Espace Dev** (Profil, protégé par son propre code ; conseil automatique « montez / baissez /
   gardez la prime » avec notification, `src/logic/premiumAdvice.ts` ; scénarios Désaffection, Normal, Forte demande, Crise et paliers de 0,25 pt ;
   `docs/espace-dev.png`), avec un graphique Gold Oria / Gold Spot (`docs/gold-oria-prime.png`). S'achète en euros, en grammes ou en onces (frais d'achat 1 %), se revend, se convertit,
@@ -77,7 +76,7 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **L'or fractionné** (`src/app/or-fractionne.tsx`, `docs/or-fractionne.png`) : page explicative (or dès 1 €, sans
   stockage à gérer, assuré et audité) et rappel sur l'accueil et chaque coffre : tous les métaux sont gardés par Orvia
   en coffre-fort en port franc, mais appartiennent au client, inscrits à son nom et séparés des biens d'Orvia.
-- **Carte Orvia** (simulée) : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
+- **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).
 - **Parrainage** : un code par compte à partager ; le filleul reçoit 10 LOU en or à son premier achat

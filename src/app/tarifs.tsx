@@ -51,8 +51,6 @@ export default function FeesScreen() {
 
       <SectionTitle>Comptes enfants : les règles</SectionTitle>
       <ChildRules name="l’enfant" />
-
-      <Hint>Compte de démonstration : aucun frais réel n’est prélevé.</Hint>
     </Screen>
   );
 }

@@ -31,7 +31,7 @@ export default function ProfileScreen() {
       run();
       return;
     }
-    Alert.alert('Fermer le compte de démo ?', 'Le solde, l’historique et le code seront effacés.', [
+    Alert.alert('Fermer le compte ?', 'Le solde, l’historique et le code seront effacés.', [
       { text: 'Annuler', style: 'cancel' },
       { text: 'Fermer le compte', style: 'destructive', onPress: run },
     ]);
@@ -118,12 +118,9 @@ export default function ProfileScreen() {
       </Card>
       <Hint>Le code à 4 chiffres est demandé à chaque ouverture de l’appli et pour valider chaque virement.</Hint>
 
-      <SectionTitle>Compte de démonstration</SectionTitle>
-      <Hint>
-        Les cours affichés sont réels (or, argent et platine au comptant, convertis en euros). Les achats, ventes et
-        virements sont simulés : aucun argent ni métal réel n’est échangé.
-      </Hint>
-      <Button title="Fermer le compte de démo" variant="danger" onPress={confirmReset} />
+      <SectionTitle>Compte</SectionTitle>
+      <Hint>Cours réels de l’or, de l’argent et du platine au comptant, convertis en euros.</Hint>
+      <Button title="Fermer le compte" variant="danger" onPress={confirmReset} />
     </Screen>
   );
 }

@@ -281,9 +281,7 @@ export default function ChildScreen() {
           <Text style={styles.code} selectable>
             {child.transferCode}
           </Text>
-          <Hint>
-            Démonstration : dans la version connectée, {name} saisira ce code après sa vérification d’identité.
-          </Hint>
+          <Hint>{name} saisit ce code dans son propre accès Orvia, après la vérification de son identité.</Hint>
         </View>
       )}
 

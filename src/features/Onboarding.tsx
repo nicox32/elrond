@@ -70,9 +70,6 @@ export function Onboarding({ existingHolder }: { existingHolder?: string }) {
           returnKeyType="next"
         />
         <Button title="Ouvrir mon compte" onPress={() => setStep('pin')} disabled={!valid} />
-        <Text style={styles.disclaimer}>
-          Application de démonstration : les cours sont réels, mais aucun argent ni métal réel n’est échangé.
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -83,5 +80,4 @@ const styles = StyleSheet.create({
   welcome: { flex: 1, justifyContent: 'center', padding: 24, gap: 14 },
   logo: { width: 200, height: 200, alignSelf: 'center' },
   tagline: { color: colors.textMuted, fontSize: 15, textAlign: 'center', marginBottom: 20, lineHeight: 21 },
-  disclaimer: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginTop: 8, lineHeight: 17 },
 });

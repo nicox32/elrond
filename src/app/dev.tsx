@@ -113,8 +113,8 @@ function DevPanel() {
   return (
     <Screen testID="screen-dev">
       <Hint>
-        Espace réservé à Orvia (démonstration). Les clients ne choisissent pas la prime : c’est Orvia qui l’ajuste selon
-        le marché. Chaque ajustement s’applique à partir de maintenant, sans modifier le passé.
+        Espace réservé à Orvia. Les clients ne choisissent pas la prime : c’est Orvia qui l’ajuste selon le marché.
+        Chaque ajustement s’applique à partir de maintenant, sans modifier le passé.
       </Hint>
 
       <SectionTitle>Conseil du moment</SectionTitle>
@@ -143,7 +143,7 @@ function DevPanel() {
 
       <SectionTitle>Prime du Gold Oria</SectionTitle>
       <Card style={{ gap: 8 }}>
-        <Row label="Marché simulé (base + or + demande + flux)" value={pct(parts.premium - parts.adjustment)} />
+        <Row label="Prime de marché (base + or + demande + flux)" value={pct(parts.premium - parts.adjustment)} />
         <Row label="Ajustement Orvia" value={pts(parts.adjustment)} />
         <View style={styles.sep} />
         <Row label="Prime appliquée" value={pct(parts.premium)} strong />
@@ -220,7 +220,7 @@ function DevPanel() {
         <Text style={styles.para}>
           <Text style={styles.bold}>Rythme.</Text> Par petits paliers de 0,25 à 0,5 point, au plus une fois par semaine
           en temps normal ; plus vite seulement en crise. Revenez au scénario « Normal » quand la situation se calme :
-          le marché simulé continue de faire varier la prime au jour le jour.
+          la prime de marché continue de varier au jour le jour.
         </Text>
       </Card>
 

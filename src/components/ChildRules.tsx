@@ -26,8 +26,7 @@ export function ChildRules({ name, compact }: { name: string; compact?: boolean 
       ))}
       {!compact && (
         <Text style={styles.note}>
-          Règles inspirées du droit français (administration légale, Code civil art. 382 et suivants). Compte de
-          démonstration : à faire valider par un juriste avant un vrai lancement.
+          Règles du droit français : administration légale des biens d’un mineur (Code civil, art. 382 et suivants).
         </Text>
       )}
     </View>

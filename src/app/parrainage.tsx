@@ -97,10 +97,6 @@ export default function ReferralScreen() {
         <Hint>
           Le bonus compte comme une opération : il évite les frais d’oxydation. Un seul code de parrain par compte.
         </Hint>
-        <Hint>
-          Démonstration : sans serveur, l’appli ne peut pas vérifier qu’un code existe ni créditer le parrain. Ces deux
-          points arriveront avec la version connectée.
-        </Hint>
       </View>
     </Screen>
   );
