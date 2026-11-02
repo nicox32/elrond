@@ -63,8 +63,6 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   « Plus-value et impôts », plus-value latente avant et après impôt, détail par métal et perspective jusqu'à
   l'exonération. Le métal versé est un don : prix de revient = valeur le jour du versement, durée de détention à partir
   de cette date.
-- **Le louis (LOU)**, monnaie interne d'Orvia : 1 LOU = 1 € de métal précieux au cours du moment ;
-  le solde s'affiche aussi en louis.
 - **Gold Oria** (jeton maison, `src/logic/ecu.ts`, `docs/ecu-orvia.png`) : 1 g d'or fin 999,9 conservé au coffre ;
   l'or classique s'appelle **Gold Spot**. Prix d'un gramme = 1 g × cours de l'or × (1 + prime), en direct ; prime automatique (cours de l'or face à sa moyenne 30 j,
   demande des autres investisseurs, vos achats et ventes sur 7 jours ; entre 1 et 12 %), ajustable par
@@ -86,8 +84,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).
-- **Parrainage** : un code par compte à partager ; le filleul reçoit 10 LOU en or à son premier achat
-  d'au moins 50 € (`docs/parrainage.png`). Sans serveur, le parrain n'est pas encore crédité.
+- **Parrainage** : un code par compte à partager ; le filleul reçoit 10 € en or à son premier achat
+  d'au moins 50 € (`docs/parrainage.png`).
 - **Reprise de l'historique 2021** (Profil) : compte ouvert le 5 janvier 2021, 12 achats le 5 de chaque mois
   (3 845 €, 3/4 argent et 1/4 or par défaut, modifiables), aux cours approximatifs de 2021, sans frais et sans
   oxydation rétroactive (`docs/historique-2021.png`).
