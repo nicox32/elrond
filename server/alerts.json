@@ -1,6 +1,7 @@
 {
   "alerts": [
     { "metal": "gold", "kind": "below", "value": 3400, "unit": "oz" },
-    { "metal": "silver", "kind": "above", "value": 55, "unit": "oz" }
+    { "metal": "silver", "kind": "above", "value": 55, "unit": "oz" },
+    { "metal": "silver", "kind": "drop", "value": 5, "window": "24h" }
   ]
 }
