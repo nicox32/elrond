@@ -5,7 +5,6 @@ import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Button, Card, Hint, Screen, SectionTitle } from '../../components/ui';
 import { EcuInfo } from '../../components/EcuInfo';
-import { ECU } from '../../logic/ecu';
 import { formatEur, formatUnitPrice, formatWeight } from '../../logic/format';
 import { buyPrice, METAL_LABEL, sellPrice } from '../../logic/ledger';
 import { type Metal, METALS } from '../../logic/types';
@@ -34,9 +33,8 @@ export default function VaultScreen() {
         <Text style={[styles.metal, { color: metalColor[metal] }]}>{METAL_LABEL[metal]}</Text>
         <Text style={styles.weight}>{formatWeight(grams, 'g', metal)}</Text>
         <Text style={styles.oz}>
-          {metal === 'ecu'
-            ? `soit ${formatWeight(grams * ECU.goldGrams, 'g')} d’or fin`
-            : `soit ${formatWeight(grams, 'oz')}`}
+          soit {formatWeight(grams, 'oz')}
+          {metal === 'ecu' ? ' d’or fin 999,9' : ''}
         </Text>
         <Text style={styles.value}>{formatEur(value)}</Text>
       </View>
@@ -44,11 +42,7 @@ export default function VaultScreen() {
       <Card style={{ gap: 8 }}>
         <Line
           label="Cours"
-          value={
-            metal === 'ecu'
-              ? formatUnitPrice(quote.prices.ecu, 'g', 'ecu')
-              : `${formatUnitPrice(quote.prices[metal], 'g')} · ${formatUnitPrice(quote.prices[metal], 'oz')}`
-          }
+          value={`${formatUnitPrice(quote.prices[metal], 'g')} · ${formatUnitPrice(quote.prices[metal], 'oz')}`}
         />
         <Line
           label="Prix d’achat"

@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { clampPremium, ECU } from '../logic/ecu';
-import { formatEur, formatUnitPrice } from '../logic/format';
+import { FEES } from '../logic/fees';
+import { GAIN_RATE, TAX } from '../logic/tax';
+import { formatEur, formatUnitPrice, formatWeight } from '../logic/format';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Card, Hint, SectionTitle } from './ui';
@@ -19,21 +21,79 @@ export function EcuInfo() {
 
   return (
     <>
-      <SectionTitle>Qu’est-ce que le Gold Oria ?</SectionTitle>
+      <SectionTitle>Ce que représente le Gold Oria</SectionTitle>
       <Card style={{ gap: 8 }}>
         <Text style={styles.para}>
-          Un jeton d’investissement frappé pour Orvia : {ECU.goldGrams} g d’or fin {ECU.fineness}, conservé au coffre à
-          votre nom. Vous pouvez en acheter une fraction, le revendre, l’envoyer ou le verser à vos enfants comme vos
-          autres métaux.
+          Le Gold Oria est de l’<Text style={styles.bold}>or physique pur</Text>, au titre de {ECU.fineness} ‰, frappé
+          en jetons pour Orvia et conservé dans son coffre. Vous l’achetez <Text style={styles.bold}>au gramme</Text> :
+          chaque gramme acheté est 1 g d’or fin qui vous appartient, inscrit à votre nom.
         </Text>
-        <SectionTitle>Son prix, en détail</SectionTitle>
-        <Row label={`Or contenu (${ECU.goldGrams} g au cours du moment)`} value={formatEur(gold)} />
+        <Bullet>
+          <Text style={styles.bold}>Gold Spot</Text> : de l’or au prix du marché, sans prime. Idéal pour épargner.
+        </Bullet>
+        <Bullet>
+          <Text style={styles.bold}>Gold Oria</Text> : le même or, sous forme de jetons frappés. Il coûte un peu plus
+          (la prime), mais sa vente est exonérée d’impôt jusqu’à 5 000 €.
+        </Bullet>
+        <Text style={styles.para}>
+          Vous pouvez le revendre à tout moment, le convertir, l’envoyer à un membre, payer avec par carte ou le verser
+          à vos enfants, comme vos autres métaux.
+        </Text>
+      </Card>
+
+      <SectionTitle>Son prix, en détail</SectionTitle>
+      <Card style={{ gap: 8 }}>
+        <Row label="Or fin (1 g au cours du Gold Spot)" value={formatEur(gold)} />
         <Row label={`Prime Orvia (${pct(premium)})`} value={`+ ${formatEur(gold * premium)}`} />
         <View style={styles.sep} />
-        <Row label="Prix d’un jeton" value={formatUnitPrice(quote.prices.ecu, 'g', 'ecu')} strong />
+        <Row label="Prix d’un gramme de Gold Oria" value={formatUnitPrice(quote.prices.ecu, 'g')} strong />
         <Text style={styles.muted}>
-          Le prix bouge tout seul avec le cours de l’or, en direct. La prime couvre la frappe et reflète la demande :
-          vous la retrouvez à la revente.
+          Le prix suit le cours de l’or en direct. La prime couvre la frappe et reflète la demande : vous la retrouvez à
+          la revente. À l’achat s’ajoutent {pct(FEES.buy.ecu)} de frais, à la revente {pct(FEES.sale)}.
+        </Text>
+      </Card>
+
+      <SectionTitle>Sa fiscalité</SectionTitle>
+      <Card style={{ gap: 8 }}>
+        <Text style={styles.para}>
+          Le Gold Oria relève du régime des jetons. L’impôt est calculé et retenu automatiquement à chaque vente :
+        </Text>
+        <Bullet>
+          <Text style={styles.bold}>Vente jusqu’à {formatEur(TAX.tokenExemptUpTo)}</Text> : aucun impôt.
+        </Bullet>
+        <Bullet>
+          <Text style={styles.bold}>Au-delà</Text> : {pct(TAX.tokenFlat)} du prix de vente (6 % + 0,5 % de CRDS), ou le
+          régime des plus-values s’il coûte moins cher : {pct(GAIN_RATE)} de la plus-value, réduite de 5 % par année de
+          détention à partir de la 3e, exonération totale après 22 ans.
+        </Bullet>
+        <Bullet>
+          Le seuil s’apprécie à chaque vente. Une conversion, un paiement par carte ou un virement vers une banque sont
+          aussi des ventes ; un envoi à un membre ou un versement à un enfant n’en sont pas (règles des dons).
+        </Bullet>
+        <Text style={[styles.para, styles.bold]}>Impôt selon le montant vendu, comparé au Gold Spot</Text>
+        <View style={styles.table}>
+          <View style={styles.tr}>
+            <Text style={[styles.th, { flex: 1.2 }]}>Vente de</Text>
+            <Text style={styles.th}>Gold Oria</Text>
+            <Text style={styles.th}>Gold Spot</Text>
+          </View>
+          {[1000, 5000, 10000, 20000].map((v) => (
+            <View key={v} style={styles.tr}>
+              <Text style={[styles.td, { flex: 1.2 }]}>
+                {formatEur(v)}
+                {'\n'}
+                <Text style={styles.muted}>≈ {formatWeight(v / (quote.prices.ecu * (1 - FEES.sale)), 'g')}</Text>
+              </Text>
+              <Text style={[styles.td, v <= TAX.tokenExemptUpTo && { color: colors.up }]}>
+                {v <= TAX.tokenExemptUpTo ? '0 €' : formatEur(v * TAX.tokenFlat)}
+              </Text>
+              <Text style={styles.td}>{formatEur(v * TAX.flat)}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.muted}>
+          Taux forfaitaires : {pct(TAX.tokenFlat)} au-delà de 5 000 € pour le Gold Oria, {pct(TAX.flat)} dès le premier
+          euro pour le Gold Spot. Si le régime des plus-values coûte moins cher, c’est lui qui est appliqué.
         </Text>
       </Card>
 
@@ -72,12 +132,16 @@ export function EcuInfo() {
           valeur même si l’or ne bouge pas ; si elle monte, il en gagne.
         </Hint>
       </Card>
-
-      <Hint>
-        Fiscalité des jetons : aucun impôt pour une vente jusqu’à 5 000 € ; au-delà, 6,5 % du prix de vente (6 % + 0,5 %
-        de CRDS), ou le régime des plus-values s’il coûte moins cher.
-      </Hint>
     </>
+  );
+}
+
+function Bullet({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      <Text style={{ color: colors.gold, lineHeight: 19 }}>•</Text>
+      <Text style={[styles.para, { flex: 1 }]}>{children}</Text>
+    </View>
   );
 }
 
@@ -91,6 +155,10 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 }
 
 const styles = StyleSheet.create({
+  table: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, overflow: 'hidden' },
+  tr: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, marginTop: -1 },
+  th: { flex: 1, color: colors.textMuted, fontSize: 12, fontWeight: '700', padding: 8 },
+  td: { flex: 1, color: colors.text, fontSize: 13, padding: 8, fontVariant: ['tabular-nums'] },
   para: { color: colors.text, fontSize: 13, lineHeight: 19 },
   muted: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },

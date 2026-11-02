@@ -67,8 +67,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Le louis (LOU)**, monnaie interne d'Orvia : 1 LOU = 1 € de métal précieux au cours du moment ;
   le solde s'affiche aussi en louis.
 - **Gold Oria** (jeton maison, `src/logic/ecu.ts`, `docs/ecu-orvia.png`) : 1 g d'or fin 999,9 conservé au coffre ;
-  l'or classique s'appelle **Gold Spot**. Prix d'un jeton = 1 g × cours de l'or × (1 + prime), en direct ; prime par défaut de 4 %, réglable de 0 à
-  15 % dans son coffre (démonstration). S'achète en euros ou en jetons (frais d'achat 1 %), se revend, se convertit,
+  l'or classique s'appelle **Gold Spot**. Prix d'un gramme = 1 g × cours de l'or × (1 + prime), en direct ; prime par défaut de 4 %, réglable de 0 à
+  15 % dans son coffre (démonstration). S'achète en euros, en grammes ou en onces (frais d'achat 1 %), se revend, se convertit,
   s'envoie et se verse aux enfants. Fiscalité des jetons : vente exonérée jusqu'à 5 000 €, au-delà 6,5 % du prix de
   vente ou régime des plus-values si moins cher. Compte comme de l'or dans la répartition.
 - **Carte Orvia** (simulée) : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
