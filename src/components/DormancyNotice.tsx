@@ -22,7 +22,7 @@ export function DormancyNotice({ wallet, name }: { wallet: Wallet; name?: string
       <Text style={styles.text}>
         {status.inactive
           ? `Aucune opération éligible d’au moins 1 € depuis le ${fmt(status.lastMovement)} : des frais d’oxydation ont été prélevés pour ces ${months} mois. Sans opération d’ici le ${fmt(status.nextChargeAt)}, les ${months} mois suivants seront facturés à leur tour (${rate} du solde par jour).`
-          : `Sans opération éligible d’au moins 1 € d’ici le ${fmt(status.nextChargeAt)}, des frais d’oxydation de ${rate} du solde par jour seront prélevés pour ces ${months} mois (environ ${total} du solde). Un paiement par carte, un échange de louis, un achat ou un parrainage suffit à remettre le compteur à zéro.`}
+          : `Sans opération éligible d’au moins 1 € d’ici le ${fmt(status.nextChargeAt)}, des frais d’oxydation de ${rate} du solde par jour seront prélevés pour ces ${months} mois (environ ${total} du solde). Un paiement par carte, un échange de métal, un achat ou un parrainage suffit à remettre le compteur à zéro.`}
       </Text>
     </View>
   );

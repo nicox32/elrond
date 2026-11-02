@@ -6,6 +6,7 @@ import { History2021 } from '../../components/History2021';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate } from '../../logic/format';
+import { loyalty } from '../../logic/loyalty';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { authenticateWithBiometrics, biometricsAvailable } from '../../security';
 import { colors } from '../../theme';
@@ -89,6 +90,12 @@ export default function ProfileScreen() {
           to="/attente"
           border
         />
+        <LinkRow
+          label="Fidélité"
+          hint={`${loyalty(account).balance} LOU · épargne régulière récompensée`}
+          to="/fidelite"
+          border
+        />
         <LinkRow label="Espace Dev" hint="Réservé à Orvia (code) : prime du Gold Oria et conseils" to="/dev" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
@@ -149,7 +156,8 @@ function LinkRow({
     | '/fiscalite'
     | '/or-fractionne'
     | '/dev'
-    | '/attente';
+    | '/attente'
+    | '/fidelite';
   border?: boolean;
 }) {
   return (

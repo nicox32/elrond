@@ -8,10 +8,7 @@ import { colors } from '../theme';
 export default function FeesScreen() {
   return (
     <Screen testID="screen-tarifs">
-      <Hint>
-        Tous les tarifs d’Orvia. Les frais sont calculés sur le cours réel du métal au moment de l’opération. Le louis
-        (LOU), monnaie interne d’Orvia, vaut 1 € de métal précieux au cours du moment.
-      </Hint>
+      <Hint>Tous les tarifs d’Orvia. Les frais sont calculés sur le cours réel du métal au moment de l’opération.</Hint>
 
       {FEE_TABLE.map((section) => (
         <View key={section.title} style={{ gap: 10 }}>
@@ -37,7 +34,7 @@ export default function FeesScreen() {
         </Text>
         <Text style={styles.para}>
           Pour éviter ces frais, il suffit de réaliser l’une des opérations suivantes à partir d’un euro : paiement ou
-          retrait avec la carte Orvia, échange de louis (envoi à un membre, conversion, versement entre comptes de la
+          retrait avec la carte Orvia, échange de métal (envoi à un membre, conversion, versement entre comptes de la
           famille), crédit du compte (achat de métal) ou parrainage. Les ventes, les virements vers un IBAN et les frais
           eux-mêmes ne comptent pas.
         </Text>

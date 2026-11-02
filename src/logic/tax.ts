@@ -72,7 +72,12 @@ export function holdingLots(wallet: Pick<Wallet, 'transactions'>): Record<Metal,
       if (delta > 0) {
         // Conversion : le nouveau métal coûte ce qui a été réinvesti (après frais de conversion et impôt).
         const paid = tx.kind === 'convert' ? tx.eur * (1 - FEES.conversion) - (tx.tax ?? 0) : tx.eur;
-        const cost = tx.kind === 'referral_bonus' ? 0 : inflows.length === 1 ? paid : (paid * delta) / inflowGrams;
+        const cost =
+          tx.kind === 'referral_bonus' || tx.kind === 'loyalty_redeem'
+            ? 0
+            : inflows.length === 1
+              ? paid
+              : (paid * delta) / inflowGrams;
         lots[m].push({ date: tx.date, grams: delta, cost });
       } else if (delta < 0) {
         let out = -delta;

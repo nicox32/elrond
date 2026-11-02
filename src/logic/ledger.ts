@@ -1,4 +1,5 @@
 import { DEFERRED_DAYS, FEES, type SaleSpeed } from './fees.ts';
+import { LOYALTY, loyalty } from './loyalty.ts';
 import { gramsForNet, type SaleTax, saleTax } from './tax.ts';
 import {
   type Account,
@@ -503,7 +504,13 @@ export function netInvested(account: Pick<Wallet, 'transactions'>): number {
     else if (tx.kind === 'buy' && tx.cash) continue;
     else if (tx.kind === 'buy' || tx.kind === 'family_in') total += tx.eur;
     // Le bonus de parrainage est un gain, pas un apport : il apparaît dans la plus-value.
-    else if (tx.kind !== 'convert' && tx.kind !== 'fee_dormancy' && tx.kind !== 'referral_bonus') total -= tx.eur;
+    else if (
+      tx.kind !== 'convert' &&
+      tx.kind !== 'fee_dormancy' &&
+      tx.kind !== 'referral_bonus' &&
+      tx.kind !== 'loyalty_redeem'
+    )
+      total -= tx.eur;
   }
   return round(total, 2);
 }
@@ -809,7 +816,7 @@ export function applyDormancy(account: Account, prices: Prices, now = new Date()
 // ——— Parrainage ——————————————————————————————————————————————————
 
 export const REFERRAL = {
-  /** Bonus versé au filleul, en louis (1 LOU = 1 €), crédité en or. */
+  /** Bonus versé au filleul, en euros, crédité en or. */
   bonusLou: 10,
   /** Montant minimal du premier achat qui déclenche le bonus. */
   minFirstPurchase: 50,
@@ -850,6 +857,27 @@ export function payReferralBonus(account: Account, prices: Prices, now = new Dat
     now,
   );
   return { ...credited, referral: { ...r, bonusPaid: true } };
+}
+
+// ——— Fidélité ————————————————————————————————————————————————————
+
+/** Échange des louis de fidélité contre du métal : 1 LOU = 1 € de métal, sans frais, à partir de 10 LOU. */
+export function redeemLoyalty(account: Account, prices: Prices, lou: number, metal: Metal, now = new Date()): Account {
+  const n = Math.floor(lou);
+  if (!(n >= LOYALTY.minRedeem)) throw new LedgerError(`Échange possible à partir de ${LOYALTY.minRedeem} LOU.`);
+  const balance = loyalty(account, now).balance;
+  if (n > balance) throw new LedgerError(`Vous avez ${balance} LOU.`);
+  const eur = n * LOYALTY.eurPerLou;
+  const next = apply(
+    account,
+    'loyalty_redeem',
+    { [metal]: eur / prices[metal] },
+    eur,
+    `Fidélité : ${n} LOU échangés contre ${METAL_LABEL[metal]}`,
+    now,
+  );
+  const [tx, ...rest] = next.transactions;
+  return { ...next, transactions: [{ ...tx, loyaltyLou: n }, ...rest] };
 }
 
 // ——— Carte Orvia ————————————————————————————————————————————————

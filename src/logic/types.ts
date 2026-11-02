@@ -59,7 +59,9 @@ export type TransactionKind =
   /** Euros crédités sur le compte d'attente. */
   | 'cash_in'
   /** Euros du compte d'attente renvoyés vers le compte bancaire. */
-  | 'cash_out';
+  | 'cash_out'
+  /** Louis de fidélité échangés contre du métal. */
+  | 'loyalty_redeem';
 
 export interface Transaction {
   id: string;
@@ -77,6 +79,8 @@ export interface Transaction {
   label: string;
   /** Versement annulé (erreur corrigée sous 24 h). */
   reversed?: boolean;
+  /** Louis de fidélité échangés (opération « loyalty_redeem »). */
+  loyaltyLou?: number;
   /** Variation du compte d'attente en euros (achat payé depuis ce compte : négatif). */
   cash?: number;
   /** Impôt retenu sur une cession (vente, virement bancaire, carte, conversion), en euros. */

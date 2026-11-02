@@ -5,13 +5,13 @@ import { BalanceChart } from '../../components/BalanceChart';
 import { CustodyNote } from '../../components/Custody';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { OrviaCard } from '../../components/OrviaCard';
-import { formatLouis, toLouis } from '../../logic/currency';
 import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
 import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
+import { formatLou, loyalty } from '../../logic/loyalty';
 import { estimateTax } from '../../logic/tax';
 import { METALS } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
@@ -54,8 +54,10 @@ export default function AccountScreen() {
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Solde total</Text>
         <Text style={styles.balance}>{formatEur(total)}</Text>
-        <Text style={styles.louis}>soit {formatLouis(toLouis(total, quote.prices))}</Text>
-        <Text style={styles.sub}>Valeur de revente au cours actuel · 1 LOU = 1 €</Text>
+        <Text style={styles.sub}>Valeur de revente au cours actuel, compte d’attente compris</Text>
+        <Pressable onPress={() => router.push('/fidelite')} accessibilityRole="link">
+          <Text style={styles.loyalty}>★ {formatLou(loyalty(account).balance)} de fidélité ›</Text>
+        </Pressable>
         {tax.cost > 0 && (
           <Text style={[styles.gain, { color: tax.gain >= 0 ? colors.up : colors.down }]}>
             {tax.gain >= 0 ? 'Plus-value latente' : 'Moins-value latente'} : {tax.gain >= 0 ? '+' : '−'}
@@ -143,7 +145,7 @@ export default function AccountScreen() {
 
       <Pressable onPress={() => router.push('/parrainage')} style={styles.referral} accessibilityRole="button">
         <Text style={styles.referralText}>
-          ★ Parrainez vos proches : ils reçoivent {REFERRAL.bonusLou} LOU en or à leur premier achat.
+          ★ Parrainez vos proches : ils reçoivent {REFERRAL.bonusLou} € en or à leur premier achat.
         </Text>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
@@ -226,6 +228,7 @@ export default function AccountScreen() {
 }
 
 const styles = StyleSheet.create({
+  loyalty: { color: colors.gold, fontSize: 13, fontWeight: '700', marginTop: 4 },
   cash: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -254,7 +257,6 @@ const styles = StyleSheet.create({
   balanceLabel: { color: colors.textMuted, fontSize: 13 },
   balance: { color: colors.text, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'] },
   sub: { color: colors.textMuted, fontSize: 11 },
-  louis: { color: colors.gold, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
   gain: { fontSize: 13, fontWeight: '700', marginTop: 6, fontVariant: ['tabular-nums'] },
   split: {
     flexDirection: 'row',

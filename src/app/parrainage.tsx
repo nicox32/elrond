@@ -13,7 +13,7 @@ export default function ReferralScreen() {
   const [input, setInput] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const invite = `Rejoignez-moi sur Orvia, le compte en or, argent et platine. Avec mon code ${code}, vous recevez ${REFERRAL.bonusLou} LOU en or dès votre premier achat de ${REFERRAL.minFirstPurchase} €.`;
+  const invite = `Rejoignez-moi sur Orvia, le compte en or, argent et platine. Avec mon code ${code}, vous recevez ${REFERRAL.bonusLou} € en or dès votre premier achat de ${REFERRAL.minFirstPurchase} €.`;
 
   async function share() {
     try {
@@ -38,7 +38,7 @@ export default function ReferralScreen() {
       setInput('');
       setMessage({
         ok: true,
-        text: `Code enregistré : ${REFERRAL.bonusLou} LOU en or vous seront versés à votre premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`,
+        text: `Code enregistré : ${REFERRAL.bonusLou} € en or vous seront versés à votre premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`,
       });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Une erreur est survenue.' });
@@ -49,8 +49,8 @@ export default function ReferralScreen() {
     <Screen testID="screen-parrainage">
       <Text style={styles.title}>Parrainez vos proches</Text>
       <Text style={styles.para}>
-        Partagez votre code. Votre filleul reçoit {REFERRAL.bonusLou} LOU en or (soit {REFERRAL.bonusLou} €) dès son
-        premier achat d’au moins {REFERRAL.minFirstPurchase} €.
+        Partagez votre code. Votre filleul reçoit {REFERRAL.bonusLou} € en or dès son premier achat d’au moins{' '}
+        {REFERRAL.minFirstPurchase} €.
       </Text>
 
       <Card style={styles.codeCard}>
@@ -69,8 +69,8 @@ export default function ReferralScreen() {
           </Text>
           <Text style={[styles.para, { color: bonusPaid ? colors.up : colors.textMuted }]}>
             {bonusPaid
-              ? `Bonus de ${REFERRAL.bonusLou} LOU versé sur votre compte.`
-              : `Votre bonus de ${REFERRAL.bonusLou} LOU arrivera à votre premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`}
+              ? `Bonus de ${REFERRAL.bonusLou} € en or versé sur votre compte.`
+              : `Votre bonus de ${REFERRAL.bonusLou} € en or arrivera à votre premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`}
           </Text>
         </Card>
       ) : (

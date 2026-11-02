@@ -312,7 +312,6 @@ test('compte enfant : aucun frais d’oxydation avant 18 ans, compteur lancé à
 
 test('opérations qui évitent les frais : achat et échanges de louis, pas les ventes ni les virements IBAN', async () => {
   const { dormancyStatus } = await import('../src/logic/ledger.ts');
-  const { toLouis } = await import('../src/logic/currency.ts');
   const t0 = new Date('2026-01-10T12:00:00Z');
   const acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 10 }, t0);
   const later = new Date('2026-05-01T12:00:00Z');
@@ -321,7 +320,6 @@ test('opérations qui évitent les frais : achat et échanges de louis, pas les 
   const converted = convert(acc, prices, 'gold', 'silver', { unit: 'g', value: 1 }, later);
   assert.equal(dormancyStatus(converted, later).lastMovement.toISOString(), later.toISOString()); // échange : compte
   // 1 louis = 1 euro
-  close(toLouis(250, prices), 250);
 });
 
 test('carte Orvia : paiements et retraits gratuits, plafonds, gel, comptent comme mouvements', async () => {
@@ -662,4 +660,35 @@ test('compte d’attente : crédit, achat réparti depuis le compte, retrait', a
   acc = withdrawCash(acc, 150, now);
   close(acc.cashEur ?? 0, 50, 0.01);
   assert.throws(() => withdrawCash(acc, 100, now), LedgerError);
+});
+
+test('fidélité : points modestes pour l’épargne régulière, échange contre du métal', async () => {
+  const { loyalty, LOYALTY } = await import('../src/logic/loyalty.ts');
+  const { redeemLoyalty } = await import('../src/logic/ledger.ts');
+  const p = { gold: 100, silver: 1, platinum: 30, ecu: 104 };
+  let acc = createAccount('T', new Date('2021-01-05'));
+  // 12 achats mensuels de 320 € en 2021
+  for (let m = 0; m < 12; m++)
+    acc = buy(acc, p, m % 4 ? 'silver' : 'gold', { unit: 'eur', value: 320 }, new Date(2021, m, 5));
+  const now = new Date('2026-11-02T12:00:00Z');
+  const l = loyalty(acc, now);
+  assert.equal(l.months, 12);
+  assert.equal(l.streaks, 1);
+  assert.equal(l.fromBuys, Math.floor(3840 / 500)); // 7
+  assert.equal(l.years, 5);
+  assert.equal(l.earned, 12 + 5 + 7 + 5);
+  // Rien sur les ventes, ni sur un mois sous 50 €
+  const sold = sell(acc, p, 'gold', { unit: 'g', value: 1 }, 'deferred', now);
+  assert.equal(loyalty(sold, now).earned, l.earned);
+  const small = buy(acc, p, 'gold', { unit: 'eur', value: 30 }, now);
+  assert.equal(loyalty(small, now).months, 12);
+  // Moins de 0,5 % des sommes investies chaque année en régime de croisière
+  assert.ok(l.earned / 3840 < 0.01 * 5);
+  // Échange : 10 LOU minimum, 1 LOU = 1 € de métal sans frais
+  assert.throws(() => redeemLoyalty(acc, p, 5, 'gold', now), LedgerError);
+  const r = redeemLoyalty(acc, p, 20, 'ecu', now);
+  close(r.holdings.ecu, 20 / p.ecu);
+  assert.equal(loyalty(r, now).balance, l.earned - 20);
+  assert.throws(() => redeemLoyalty(r, p, 50, 'gold', now), LedgerError);
+  assert.equal(LOYALTY.minRedeem, 10);
 });

@@ -19,6 +19,7 @@ const ICON: Record<TransactionKind, string> = {
   referral_bonus: '★',
   cash_in: '€',
   cash_out: '↗',
+  loyalty_redeem: '★',
 };
 
 export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit }) {
@@ -31,7 +32,11 @@ export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit
     parts.push(`compte d’attente ${tx.kind === 'cash_in' ? '+' : '−'}${formatEur(tx.eur)}`);
   else if (tx.cash) parts.push(`payé depuis le compte d’attente`);
   const incoming =
-    tx.kind === 'buy' || tx.kind === 'family_in' || tx.kind === 'referral_bonus' || tx.kind === 'cash_in';
+    tx.kind === 'buy' ||
+    tx.kind === 'family_in' ||
+    tx.kind === 'referral_bonus' ||
+    tx.kind === 'cash_in' ||
+    tx.kind === 'loyalty_redeem';
   const neutral = tx.kind === 'convert';
   const fee = tx.kind === 'fee_dormancy';
 

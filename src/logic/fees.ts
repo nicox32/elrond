@@ -76,10 +76,10 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
   {
     title: 'Transferts et comptes',
     rows: [
-      { label: 'Envoi de louis (métaux) à un membre', orvia: 'Gratuit' },
-      { label: 'Réception de louis (métaux) d’un membre', orvia: 'Gratuit' },
+      { label: 'Envoi de métal à un membre', orvia: 'Gratuit' },
+      { label: 'Réception de métal d’un membre', orvia: 'Gratuit' },
       { label: 'Compte enfant (ouverture, tenue, alimentation)', orvia: 'Gratuit' },
-      { label: 'Bonus de parrainage du filleul (1er achat d’au moins 50 €)', orvia: '+10 LOU en or' },
+      { label: 'Bonus de parrainage du filleul (1er achat d’au moins 50 €)', orvia: '+10 € en or' },
       { label: 'Frais sur un compte enfant avant les 18 ans', orvia: 'Aucun' },
       {
         label: 'Retrait d’un compte enfant : pour une dépense faite pour l’enfant, validé par les deux parents',
@@ -91,6 +91,17 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
         label: `Frais d’oxydation : ${FEES.dormancyAfterMonths} mois calendaires sans opération éligible d’au moins 1 €`,
         orvia: `${pct(FEES.dormancyDaily)} du solde par jour, sur ces ${FEES.dormancyAfterMonths} mois`,
       },
+    ],
+  },
+  {
+    title: 'Fidélité (louis, LOU)',
+    rows: [
+      { label: 'Chaque mois avec au moins 50 € investis', orvia: '+1 LOU' },
+      { label: 'Tous les 12 mois d’épargne consécutifs', orvia: '+5 LOU' },
+      { label: 'Achat de métal', orvia: '+1 LOU / 500 €' },
+      { label: 'Paiement avec la carte Orvia', orvia: '+1 LOU / 250 €' },
+      { label: 'Anniversaire du compte', orvia: '+1 LOU' },
+      { label: 'Échange contre du métal (dès 10 LOU)', orvia: '1 LOU = 1 €, sans frais' },
     ],
   },
 ];
