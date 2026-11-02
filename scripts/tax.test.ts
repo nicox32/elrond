@@ -132,3 +132,22 @@ test('impôt retenu automatiquement à chaque cession, au régime le moins cher'
   const conv = convert(acc, high, 'gold', 'silver', { unit: 'g', value: 1 }, now).transactions[0];
   assert.ok((conv.tax ?? 0) > 0);
 });
+
+test('perspective : l’impôt baisse avec les années, exonération 22 ans après le dernier achat', async () => {
+  const { taxOutlook } = await import('../src/logic/tax.ts');
+  const acc = buy(
+    createAccount('T'),
+    { gold: 100, silver: 1, platinum: 30 },
+    'gold',
+    { unit: 'eur', value: 1000 },
+    new Date('2021-06-01'),
+  );
+  const o = taxOutlook(acc, { gold: 300, silver: 1, platinum: 30 }, 'gold', new Date('2026-11-02'))!;
+  assert.equal(o.today.regime, 'flat');
+  assert.equal(o.exemptAt!.slice(0, 10), '2043-06-01');
+  assert.ok(o.gainRegimeFrom && o.gainRegimeFrom > '2026-11-02' && o.gainRegimeFrom < o.exemptAt!);
+  const last = o.points[o.points.length - 1];
+  assert.equal(last.tax, 0);
+  for (let i = 1; i < o.points.length; i++) assert.ok(o.points[i].tax <= o.points[i - 1].tax);
+  assert.ok(o.points[0].tax <= o.today.tax);
+});

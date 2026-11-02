@@ -305,3 +305,74 @@ const money = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR
 function formatMoney(n: number): string {
   return money.format(n);
 }
+
+export interface TaxOutlookPoint {
+  date: string;
+  tax: number;
+  regime: TaxRegime;
+}
+
+export interface TaxOutlook {
+  metal: Metal;
+  /** Impôt si tout ce métal était vendu aujourd'hui. */
+  today: TaxOutlookPoint;
+  /** Impôt à quelques dates à venir, à cours constant. */
+  points: TaxOutlookPoint[];
+  /** Premier mois où le régime des plus-values devient le moins cher (null : déjà le cas, ou jamais avant l'exonération). */
+  gainRegimeFrom: string | null;
+  /** Date à laquelle tout le métal détenu aujourd'hui sera exonéré (22 ans après le dernier achat). */
+  exemptAt: string | null;
+}
+
+function addMonths(d: Date, months: number): Date {
+  const x = new Date(d);
+  x.setMonth(x.getMonth() + months);
+  return x;
+}
+
+/**
+ * Évolution de l'impôt si l'on garde tout le métal d'aujourd'hui, à cours constant : l'abattement pour durée de
+ * détention fait baisser l'impôt au régime des plus-values jusqu'à l'exonération, 22 ans après chaque achat.
+ */
+export function taxOutlook(
+  wallet: Pick<Wallet, 'transactions' | 'holdings'>,
+  prices: Prices,
+  metal: Metal,
+  now = new Date(),
+): TaxOutlook | null {
+  const grams = wallet.holdings[metal];
+  const price = grams * prices[metal] * (1 - FEES.sale);
+  if (grams <= 1e-6 || price <= 0) return null;
+  const lots = holdingLots(wallet)[metal];
+  const at = (d: Date): TaxOutlookPoint => {
+    const t = saleTax(wallet, metal, grams, price, d, lots);
+    return { date: d.toISOString(), tax: t.tax, regime: t.regime };
+  };
+  const today = at(now);
+  const proven = saleTax(wallet, metal, grams, price, now, lots).gainTax !== null;
+  if (!proven) return { metal, today, points: [], gainRegimeFrom: null, exemptAt: null };
+
+  const last = lots.reduce((d, l) => (l.date > d ? l.date : d), lots[0].date);
+  const exempt = new Date(last);
+  exempt.setFullYear(exempt.getFullYear() + TAX.exemptAfterYears);
+  const exemptAt = exempt.getTime() > now.getTime() ? exempt.toISOString() : null;
+
+  let gainRegimeFrom: string | null = null;
+  if (today.regime !== 'gain') {
+    for (let m = 1; m <= (TAX.exemptAfterYears + 1) * 12; m++) {
+      const d = addMonths(now, m);
+      if (at(d).regime === 'gain') {
+        gainRegimeFrom = d.toISOString();
+        break;
+      }
+    }
+  }
+
+  const points: TaxOutlookPoint[] = [];
+  for (const years of [5, 10, 15]) {
+    const d = addMonths(now, years * 12);
+    if (!exemptAt || d.getTime() < exempt.getTime()) points.push(at(d));
+  }
+  if (exemptAt) points.push(at(addMonths(exempt, 0)));
+  return { metal, today, points, gainRegimeFrom, exemptAt };
+}

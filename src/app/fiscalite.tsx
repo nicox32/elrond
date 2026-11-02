@@ -4,7 +4,7 @@ import { PriceStatus } from '../components/PriceStatus';
 import { Card, Hint, Label, Screen, SectionTitle } from '../components/ui';
 import { formatEur, formatPercent, formatWeight } from '../logic/format';
 import { METAL_LABEL } from '../logic/ledger';
-import { estimateTax, GAIN_RATE, type MetalTax, TAX } from '../logic/tax';
+import { estimateTax, GAIN_RATE, type MetalTax, TAX, type TaxOutlook, taxOutlook } from '../logic/tax';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors, metalColor } from '../theme';
 
@@ -87,7 +87,7 @@ export default function TaxScreen() {
 
           <SectionTitle>Par métal</SectionTitle>
           {est.metals.map((m) => (
-            <MetalCard key={m.metal} m={m} unit={unit} />
+            <MetalCard key={m.metal} m={m} unit={unit} outlook={taxOutlook(account, quote.prices, m.metal)} />
           ))}
         </>
       )}
@@ -142,7 +142,7 @@ export default function TaxScreen() {
   );
 }
 
-function MetalCard({ m, unit }: { m: MetalTax; unit: 'g' | 'oz' }) {
+function MetalCard({ m, unit, outlook }: { m: MetalTax; unit: 'g' | 'oz'; outlook: TaxOutlook | null }) {
   return (
     <Card style={{ gap: 8 }}>
       <View style={styles.rowBetween}>
@@ -171,7 +171,54 @@ function MetalCard({ m, unit }: { m: MetalTax; unit: 'g' | 'oz' }) {
         valueStyle={tone(m.netGain)}
         strong
       />
+      {outlook && <Outlook o={outlook} />}
     </Card>
+  );
+}
+
+const monthYear = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+const year = (iso: string) => new Date(iso).getFullYear();
+
+/** Ce que coûterait la vente si vous attendez, à cours constant. */
+function Outlook({ o }: { o: TaxOutlook }) {
+  if (!o.exemptAt) {
+    return (
+      <Text style={styles.muted}>
+        {o.points.length === 0 && o.today.tax > 0
+          ? 'Sans justificatif d’achat pour tout ce métal, seule la taxe forfaitaire s’applique : attendre ne change rien.'
+          : 'Ce métal est déjà exonéré : aucun impôt à la vente.'}
+      </Text>
+    );
+  }
+  const saving = o.today.tax;
+  return (
+    <View style={styles.outlook}>
+      <Text style={[styles.para, styles.bold]}>Si vous attendez (à cours constant)</Text>
+      <View style={styles.timeline}>
+        <Step label="Aujourd’hui" tax={o.today.tax} />
+        {o.points.map((p) => (
+          <Step key={p.date} label={String(year(p.date))} tax={p.tax} />
+        ))}
+      </View>
+      {o.gainRegimeFrom && (
+        <Text style={styles.muted}>
+          Le régime des plus-values devient le moins cher dès {monthYear(o.gainRegimeFrom)}.
+        </Text>
+      )}
+      <Text style={styles.para}>
+        Exonéré en <Text style={styles.bold}>{monthYear(o.exemptAt)}</Text> : en attendant, vous économisez{' '}
+        <Text style={[styles.bold, { color: colors.up }]}>{formatEur(saving)}</Text> d’impôt.
+      </Text>
+    </View>
+  );
+}
+
+function Step({ label, tax }: { label: string; tax: number }) {
+  return (
+    <View style={styles.step}>
+      <Text style={styles.muted}>{label}</Text>
+      <Text style={[styles.stepTax, tax === 0 && { color: colors.up }]}>{tax === 0 ? '0 €' : formatEur(tax)}</Text>
+    </View>
   );
 }
 
@@ -216,6 +263,18 @@ function Bullet({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  outlook: { gap: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 2 },
+  timeline: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  step: {
+    flexGrow: 1,
+    minWidth: 64,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceAlt,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  stepTax: { color: colors.text, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   op: { paddingVertical: 12, gap: 4 },
   opBorder: { borderTopWidth: 1, borderTopColor: colors.border },
   badge: {
