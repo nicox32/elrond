@@ -90,6 +90,8 @@ export interface Wallet {
   createdAt: string;
   /** Les frais d'oxydation ont été prélevés jusqu'à cette date (ISO). */
   dormancyChargedThrough?: string;
+  /** Aucun frais d'oxydation pour la période d'avant cette date : les 6 mois comptent à partir d'ici (ISO). */
+  dormancyNotBefore?: string;
 }
 
 /** Compte enfant, géré depuis le compte principal. Gratuit. */
@@ -134,4 +136,6 @@ export interface Account extends Wallet {
   settings: Settings;
   card?: Card;
   referral: Referral;
+  /** L'historique d'achats 2021 a été repris (une seule fois). */
+  history2021Imported?: boolean;
 }

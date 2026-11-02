@@ -583,9 +583,11 @@ export function feesExemptUntil(wallet: Wallet): Date | null {
 
 /** Point de départ des 6 mois : le dernier mouvement, ou la majorité pour un compte enfant devenu majeur. */
 function dormancyAnchor(wallet: Wallet): Date {
-  const last = lastMovement(wallet);
+  let anchor = lastMovement(wallet).getTime();
   const exempt = feesExemptUntil(wallet);
-  return exempt && exempt > last ? exempt : last;
+  if (exempt) anchor = Math.max(anchor, exempt.getTime());
+  if (wallet.dormancyNotBefore) anchor = Math.max(anchor, new Date(wallet.dormancyNotBefore).getTime());
+  return new Date(anchor);
 }
 
 export function dormancyStatus(wallet: Wallet, now = new Date()) {

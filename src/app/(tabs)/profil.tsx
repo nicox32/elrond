@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { History2021 } from '../../components/History2021';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate } from '../../logic/format';
@@ -57,6 +58,9 @@ export default function ProfileScreen() {
         <LinkRow label="Comptes enfants" hint={`${account.children.length} compte(s) · gratuit`} to="/enfants" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
+
+      <SectionTitle>Historique</SectionTitle>
+      <History2021 />
 
       <SectionTitle>Affichage</SectionTitle>
       <Label>Unité de poids</Label>

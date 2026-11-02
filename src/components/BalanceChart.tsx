@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { type LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Line, Path, Stop } from 'react-native-svg';
 
-import { formatDate, formatEur } from '../logic/format';
+import { formatEur } from '../logic/format';
 import type { BalancePoint } from '../logic/types';
 import { colors } from '../theme';
 import { Segmented } from './Segmented';
@@ -70,7 +70,9 @@ export function BalanceChart({ points }: Props) {
             {formatEur(Math.abs(change))}
           </Text>
           <Text style={styles.since}>
-            depuis le {formatDate(visible[0].date)} · achats, ventes et virements compris
+            depuis le{' '}
+            {new Date(visible[0].date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}{' '}
+            · achats, ventes et virements compris
           </Text>
         </View>
       )}

@@ -55,6 +55,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).
 - **Parrainage** : un code par compte à partager ; le filleul reçoit 10 LOU en or à son premier achat
   d'au moins 50 € (`docs/parrainage.png`). Sans serveur, le parrain n'est pas encore crédité.
+- **Reprise de l'historique 2021** (Profil) : compte ouvert le 5 janvier 2021, 12 achats le 5 de chaque mois
+  (3 845 €, 3/4 argent et 1/4 or par défaut, modifiables), aux cours approximatifs de 2021, sans frais et sans
+  oxydation rétroactive (`docs/historique-2021.png`).
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
   achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;
   écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
