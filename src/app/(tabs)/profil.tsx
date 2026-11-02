@@ -83,7 +83,7 @@ export default function ProfileScreen() {
           to="/or-fractionne"
           border
         />
-        <LinkRow label="Espace Dev" hint="Réservé à Orvia : prime du Gold Oria" to="/dev" border />
+        <LinkRow label="Espace Dev" hint="Réservé à Orvia (code) : prime du Gold Oria et conseils" to="/dev" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 

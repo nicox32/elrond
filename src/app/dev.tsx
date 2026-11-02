@@ -1,8 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Card, Hint, Screen, SectionTitle } from '../components/ui';
+import { CodeConfirm } from '../components/CodeConfirm';
+import { Button, Card, Hint, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { adjustmentAt, AUTO_PREMIUM, currentPremium, PREMIUM_SCENARIOS } from '../logic/ecu';
 import { formatEur, formatUnitPrice } from '../logic/format';
+import { premiumAdvice } from '../logic/premiumAdvice';
+import { createSecret, isValidPinFormat, verifySecret } from '../security';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 
@@ -11,14 +15,92 @@ const pts = (n: number) =>
   `${n >= 0 ? '+' : '−'}${Math.abs(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} pt`;
 const STEP = 0.0025;
 
-/** Espace Dev : réglages réservés à Orvia (démonstration), dont l'ajustement de la prime du Gold Oria. */
+/** Espace Dev : protégé par son propre code, puis réglages réservés à Orvia. */
 export default function DevScreen() {
+  const account = useAccount();
+  const { updateSettings } = useBank();
+  const [unlocked, setUnlocked] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [code, setCode] = useState('');
+  const [code2, setCode2] = useState('');
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  if (unlocked) return <DevPanel />;
+
+  if (!account.settings.devCodeHash) {
+    return (
+      <Screen testID="screen-dev">
+        <Card style={{ gap: 10 }}>
+          <Text style={styles.bold}>Créer le code de l’Espace Dev</Text>
+          <Text style={styles.para}>
+            Ce code à 4 chiffres protège les réglages réservés à Orvia. Choisissez-en un différent de votre code
+            d’accès.
+          </Text>
+          <TextInput
+            value={code}
+            onChangeText={setCode}
+            placeholder="Code (4 chiffres)"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={4}
+            style={ui.input}
+          />
+          <TextInput
+            value={code2}
+            onChangeText={setCode2}
+            placeholder="Confirmer le code"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={4}
+            style={ui.input}
+          />
+          <Button
+            title="Enregistrer le code"
+            onPress={async () => {
+              if (!isValidPinFormat(code)) return setMsg({ ok: false, text: 'Le code doit faire 4 chiffres.' });
+              if (code !== code2) return setMsg({ ok: false, text: 'Les deux codes sont différents.' });
+              updateSettings({ devCodeHash: await createSecret(code) });
+              setUnlocked(true);
+            }}
+          />
+          {msg && <Message {...msg} />}
+        </Card>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen testID="screen-dev">
+      <Card style={{ gap: 10 }}>
+        <Text style={styles.bold}>Espace Dev verrouillé</Text>
+        <Text style={styles.para}>Entrez le code de l’Espace Dev pour accéder aux réglages d’Orvia.</Text>
+        <Button title="Déverrouiller" onPress={() => setAsking(true)} />
+      </Card>
+      <CodeConfirm
+        visible={asking}
+        title="Code de l’Espace Dev"
+        summary="Réglages réservés à Orvia"
+        verify={(pin) => verifySecret(pin, account.settings.devCodeHash)}
+        onConfirm={() => {
+          setAsking(false);
+          setUnlocked(true);
+        }}
+        onCancel={() => setAsking(false)}
+      />
+    </Screen>
+  );
+}
+
+function DevPanel() {
   const account = useAccount();
   const { quote, hourlyHistory, updateSettings } = useBank();
   const now = new Date();
   const parts = currentPremium(account, quote.prices.gold, hourlyHistory, now);
   const offset = adjustmentAt(account, now);
   const history = account.settings.ecuPremiumAdjustments ?? [];
+  const advice = premiumAdvice(account, quote.prices.gold, hourlyHistory, now);
 
   const setOffset = (value: number, reason: string) => {
     const next = Math.round(Math.min(AUTO_PREMIUM.adjustMax, Math.max(AUTO_PREMIUM.adjustMin, value)) * 10000) / 10000;
@@ -34,6 +116,30 @@ export default function DevScreen() {
         Espace réservé à Orvia (démonstration). Les clients ne choisissent pas la prime : c’est Orvia qui l’ajuste selon
         le marché. Chaque ajustement s’applique à partir de maintenant, sans modifier le passé.
       </Hint>
+
+      <SectionTitle>Conseil du moment</SectionTitle>
+      <Card
+        style={{
+          gap: 8,
+          borderColor: advice.action === 'raise' ? colors.down : advice.action === 'lower' ? colors.up : colors.border,
+        }}
+      >
+        <Text style={styles.adviceTitle}>
+          {advice.action === 'raise' ? '▲ ' : advice.action === 'lower' ? '▼ ' : '● '}
+          {advice.title}
+        </Text>
+        {advice.reasons.map((r) => (
+          <Text key={r} style={styles.muted}>
+            • {r}
+          </Text>
+        ))}
+        {(advice.action === 'raise' || advice.action === 'lower') && (
+          <Button
+            title={`Appliquer : ajustement ${pts(advice.toOffset)}`}
+            onPress={() => setOffset(advice.toOffset, `Conseil : ${advice.scenario.label}`)}
+          />
+        )}
+      </Card>
 
       <SectionTitle>Prime du Gold Oria</SectionTitle>
       <Card style={{ gap: 8 }}>
@@ -176,4 +282,5 @@ const styles = StyleSheet.create({
   offset: { color: colors.text, fontSize: 20, fontWeight: '800', minWidth: 90, textAlign: 'center' },
   scenario: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, gap: 4 },
   scenarioActive: { borderColor: colors.gold, backgroundColor: colors.goldSoft },
+  adviceTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
 });

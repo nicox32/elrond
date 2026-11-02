@@ -6,6 +6,7 @@ import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
 import { currentPremium, withEcu } from '../logic/ecu';
+import { premiumAdvice } from '../logic/premiumAdvice';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
 import { clearPin, hasPin, setPin } from '../security';
@@ -135,6 +136,16 @@ export function BankProvider({ children }: { children: ReactNode }) {
             if (r.alerts !== acc.alerts || r.events.length) {
               persist({ ...acc, alerts: r.alerts, alertEvents: addEvents(acc.alertEvents ?? [], r.events) });
               r.events.forEach((e) => notify(e.title, e.body));
+            }
+          }
+          // Espace Dev activé : prévient quand l'appli conseille de monter ou baisser la prime du Gold Oria.
+          const dev = accountRef.current;
+          if (dev?.settings.devCodeHash) {
+            const advice = premiumAdvice(dev, live.prices.gold, hourly);
+            const actionable = advice.action === 'raise' || advice.action === 'lower';
+            if (actionable && dev.settings.devAdviceNotified !== advice.key) {
+              persist({ ...dev, settings: { ...dev.settings, devAdviceNotified: advice.key } });
+              notify('Espace Dev · prime du Gold Oria', `${advice.title}. ${advice.reasons[0]}`);
             }
           }
           const last = accountRef.current?.balanceHistory.at(-1);

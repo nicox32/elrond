@@ -107,6 +107,10 @@ export interface Settings {
    * chacun valable à partir de sa date.
    */
   ecuPremiumAdjustments?: { at: string; offset: number; reason?: string }[];
+  /** Espace Dev : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
+  devCodeHash?: string;
+  /** Dernier conseil de prime notifié, pour ne pas le répéter. */
+  devAdviceNotified?: string;
 }
 
 /** Ce qu'un compte détient et son historique (compte principal ou compte enfant). */

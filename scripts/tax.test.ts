@@ -287,3 +287,67 @@ test('prime automatique du Gold Oria : or sous sa moyenne, demande simulée, vos
   assert.equal(after.adjustment, 0.02);
   assert.ok(after.premium < 0.1 && after.premium > before.premium);
 });
+
+test('Espace Dev : conseils pour monter, baisser ou garder la prime', async () => {
+  const { premiumAdvice } = await import('../src/logic/premiumAdvice.ts');
+  const now = new Date('2026-11-02T12:00:00Z');
+  const hist = (f: (daysAgo: number) => number) =>
+    Array.from({ length: 20 * 24 }, (_, i) => {
+      const h = 20 * 24 - i;
+      return {
+        t: new Date(now.getTime() - h * 3_600_000).toISOString(),
+        prices: { gold: f(h / 24), silver: 1, platinum: 30, ecu: 0 },
+      };
+    });
+  const base = { unit: 'g' as const, biometrics: false };
+  // Pas assez de données
+  assert.equal(premiumAdvice({ settings: base }, 100, [], now).action, 'wait-data');
+  // Marché stable : garder
+  const flat = premiumAdvice(
+    { settings: base },
+    100,
+    hist(() => 100),
+    now,
+  );
+  assert.equal(flat.action, 'hold');
+  // Or 5 % sous sa moyenne : monter par palier de 0,5 pt vers « Forte demande »
+  const dip = premiumAdvice(
+    { settings: base },
+    95.9,
+    hist((d) => 96 + 8 * (d / 20)),
+    now,
+  );
+  assert.equal(dip.action, 'raise');
+  assert.equal(dip.scenario.id, 'demand');
+  close(dip.toOffset, 0.005, 1e-9);
+  // Krach sur 7 jours : crise, on rejoint directement +5 pt, même juste après un ajustement
+  const recent = { ...base, ecuPremiumAdjustments: [{ at: '2026-11-01T00:00:00Z', offset: 0.005 }] };
+  const crash = premiumAdvice(
+    { settings: recent },
+    88,
+    hist((d) => (d > 7 ? 100 : 100 - (7 - d) * 1.5)),
+    now,
+  );
+  assert.equal(crash.scenario.id, 'crisis');
+  assert.equal(crash.action, 'raise');
+  close(crash.toOffset, 0.05, 1e-9);
+  // Hors crise, un ajustement il y a 1 jour : attendre
+  const wait = premiumAdvice(
+    { settings: recent },
+    95.9,
+    hist((d) => 96 + 8 * (d / 20)),
+    now,
+  );
+  assert.equal(wait.action, 'hold');
+  assert.match(wait.title, /Attendez/);
+  // Or au plus haut (+8 % vs moyenne, +4 % sur 7 j) avec un ajustement de crise ancien : baisser
+  const old = { ...base, ecuPremiumAdjustments: [{ at: '2026-09-01T00:00:00Z', offset: 0.05 }] };
+  const high = premiumAdvice(
+    { settings: old },
+    108,
+    hist((d) => (d > 7 ? 100 : 104)),
+    now,
+  );
+  assert.equal(high.action, 'lower');
+  close(high.toOffset, 0.045, 1e-9);
+});
