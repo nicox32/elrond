@@ -1,10 +1,12 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PriceStatus } from '../components/PriceStatus';
 import { Card, Hint, Label, Screen, SectionTitle } from '../components/ui';
 import { formatEur, formatPercent, formatWeight } from '../logic/format';
 import { METAL_LABEL } from '../logic/ledger';
 import { estimateTax, GAIN_RATE, type MetalTax, TAX, type TaxOutlook, taxOutlook } from '../logic/tax';
+import type { ChildAccount, Prices } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors, metalColor } from '../theme';
 
@@ -92,6 +94,21 @@ export default function TaxScreen() {
         </>
       )}
 
+      {account.children.length > 0 && (
+        <>
+          <SectionTitle>Comptes enfants</SectionTitle>
+          {account.children.map((c) => (
+            <ChildTax key={c.id} child={c} prices={quote.prices} unit={unit} />
+          ))}
+          <Hint>
+            Le métal versé à un enfant est un don : son prix de revient est sa valeur le jour du versement, et sa durée
+            de détention part de cette date. S’il est vendu, l’impôt suit les mêmes règles, au nom du foyer fiscal
+            auquel l’enfant est rattaché (le vôtre tant qu’il est mineur). Un retrait pour une dépense faite pour lui
+            n’est pas une vente : le métal revient sur votre compte, sans impôt.
+          </Hint>
+        </>
+      )}
+
       <SectionTitle>Selon l’opération</SectionTitle>
       <Card style={{ paddingVertical: 4 }}>
         {OPERATIONS.map((o, i) => (
@@ -148,6 +165,50 @@ export default function TaxScreen() {
         </Text>
       </Card>
     </Screen>
+  );
+}
+
+function ChildTax({ child, prices, unit }: { child: ChildAccount; prices: Prices; unit: 'g' | 'oz' }) {
+  const [open, setOpen] = useState(false);
+  const est = estimateTax(child, prices);
+  if (est.metals.length === 0) {
+    return (
+      <Card>
+        <Text style={[styles.para, styles.bold]}>{child.name}</Text>
+        <Text style={styles.muted}>Aucun métal sur ce compte pour l’instant.</Text>
+      </Card>
+    );
+  }
+  return (
+    <Card style={{ gap: 8 }}>
+      <View style={styles.rowBetween}>
+        <Text style={[styles.metal, { color: colors.text }]}>{child.name}</Text>
+        <Text style={styles.muted}>{child.transferredAt ? 'compte transféré' : formatEur(est.value)}</Text>
+      </View>
+      <Row label="Prix de revient (valeur des dons)" value={formatEur(est.cost)} />
+      <Row
+        label="Plus-value latente"
+        value={`${signed(est.gain)} · ${formatPercent(est.gainPercent)}`}
+        valueStyle={tone(est.gain)}
+        strong
+      />
+      <Row label="Impôt si tout était vendu" value={`− ${formatEur(est.tax)}`} />
+      <Row
+        label="Après impôt"
+        value={`${signed(est.netGain)} · ${formatPercent(est.netGainPercent)}`}
+        valueStyle={tone(est.netGain)}
+        strong
+      />
+      <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button">
+        <Text style={styles.link}>{open ? 'Masquer le détail par métal' : 'Voir le détail par métal'}</Text>
+      </Pressable>
+      {open &&
+        est.metals.map((m) => (
+          <View key={m.metal} style={styles.childMetal}>
+            <MetalCard m={m} unit={unit} outlook={taxOutlook(child, prices, m.metal)} />
+          </View>
+        ))}
+    </Card>
   );
 }
 
@@ -272,6 +333,8 @@ function Bullet({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  link: { color: colors.gold, fontSize: 13, fontWeight: '700' },
+  childMetal: { marginHorizontal: -8 },
   outlook: { gap: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 2 },
   timeline: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   step: {

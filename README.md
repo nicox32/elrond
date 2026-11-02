@@ -60,6 +60,10 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   l'impôt et le régime retenu, l'historique aussi. Virement de métal à un membre ou versement sur un compte enfant :
   pas une vente, donc pas d'impôt sur la plus-value ; règles des dons rappelées (présent d'usage, abattements,
   formulaire 2735).
+- **Comptes enfants dans le calcul des impôts** (`docs/impots-compte-enfant.png`) : sur la fiche de l'enfant et dans
+  « Plus-value et impôts », plus-value latente avant et après impôt, détail par métal et perspective jusqu'à
+  l'exonération. Le métal versé est un don : prix de revient = valeur le jour du versement, durée de détention à partir
+  de cette date.
 - **Le louis (LOU)**, monnaie interne d'Orvia : 1 LOU = 1 € de métal précieux au cours du moment ;
   le solde s'affiche aussi en louis.
 - **Carte Orvia** (simulée) : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement

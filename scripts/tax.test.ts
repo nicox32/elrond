@@ -151,3 +151,38 @@ test('perspective : l’impôt baisse avec les années, exonération 22 ans apr�
   for (let i = 1; i < o.points.length; i++) assert.ok(o.points[i].tax <= o.points[i - 1].tax);
   assert.ok(o.points[0].tax <= o.today.tax);
 });
+
+test('compte enfant : le don compte à sa valeur et à sa date de versement', async () => {
+  const { addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const parent = buy(
+    createAccount('P'),
+    { gold: 100, silver: 1, platinum: 30 },
+    'gold',
+    { unit: 'eur', value: 1000 },
+    new Date('2021-06-01'),
+  );
+  const { account: withKid, child } = addChild(parent, 'Léo', '2018-03-06', new Date('2024-01-01'));
+  const funded = fundChild(
+    withKid,
+    { gold: 200, silver: 1, platinum: 30 },
+    child.id,
+    'gold',
+    { unit: 'g', value: 2 },
+    new Date('2024-01-01'),
+  );
+  const kid = funded.children[0];
+  const lots = holdingLots(kid).gold;
+  assert.equal(lots.length, 1);
+  assert.equal(lots[0].date.slice(0, 10), '2024-01-01');
+  // Valeur du don = 2 g au cours du jour (200 €/g), pas le prix payé par le parent en 2021
+  assert.ok(lots[0].cost > 300 && lots[0].cost <= 400, String(lots[0].cost));
+  const est = estimateTax(kid, { gold: 300, silver: 1, platinum: 30 }, new Date('2026-11-02'));
+  assert.equal(est.metals[0].avgYears, 2); // détention depuis le don
+  assert.ok(est.gain > 0 && est.tax > 0);
+  // Le parent ne garde que le reste de ses lots
+  close(
+    holdingLots(funded).gold.reduce((s, l) => s + l.grams, 0),
+    funded.holdings.gold,
+    1e-6,
+  );
+});

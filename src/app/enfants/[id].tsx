@@ -20,7 +20,8 @@ import {
   transferChildAccount,
   undoableDeposits,
 } from '../../logic/childRules';
-import { formatDate, formatEur, formatWeight, parseAmount } from '../../logic/format';
+import { formatDate, formatEur, formatPercent, formatWeight, parseAmount } from '../../logic/format';
+import { estimateTax } from '../../logic/tax';
 import {
   accountValue,
   fundChild,
@@ -86,6 +87,7 @@ export default function ChildScreen() {
   const name = child.name;
   const stage = childStage(child);
   const value = accountValue(child, quote.prices);
+  const tax = estimateTax(child, quote.prices);
   const amount = parseAmount(text);
   const grams =
     Number.isFinite(amount) && amount > 0 ? toGrams({ unit: amountUnit, value: amount }, quote.prices[metal]) : 0;
@@ -226,6 +228,23 @@ export default function ChildScreen() {
         </View>
         <Text style={styles.heroName}>{name}</Text>
         <Text style={styles.heroValue}>{formatEur(value.total)}</Text>
+        {tax.cost > 0 && (
+          <Pressable
+            onPress={() => router.push('/fiscalite')}
+            accessibilityRole="button"
+            style={{ alignItems: 'center' }}
+          >
+            <Text style={[styles.heroGain, { color: tax.gain >= 0 ? colors.up : colors.down }]}>
+              {tax.gain >= 0 ? 'Plus-value latente' : 'Moins-value latente'} : {tax.gain >= 0 ? '+' : '−'}
+              {formatEur(Math.abs(tax.gain))} ({formatPercent(tax.gainPercent)})
+            </Text>
+            <Text style={styles.heroTax}>
+              Après impôt : {tax.netGain >= 0 ? '+' : '−'}
+              {formatEur(Math.abs(tax.netGain))} ({formatPercent(tax.netGainPercent)}){' '}
+              <Text style={ui.link}>Détail ›</Text>
+            </Text>
+          </Pressable>
+        )}
         <View style={styles.metals}>
           {METALS.map((m) => (
             <View key={m} style={{ alignItems: 'center', flex: 1 }}>
@@ -551,6 +570,8 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: colors.gold, fontSize: 24, fontWeight: '800' },
   heroName: { color: colors.text, fontSize: 24, fontWeight: '800' },
+  heroGain: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  heroTax: { color: colors.textMuted, fontSize: 12, fontWeight: '600', marginTop: 2 },
   heroValue: { color: colors.text, fontSize: 30, fontWeight: '800', fontVariant: ['tabular-nums'] },
   metals: { flexDirection: 'row', marginTop: 10, alignSelf: 'stretch' },
   metalName: { fontSize: 12, fontWeight: '700' },
