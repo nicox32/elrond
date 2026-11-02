@@ -36,7 +36,7 @@ writeFileSync(STATE, JSON.stringify(result.state));
 
 console.log(`${config.length} alerte(s) surveillée(s), ${result.state.hourly.length} relevé(s) horaires.`);
 if (!topic) {
-  console.warn('NTFY_TOPIC absent : aucune notification envoyée (ajoute le secret dans les réglages du dépôt).');
+  console.warn('NTFY_TOPIC absent : aucune notification envoyée (ajoutez le secret dans les réglages du dépôt).');
 }
 for (const n of result.notifications) {
   console.log(`Alerte : ${n.title} — ${n.body}`);

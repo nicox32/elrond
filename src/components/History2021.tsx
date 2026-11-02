@@ -26,7 +26,7 @@ export function History2021() {
     return (
       <Card style={{ gap: 4 }}>
         <Text style={styles.title}>Historique 2021 repris</Text>
-        <Hint>Ton compte est ouvert depuis le 5 janvier 2021, avec tes achats mensuels de l’année.</Hint>
+        <Hint>Votre compte est ouvert depuis le 5 janvier 2021, avec vos achats mensuels de l’année.</Hint>
       </Card>
     );
   }
@@ -44,7 +44,7 @@ export function History2021() {
   function confirm() {
     if (!valid) return;
     if (Platform.OS === 'web') return run();
-    Alert.alert('Reprendre l’historique 2021 ?', 'Les 12 achats seront ajoutés à ton compte. Une seule fois.', [
+    Alert.alert('Reprendre l’historique 2021 ?', 'Les 12 achats seront ajoutés à votre compte. Une seule fois.', [
       { text: 'Annuler', style: 'cancel' },
       { text: 'Reprendre', onPress: run },
     ]);

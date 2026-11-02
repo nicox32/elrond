@@ -121,7 +121,7 @@ export default function AllocationScreen() {
               </Pressable>
             ))}
           </View>
-          <Hint>Or / argent / platine. Ta répartition sert à chaque achat réparti.</Hint>
+          <Hint>Or / argent / platine. Votre répartition sert à chaque achat réparti.</Hint>
           {dirty && <Button title="Enregistrer ma répartition" variant="ghost" onPress={save} disabled={!valid} />}
         </Card>
 
@@ -136,8 +136,8 @@ export default function AllocationScreen() {
         />
         <Hint>
           {mode === 'target'
-            ? 'Met davantage sur les métaux en retard sur ta répartition, pour t’en rapprocher sans rien vendre.'
-            : 'Partage le montant exactement selon tes pourcentages.'}
+            ? 'Place davantage sur les métaux en retard sur votre répartition, pour vous en rapprocher sans rien vendre.'
+            : 'Partage le montant exactement selon vos pourcentages.'}
         </Hint>
         <View style={styles.amountRow}>
           <TextInput
@@ -154,7 +154,7 @@ export default function AllocationScreen() {
           />
           <Text style={styles.unit}>€</Text>
         </View>
-        {!valid && <Hint style={{ color: colors.down }}>Ta répartition doit faire 100 % pour acheter.</Hint>}
+        {!valid && <Hint style={{ color: colors.down }}>Votre répartition doit faire 100 % pour acheter.</Hint>}
 
         {preview && preview.lines.length > 0 && (
           <Card style={{ gap: 8 }}>

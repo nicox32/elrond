@@ -27,11 +27,11 @@ export function Onboarding({ existingHolder }: { existingHolder?: string }) {
       <View style={styles.center}>
         <PinPad
           key={step}
-          title={step === 'pin' ? 'Choisis ton code d’accès' : 'Confirme ton code'}
+          title={step === 'pin' ? 'Choisissez votre code d’accès' : 'Confirmez votre code'}
           subtitle={
             step === 'pin'
-              ? `${existingHolder ? 'Nouveau : ton compte est protégé par un code. ' : ''}4 chiffres, demandés à chaque ouverture de l’appli et pour chaque virement.`
-              : 'Tape le même code une seconde fois.'
+              ? `${existingHolder ? 'Nouveau : votre compte est protégé par un code. ' : ''}4 chiffres, demandés à chaque ouverture de l’appli et pour chaque virement.`
+              : 'Tapez le même code une seconde fois.'
           }
           error={error}
           onComplete={async (entered) => {
@@ -59,11 +59,11 @@ export function Onboarding({ existingHolder }: { existingHolder?: string }) {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.welcome}>
         <Image source={LOGO} style={styles.logo} accessibilityLabel="Orvia" resizeMode="contain" />
-        <Text style={styles.tagline}>Ton argent en or, en argent et en platine physiques, à portée de main.</Text>
+        <Text style={styles.tagline}>Votre argent en or, en argent et en platine physiques, à portée de main.</Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder="Ton prénom"
+          placeholder="Votre prénom"
           placeholderTextColor={colors.textMuted}
           style={ui.input}
           onSubmitEditing={() => valid && setStep('pin')}

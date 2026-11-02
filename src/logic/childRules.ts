@@ -64,10 +64,10 @@ export function setChildParents(
 ): Account {
   const child = getChild(account, childId);
   if (authority === 'joint' && !coParent && !child.coParent) {
-    throw new LedgerError('Ajoute le second parent : il validera les retraits avec son propre code.');
+    throw new LedgerError('Ajoutez le second parent : il validera les retraits avec son propre code.');
   }
   const coParentName = coParent?.name.trim();
-  if (coParent && !coParentName) throw new LedgerError('Indique le prénom du second parent.');
+  if (coParent && !coParentName) throw new LedgerError('Indiquez le prénom du second parent.');
   return replaceChildAccount(account, {
     ...child,
     authority,
@@ -115,10 +115,10 @@ export function requestChildWithdrawal(
   const child = getChild(account, childId);
   requireMinor(child, now);
   if (!child.authority) {
-    throw new LedgerError('Indique d’abord si tu exerces l’autorité parentale seul ou avec un second parent.');
+    throw new LedgerError('Indiquez d’abord si vous exercez l’autorité parentale seul ou avec un second parent.');
   }
-  if (!purpose) throw new LedgerError(`Choisis la dépense faite pour ${child.name}.`);
-  if (purpose === 'other' && !note.trim()) throw new LedgerError('Précise la dépense en quelques mots.');
+  if (!purpose) throw new LedgerError(`Choisissez la dépense faite pour ${child.name}.`);
+  if (purpose === 'other' && !note.trim()) throw new LedgerError('Précisez la dépense en quelques mots.');
   if (!Number.isFinite(q.value) || q.value <= 0) throw new LedgerError('La quantité doit être un nombre positif.');
   const grams = toGrams(q, prices[metal]);
   if (grams > child.holdings[metal] - reservedGrams(child, metal) + DUST) {

@@ -111,7 +111,7 @@ export default function ChildScreen() {
   function undo(txId: string) {
     try {
       commit((acc, p) => cancelDeposit(acc, p, child!.id, txId));
-      setFundMsg({ ok: true, text: 'Versement annulé : le métal est revenu sur ton compte.' });
+      setFundMsg({ ok: true, text: 'Versement annulé : le métal est revenu sur votre compte.' });
     } catch (e) {
       setFundMsg({ ok: false, text: errText(e) });
     }
@@ -168,7 +168,7 @@ export default function ChildScreen() {
         setEditParents(false);
         return;
       }
-      if (!coName.trim()) throw new Error('Indique le prénom du second parent.');
+      if (!coName.trim()) throw new Error('Indiquez le prénom du second parent.');
       if (!isValidPinFormat(coPin)) throw new Error('Le code du second parent doit faire 4 chiffres.');
       if (coPin !== coPin2) throw new Error('Les deux codes ne correspondent pas.');
       const secret = await createSecret(coPin);
@@ -192,7 +192,7 @@ export default function ChildScreen() {
       }
     };
     if (Platform.OS === 'web') return run();
-    Alert.alert(`Transférer le compte à ${name} ?`, 'Tu ne pourras plus le gérer. Cette action est définitive.', [
+    Alert.alert(`Transférer le compte à ${name} ?`, 'Vous ne pourrez plus le gérer. Cette action est définitive.', [
       { text: 'Annuler', style: 'cancel' },
       { text: 'Transférer', onPress: run },
     ]);
@@ -248,8 +248,8 @@ export default function ChildScreen() {
         <View style={[styles.banner, { borderColor: colors.gold }]}>
           <Text style={styles.bannerTitle}>{name} est majeur</Text>
           <Text style={styles.bannerText}>
-            Depuis ses 18 ans, ce compte lui appartient : tu ne peux plus y verser ni en retirer. Transfère-le pour que{' '}
-            {name} y accède avec son propre compte Orvia (et sa propre pièce d’identité).
+            Depuis ses 18 ans, ce compte lui appartient : vous ne pouvez plus y verser ni en retirer. Transférez-le pour
+            que {name} y accède avec son propre compte Orvia (et sa propre pièce d’identité).
           </Text>
           <Button title={`Transférer le compte à ${name}`} onPress={transfer} />
         </View>
@@ -272,7 +272,7 @@ export default function ChildScreen() {
       {!child.birthDate && stage === 'minor' && (
         <Card style={{ gap: 8 }}>
           <Text style={styles.para}>
-            Ajoute la date de naissance de {name} : le compte reste sans frais jusqu’à ses 18 ans, puis lui est
+            Ajoutez la date de naissance de {name} : le compte reste sans frais jusqu’à ses 18 ans, puis lui est
             transféré.
           </Text>
           <TextInput
@@ -346,12 +346,12 @@ export default function ChildScreen() {
                 />
               </View>
               <Hint>
-                Le second parent choisit lui-même ce code : il le tape sur ton téléphone pour valider un retrait.
+                Le second parent choisit lui-même ce code : il le tape sur votre téléphone pour valider un retrait.
               </Hint>
               <Button title="Enregistrer le second parent" onPress={() => saveParents('joint')} />
               <View style={styles.sep} />
               <Text style={styles.label}>J’exerce seul l’autorité parentale</Text>
-              <Hint>Tu valides seul les retraits, toujours pour une dépense faite pour {name}.</Hint>
+              <Hint>Vous validez seul les retraits, toujours pour une dépense faite pour {name}.</Hint>
               <Button title="Je suis seul titulaire" variant="ghost" onPress={() => saveParents('sole')} />
               {parentMsg && <Message {...parentMsg} />}
             </Card>
@@ -366,7 +366,7 @@ export default function ChildScreen() {
                 <Hint>
                   {child.authority === 'joint'
                     ? `${child.coParent?.name} valide chaque retrait avec son code.`
-                    : 'Tu valides seul les retraits, avec un motif.'}
+                    : 'Vous validez seul les retraits, avec un motif.'}
                 </Hint>
               </View>
               <Pressable onPress={() => setEditParents(true)} accessibilityRole="button">
@@ -377,7 +377,7 @@ export default function ChildScreen() {
 
           <SectionTitle>Verser à {name}</SectionTitle>
           <MetalPicker value={metal} onChange={setMetal} />
-          <Hint>Disponible sur ton compte : {formatWeight(account.holdings[metal], unit)}</Hint>
+          <Hint>Disponible sur votre compte : {formatWeight(account.holdings[metal], unit)}</Hint>
           <AmountInput
             text={text}
             onChangeText={(t) => {
@@ -409,11 +409,11 @@ export default function ChildScreen() {
 
           <SectionTitle>Dépense pour {name}</SectionTitle>
           <Hint>
-            Pour payer une dépense faite pour {name}, le métal est retiré de son compte vers le tien.
+            Pour payer une dépense faite pour {name}, le métal est retiré de son compte vers le vôtre.
             {child.authority === 'joint' ? ` ${child.coParent?.name} doit valider.` : ''}
           </Hint>
           {!child.authority ? (
-            <Hint style={{ color: colors.warning }}>Indique d’abord comment vous exercez l’autorité parentale.</Hint>
+            <Hint style={{ color: colors.warning }}>Indiquez d’abord comment vous exercez l’autorité parentale.</Hint>
           ) : (
             <>
               <Label>Dépense</Label>
@@ -436,7 +436,7 @@ export default function ChildScreen() {
               <TextInput
                 value={note}
                 onChangeText={setNote}
-                placeholder={purpose === 'other' ? 'Précise la dépense (obligatoire)' : 'Précision (facultatif)'}
+                placeholder={purpose === 'other' ? 'Précisez la dépense (obligatoire)' : 'Précision (facultatif)'}
                 placeholderTextColor={colors.textMuted}
                 style={ui.input}
               />
@@ -456,7 +456,7 @@ export default function ChildScreen() {
               {wGrams > 0 && (
                 <Text style={styles.preview}>
                   {formatWeight(wGrams, unit)} {METAL_OF[wMetal]} ({formatEur(wGrams * quote.prices[wMetal])}) pour :{' '}
-                  {purpose ? PURPOSE_LABEL[purpose] : 'choisis la dépense'}.
+                  {purpose ? PURPOSE_LABEL[purpose] : 'choisissez la dépense'}.
                 </Text>
               )}
               <Button

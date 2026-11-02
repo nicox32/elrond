@@ -70,11 +70,11 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
     const q = { unit: amountUnit, value };
     if (mode === 'buy') {
       const r = quoteBuy(prices, metal, q);
-      return `Tu achètes ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} pour ${formatEur(r.paid)}, dont ${formatEur(r.fees)} de frais (${pct(FEES.buy[metal])}).`;
+      return `Vous achetez ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} pour ${formatEur(r.paid)}, dont ${formatEur(r.fees)} de frais (${pct(FEES.buy[metal])}).`;
     }
     if (mode === 'sell') {
       const r = quoteSale(prices, metal, q, speed);
-      return `Tu vends ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} et reçois ${formatEur(r.received)}, après ${formatEur(r.fees)} de frais.`;
+      return `Vous vendez ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} et recevez ${formatEur(r.received)}, après ${formatEur(r.fees)} de frais.`;
     }
     const r = quoteConvert(prices, metal, target, q);
     return `${formatWeight(r.grams, unit)} ${METAL_OF[metal]} deviennent ${formatWeight(r.received, unit)} ${METAL_OF[target]}, après ${formatEur(r.fees)} de frais (${pct(FEES.conversion)} + ${pct(FEES.buy[target])}).`;
@@ -170,7 +170,7 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
           {mode === 'buy'
             ? `Paiement par carte bancaire (fictive). Frais d’achat : ${pct(FEES.buy[metal])} du montant.`
             : mode === 'sell'
-              ? `Les euros sont versés sur ton compte bancaire en France (fictif). Frais de revente : ${pct(FEES.sale)}.`
+              ? `Les euros sont versés sur votre compte bancaire en France (fictif). Frais de revente : ${pct(FEES.sale)}.`
               : `Frais de conversion : ${pct(FEES.conversion)} + frais d’achat du métal reçu.`}{' '}
           1 once troy = 31,1035 g.
         </Hint>

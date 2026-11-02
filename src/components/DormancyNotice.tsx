@@ -12,7 +12,7 @@ export function DormancyNotice({ wallet, name }: { wallet: Wallet; name?: string
   const status = dormancyStatus(wallet);
   // Visible tant que le compte est inactif, ou dans le mois qui précède un prélèvement.
   if (!status.inactive && status.daysLeft > 30) return null;
-  const who = name ? `Le compte de ${name}` : 'Ton compte';
+  const who = name ? `Le compte de ${name}` : 'Votre compte';
   const rate = `${(FEES.dormancyDaily * 100).toLocaleString('fr-FR')} %`;
   const months = FEES.dormancyAfterMonths;
   const total = `${(Math.round(FEES.dormancyDaily * 182 * 1000) / 10).toLocaleString('fr-FR')} %`;

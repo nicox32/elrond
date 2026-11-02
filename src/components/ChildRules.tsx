@@ -5,7 +5,7 @@ import { colors } from '../theme';
 /** Les règles d'un compte enfant, affichées partout où on le gère. */
 export function ChildRules({ name, compact }: { name: string; compact?: boolean }) {
   const rules = [
-    `L’argent versé appartient à ${name} : c’est un don, tu ne peux pas le reprendre pour toi.`,
+    `L’argent versé appartient à ${name} : c’est un don, vous ne pouvez pas le reprendre pour vous.`,
     `Un retrait n’est possible que pour une dépense faite pour ${name} (études, santé, équipement…), avec l’accord des deux parents si vous exercez ensemble l’autorité parentale.`,
     'Un versement fait par erreur peut être annulé seul, dans les 24 h.',
     `Aucun frais avant ses 18 ans. À sa majorité, le compte devient celui de ${name} et lui est transféré.`,

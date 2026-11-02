@@ -114,7 +114,7 @@ export default function AccountScreen() {
       ) : (
         <Pressable onPress={() => router.push('/carte')} style={styles.kids} accessibilityRole="button">
           <Text style={styles.kidsText}>
-            Paie et retire avec ton or, ton argent ou ton platine : commande ta carte Orvia, gratuite.
+            Payez et retirez avec votre or, votre argent ou votre platine : commandez votre carte Orvia, gratuite.
           </Text>
           <Text style={styles.chevron}>›</Text>
         </Pressable>
@@ -122,7 +122,7 @@ export default function AccountScreen() {
 
       <Pressable onPress={() => router.push('/parrainage')} style={styles.referral} accessibilityRole="button">
         <Text style={styles.referralText}>
-          ★ Parraine tes proches : ils reçoivent {REFERRAL.bonusLou} LOU en or à leur premier achat.
+          ★ Parrainez vos proches : ils reçoivent {REFERRAL.bonusLou} LOU en or à leur premier achat.
         </Text>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
@@ -139,7 +139,7 @@ export default function AccountScreen() {
       <Pressable onPress={() => router.push('/enfants')} style={styles.kids} accessibilityRole="button">
         <Text style={styles.kidsText}>
           {account.children.length === 0
-            ? 'Ouvre gratuitement un compte en or, argent ou platine pour chacun de tes enfants.'
+            ? 'Ouvrez gratuitement un compte en or, argent ou platine pour chacun de vos enfants.'
             : account.children
                 .map(
                   (c) =>

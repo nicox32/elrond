@@ -79,8 +79,8 @@ export default function AlertsScreen() {
   return (
     <Screen testID="screen-alertes">
       <Hint>
-        Choisis tes conditions : l’appli te prévient quand elles sont remplies. Ce ne sont pas des conseils
-        d’investissement, la décision d’acheter ou de vendre reste la tienne.
+        Choisissez vos conditions : l’appli vous prévient quand elles sont remplies. Ce ne sont pas des conseils
+        d’investissement, la décision d’acheter ou de vendre vous appartient.
       </Hint>
 
       {permission !== 'granted' && (
@@ -88,10 +88,10 @@ export default function AlertsScreen() {
           <Text style={styles.title}>Notifications</Text>
           <Text style={styles.para}>
             {permission === 'denied'
-              ? 'Les notifications sont bloquées. Autorise-les dans les réglages du téléphone (ou de Chrome) pour ce site.'
+              ? 'Les notifications sont bloquées. Autorisez-les dans les réglages du téléphone (ou de Chrome) pour ce site.'
               : permission === 'unsupported'
                 ? 'Ce navigateur ne gère pas les notifications. Les alertes restent visibles dans l’historique ci-dessous.'
-                : 'Autorise les notifications pour être prévenu même quand tu n’es pas sur l’écran.'}
+                : 'Autorisez les notifications pour être prévenu même quand vous n’êtes pas sur l’écran.'}
           </Text>
           {permission === 'default' && (
             <Button

@@ -39,7 +39,7 @@ function Sheet({ summary, onConfirm, onCancel }: Omit<Props, 'visible'>) {
       <View style={styles.sheet}>
         <Text style={styles.summary}>{summary}</Text>
         <PinPad
-          title="Confirme avec ton code"
+          title="Confirmez avec votre code"
           error={error}
           onComplete={async (pin) => {
             if (await verifyPin(pin)) {

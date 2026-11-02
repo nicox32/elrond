@@ -33,8 +33,8 @@ export function ServerAlerts() {
       <Card style={{ gap: 8 }}>
         <Text style={styles.title}>Alertes 24 h/24</Text>
         <Text style={styles.para}>
-          Reçois tes alertes même quand l’appli et le téléphone sont éteints : un serveur vérifie les cours toutes les
-          15 minutes et t’envoie une notification par l’appli gratuite ntfy.
+          Recevez vos alertes même quand l’appli et le téléphone sont éteints : un serveur vérifie les cours toutes les
+          15 minutes et vous envoie une notification par l’appli gratuite ntfy.
         </Text>
         <Button
           title="Préparer mon canal de notifications"
@@ -49,15 +49,15 @@ export function ServerAlerts() {
     <Card style={{ gap: 12 }}>
       <Text style={styles.title}>Alertes 24 h/24 · 4 étapes</Text>
 
-      <Step n={1} title="Installe l’appli ntfy (gratuite)">
+      <Step n={1} title="Installez l’appli ntfy (gratuite)">
         <LinkText url={LINKS.ntfyApp}>Ouvrir ntfy sur le Play Store</LinkText>
       </Step>
 
-      <Step n={2} title="Abonne-toi à ton canal secret">
+      <Step n={2} title="Abonnez-vous à votre canal secret">
         <Text style={styles.code} selectable>
           {topic}
         </Text>
-        <Text style={styles.para}>Dans ntfy : « + », colle ce nom de canal, puis « S’abonner ».</Text>
+        <Text style={styles.para}>Dans ntfy : « + », collez ce nom de canal, puis « S’abonner ».</Text>
         <Button
           title={copied === 'topic' ? 'Canal copié ✓' : 'Copier le canal'}
           variant="ghost"
@@ -65,17 +65,18 @@ export function ServerAlerts() {
         />
       </Step>
 
-      <Step n={3} title="Donne ce canal au serveur (une fois)">
+      <Step n={3} title="Donnez ce canal au serveur (une fois)">
         <Text style={styles.para}>
-          Sur GitHub, crée le secret <Text style={styles.bold}>NTFY_TOPIC</Text> avec ce même nom de canal comme valeur.
+          Sur GitHub, créez le secret <Text style={styles.bold}>NTFY_TOPIC</Text> avec ce même nom de canal comme
+          valeur.
         </Text>
         <LinkText url={LINKS.secret}>Ouvrir la page des secrets du dépôt</LinkText>
       </Step>
 
-      <Step n={4} title="Envoie tes alertes au serveur">
+      <Step n={4} title="Envoyez vos alertes au serveur">
         <Text style={styles.para}>
-          Copie tes alertes, puis colle-les à la place du contenu du fichier server/alerts.json et enregistre (« Commit
-          changes »). À refaire quand tu modifies tes alertes.
+          Copiez vos alertes, puis collez-les à la place du contenu du fichier server/alerts.json et enregistrez («
+          Commit changes »). À refaire quand vous modifiez vos alertes.
         </Text>
         <Button
           title={copied === 'config' ? 'Alertes copiées ✓' : `Copier mes ${account.alerts?.length ?? 0} alerte(s)`}
@@ -91,7 +92,7 @@ export function ServerAlerts() {
         <Text style={styles.link} onPress={() => Linking.openURL(LINKS.run)}>
           Ouvrir la tâche
         </Text>
-        . Le canal est secret : ne le partage pas, toute personne qui le connaît peut lire tes alertes.
+        . Le canal est secret : ne le partagez pas, toute personne qui le connaît peut lire vos alertes.
       </Hint>
     </Card>
   );

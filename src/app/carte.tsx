@@ -41,7 +41,7 @@ export default function CardScreen() {
       <Screen testID="screen-carte">
         <Text style={styles.title}>La carte Orvia</Text>
         <Text style={styles.para}>
-          Paie partout et retire des espèces avec l’or, l’argent ou le platine de ton compte. À chaque paiement, le
+          Payez partout et retirez des espèces avec l’or, l’argent ou le platine de votre compte. À chaque paiement, le
           métal choisi est vendu au cours du moment, sans frais.
         </Text>
         <Card style={{ gap: 6 }}>
@@ -101,7 +101,7 @@ export default function CardScreen() {
         <Card style={styles.switchRow}>
           <View style={{ flex: 1 }}>
             <Text style={styles.switchLabel}>Geler la carte</Text>
-            <Hint>Bloque aussitôt les paiements et retraits. Dégèle-la quand tu veux.</Hint>
+            <Hint>Bloque aussitôt les paiements et retraits. Dégelez-la quand vous voulez.</Hint>
           </View>
           <Switch
             value={card.frozen}
@@ -170,7 +170,7 @@ export default function CardScreen() {
           title={mode === 'pay' ? 'Payer' : 'Retirer'}
           onPress={() => {
             setMessage(null);
-            if (!valid) return setMessage({ ok: false, text: 'Indique un montant.' });
+            if (!valid) return setMessage({ ok: false, text: 'Indiquez un montant.' });
             setConfirming(true);
           }}
         />

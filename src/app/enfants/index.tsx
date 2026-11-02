@@ -43,8 +43,8 @@ export default function ChildrenScreen() {
   return (
     <Screen testID="screen-enfants">
       <Hint>
-        Ouvre gratuitement un compte pour chacun de tes enfants et verse-lui de l’or, de l’argent ou du platine depuis
-        ton compte, sans frais. Ce que tu verses lui appartient : c’est une épargne pour lui.
+        Ouvrez gratuitement un compte pour chacun de vos enfants et versez-lui de l’or, de l’argent ou du platine depuis
+        votre compte, sans frais. Ce que vous versez lui appartient : c’est une épargne pour lui.
       </Hint>
 
       {account.children.length > 0 && <SectionTitle>Comptes enfants</SectionTitle>}

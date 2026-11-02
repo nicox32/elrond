@@ -125,7 +125,7 @@ export function createAlert(
   input: Pick<PriceAlert, 'metal' | 'kind' | 'value'> & Partial<Pick<PriceAlert, 'unit' | 'window'>>,
   now = new Date(),
 ): PriceAlert {
-  if (!Number.isFinite(input.value) || input.value <= 0) throw new Error('Indique une valeur positive.');
+  if (!Number.isFinite(input.value) || input.value <= 0) throw new Error('Indiquez une valeur positive.');
   if ((input.kind === 'drop' || input.kind === 'rise' || input.kind.endsWith('Avg30')) && input.value >= 100) {
     throw new Error('Le pourcentage doit être inférieur à 100 %.');
   }

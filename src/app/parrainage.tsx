@@ -13,7 +13,7 @@ export default function ReferralScreen() {
   const [input, setInput] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const invite = `Rejoins-moi sur Orvia, le compte en or, argent et platine. Avec mon code ${code}, tu reçois ${REFERRAL.bonusLou} LOU en or dès ton premier achat de ${REFERRAL.minFirstPurchase} €.`;
+  const invite = `Rejoignez-moi sur Orvia, le compte en or, argent et platine. Avec mon code ${code}, vous recevez ${REFERRAL.bonusLou} LOU en or dès votre premier achat de ${REFERRAL.minFirstPurchase} €.`;
 
   async function share() {
     try {
@@ -22,7 +22,7 @@ export default function ReferralScreen() {
         if (nav.share) await nav.share({ text: invite });
         else {
           await navigator.clipboard?.writeText(invite);
-          setMessage({ ok: true, text: 'Invitation copiée : colle-la dans un message.' });
+          setMessage({ ok: true, text: 'Invitation copiée : collez-la dans un message.' });
         }
       } else {
         await Share.share({ message: invite });
@@ -38,7 +38,7 @@ export default function ReferralScreen() {
       setInput('');
       setMessage({
         ok: true,
-        text: `Code enregistré : ${REFERRAL.bonusLou} LOU en or te seront versés à ton premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`,
+        text: `Code enregistré : ${REFERRAL.bonusLou} LOU en or vous seront versés à votre premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`,
       });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Une erreur est survenue.' });
@@ -47,30 +47,30 @@ export default function ReferralScreen() {
 
   return (
     <Screen testID="screen-parrainage">
-      <Text style={styles.title}>Parraine tes proches</Text>
+      <Text style={styles.title}>Parrainez vos proches</Text>
       <Text style={styles.para}>
-        Partage ton code. Ton filleul reçoit {REFERRAL.bonusLou} LOU en or (soit {REFERRAL.bonusLou} €) dès son premier
-        achat d’au moins {REFERRAL.minFirstPurchase} €.
+        Partagez votre code. Votre filleul reçoit {REFERRAL.bonusLou} LOU en or (soit {REFERRAL.bonusLou} €) dès son
+        premier achat d’au moins {REFERRAL.minFirstPurchase} €.
       </Text>
 
       <Card style={styles.codeCard}>
-        <Text style={styles.codeLabel}>Ton code de parrainage</Text>
+        <Text style={styles.codeLabel}>Votre code de parrainage</Text>
         <Text style={styles.code} selectable>
           {code}
         </Text>
         <Button title="Partager mon code" onPress={share} />
       </Card>
 
-      <SectionTitle>Tu as été parrainé ?</SectionTitle>
+      <SectionTitle>Vous avez été parrainé ?</SectionTitle>
       {sponsorCode ? (
         <Card style={{ gap: 4 }}>
           <Text style={styles.para}>
-            Code de ton parrain : <Text style={{ fontWeight: '800' }}>{sponsorCode}</Text>
+            Code de votre parrain : <Text style={{ fontWeight: '800' }}>{sponsorCode}</Text>
           </Text>
           <Text style={[styles.para, { color: bonusPaid ? colors.up : colors.textMuted }]}>
             {bonusPaid
-              ? `Bonus de ${REFERRAL.bonusLou} LOU versé sur ton compte.`
-              : `Ton bonus de ${REFERRAL.bonusLou} LOU arrivera à ton premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`}
+              ? `Bonus de ${REFERRAL.bonusLou} LOU versé sur votre compte.`
+              : `Votre bonus de ${REFERRAL.bonusLou} LOU arrivera à votre premier achat d’au moins ${REFERRAL.minFirstPurchase} €.`}
           </Text>
         </Card>
       ) : (

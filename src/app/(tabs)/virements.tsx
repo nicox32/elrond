@@ -88,8 +88,8 @@ export default function TransfersScreen() {
 
   function startTransfer() {
     setMessage(null);
-    if (!selected) return setMessage({ ok: false, text: 'Choisis un bénéficiaire.' });
-    if (grams <= 0) return setMessage({ ok: false, text: 'Indique un montant.' });
+    if (!selected) return setMessage({ ok: false, text: 'Choisissez un bénéficiaire.' });
+    if (grams <= 0) return setMessage({ ok: false, text: 'Indiquez un montant.' });
     if (sale && sale.received <= 0) {
       return setMessage({ ok: false, text: 'Montant trop faible pour couvrir les frais du virement.' });
     }
@@ -137,7 +137,7 @@ export default function TransfersScreen() {
         />
         <Hint>
           {kind === 'member'
-            ? 'Échange de louis : le métal passe directement de ton coffre à celui du membre, immédiat et sans frais.'
+            ? 'Échange de louis : le métal passe directement de votre coffre à celui du membre, immédiat et sans frais.'
             : `Le métal est vendu au cours du moment, puis les euros partent par virement SEPA. Frais : ${(FEES.sale * 100).toLocaleString('fr-FR')}\u00a0% (+ ${FEES.saleAbroadFixed}\u00a0€ vers un compte hors de France).`}
         </Hint>
 

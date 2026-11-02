@@ -274,7 +274,7 @@ export function convert(
   now = new Date(),
 ): Account {
   assertPositive(q.value, 'La quantité');
-  if (from === to) throw new LedgerError('Choisis deux métaux différents.');
+  if (from === to) throw new LedgerError('Choisissez deux métaux différents.');
   const { grams, gross, received, fees } = quoteConvert(prices, from, to, q);
   return apply(
     account,
@@ -299,7 +299,7 @@ export function transferToMember(
   assertPositive(q.value, 'La quantité');
   if (beneficiary.kind !== 'member') throw new LedgerError('Ce bénéficiaire n’est pas un membre.');
   if (beneficiary.identifier === account.memberId) {
-    throw new LedgerError('Tu ne peux pas te faire un virement à toi-même.');
+    throw new LedgerError('Vous ne pouvez pas vous faire un virement à vous-même.');
   }
   const grams = toGrams(q, prices[metal]);
   return apply(
@@ -367,13 +367,13 @@ export function addBeneficiary(
   identifier: string,
 ): { account: Account; beneficiary: Beneficiary } {
   const cleanName = name.trim();
-  if (!cleanName) throw new LedgerError('Indique le nom du bénéficiaire.');
+  if (!cleanName) throw new LedgerError('Indiquez le nom du bénéficiaire.');
   let id = identifier.trim();
   if (kind === 'iban') {
     if (!isValidIban(id)) throw new LedgerError('IBAN invalide.');
     id = formatIban(id);
   } else if (!id) {
-    throw new LedgerError('Indique l’identifiant, l’e-mail ou le téléphone du membre.');
+    throw new LedgerError('Indiquez l’identifiant, l’e-mail ou le téléphone du membre.');
   }
   const existing = account.beneficiaries.find((b) => b.kind === kind && b.identifier === id);
   if (existing) return { account, beneficiary: existing };
@@ -452,7 +452,7 @@ export function majorityDate(birthDate: string): Date {
 
 export function addChild(account: Account, name: string, birthDate?: string, now = new Date()) {
   const clean = name.trim();
-  if (!clean) throw new LedgerError('Indique le prénom de l’enfant.');
+  if (!clean) throw new LedgerError('Indiquez le prénom de l’enfant.');
   const child: ChildAccount = {
     id: newId(),
     name: clean,
@@ -488,7 +488,7 @@ export function fundChild(
   if (child.transferredAt) throw new LedgerError(`Le compte de ${child.name} lui a été transféré.`);
   if (child.birthDate && majorityDate(child.birthDate).getTime() <= now.getTime()) {
     throw new LedgerError(
-      `${child.name} est majeur : transfère-lui son compte, puis fais-lui un virement à un membre.`,
+      `${child.name} est majeur : transférez-lui son compte, puis faites-lui un virement à un membre.`,
     );
   }
   const grams = toGrams(q, prices[metal]);
@@ -552,7 +552,7 @@ export function setChildBirthDate(account: Account, childId: string, birthDate: 
 export function removeChild(account: Account, childId: string): Account {
   const child = findChild(account, childId);
   if (METALS.some((m) => child.holdings[m] > DUST)) {
-    throw new LedgerError('Vide d’abord ce compte enfant vers ton compte.');
+    throw new LedgerError('Videz d’abord ce compte enfant vers votre compte.');
   }
   return { ...account, children: account.children.filter((c) => c.id !== childId) };
 }
@@ -720,9 +720,9 @@ export function normalizeReferralCode(input: string): string {
 /** Saisit le code d'un parrain (une seule fois). Le bonus arrive au premier achat d'au moins 50 €. */
 export function enterSponsorCode(account: Account, input: string): Account {
   const code = normalizeReferralCode(input);
-  if (account.referral.sponsorCode) throw new LedgerError('Tu as déjà saisi un code de parrainage.');
+  if (account.referral.sponsorCode) throw new LedgerError('Vous avez déjà saisi un code de parrainage.');
   if (!/^ORVIA-[A-Z0-9]{6}$/.test(code)) throw new LedgerError('Code de parrainage invalide (format ORVIA-XXXXXX).');
-  if (code === account.referral.code) throw new LedgerError('Tu ne peux pas utiliser ton propre code.');
+  if (code === account.referral.code) throw new LedgerError('Vous ne pouvez pas utiliser votre propre code.');
   return { ...account, referral: { ...account.referral, sponsorCode: code } };
 }
 
@@ -770,7 +770,7 @@ export function issueCard(account: Account, now = new Date()): Account {
 }
 
 function requireCard(account: Account) {
-  if (!account.card) throw new LedgerError('Commande d’abord ta carte.');
+  if (!account.card) throw new LedgerError('Commandez d’abord votre carte.');
   return account.card;
 }
 
@@ -800,7 +800,7 @@ function cardDebit(
 ): Account {
   assertPositive(amount, 'Le montant');
   const card = requireCard(account);
-  if (card.frozen) throw new LedgerError('Ta carte est gelée. Dégèle-la pour l’utiliser.');
+  if (card.frozen) throw new LedgerError('Votre carte est gelée. Dégelez-la pour l’utiliser.');
   const [limit, days, what] =
     kind === 'card_payment'
       ? [CARD.paymentLimit30d, 30, 'de paiement sur 30 jours']

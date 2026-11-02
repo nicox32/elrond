@@ -44,7 +44,7 @@ export default function FeesScreen() {
         <Text style={styles.para}>
           Si l’inactivité continue, chaque nouvelle période de {FEES.dormancyAfterMonths} mois est facturée de la même
           façon. La règle s’applique à chaque compte séparément. Un compte enfant n’a aucun frais avant les 18 ans de
-          l’enfant ; à sa majorité, les {FEES.dormancyAfterMonths} mois commencent à compter. L’appli te prévient un
+          l’enfant ; à sa majorité, les {FEES.dormancyAfterMonths} mois commencent à compter. L’appli vous prévient un
           mois avant.
         </Text>
       </Card>

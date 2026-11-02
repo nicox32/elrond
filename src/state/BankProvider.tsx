@@ -132,7 +132,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
           const last = accountRef.current?.balanceHistory.at(-1);
           if (!periodic || !last || Date.now() - new Date(last.date).getTime() >= PERIODIC_BALANCE_MS) snapshot();
         } catch {
-          setPriceError('Impossible de charger les cours réels. Vérifie ta connexion.');
+          setPriceError('Impossible de charger les cours réels. Vérifiez votre connexion.');
         } finally {
           setRefreshing(false);
           inFlight.current = null;

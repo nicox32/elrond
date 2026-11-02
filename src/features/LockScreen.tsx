@@ -46,7 +46,7 @@ export function LockScreen() {
       <Image source={LOGO} style={styles.logo} accessibilityLabel="Orvia" resizeMode="contain" />
       <Text style={styles.hello}>Bonjour {account?.holder}</Text>
       <PinPad
-        title="Entre ton code d’accès"
+        title="Entrez votre code d’accès"
         error={error}
         disabled={blockedUntil > 0}
         onComplete={async (pin) => {
@@ -59,7 +59,7 @@ export function LockScreen() {
           if (attempts.current >= MAX_ATTEMPTS) {
             attempts.current = 0;
             setBlockedUntil(Date.now() + COOLDOWN_MS);
-            setError('Trop d’essais. Réessaie dans 30 secondes.');
+            setError('Trop d’essais. Réessayez dans 30 secondes.');
           } else {
             setError(`Code incorrect (${MAX_ATTEMPTS - attempts.current} essai(s) restant(s)).`);
           }
