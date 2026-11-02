@@ -52,6 +52,8 @@ function AppStack() {
       <Stack.Screen name="enfants/index" options={{ title: 'Comptes enfants' }} />
       <Stack.Screen name="enfants/[id]" options={{ title: 'Compte enfant' }} />
       <Stack.Screen name="tarifs" options={{ title: 'Tarifs' }} />
+      <Stack.Screen name="carte" options={{ title: 'Ma carte Orvia' }} />
+      <Stack.Screen name="parrainage" options={{ title: 'Parrainage' }} />
     </Stack>
   );
 }

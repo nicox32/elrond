@@ -308,3 +308,62 @@ test('opérations qui évitent les frais : achat et échanges de louis, pas les 
   // 1 louis = 1 euro
   close(toLouis(250, prices), 250);
 });
+
+test('carte Orvia : paiements et retraits gratuits, plafonds, gel, comptent comme mouvements', async () => {
+  const { issueCard, cardPay, cardWithdraw, setCardFrozen, setCardMetal, dormancyStatus, CARD } = await import(
+    '../src/logic/ledger.ts'
+  );
+  const t0 = new Date('2026-03-01T12:00:00Z');
+  let acc = buy(createAccount('Nico', t0), prices, 'gold', { unit: 'g', value: 50 }, t0); // 5 000 € d'or
+  assert.throws(() => cardPay(acc, prices, 'Boulangerie', 5, t0), LedgerError); // pas encore de carte
+  acc = issueCard(acc, t0);
+  assert.match(acc.card!.last4, /^\d{4}$/);
+  assert.equal(acc.card!.expiry, '03/30');
+  const t1 = new Date('2026-05-01T12:00:00Z');
+  acc = cardPay(acc, prices, 'Boulangerie', 25, t1);
+  close(acc.holdings.gold, 50 - 0.25); // 25 € à 100 €/g, sans frais
+  assert.equal(acc.transactions[0].fees, undefined);
+  assert.equal(dormancyStatus(acc, t1).lastMovement.toISOString(), t1.toISOString()); // évite l'oxydation
+  acc = cardWithdraw(acc, prices, 100, t1);
+  close(acc.holdings.gold, 50 - 1.25);
+  // plafonds
+  assert.throws(() => cardWithdraw(acc, prices, CARD.withdrawalLimit7d, t1), LedgerError);
+  acc = cardWithdraw(acc, prices, 100, new Date('2026-05-09T12:00:00Z')); // 8 jours plus tard : nouveau plafond
+  assert.throws(() => cardPay(acc, prices, 'Voyage', 3000, t1), LedgerError);
+  // métal débité au choix
+  acc = buy(acc, prices, 'silver', { unit: 'g', value: 1000 }, t1);
+  acc = setCardMetal(acc, 'silver');
+  acc = cardPay(acc, prices, 'Café', 2, t1);
+  close(acc.holdings.silver, 1000 - 2);
+  // gel
+  acc = setCardFrozen(acc, true);
+  assert.throws(() => cardPay(acc, prices, 'Café', 2, t1), LedgerError);
+  assert.doesNotThrow(() => cardPay(setCardFrozen(acc, false), prices, 'Café', 2, t1));
+});
+
+test('parrainage : code saisi une fois, bonus de 10 LOU en or au premier achat d’au moins 50 €', async () => {
+  const { enterSponsorCode, REFERRAL, dormancyStatus } = await import('../src/logic/ledger.ts');
+  let acc = createAccount('Filleul');
+  assert.match(acc.referral.code, /^ORVIA-[A-Z2-9]{6}$/);
+  assert.throws(() => enterSponsorCode(acc, 'abc'), LedgerError);
+  assert.throws(() => enterSponsorCode(acc, acc.referral.code), LedgerError);
+  acc = enterSponsorCode(acc, ' orvia-abc234 ');
+  assert.equal(acc.referral.sponsorCode, 'ORVIA-ABC234');
+  assert.throws(() => enterSponsorCode(acc, 'ORVIA-XYZ234'), LedgerError);
+  // achat de 20 € : pas de bonus
+  acc = buy(acc, prices, 'gold', { unit: 'eur', value: 20 });
+  assert.ok(!acc.referral.bonusPaid);
+  // achat de 50 € : bonus versé en or, une seule fois
+  acc = buy(acc, prices, 'gold', { unit: 'eur', value: 50 });
+  assert.ok(acc.referral.bonusPaid);
+  assert.equal(acc.transactions[0].kind, 'referral_bonus');
+  close(acc.transactions[0].deltas.gold, REFERRAL.bonusLou / prices.gold);
+  acc = buy(acc, prices, 'gold', { unit: 'eur', value: 100 });
+  assert.equal(acc.transactions.filter((t) => t.kind === 'referral_bonus').length, 1);
+  // le bonus est un gain (pas un apport) et compte comme une opération contre l'oxydation
+  close(unrealizedGain(acc, prices).invested, 170, 0.01);
+  assert.ok(dormancyStatus(acc).lastMovement.getTime() > 0);
+  // migration : un compte sans code de parrainage en reçoit un
+  const legacy = migrateAccount({ ...createAccount('Old'), referral: undefined });
+  assert.match(legacy!.referral.code, /^ORVIA-/);
+});

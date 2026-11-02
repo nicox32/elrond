@@ -60,14 +60,25 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
     ],
   },
   {
+    title: 'Carte Orvia',
+    rows: [
+      { label: 'Émission et tenue de la carte virtuelle', orvia: 'Gratuit' },
+      { label: 'Paiement par carte (revente du métal au cours du moment)', orvia: 'Gratuit' },
+      { label: 'Retrait au distributeur', orvia: 'Gratuit' },
+      { label: 'Plafond de paiements', orvia: '3 000 € / 30 jours' },
+      { label: 'Plafond de retraits', orvia: '500 € / 7 jours' },
+    ],
+  },
+  {
     title: 'Transferts et comptes',
     rows: [
       { label: 'Envoi de louis (métaux) à un membre', orvia: 'Gratuit' },
       { label: 'Réception de louis (métaux) d’un membre', orvia: 'Gratuit' },
       { label: 'Compte enfant (ouverture, tenue, alimentation)', orvia: 'Gratuit' },
+      { label: 'Bonus de parrainage du filleul (1er achat d’au moins 50 €)', orvia: '+10 LOU en or' },
       { label: 'Frais sur un compte enfant avant les 18 ans', orvia: 'Aucun' },
       {
-        label: `Frais d’oxydation : ${FEES.dormancyAfterMonths} mois calendaires sans achat ni échange de louis d’au moins 1 €`,
+        label: `Frais d’oxydation : ${FEES.dormancyAfterMonths} mois calendaires sans opération éligible d’au moins 1 €`,
         orvia: `${pct(FEES.dormancyDaily)} du solde par jour, sur ces ${FEES.dormancyAfterMonths} mois`,
       },
     ],

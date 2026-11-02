@@ -35,9 +35,10 @@ export default function FeesScreen() {
           solde), prélevés en métal.
         </Text>
         <Text style={styles.para}>
-          Pour éviter ces frais, il suffit de réaliser l’une des opérations suivantes à partir d’un euro : crédit du
-          compte (achat de métal) ou échange de louis (envoi à un membre, conversion, versement entre comptes de la
-          famille). Les ventes, les virements vers un IBAN et les frais eux-mêmes ne comptent pas.
+          Pour éviter ces frais, il suffit de réaliser l’une des opérations suivantes à partir d’un euro : paiement ou
+          retrait avec la carte Orvia, échange de louis (envoi à un membre, conversion, versement entre comptes de la
+          famille), crédit du compte (achat de métal) ou parrainage. Les ventes, les virements vers un IBAN et les frais
+          eux-mêmes ne comptent pas.
         </Text>
         <Text style={styles.para}>
           Si l’inactivité continue, chaque nouvelle période de {FEES.dormancyAfterMonths} mois est facturée de la même

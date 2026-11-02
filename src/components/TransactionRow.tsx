@@ -14,13 +14,16 @@ const ICON: Record<TransactionKind, string> = {
   family_out: '↘',
   family_in: '↙',
   fee_dormancy: '!',
+  card_payment: '▭',
+  card_withdrawal: '€',
+  referral_bonus: '★',
 };
 
 export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit }) {
   const parts = METALS.filter((m) => tx.deltas[m]).map(
     (m) => `${formatWeightDelta(tx.deltas[m], unit)} ${METAL_LABEL[m].toLowerCase()}`,
   );
-  const incoming = tx.kind === 'buy' || tx.kind === 'family_in';
+  const incoming = tx.kind === 'buy' || tx.kind === 'family_in' || tx.kind === 'referral_bonus';
   const neutral = tx.kind === 'convert';
   const fee = tx.kind === 'fee_dormancy';
 

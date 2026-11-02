@@ -39,7 +39,13 @@ export type TransactionKind =
   /** Métal reçu d'un autre compte de la famille. */
   | 'family_in'
   /** Frais d'oxydation prélevés sur un compte inactif. */
-  | 'fee_dormancy';
+  | 'fee_dormancy'
+  /** Paiement chez un commerçant avec la carte Orvia. */
+  | 'card_payment'
+  /** Retrait au distributeur avec la carte Orvia. */
+  | 'card_withdrawal'
+  /** Bonus de parrainage crédité. */
+  | 'referral_bonus';
 
 export interface Transaction {
   id: string;
@@ -94,6 +100,28 @@ export interface ChildAccount extends Wallet {
   birthDate?: string;
 }
 
+/** Carte de paiement Orvia, adossée aux métaux du compte. */
+export interface Card {
+  /** Seuls les 4 derniers chiffres sont connus de l'appli. */
+  last4: string;
+  /** Date d'expiration « MM/AA ». */
+  expiry: string;
+  holderName: string;
+  /** Métal vendu pour régler les paiements et retraits. */
+  fundingMetal: Metal;
+  frozen: boolean;
+  issuedAt: string;
+}
+
+export interface Referral {
+  /** Code à partager pour parrainer quelqu'un. */
+  code: string;
+  /** Code du parrain saisi par ce compte, s'il y en a un. */
+  sponsorCode?: string;
+  /** Le bonus de filleul a été versé. */
+  bonusPaid?: boolean;
+}
+
 export interface Account extends Wallet {
   version: 2;
   holder: string;
@@ -104,4 +132,6 @@ export interface Account extends Wallet {
   children: ChildAccount[];
   balanceHistory: BalancePoint[];
   settings: Settings;
+  card?: Card;
+  referral: Referral;
 }

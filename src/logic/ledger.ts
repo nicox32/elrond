@@ -94,6 +94,7 @@ export function createAccount(holder: string, now = new Date()): Account {
     transactions: [],
     beneficiaries: [],
     children: [],
+    referral: { code: generateReferralCode() },
     balanceHistory: [],
     settings: { unit: 'g', biometrics: false },
   };
@@ -105,7 +106,11 @@ export function migrateAccount(raw: unknown): Account | null {
   const a = raw as Record<string, any>;
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
-    return { ...(a as Account), children: Array.isArray(a.children) ? a.children : [] };
+    return {
+      ...(a as Account),
+      children: Array.isArray(a.children) ? a.children : [],
+      referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
+    };
   }
   if (typeof a.holder !== 'string') return null;
 
@@ -206,11 +211,15 @@ export function quoteBuy(prices: Prices, metal: Metal, q: Quantity) {
   return { grams, paid, fees: paid - grams * prices[metal] };
 }
 
-/** Achète du métal, payé par carte bancaire (fictive). Saisie en euros (montant payé), grammes ou onces. */
+/**
+ * Achète du métal, payé par carte bancaire (fictive). Saisie en euros (montant payé), grammes ou onces.
+ * Premier achat d'au moins 50 € d'un filleul : son bonus de parrainage est versé dans la foulée.
+ */
 export function buy(account: Account, prices: Prices, metal: Metal, q: Quantity, now = new Date()): Account {
   assertPositive(q.value, 'La quantité');
   const { grams, paid, fees } = quoteBuy(prices, metal, q);
-  return apply(account, 'buy', { [metal]: grams }, paid, `Achat ${METAL_OF[metal]}`, now, fees);
+  const bought = apply(account, 'buy', { [metal]: grams }, paid, `Achat ${METAL_OF[metal]}`, now, fees);
+  return paid >= REFERRAL.minFirstPurchase ? payReferralBonus(bought, prices, now) : bought;
 }
 
 /**
@@ -384,7 +393,8 @@ export function netInvested(account: Pick<Wallet, 'transactions'>): number {
   let total = 0;
   for (const tx of account.transactions) {
     if (tx.kind === 'buy' || tx.kind === 'family_in') total += tx.eur;
-    else if (tx.kind !== 'convert' && tx.kind !== 'fee_dormancy') total -= tx.eur;
+    // Le bonus de parrainage est un gain, pas un apport : il apparaît dans la plus-value.
+    else if (tx.kind !== 'convert' && tx.kind !== 'fee_dormancy' && tx.kind !== 'referral_bonus') total -= tx.eur;
   }
   return round(total, 2);
 }
@@ -534,6 +544,9 @@ export const MIN_MOVEMENT_EUR = 1;
  */
 export const MOVEMENT_KINDS: ReadonlySet<TransactionKind> = new Set<TransactionKind>([
   'buy',
+  'card_payment',
+  'card_withdrawal',
+  'referral_bonus',
   'convert',
   'transfer_member',
   'family_out',
@@ -645,4 +658,137 @@ export function applyDormancy(account: Account, prices: Prices, now = new Date()
   const children = account.children.map((c) => chargeDormancy(c, prices, now));
   const changed = parent !== account || children.some((c, i) => c !== account.children[i]);
   return changed ? { ...parent, children } : account;
+}
+
+// ——— Parrainage ——————————————————————————————————————————————————
+
+export const REFERRAL = {
+  /** Bonus versé au filleul, en louis (1 LOU = 1 €), crédité en or. */
+  bonusLou: 10,
+  /** Montant minimal du premier achat qui déclenche le bonus. */
+  minFirstPurchase: 50,
+} as const;
+
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans 0/O ni 1/I
+
+export function generateReferralCode(): string {
+  let code = '';
+  for (let i = 0; i < 6; i++) code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  return `ORVIA-${code}`;
+}
+
+export function normalizeReferralCode(input: string): string {
+  return input.trim().toUpperCase().replace(/\s+/g, '');
+}
+
+/** Saisit le code d'un parrain (une seule fois). Le bonus arrive au premier achat d'au moins 50 €. */
+export function enterSponsorCode(account: Account, input: string): Account {
+  const code = normalizeReferralCode(input);
+  if (account.referral.sponsorCode) throw new LedgerError('Tu as déjà saisi un code de parrainage.');
+  if (!/^ORVIA-[A-Z0-9]{6}$/.test(code)) throw new LedgerError('Code de parrainage invalide (format ORVIA-XXXXXX).');
+  if (code === account.referral.code) throw new LedgerError('Tu ne peux pas utiliser ton propre code.');
+  return { ...account, referral: { ...account.referral, sponsorCode: code } };
+}
+
+/** Verse le bonus de filleul s'il est dû (code saisi, pas encore versé). */
+export function payReferralBonus(account: Account, prices: Prices, now = new Date()): Account {
+  const r = account.referral;
+  if (!r?.sponsorCode || r.bonusPaid) return account;
+  const eur = REFERRAL.bonusLou;
+  const credited = apply(
+    account,
+    'referral_bonus',
+    { gold: eur / prices.gold },
+    eur,
+    `Bonus de parrainage (${r.sponsorCode})`,
+    now,
+  );
+  return { ...credited, referral: { ...r, bonusPaid: true } };
+}
+
+// ——— Carte Orvia ————————————————————————————————————————————————
+
+export const CARD = {
+  /** Plafond de paiements sur 30 jours glissants. */
+  paymentLimit30d: 3000,
+  /** Plafond de retraits sur 7 jours glissants. */
+  withdrawalLimit7d: 500,
+} as const;
+
+/** Émet la carte virtuelle (gratuite). */
+export function issueCard(account: Account, now = new Date()): Account {
+  if (account.card) return account;
+  const exp = new Date(now.getTime());
+  exp.setFullYear(exp.getFullYear() + 4);
+  return {
+    ...account,
+    card: {
+      last4: randomDigits(4),
+      expiry: `${String(exp.getMonth() + 1).padStart(2, '0')}/${String(exp.getFullYear()).slice(-2)}`,
+      holderName: account.holder.toUpperCase(),
+      fundingMetal: 'gold',
+      frozen: false,
+      issuedAt: now.toISOString(),
+    },
+  };
+}
+
+function requireCard(account: Account) {
+  if (!account.card) throw new LedgerError('Commande d’abord ta carte.');
+  return account.card;
+}
+
+export function setCardFrozen(account: Account, frozen: boolean): Account {
+  return { ...account, card: { ...requireCard(account), frozen } };
+}
+
+export function setCardMetal(account: Account, fundingMetal: Metal): Account {
+  return { ...account, card: { ...requireCard(account), fundingMetal } };
+}
+
+/** Montant déjà utilisé sur une période glissante (en euros). */
+export function cardUsage(account: Account, kind: 'card_payment' | 'card_withdrawal', days: number, now = new Date()) {
+  const from = now.getTime() - days * 86_400_000;
+  return account.transactions
+    .filter((t) => t.kind === kind && new Date(t.date).getTime() > from)
+    .reduce((sum, t) => sum + t.eur, 0);
+}
+
+function cardDebit(
+  account: Account,
+  prices: Prices,
+  kind: 'card_payment' | 'card_withdrawal',
+  amount: number,
+  label: string,
+  now: Date,
+): Account {
+  assertPositive(amount, 'Le montant');
+  const card = requireCard(account);
+  if (card.frozen) throw new LedgerError('Ta carte est gelée. Dégèle-la pour l’utiliser.');
+  const [limit, days, what] =
+    kind === 'card_payment'
+      ? [CARD.paymentLimit30d, 30, 'de paiement sur 30 jours']
+      : [CARD.withdrawalLimit7d, 7, 'de retrait sur 7 jours'];
+  const used = cardUsage(account, kind, days, now);
+  if (used + amount > limit + 1e-9) {
+    throw new LedgerError(
+      `Plafond ${what} atteint : il reste ${Math.max(0, limit - used)
+        .toFixed(2)
+        .replace('.', ',')} €.`,
+    );
+  }
+  // Paiements et retraits par carte : revente du métal sans frais, au cours du moment.
+  const metal = card.fundingMetal;
+  return apply(account, kind, { [metal]: -amount / prices[metal] }, amount, label, now);
+}
+
+/** Paiement chez un commerçant : le métal choisi est vendu au cours du moment, sans frais. */
+export function cardPay(account: Account, prices: Prices, merchant: string, amount: number, now = new Date()): Account {
+  const name = merchant.trim() || 'Commerçant';
+  return cardDebit(account, prices, 'card_payment', amount, `Carte · ${name}`, now);
+}
+
+/** Retrait au distributeur : le métal choisi est vendu au cours du moment, sans frais. */
+export function cardWithdraw(account: Account, prices: Prices, amount: number, now = new Date()): Account {
+  return cardDebit(account, prices, 'card_withdrawal', amount, 'Carte · Retrait au distributeur', now);
 }

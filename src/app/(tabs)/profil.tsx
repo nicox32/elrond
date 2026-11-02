@@ -48,7 +48,13 @@ export default function ProfileScreen() {
       </Card>
 
       <Card style={{ paddingVertical: 4 }}>
-        <LinkRow label="Comptes enfants" hint={`${account.children.length} compte(s) · gratuit`} to="/enfants" />
+        <LinkRow
+          label="Ma carte Orvia"
+          hint={account.card ? `•••• ${account.card.last4}${account.card.frozen ? ' · gelée' : ''}` : 'Gratuite'}
+          to="/carte"
+        />
+        <LinkRow label="Parrainage" hint={account.referral.code} to="/parrainage" border />
+        <LinkRow label="Comptes enfants" hint={`${account.children.length} compte(s) · gratuit`} to="/enfants" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 
@@ -98,7 +104,7 @@ function LinkRow({
 }: {
   label: string;
   hint: string;
-  to: '/enfants' | '/tarifs';
+  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage';
   border?: boolean;
 }) {
   return (

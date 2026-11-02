@@ -3,13 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BalanceChart } from '../../components/BalanceChart';
 import { DormancyNotice } from '../../components/DormancyNotice';
+import { OrviaCard } from '../../components/OrviaCard';
 import { formatLouis, toLouis } from '../../logic/currency';
 import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
-import { accountValue, METAL_LABEL, unrealizedGain } from '../../logic/ledger';
+import { accountValue, METAL_LABEL, REFERRAL, unrealizedGain } from '../../logic/ledger';
 import { METALS } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { colors, metalColor, metalSymbol } from '../../theme';
@@ -84,6 +85,31 @@ export default function AccountScreen() {
       <Card>
         <BalanceChart points={account.balanceHistory} />
       </Card>
+
+      <SectionTitle>Ma carte</SectionTitle>
+      {account.card ? (
+        <Pressable
+          onPress={() => router.push('/carte')}
+          accessibilityRole="button"
+          accessibilityLabel="Ouvrir ma carte"
+        >
+          <OrviaCard card={account.card} />
+        </Pressable>
+      ) : (
+        <Pressable onPress={() => router.push('/carte')} style={styles.kids} accessibilityRole="button">
+          <Text style={styles.kidsText}>
+            Paie et retire avec ton or, ton argent ou ton platine : commande ta carte Orvia, gratuite.
+          </Text>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      )}
+
+      <Pressable onPress={() => router.push('/parrainage')} style={styles.referral} accessibilityRole="button">
+        <Text style={styles.referralText}>
+          ★ Parraine tes proches : ils reçoivent {REFERRAL.bonusLou} LOU en or à leur premier achat.
+        </Text>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
 
       <SectionTitle
         right={
@@ -210,5 +236,14 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   kidsText: { color: colors.text, fontSize: 14, lineHeight: 21, flex: 1 },
+  referral: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.goldSoft,
+    borderRadius: 16,
+    padding: 14,
+  },
+  referralText: { color: colors.text, fontSize: 14, lineHeight: 20, flex: 1, fontWeight: '600' },
   empty: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
 });
