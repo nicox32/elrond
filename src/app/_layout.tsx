@@ -6,7 +6,10 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LockScreen } from '../features/LockScreen';
 import { Onboarding } from '../features/Onboarding';
 import { BankProvider, useBank } from '../state/BankProvider';
+import { setupPwa } from '../pwa';
 import { colors } from '../theme';
+
+setupPwa();
 
 function Gate() {
   const { loading, account, locked, needsPin } = useBank();
