@@ -102,6 +102,10 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
       <Screen testID="screen-operations">
         <Title>Opérations</Title>
         <PriceStatus />
+        <Pressable onPress={() => router.push('/repartition')} style={styles.splitLink} accessibilityRole="link">
+          <Text style={styles.splitText}>Achat réparti or / argent / platine en un geste</Text>
+          <Text style={ui.link}>Répartition ›</Text>
+        </Pressable>
         <Segmented
           value={mode}
           onChange={(m) => {
@@ -180,6 +184,17 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
 
 const styles = StyleSheet.create({
   block: { gap: 8 },
+  splitLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    backgroundColor: colors.goldSoft,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  splitText: { color: colors.text, fontSize: 13, flex: 1 },
   preview: {
     color: colors.text,
     backgroundColor: colors.goldSoft,

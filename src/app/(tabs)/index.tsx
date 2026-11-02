@@ -145,7 +145,15 @@ export default function AccountScreen() {
         <Text style={styles.chevron}>›</Text>
       </Pressable>
 
-      <SectionTitle>Mes coffres</SectionTitle>
+      <SectionTitle
+        right={
+          <Pressable onPress={() => router.push('/repartition')}>
+            <Text style={ui.link}>Répartition</Text>
+          </Pressable>
+        }
+      >
+        Mes coffres
+      </SectionTitle>
       <Card style={{ paddingVertical: 4 }}>
         {METALS.map((m, i) => (
           <Pressable

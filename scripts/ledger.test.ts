@@ -491,3 +491,33 @@ test('export des alertes vers le serveur : actives seulement, lisibles par le se
   assert.equal(parseConfig({ alerts: out }).length, 1);
   assert.match(generateNtfyTopic(), /^orvia-[a-z2-9]{20}$/);
 });
+
+test('répartition : partage au centime près, vers l’objectif, achat groupé', async () => {
+  const { splitAmount, normalizeAllocation, isValidAllocation, currentAllocation, buySplit, quoteSplitBuy } =
+    await import('../src/logic/allocation.ts');
+  const target = { gold: 50, silver: 25, platinum: 25 };
+  // selon les % : 100 € → 50 / 25 / 25
+  assert.deepEqual(splitAmount(100, target, 'percent'), { gold: 50, silver: 25, platinum: 25 });
+  // au centime près, sans perte
+  const odd = splitAmount(100, { gold: 34, silver: 33, platinum: 33 }, 'percent');
+  close(odd.gold + odd.silver + odd.platinum, 100, 1e-9);
+  // vers l'objectif : compte 100 % argent → tout va à l'or et au platine
+  let acc = buy(createAccount('Test'), prices, 'silver', { unit: 'g', value: 300 }); // ≈ 297,6 € d'argent
+  const toward = splitAmount(100, target, 'target', acc, prices);
+  assert.equal(toward.silver, 0);
+  // l'or (cible 50 %) est plus en retard que le platine (25 %) : il reçoit deux fois plus
+  close(toward.gold, 66.67, 0.01);
+  close(toward.platinum, 33.33, 0.01);
+  close(toward.gold + toward.silver + toward.platinum, 100, 1e-9);
+  // achat groupé : un achat par métal, chacun avec ses frais
+  const preview = quoteSplitBuy(prices, toward);
+  acc = buySplit(acc, prices, toward);
+  assert.equal(acc.transactions.filter((t) => t.kind === 'buy').length, 3);
+  close(acc.holdings.gold, preview.lines.find((l) => l.metal === 'gold')!.grams);
+  const now = currentAllocation(acc, prices);
+  close(now.gold + now.silver + now.platinum, 100, 1e-6);
+  // normalisation
+  assert.deepEqual(normalizeAllocation({ gold: 2, silver: 1, platinum: 1 }), { gold: 50, silver: 25, platinum: 25 });
+  assert.ok(isValidAllocation(target));
+  assert.ok(!isValidAllocation({ gold: 50, silver: 30, platinum: 30 }));
+});

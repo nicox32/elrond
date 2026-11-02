@@ -66,6 +66,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   logique que l'appli (`server/alertServer.ts`) et envoie les alertes par [ntfy](https://ntfy.sh). Réglages :
   secret `NTFY_TOPIC` (canal secret généré dans l'appli), alertes dans `server/alerts.json` (export depuis l'écran
   Alertes). L'état (relevés, alertes déjà envoyées) est gardé dans le cache GitHub Actions.
+- **Répartition** (« Répartition » sur l'écran du compte, l'écran Opérer ou le Profil) : objectif en % par métal
+  (modèles 50/25/25, 60/20/20…), comparaison avec la répartition actuelle, et **achat réparti en euros** en un geste,
+  « selon mes % » ou « vers mon objectif » (priorité aux métaux en retard, sans rien vendre) (`docs/repartition.png`).
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
   achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;
   écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;

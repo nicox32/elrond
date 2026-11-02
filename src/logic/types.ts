@@ -83,6 +83,8 @@ export interface BalancePoint {
 export interface Settings {
   unit: WeightUnit;
   biometrics: boolean;
+  /** Répartition cible des achats, en % par métal (total 100). */
+  allocation?: Record<Metal, number>;
 }
 
 /** Ce qu'un compte détient et son historique (compte principal ou compte enfant). */

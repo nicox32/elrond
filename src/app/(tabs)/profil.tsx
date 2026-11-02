@@ -54,6 +54,15 @@ export default function ProfileScreen() {
           hint={account.card ? `•••• ${account.card.last4}${account.card.frozen ? ' · gelée' : ''}` : 'Gratuite'}
           to="/carte"
         />
+        <LinkRow
+          label="Répartition"
+          hint={(() => {
+            const a = account.settings.allocation ?? { gold: 50, silver: 25, platinum: 25 };
+            return `Or ${a.gold} % · argent ${a.silver} % · platine ${a.platinum} %`;
+          })()}
+          to="/repartition"
+          border
+        />
         <LinkRow label="Parrainage" hint={account.referral.code} to="/parrainage" border />
         <LinkRow
           label="Alertes de prix"
@@ -114,7 +123,7 @@ function LinkRow({
 }: {
   label: string;
   hint: string;
-  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes';
+  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes' | '/repartition';
   border?: boolean;
 }) {
   return (
