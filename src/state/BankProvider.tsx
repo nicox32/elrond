@@ -5,7 +5,7 @@ import { applyDormancy, createAccount, recordBalance } from '../logic/ledger';
 import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
-import { withEcu } from '../logic/ecu';
+import { currentPremium, withEcu } from '../logic/ecu';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
 import { clearPin, hasPin, setPin } from '../security';
@@ -92,7 +92,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
 
   /** Cours avec le prix de l'Écu Orvia, selon la prime réglée (et pour d'anciens cours enregistrés sans écu). */
   const pricesNow = useCallback(
-    (q: PriceQuote = quoteRef.current) => withEcu(q.prices, accountRef.current?.settings.ecuPremium),
+    (q: PriceQuote = quoteRef.current) =>
+      withEcu(q.prices, currentPremium(accountRef.current, q.prices.gold, hourlyRef.current).premium),
     [],
   );
 
@@ -170,7 +171,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
         setQuote(cached);
       }
       // Ouverture : prélève les frais d'oxydation dus depuis la dernière visite.
-      const prices = withEcu((cached ?? quoteRef.current).prices, acc?.settings.ecuPremium);
+      const base = (cached ?? quoteRef.current).prices;
+      const prices = withEcu(base, currentPremium(acc, base.gold, hourly).premium);
       const charged = acc ? applyDormancy(acc, prices) : null;
       if (charged && charged !== acc) saveAccount(charged);
       accountRef.current = charged;
@@ -265,8 +267,15 @@ export function BankProvider({ children }: { children: ReactNode }) {
     setLocked(true);
   }, [persist]);
 
-  const ecuPremium = account?.settings.ecuPremium;
-  const pricedQuote = useMemo(() => ({ ...quote, prices: withEcu(quote.prices, ecuPremium) }), [quote, ecuPremium]);
+  // Prix du Gold Oria : cours de l'or × (1 + prime), prime manuelle ou du marché simulé.
+  const ecuPremium = useMemo(
+    () => currentPremium(account, quote.prices.gold, hourlyHistory, new Date()),
+    [account, quote, hourlyHistory],
+  );
+  const pricedQuote = useMemo(
+    () => ({ ...quote, prices: withEcu(quote.prices, ecuPremium.premium) }),
+    [quote, ecuPremium],
+  );
 
   const value = useMemo<BankContextValue>(
     () => ({

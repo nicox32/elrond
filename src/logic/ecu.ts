@@ -6,7 +6,9 @@
  * Fiscalité : traité comme de l'or d'investissement (taxe forfaitaire ou plus-values), tant que le statut
  * particulier des jetons n'est pas confirmé par un texte officiel.
  */
-import type { Prices, SpotPrices } from './types.ts';
+import { average30 } from './alerts.ts';
+import type { PricePoint } from './priceHistory.ts';
+import type { Account, Prices, SpotPrices } from './types.ts';
 
 export const ECU = {
   name: 'Gold Oria',
@@ -32,4 +34,123 @@ export function ecuPrice(goldPerGram: number, premium?: number): number {
 /** Ajoute (ou recalcule) le prix de l'écu à des cours de métaux. */
 export function withEcu(prices: SpotPrices | Prices, premium?: number): Prices {
   return { ...prices, ecu: ecuPrice(prices.gold, premium) };
+}
+
+// ——— Prime automatique : un marché simulé ————————————————————————————————
+//
+// Avec un seul utilisateur, il n'y a pas de vrai marché. La prime automatique imite donc ce qui fait bouger la prime
+// d'une pièce d'or dans la réalité :
+// 1. le cours de l'or : quand il passe sous sa moyenne 30 jours, les investisseurs achètent et la prime monte ;
+//    quand il s'envole, la demande se calme et la prime baisse ;
+// 2. la demande des autres investisseurs, simulée : une vague lente et régulière (quelques jours à un mois),
+//    identique pour tout le monde à un instant donné ;
+// 3. vos propres achats et ventes de Gold Oria sur 7 jours : acheter pousse un peu la prime, vendre la fait baisser.
+
+export type PremiumMode = 'auto' | 'manual';
+
+export const AUTO_PREMIUM = {
+  base: ECU.defaultPremium,
+  /** Points de prime par point d'écart à la moyenne 30 j (or sous la moyenne → prime plus haute). */
+  dipFactor: 0.4,
+  dipMin: -0.01,
+  dipMax: 0.025,
+  /** Vague de demande simulée : amplitudes et périodes (jours). */
+  waves: [
+    { amp: 0.003, days: 3.3, phase: 0.4 },
+    { amp: 0.002, days: 11, phase: 1.7 },
+    { amp: 0.0015, days: 29, phase: 3.1 },
+  ],
+  /** Points de prime par tranche de 1 000 € achetés (net) sur 7 jours. */
+  flowPer1000: 0.001,
+  flowMin: -0.005,
+  flowMax: 0.01,
+  min: 0.01,
+  max: 0.1,
+} as const;
+
+export interface PremiumParts {
+  base: number;
+  /** Effet du cours de l'or par rapport à sa moyenne 30 jours (null : pas encore 7 jours de relevés). */
+  market: number | null;
+  /** Demande simulée des autres investisseurs. */
+  community: number;
+  /** Vos achats et ventes de Gold Oria sur 7 jours. */
+  flow: number;
+  premium: number;
+}
+
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+
+/** Demande simulée des autres investisseurs à un instant donné (somme de vagues lentes, sans hasard). */
+export function communityDemand(at: Date): number {
+  const days = at.getTime() / 86_400_000;
+  return AUTO_PREMIUM.waves.reduce((s, w) => s + w.amp * Math.sin((2 * Math.PI * days) / w.days + w.phase), 0);
+}
+
+/** Achats nets de Gold Oria (en euros) sur les 7 jours précédant `at`. */
+export function ecuNetFlow(
+  transactions: { kind: string; date: string; eur: number; deltas: Partial<Record<string, number>> }[],
+  at: Date,
+): number {
+  const from = at.getTime() - 7 * 86_400_000;
+  let flow = 0;
+  for (const t of transactions) {
+    const time = new Date(t.date).getTime();
+    const d = t.deltas.ecu ?? 0;
+    if (!d || time < from || time > at.getTime()) continue;
+    if (t.kind === 'buy') flow += t.eur;
+    else if (t.kind === 'sell' || t.kind === 'transfer_iban' || t.kind.startsWith('card_')) flow -= t.eur;
+    else if (t.kind === 'convert') flow += d > 0 ? t.eur : -t.eur;
+  }
+  return flow;
+}
+
+/** Prime automatique à un instant donné, avec le détail de ce qui la compose. */
+export function autoPremium(input: {
+  at: Date;
+  gold: number;
+  goldAvg30: number | null;
+  netFlowEur: number;
+}): PremiumParts {
+  const A = AUTO_PREMIUM;
+  const market =
+    input.goldAvg30 && input.goldAvg30 > 0
+      ? clamp(((input.goldAvg30 - input.gold) / input.goldAvg30) * A.dipFactor, A.dipMin, A.dipMax)
+      : null;
+  const community = communityDemand(input.at);
+  const flow = clamp((input.netFlowEur / 1000) * A.flowPer1000, A.flowMin, A.flowMax);
+  const premium = clamp(A.base + (market ?? 0) + community + flow, A.min, A.max);
+  return { base: A.base, market, community, flow, premium };
+}
+
+/** Prime en vigueur pour ce compte : réglage manuel, ou prime automatique du marché simulé (par défaut). */
+export function currentPremium(
+  account: Pick<Account, 'settings' | 'transactions'> | null | undefined,
+  gold: number,
+  hourly: PricePoint[],
+  at = new Date(),
+): PremiumParts & { mode: PremiumMode } {
+  if (account?.settings.ecuPremiumMode === 'manual') {
+    const p = clampPremium(account.settings.ecuPremium);
+    return { base: p, market: null, community: 0, flow: 0, premium: p, mode: 'manual' };
+  }
+  const parts = autoPremium({
+    at,
+    gold,
+    goldAvg30: average30(hourly, 'gold', at.getTime()),
+    netFlowEur: account ? ecuNetFlow(account.transactions, at) : 0,
+  });
+  return { ...parts, mode: 'auto' };
+}
+
+/** Historique du prix du Gold Oria et du Gold Spot (€/g), à partir des relevés horaires. */
+export function ecuHistory(
+  account: Pick<Account, 'settings' | 'transactions'> | null | undefined,
+  hourly: PricePoint[],
+): { t: string; gold: number; ecu: number; premium: number }[] {
+  return hourly.map((p, i) => {
+    const at = new Date(p.t);
+    const premium = currentPremium(account, p.prices.gold, hourly.slice(0, i + 1), at).premium;
+    return { t: p.t, gold: p.prices.gold, ecu: ecuPrice(p.prices.gold, premium), premium };
+  });
 }

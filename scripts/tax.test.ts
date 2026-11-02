@@ -243,3 +243,42 @@ test('Écu Orvia : régime des jetons (exonéré jusqu’à 5 000 €, puis 6,5 
   // Saisie en euros juste sous le seuil : montant exact, sans impôt
   close(gramsForNet(big, 'ecu', 4990, p.ecu * (1 - FEES.sale), 0, now) * p.ecu * (1 - FEES.sale), 4990);
 });
+
+test('prime automatique du Gold Oria : or sous sa moyenne, demande simulée, vos achats', async () => {
+  const { AUTO_PREMIUM, autoPremium, communityDemand, currentPremium, ecuNetFlow } =
+    await import('../src/logic/ecu.ts');
+  const at = new Date('2026-11-02T12:00:00Z');
+  const flat = autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: 0 });
+  close(flat.premium, AUTO_PREMIUM.base + communityDemand(at), 1e-9);
+  // Or 5 % sous sa moyenne : +2 pt
+  const dip = autoPremium({ at, gold: 95, goldAvg30: 100, netFlowEur: 0 });
+  close(dip.market!, 0.02, 1e-9);
+  assert.ok(dip.premium > flat.premium);
+  // Or qui s'envole : effet plafonné à −1 pt
+  close(autoPremium({ at, gold: 130, goldAvg30: 100, netFlowEur: 0 }).market!, -0.01, 1e-9);
+  // Achats nets de 3 000 € sur 7 jours : +0,3 pt ; ventes : baisse
+  close(autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: 3000 }).flow, 0.003, 1e-9);
+  assert.ok(autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: -3000 }).flow < 0);
+  // La demande simulée bouge au fil des jours, dans ses bornes
+  const days = Array.from({ length: 60 }, (_, i) => communityDemand(new Date(at.getTime() + i * 86_400_000)));
+  assert.ok(Math.max(...days) - Math.min(...days) > 0.004);
+  assert.ok(days.every((d) => Math.abs(d) <= 0.0066));
+  // Toujours entre 1 % et 10 %
+  assert.ok(autoPremium({ at, gold: 50, goldAvg30: 100, netFlowEur: 1e7 }).premium <= AUTO_PREMIUM.max);
+  // Flux : achats de Gold Oria uniquement, sur 7 jours
+  const tx = [
+    { kind: 'buy', date: '2026-10-30T00:00:00Z', eur: 2000, deltas: { ecu: 15 } },
+    { kind: 'sell', date: '2026-10-31T00:00:00Z', eur: 500, deltas: { ecu: -4 } },
+    { kind: 'buy', date: '2026-10-31T00:00:00Z', eur: 900, deltas: { gold: 7 } },
+    { kind: 'buy', date: '2026-10-01T00:00:00Z', eur: 9000, deltas: { ecu: 70 } },
+  ];
+  assert.equal(ecuNetFlow(tx, at), 1500);
+  // Mode manuel : la prime réglée
+  const manual = currentPremium(
+    { settings: { unit: 'g', biometrics: false, ecuPremiumMode: 'manual', ecuPremium: 0.07 }, transactions: [] },
+    100,
+    [],
+    at,
+  );
+  assert.equal(manual.premium, 0.07);
+});

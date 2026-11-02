@@ -99,8 +99,10 @@ export interface Settings {
   biometrics: boolean;
   /** Répartition cible des achats, en % par métal (total 100). */
   allocation?: Record<SpotMetal, number>;
-  /** Prime de l'Écu Orvia sur l'or contenu (réglage de démonstration). */
+  /** Prime du Gold Oria sur l'or contenu, en mode manuel. */
   ecuPremium?: number;
+  /** Prime du Gold Oria : automatique (marché simulé, par défaut) ou manuelle. */
+  ecuPremiumMode?: 'auto' | 'manual';
 }
 
 /** Ce qu'un compte détient et son historique (compte principal ou compte enfant). */
