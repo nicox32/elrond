@@ -1,4 +1,5 @@
 import { DEFERRED_DAYS, FEES, type SaleSpeed } from './fees.ts';
+import { gramsForNet, type SaleTax, saleTax } from './tax.ts';
 import {
   type Account,
   type ChildAccount,
@@ -157,6 +158,7 @@ function apply<W extends Wallet>(
   label: string,
   now: Date,
   fees = 0,
+  tax?: SaleTax | null,
 ): W {
   const holdings = { ...wallet.holdings };
   const full = emptyHoldings();
@@ -178,6 +180,10 @@ function apply<W extends Wallet>(
     label,
   };
   if (fees > 0) tx.fees = round(fees, 2);
+  if (tax) {
+    tx.tax = round(tax.tax, 2);
+    tx.taxRegime = tax.regime;
+  }
   return { ...wallet, holdings, transactions: [tx, ...wallet.transactions] };
 }
 
@@ -226,12 +232,28 @@ export function buy(account: Account, prices: Prices, metal: Metal, q: Quantity,
  * Détail chiffré d'une revente par virement. Saisie en euros = montant reçu net de frais.
  * `abroad` : compte bancaire hors de France (frais fixe en plus).
  */
-export function quoteSale(prices: Prices, metal: Metal, q: Quantity, speed: SaleSpeed, abroad = false) {
+export function quoteSale(
+  prices: Prices,
+  metal: Metal,
+  q: Quantity,
+  speed: SaleSpeed,
+  abroad = false,
+  wallet?: Pick<Wallet, 'transactions'>,
+  now = new Date(),
+) {
   const net = sellPrice(prices, metal, speed);
   const fixed = abroad ? FEES.saleAbroadFixed : 0;
-  const grams = q.unit === 'eur' ? (q.value + fixed) / net : toGrams(q, net);
-  const received = grams * net - fixed;
-  return { grams, received, fees: grams * prices[metal] - received };
+  // Saisie en euros = montant reçu, impôt déduit quand le compte est connu.
+  const grams =
+    q.unit === 'eur'
+      ? wallet
+        ? gramsForNet(wallet, metal, q.value, net, fixed, now)
+        : (q.value + fixed) / net
+      : toGrams(q, net);
+  const gross = grams * net - fixed;
+  const tax = wallet ? saleTax(wallet, metal, grams, Math.max(0, gross), now) : null;
+  const received = gross - (tax?.tax ?? 0);
+  return { grams, gross, received, fees: grams * prices[metal] - gross, tax };
 }
 
 /** Vend du métal ; les euros sont versés sur le compte bancaire du titulaire (fictif, en France). */
@@ -244,7 +266,7 @@ export function sell(
   now = new Date(),
 ): Account {
   assertPositive(q.value, 'La quantité');
-  const { grams, received, fees } = quoteSale(prices, metal, q, speed);
+  const { grams, received, fees, tax } = quoteSale(prices, metal, q, speed, false, account, now);
   return apply(
     account,
     'sell',
@@ -253,15 +275,27 @@ export function sell(
     `Vente ${METAL_OF[metal]} · ${SPEED_LABEL[speed]}`,
     now,
     fees,
+    tax,
   );
 }
 
 /** Détail chiffré d'une conversion : revente (frais de conversion) puis achat (frais d'achat du métal reçu). */
-export function quoteConvert(prices: Prices, from: Metal, to: Metal, q: Quantity) {
+export function quoteConvert(
+  prices: Prices,
+  from: Metal,
+  to: Metal,
+  q: Quantity,
+  wallet?: Pick<Wallet, 'transactions'>,
+  now = new Date(),
+) {
   const grams = toGrams(q, prices[from]);
   const gross = grams * prices[from];
-  const received = (gross * (1 - FEES.conversion) * (1 - FEES.buy[to])) / prices[to];
-  return { grams, gross, received, fees: gross - received * prices[to] };
+  // Échanger un métal contre un autre est une cession : l'impôt est retenu avant le rachat.
+  const cession = gross * (1 - FEES.conversion);
+  const tax = wallet ? saleTax(wallet, from, grams, cession, now) : null;
+  const reinvested = cession - (tax?.tax ?? 0);
+  const received = (reinvested * (1 - FEES.buy[to])) / prices[to];
+  return { grams, gross, received, fees: gross - (tax?.tax ?? 0) - received * prices[to], tax };
 }
 
 /** Convertit un métal en un autre. Saisie en euros = valeur au cours du métal cédé. */
@@ -275,7 +309,7 @@ export function convert(
 ): Account {
   assertPositive(q.value, 'La quantité');
   if (from === to) throw new LedgerError('Choisissez deux métaux différents.');
-  const { grams, gross, received, fees } = quoteConvert(prices, from, to, q);
+  const { grams, gross, received, fees, tax } = quoteConvert(prices, from, to, q, account, now);
   return apply(
     account,
     'convert',
@@ -284,6 +318,7 @@ export function convert(
     `${METAL_LABEL[from]} → ${METAL_LABEL[to]}`,
     now,
     fees,
+    tax,
   );
 }
 
@@ -329,7 +364,15 @@ export function transferToIban(
 ): Account {
   assertPositive(q.value, 'Le montant');
   if (beneficiary.kind !== 'iban') throw new LedgerError('Ce bénéficiaire n’a pas d’IBAN.');
-  const { grams, received, fees } = quoteSale(prices, metal, q, speed, isForeignIban(beneficiary.identifier));
+  const { grams, received, fees, tax } = quoteSale(
+    prices,
+    metal,
+    q,
+    speed,
+    isForeignIban(beneficiary.identifier),
+    account,
+    now,
+  );
   if (received <= 0) throw new LedgerError('Montant trop faible pour couvrir les frais du virement.');
   return apply(
     account,
@@ -339,6 +382,7 @@ export function transferToIban(
     `Virement SEPA à ${beneficiary.name} · ${SPEED_LABEL[speed]}`,
     now,
     fees,
+    tax,
   );
 }
 
@@ -813,9 +857,12 @@ function cardDebit(
         .replace('.', ',')} €.`,
     );
   }
-  // Paiements et retraits par carte : revente du métal sans frais, au cours du moment.
+  // Paiements et retraits par carte : revente du métal sans frais, au cours du moment. C'est une cession : on vend
+  // un peu plus de métal pour couvrir l'impôt, le commerçant reçoit le montant exact.
   const metal = card.fundingMetal;
-  return apply(account, kind, { [metal]: -amount / prices[metal] }, amount, label, now);
+  const grams = gramsForNet(account, metal, amount, prices[metal], 0, now);
+  const tax = saleTax(account, metal, grams, grams * prices[metal], now);
+  return apply(account, kind, { [metal]: -grams }, amount, label, now, 0, tax);
 }
 
 /** Paiement chez un commerçant : le métal choisi est vendu au cours du moment, sans frais. */

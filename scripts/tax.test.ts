@@ -84,3 +84,51 @@ test('impôt : le régime le moins cher est retenu, plus-value en euros et en %'
   assert.equal(r.best, 'gain');
   close(TAX.flat + 0, 0.115, 1e-9);
 });
+
+test('impôt retenu automatiquement à chaque cession, au régime le moins cher', async () => {
+  const { addBeneficiary, cardPay, convert, issueCard, transferToIban } = await import('../src/logic/ledger.ts');
+  const start = new Date('2021-06-01');
+  const now = new Date('2026-11-02');
+  const low = { gold: 100, silver: 1, platinum: 30 };
+  const high = { gold: 300, silver: 3, platinum: 30 };
+  const acc = buy(createAccount('T'), low, 'gold', { unit: 'eur', value: 1000 }, start);
+
+  // Vente de 1 g : prix de cession 297,60 €, la taxe forfaitaire (34,22 €) est moins chère que la plus-value
+  const sold = sell(acc, high, 'gold', { unit: 'g', value: 1 }, 'deferred', now);
+  const tx = sold.transactions[0];
+  const price = 300 * (1 - FEES.sale);
+  const flat = price * 0.115;
+  const gainTax = (price - 1000 / acc.holdings.gold) * 0.85 * 0.376;
+  close(tx.tax ?? 0, Math.min(flat, gainTax));
+  assert.equal(tx.taxRegime, flat < gainTax ? 'flat' : 'gain');
+  close(tx.eur, price - (tx.tax ?? 0));
+
+  // Saisie en euros : montant reçu après impôt
+  const net = sell(acc, high, 'gold', { unit: 'eur', value: 200 }, 'deferred', now).transactions[0];
+  close(net.eur, 200);
+  assert.ok((net.tax ?? 0) > 0);
+
+  // Tout vendre en grammes
+  const all = sell(acc, high, 'gold', { unit: 'g', value: acc.holdings.gold }, 'deferred', now);
+  close(all.holdings.gold, 0, 1e-6);
+
+  // Vente à perte : aucun impôt
+  const loss = sell(acc, { ...low, gold: 90 }, 'gold', { unit: 'g', value: 1 }, 'deferred', now).transactions[0];
+  assert.ok(!loss.tax);
+
+  // Virement vers un compte bancaire : même règle
+  const { account: withIban, beneficiary } = addBeneficiary(acc, 'iban', 'Moi', 'FR76 3000 6000 0112 3456 7890 189');
+  const iban = transferToIban(withIban, high, 'gold', { unit: 'eur', value: 50 }, beneficiary, 'deferred', now);
+  close(iban.transactions[0].eur, 50);
+  assert.ok((iban.transactions[0].tax ?? 0) > 0);
+
+  // Carte : le commerçant reçoit le montant exact, un peu plus de métal est vendu pour l'impôt
+  const carded = cardPay(issueCard(acc), high, 'Boulangerie', 20, now);
+  const ctx = carded.transactions[0];
+  close(ctx.eur, 20);
+  close(-ctx.deltas.gold * 300 - (ctx.tax ?? 0), 20);
+
+  // Conversion : cession du métal d'origine, l'impôt réduit le métal reçu
+  const conv = convert(acc, high, 'gold', 'silver', { unit: 'g', value: 1 }, now).transactions[0];
+  assert.ok((conv.tax ?? 0) > 0);
+});

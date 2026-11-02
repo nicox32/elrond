@@ -54,6 +54,12 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   un abattement de 5 % par an à partir de la 3e année de détention (exonération après 22 ans). Le régime le moins
   cher est retenu pour chaque métal ; durée de détention calculée en premier entré, premier sorti. Estimation
   indicative, sans valeur de conseil fiscal.
+- **Impôt retenu automatiquement** à chaque cession, au régime le moins cher (`docs/impots-par-operation.png`) :
+  vente (« Tout vendre » en un geste ; en euros, montant reçu après impôt), virement vers un IBAN, paiement ou retrait
+  par carte (le commerçant reçoit le montant exact) et conversion entre métaux. L'aperçu de chaque opération indique
+  l'impôt et le régime retenu, l'historique aussi. Virement de métal à un membre ou versement sur un compte enfant :
+  pas une vente, donc pas d'impôt sur la plus-value ; règles des dons rappelées (présent d'usage, abattements,
+  formulaire 2735).
 - **Le louis (LOU)**, monnaie interne d'Orvia : 1 LOU = 1 € de métal précieux au cours du moment ;
   le solde s'affiche aussi en louis.
 - **Carte Orvia** (simulée) : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement

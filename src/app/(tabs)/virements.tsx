@@ -23,6 +23,7 @@ import {
 } from '../../logic/ledger';
 import type { AmountUnit, Beneficiary, BeneficiaryKind, Metal } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
+import { describeTax } from '../../logic/tax';
 import { colors } from '../../theme';
 
 export default function TransfersScreen() {
@@ -58,15 +59,17 @@ export default function TransfersScreen() {
   // Membre : le métal change de main au cours réel, sans frais. IBAN : le métal est vendu (frais de revente).
   const abroad = kind === 'iban' && !!selected && isForeignIban(selected.identifier);
   const sale =
-    valid && kind === 'iban' ? quoteSale(quote.prices, metal, { unit: amountUnit, value }, speed, abroad) : null;
+    valid && kind === 'iban'
+      ? quoteSale(quote.prices, metal, { unit: amountUnit, value }, speed, abroad, account)
+      : null;
   const grams = !valid ? 0 : sale ? sale.grams : toGrams({ unit: amountUnit, value }, quote.prices[metal]);
 
   const summary =
     !selected || grams <= 0
       ? ''
       : kind === 'member'
-        ? `Envoyer ${formatWeight(grams, unit)} ${METAL_OF[metal]}, soit ${formatLouis(toLouis(grams * quote.prices[metal], quote.prices))} (${formatEur(grams * quote.prices[metal])}), à ${selected.name}, gratuitement.`
-        : `Vendre ${formatWeight(grams, unit)} ${METAL_OF[metal]} : ${selected.name} reçoit ${formatEur(sale?.received ?? 0)} (${selected.identifier}), après ${formatEur(sale?.fees ?? 0)} de frais${abroad ? `, dont ${FEES.saleAbroadFixed} € pour un compte à l’étranger` : ''}.`;
+        ? `Envoyer ${formatWeight(grams, unit)} ${METAL_OF[metal]}, soit ${formatLouis(toLouis(grams * quote.prices[metal], quote.prices))} (${formatEur(grams * quote.prices[metal])}), à ${selected.name}, gratuitement. Pas une vente : pas d’impôt sur la plus-value (un don suit les règles des donations).`
+        : `Vendre ${formatWeight(grams, unit)} ${METAL_OF[metal]} : ${selected.name} reçoit ${formatEur(sale?.received ?? 0)} (${selected.identifier}), après ${formatEur(sale?.fees ?? 0)} de frais${abroad ? `, dont ${FEES.saleAbroadFixed} € pour un compte à l’étranger` : ''}. ${sale?.tax ? describeTax(sale.tax) : ''}`;
 
   function saveBeneficiary() {
     try {

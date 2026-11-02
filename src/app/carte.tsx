@@ -20,6 +20,7 @@ import {
   setCardMetal,
 } from '../logic/ledger';
 import { useAccount, useBank } from '../state/BankProvider';
+import { describeTax, gramsForNet, saleTax } from '../logic/tax';
 import { colors } from '../theme';
 
 type Mode = 'pay' | 'withdraw';
@@ -71,13 +72,14 @@ export default function CardScreen() {
   const amount = parseAmount(text);
   const valid = Number.isFinite(amount) && amount > 0;
   const metal = card.fundingMetal;
-  const grams = valid ? amount / quote.prices[metal] : 0;
+  const grams = valid ? gramsForNet(account, metal, amount, quote.prices[metal]) : 0;
+  const tax = valid ? saleTax(account, metal, grams, grams * quote.prices[metal]) : null;
   const usedPay = cardUsage(account, 'card_payment', 30);
   const usedCash = cardUsage(account, 'card_withdrawal', 7);
   const summary = valid
     ? mode === 'pay'
-      ? `Payer ${formatEur(amount)} chez ${merchant.trim() || 'un commerçant'} : ${formatWeight(grams, unit)} ${METAL_OF[metal]} vendus, sans frais.`
-      : `Retirer ${formatEur(amount)} au distributeur : ${formatWeight(grams, unit)} ${METAL_OF[metal]} vendus, sans frais.`
+      ? `Payer ${formatEur(amount)} chez ${merchant.trim() || 'un commerçant'} : ${formatWeight(grams, unit)} ${METAL_OF[metal]} vendus, sans frais. ${tax ? describeTax(tax) : ''}`
+      : `Retirer ${formatEur(amount)} au distributeur : ${formatWeight(grams, unit)} ${METAL_OF[metal]} vendus, sans frais. ${tax ? describeTax(tax) : ''}`
     : '';
   const cardTx = account.transactions.filter((t) => t.kind === 'card_payment' || t.kind === 'card_withdrawal');
 

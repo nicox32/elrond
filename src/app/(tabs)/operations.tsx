@@ -24,6 +24,7 @@ import {
 } from '../../logic/ledger';
 import { type AmountUnit, type Metal, METALS } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
+import { describeTax } from '../../logic/tax';
 import { colors } from '../../theme';
 
 const pct = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })}\u00a0%`;
@@ -73,12 +74,12 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
       return `Vous achetez ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} pour ${formatEur(r.paid)}, dont ${formatEur(r.fees)} de frais (${pct(FEES.buy[metal])}).`;
     }
     if (mode === 'sell') {
-      const r = quoteSale(prices, metal, q, speed);
-      return `Vous vendez ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} et recevez ${formatEur(r.received)}, après ${formatEur(r.fees)} de frais.`;
+      const r = quoteSale(prices, metal, q, speed, false, account);
+      return `Vous vendez ${formatWeight(r.grams, unit)} ${METAL_OF[metal]} et recevez ${formatEur(r.received)}, après ${formatEur(r.fees)} de frais.${r.tax ? ` ${describeTax(r.tax)}` : ''}`;
     }
-    const r = quoteConvert(prices, metal, target, q);
-    return `${formatWeight(r.grams, unit)} ${METAL_OF[metal]} deviennent ${formatWeight(r.received, unit)} ${METAL_OF[target]}, après ${formatEur(r.fees)} de frais (${pct(FEES.conversion)} + ${pct(FEES.buy[target])}).`;
-  }, [value, amountUnit, mode, metal, target, prices, unit, speed]);
+    const r = quoteConvert(prices, metal, target, q, account);
+    return `${formatWeight(r.grams, unit)} ${METAL_OF[metal]} deviennent ${formatWeight(r.received, unit)} ${METAL_OF[target]}, après ${formatEur(r.fees)} de frais (${pct(FEES.conversion)} + ${pct(FEES.buy[target])}).${r.tax ? ` Une conversion est une vente pour le fisc. ${describeTax(r.tax)}` : ''}`;
+  }, [value, amountUnit, mode, metal, target, prices, unit, speed, account]);
 
   function submit() {
     const q = { unit: amountUnit, value };
@@ -142,7 +143,7 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
             {mode === 'buy'
               ? 'Montant à acheter (en euros : montant payé)'
               : mode === 'sell'
-                ? 'Montant à vendre (en euros : montant reçu)'
+                ? 'Montant à vendre (en euros : montant reçu après impôt)'
                 : 'Quantité à convertir'}
           </Label>
           <AmountInput
@@ -154,6 +155,20 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
             unit={amountUnit}
             onUnitChange={setAmountUnit}
           />
+          {mode !== 'buy' && account.holdings[metal] > 0 && (
+            <Pressable
+              onPress={() => {
+                setAmountUnit('g');
+                setText(String(Math.floor(account.holdings[metal] * 1e6) / 1e6).replace('.', ','));
+                setMessage(null);
+              }}
+              accessibilityRole="button"
+            >
+              <Text style={ui.link}>
+                {mode === 'sell' ? 'Tout vendre' : 'Tout convertir'} ({formatWeight(account.holdings[metal], unit)})
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         {preview && <Text style={styles.preview}>{preview}</Text>}
@@ -170,7 +185,7 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
           {mode === 'buy'
             ? `Paiement par carte bancaire (fictive). Frais d’achat : ${pct(FEES.buy[metal])} du montant.`
             : mode === 'sell'
-              ? `Les euros sont versés sur votre compte bancaire en France (fictif). Frais de revente : ${pct(FEES.sale)}.`
+              ? `Les euros sont versés sur votre compte bancaire en France (fictif). Frais de revente : ${pct(FEES.sale)}. L’impôt est calculé et retenu automatiquement, au régime le moins cher.`
               : `Frais de conversion : ${pct(FEES.conversion)} + frais d’achat du métal reçu.`}{' '}
           1 once troy = 31,1035 g.
         </Hint>

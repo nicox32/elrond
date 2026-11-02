@@ -12,6 +12,39 @@ const rate = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFracti
 const signed = (n: number) => `${n >= 0 ? '+' : '−'}${formatEur(Math.abs(n))}`;
 const tone = (n: number) => ({ color: n >= 0 ? colors.up : colors.down });
 
+const OPERATIONS = [
+  {
+    title: 'Vente de métal',
+    taxed: true,
+    text: 'C’est une cession : l’impôt est calculé et retenu automatiquement, au régime le moins cher, dès le premier euro. En euros, vous saisissez le montant reçu après impôt.',
+  },
+  {
+    title: 'Virement vers un compte bancaire (IBAN)',
+    taxed: true,
+    text: 'Le métal est vendu pour envoyer des euros : même règle qu’une vente, même pour un petit montant. Il n’existe pas de franchise pour l’or, l’argent et le platine.',
+  },
+  {
+    title: 'Paiement ou retrait par carte',
+    taxed: true,
+    text: 'Chaque paiement vend du métal : c’est une cession. Orvia vend un peu plus de métal pour couvrir l’impôt, le commerçant reçoit le montant exact.',
+  },
+  {
+    title: 'Conversion entre métaux',
+    taxed: true,
+    text: 'Échanger un métal contre un autre est une vente du premier : l’impôt est retenu avant le rachat et réduit le métal reçu.',
+  },
+  {
+    title: 'Virement de métal à un membre',
+    taxed: false,
+    text: 'Le métal change de main sans être vendu : pas d’impôt sur la plus-value. Si c’est un cadeau, c’est un don : petit cadeau d’anniversaire ou de fêtes (présent d’usage, raisonnable par rapport à vos revenus) sans formalité ; sinon droits de donation après abattement (100 000 € par parent et par enfant, 31 865 € par grand-parent et petit-enfant, 15 932 € entre frères et sœurs, 7 967 € pour un neveu ou une nièce, tous les 15 ans ; aucun abattement entre personnes non parentes) et déclaration du don (formulaire 2735 ou en ligne). S’il paie un achat entre particuliers, c’est une cession imposable à déclarer vous-même.',
+  },
+  {
+    title: 'Versement sur un compte enfant',
+    taxed: false,
+    text: 'C’est un don à votre enfant : pas d’impôt sur la plus-value, abattement de 100 000 € par parent tous les 15 ans. Au-delà d’un présent d’usage, déclarez le don (formulaire 2735 ou en ligne).',
+  },
+];
+
 export default function TaxScreen() {
   const account = useAccount();
   const { quote } = useBank();
@@ -59,11 +92,26 @@ export default function TaxScreen() {
         </>
       )}
 
+      <SectionTitle>Selon l’opération</SectionTitle>
+      <Card style={{ paddingVertical: 4 }}>
+        {OPERATIONS.map((o, i) => (
+          <View key={o.title} style={[styles.op, i > 0 && styles.opBorder]}>
+            <View style={styles.rowBetween}>
+              <Text style={[styles.para, styles.bold, { flex: 1 }]}>{o.title}</Text>
+              <Text style={[styles.badge, o.taxed ? styles.badgeTaxed : styles.badgeFree]}>
+                {o.taxed ? 'impôt retenu' : 'pas une vente'}
+              </Text>
+            </View>
+            <Text style={styles.muted}>{o.text}</Text>
+          </View>
+        ))}
+      </Card>
+
       <SectionTitle>Les règles en France (2026)</SectionTitle>
       <Card style={{ gap: 8 }}>
         <Text style={styles.para}>
           À chaque vente d’or, d’argent ou de platine d’investissement, vous choisissez entre deux régimes. Orvia
-          retient pour chaque métal celui qui vous coûte le moins.
+          calcule les deux à chaque opération et retient automatiquement celui qui vous coûte le moins.
         </Text>
         <Bullet>
           <Text style={styles.bold}>Taxe forfaitaire (par défaut) :</Text> {rate(TAX.flat)} du prix de vente (11 % + 0,5
@@ -127,12 +175,14 @@ function MetalCard({ m, unit }: { m: MetalTax; unit: 'g' | 'oz' }) {
   );
 }
 
-function Regime({ title, amount, chosen }: { title: string; amount: number; chosen: boolean }) {
+function Regime({ title, amount, chosen }: { title: string; amount: number | null; chosen: boolean }) {
   return (
     <View style={[styles.regime, chosen && styles.regimeChosen]}>
       <Label>{title}</Label>
-      <Text style={styles.regimeAmount}>{formatEur(amount)}</Text>
-      <Text style={[styles.muted, chosen && { color: colors.gold }]}>{chosen ? '✓ le moins cher' : 'plus cher'}</Text>
+      <Text style={styles.regimeAmount}>{amount === null ? '—' : formatEur(amount)}</Text>
+      <Text style={[styles.muted, chosen && { color: colors.gold }]}>
+        {chosen ? '✓ le moins cher' : amount === null ? 'sans justificatif' : 'plus cher'}
+      </Text>
     </View>
   );
 }
@@ -166,6 +216,18 @@ function Bullet({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
+  op: { paddingVertical: 12, gap: 4 },
+  opBorder: { borderTopWidth: 1, borderTopColor: colors.border },
+  badge: {
+    fontSize: 11,
+    fontWeight: '700',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  badgeTaxed: { color: colors.gold, backgroundColor: colors.goldSoft },
+  badgeFree: { color: colors.up, backgroundColor: colors.surfaceAlt },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   label: { color: colors.textMuted, fontSize: 13, flexShrink: 1 },
   value: { color: colors.text, fontSize: 14, fontVariant: ['tabular-nums'], textAlign: 'right' },

@@ -10,7 +10,7 @@
  * Pas de seuil d'exonération pour l'or, l'argent et le platine d'investissement (le seuil de 5 000 € vise les bijoux
  * et objets d'art). Estimation indicative : à faire confirmer par un conseiller fiscal.
  */
-import { accountValue } from './ledger.ts';
+import { FEES } from './fees.ts';
 import { type Metal, METALS, type Prices, type Wallet } from './types.ts';
 
 export const TAX = {
@@ -64,7 +64,9 @@ export function holdingLots(wallet: Pick<Wallet, 'transactions'>): Record<Metal,
     for (const m of METALS) {
       const delta = tx.deltas[m];
       if (delta > 0) {
-        const cost = tx.kind === 'referral_bonus' ? 0 : inflows.length === 1 ? tx.eur : (tx.eur * delta) / inflowGrams;
+        // Conversion : le nouveau métal coûte ce qui a été réinvesti (après frais de conversion et impôt).
+        const paid = tx.kind === 'convert' ? tx.eur * (1 - FEES.conversion) - (tx.tax ?? 0) : tx.eur;
+        const cost = tx.kind === 'referral_bonus' ? 0 : inflows.length === 1 ? paid : (paid * delta) / inflowGrams;
         lots[m].push({ date: tx.date, grams: delta, cost });
       } else if (delta < 0) {
         let out = -delta;
@@ -97,8 +99,8 @@ export interface MetalTax {
   gainPercent: number;
   /** Taxe forfaitaire (11,5 % du prix de vente). */
   flatTax: number;
-  /** Impôt au régime des plus-values (37,6 % après abattement). */
-  gainTax: number;
+  /** Impôt au régime des plus-values (37,6 % après abattement) ; null sans justificatif d'achat. */
+  gainTax: number | null;
   /** Durée de détention moyenne pondérée, en années pleines. */
   avgYears: number;
   /** Abattement moyen appliqué (0 à 1), pondéré par la plus-value. */
@@ -129,56 +131,29 @@ export function estimateTax(
   prices: Prices,
   now = new Date(),
 ): TaxEstimate {
-  const lots = holdingLots(wallet);
-  const value = accountValue(wallet, prices).byMetal;
+  const allLots = holdingLots(wallet);
   const metals: MetalTax[] = [];
   for (const m of METALS) {
     const grams = wallet.holdings[m];
-    if (grams <= 1e-6 || value[m] <= 0) continue;
-    const metalLots = lots[m];
-    const lotGrams = metalLots.reduce((s, l) => s + l.grams, 0) || grams;
-    const pricePerGram = value[m] / grams;
-    let cost = 0;
-    let taxableGain = 0;
-    let positiveGain = 0;
-    let allowedGain = 0;
-    let weightedYears = 0;
-    for (const lot of metalLots) {
-      const years = fullYears(new Date(lot.date), now);
-      const lotValue = lot.grams * pricePerGram;
-      const lotGain = lotValue - lot.cost;
-      cost += lot.cost;
-      weightedYears += years * lot.grams;
-      // La plus-value se calcule sur la vente entière : les pertes d'un lot compensent les gains d'un autre.
-      const allowance = lotGain > 0 ? holdingAllowance(years) : 0;
-      taxableGain += lotGain * (1 - allowance);
-      if (lotGain > 0) {
-        positiveGain += lotGain;
-        allowedGain += lotGain * allowance;
-      }
-    }
-    const gain = value[m] - cost;
-    const flatTax = value[m] * TAX.flat;
-    const gainTax = Math.max(0, taxableGain) * GAIN_RATE;
-    const best = gainTax <= flatTax ? 'gain' : 'flat';
-    const tax = Math.min(flatTax, gainTax);
-    const net = value[m] - tax;
+    const value = grams * prices[m] * (1 - FEES.sale);
+    if (grams <= 1e-6 || value <= 0) continue;
+    const t = saleTax(wallet, m, grams, value, now, allLots[m]);
     metals.push({
       metal: m,
       grams,
-      cost: r2(cost),
-      value: r2(value[m]),
-      gain: r2(gain),
-      gainPercent: cost > 0 ? (gain / cost) * 100 : 0,
-      flatTax: r2(flatTax),
-      gainTax: r2(gainTax),
-      avgYears: Math.floor(weightedYears / lotGrams),
-      allowance: positiveGain > 0 ? allowedGain / positiveGain : 0,
-      best,
-      tax: r2(tax),
-      net: r2(net),
-      netGain: r2(net - cost),
-      netGainPercent: cost > 0 ? ((net - cost) / cost) * 100 : 0,
+      cost: t.cost,
+      value: t.price,
+      gain: t.gain,
+      gainPercent: t.cost > 0 ? (t.gain / t.cost) * 100 : 0,
+      flatTax: t.flatTax,
+      gainTax: t.gainTax,
+      avgYears: t.years,
+      allowance: t.allowance,
+      best: t.regime,
+      tax: t.tax,
+      net: t.net,
+      netGain: r2(t.net - t.cost),
+      netGainPercent: t.cost > 0 ? ((t.net - t.cost) / t.cost) * 100 : 0,
     });
   }
   const cost = metals.reduce((s, x) => s + x.cost, 0);
@@ -194,4 +169,139 @@ export function estimateTax(
     netGain: r2(total - tax - cost),
     netGainPercent: cost > 0 ? ((total - tax - cost) / cost) * 100 : 0,
   };
+}
+
+export type TaxRegime = 'flat' | 'gain';
+
+export const REGIME_LABEL: Record<TaxRegime, string> = {
+  flat: 'taxe forfaitaire',
+  gain: 'régime des plus-values',
+};
+
+/** Impôt d'une cession (vente, virement vers une banque, paiement par carte, conversion). */
+export interface SaleTax {
+  grams: number;
+  /** Prix de cession, frais Orvia déduits, avant impôt. */
+  price: number;
+  /** Prix de revient des grammes cédés (premiers achetés). */
+  cost: number;
+  gain: number;
+  /** Abattement pour durée de détention, pondéré par la plus-value (0 à 1). */
+  allowance: number;
+  /** Durée de détention moyenne des grammes cédés, en années pleines. */
+  years: number;
+  flatTax: number;
+  /** null : pas de justificatif d'achat pour tous les grammes, seule la taxe forfaitaire est possible. */
+  gainTax: number | null;
+  regime: TaxRegime;
+  tax: number;
+  /** Ce qui reste après impôt. */
+  net: number;
+}
+
+/**
+ * Impôt dû sur la cession de `grams` de métal pour `price` euros : les grammes cédés sont les premiers achetés.
+ * Le régime le moins cher est retenu.
+ */
+export function saleTax(
+  wallet: Pick<Wallet, 'transactions'>,
+  metal: Metal,
+  grams: number,
+  price: number,
+  now = new Date(),
+  lots = holdingLots(wallet)[metal],
+): SaleTax {
+  const perGram = grams > 0 ? price / grams : 0;
+  let left = grams;
+  let cost = 0;
+  let taxable = 0;
+  let positive = 0;
+  let allowed = 0;
+  let weightedYears = 0;
+  for (const lot of lots) {
+    if (left <= 1e-9) break;
+    const g = Math.min(lot.grams, left);
+    const lotCost = lot.cost * (g / lot.grams);
+    const years = fullYears(new Date(lot.date), now);
+    const lotGain = g * perGram - lotCost;
+    const allowance = lotGain > 0 ? holdingAllowance(years) : 0;
+    cost += lotCost;
+    taxable += lotGain * (1 - allowance);
+    if (lotGain > 0) {
+      positive += lotGain;
+      allowed += lotGain * allowance;
+    }
+    weightedYears += years * g;
+    left -= g;
+  }
+  const proven = left <= 1e-6;
+  const flatTax = r2(Math.max(0, price) * TAX.flat);
+  const gainTax = proven ? r2(Math.max(0, taxable) * GAIN_RATE) : null;
+  const regime: TaxRegime = gainTax !== null && gainTax <= flatTax ? 'gain' : 'flat';
+  const tax = regime === 'gain' ? gainTax! : flatTax;
+  return {
+    grams,
+    price: r2(price),
+    cost: r2(cost),
+    gain: r2(price - cost),
+    allowance: positive > 0 ? allowed / positive : 0,
+    years: grams > 0 ? Math.floor(weightedYears / grams) : 0,
+    flatTax,
+    gainTax,
+    regime,
+    tax,
+    net: r2(price - tax),
+  };
+}
+
+/**
+ * Grammes à céder pour obtenir `target` euros nets d'impôt (et de `fixed` euros de frais fixes), au prix de
+ * `perGram` euros par gramme frais compris. L'impôt croît moins vite que le prix : recherche par dichotomie.
+ */
+export function gramsForNet(
+  wallet: Pick<Wallet, 'transactions'>,
+  metal: Metal,
+  target: number,
+  perGram: number,
+  fixed = 0,
+  now = new Date(),
+): number {
+  const lots = holdingLots(wallet)[metal];
+  const net = (g: number) => {
+    const price = g * perGram - fixed;
+    return price - saleTax(wallet, metal, g, Math.max(0, price), now, lots).tax;
+  };
+  const owned = lots.reduce((sum, l) => sum + l.grams, 0);
+  let lo = 0;
+  // Tout le métal suffit (au centime près) : on cherche dans ce qu'on possède, sinon au-delà (solde insuffisant).
+  let hi = owned > 0 && net(owned) >= target - 0.005 ? owned : (target + fixed) / (perGram * (1 - GAIN_RATE)) + 1e-6;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (net(mid) < target) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+
+/** Phrase courte pour l'aperçu d'une opération. */
+export function describeTax(t: SaleTax): string {
+  if (t.tax <= 0) {
+    return t.gain <= 0
+      ? 'Pas d’impôt : pas de plus-value sur ce métal (régime des plus-values).'
+      : `Pas d’impôt : plus-value exonérée après ${TAX.exemptAfterYears} ans de détention.`;
+  }
+  if (t.gainTax === null) {
+    return `Impôt retenu : ${formatMoney(t.tax)} (taxe forfaitaire : pas de justificatif d’achat pour tout ce métal).`;
+  }
+  const other =
+    t.regime === 'gain'
+      ? `au lieu de ${formatMoney(t.flatTax)} en taxe forfaitaire`
+      : `au lieu de ${formatMoney(t.gainTax)} au régime des plus-values`;
+  return `Impôt retenu : ${formatMoney(t.tax)} (${REGIME_LABEL[t.regime]}, le moins cher, ${other}).`;
+}
+
+const money = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
+
+function formatMoney(n: number): string {
+  return money.format(n);
 }

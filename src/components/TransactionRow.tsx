@@ -38,6 +38,11 @@ export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit
         </Text>
         <Text style={styles.detail}>{parts.join(' · ')}</Text>
         {tx.fees && !fee ? <Text style={styles.fees}>dont {formatEur(tx.fees)} de frais</Text> : null}
+        {tx.tax ? (
+          <Text style={styles.fees}>
+            impôt retenu : {formatEur(tx.tax)} ({tx.taxRegime === 'gain' ? 'plus-values' : 'taxe forfaitaire'})
+          </Text>
+        ) : null}
       </View>
       <View style={styles.right}>
         <Text style={[styles.amount, incoming && { color: colors.up }, fee && { color: colors.down }]}>

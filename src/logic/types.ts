@@ -65,6 +65,10 @@ export interface Transaction {
   label: string;
   /** Versement annulé (erreur corrigée sous 24 h). */
   reversed?: boolean;
+  /** Impôt retenu sur une cession (vente, virement bancaire, carte, conversion), en euros. */
+  tax?: number;
+  /** Régime fiscal retenu pour cet impôt : taxe forfaitaire ou plus-values. */
+  taxRegime?: 'flat' | 'gain';
 }
 
 export type BeneficiaryKind = 'member' | 'iban';
