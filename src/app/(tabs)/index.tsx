@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BalanceChart } from '../../components/BalanceChart';
+import { CustodyNote } from '../../components/Custody';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { OrviaCard } from '../../components/OrviaCard';
 import { formatLouis, toLouis } from '../../logic/currency';
@@ -192,6 +193,7 @@ export default function AccountScreen() {
           </Pressable>
         ))}
       </Card>
+      <CustodyNote />
 
       <SectionTitle
         right={

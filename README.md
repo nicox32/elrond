@@ -71,6 +71,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   15 % dans son coffre (démonstration). S'achète en euros, en grammes ou en onces (frais d'achat 1 %), se revend, se convertit,
   s'envoie et se verse aux enfants. Fiscalité des jetons : vente exonérée jusqu'à 5 000 €, au-delà 6,5 % du prix de
   vente ou régime des plus-values si moins cher. Compte comme de l'or dans la répartition.
+- **L'or fractionné** (`src/app/or-fractionne.tsx`, `docs/or-fractionne.png`) : page explicative (or dès 1 €, sans
+  stockage à gérer, assuré et audité) et rappel sur l'accueil et chaque coffre : tous les métaux sont gardés par Orvia
+  en coffre-fort en port franc, mais appartiennent au client, inscrits à son nom et séparés des biens d'Orvia.
 - **Carte Orvia** (simulée) : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).

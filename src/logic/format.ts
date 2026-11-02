@@ -12,7 +12,7 @@ function decimalsFor(abs: number): number {
 }
 
 /** Formate un poids donné en grammes, dans l'unité choisie. */
- 
+
 export function formatWeight(grams: number, unit: WeightUnit = 'g', metal?: Metal): string {
   const value = unit === 'oz' ? grams / TROY_OUNCE : grams;
   const text = value.toFixed(decimalsFor(Math.abs(value))).replace('.', ',');
@@ -30,7 +30,7 @@ export function formatQty(metal: Metal, grams: number, unit: WeightUnit = 'g'): 
 }
 
 /** Prix par unité de poids (€/g ou €/oz). */
- 
+
 export function formatUnitPrice(eurPerGram: number, unit: WeightUnit = 'g', metal?: Metal): string {
   return `${formatEur(unit === 'oz' ? eurPerGram * TROY_OUNCE : eurPerGram)}/${unit}`;
 }

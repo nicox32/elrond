@@ -1,6 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CustodyNote } from '../../components/Custody';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Button, Card, Hint, Screen, SectionTitle } from '../../components/ui';
@@ -71,6 +72,8 @@ export default function VaultScreen() {
           />
         </View>
       </View>
+
+      <CustodyNote />
 
       <SectionTitle>Mouvements</SectionTitle>
       {txs.length === 0 ? (

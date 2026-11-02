@@ -77,6 +77,12 @@ export default function ProfileScreen() {
           to="/fiscalite"
           border
         />
+        <LinkRow
+          label="L’or fractionné"
+          hint="Port franc, propriété de votre métal, assurance et audit"
+          to="/or-fractionne"
+          border
+        />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 
@@ -129,7 +135,7 @@ function LinkRow({
 }: {
   label: string;
   hint: string;
-  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes' | '/repartition' | '/fiscalite';
+  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes' | '/repartition' | '/fiscalite' | '/or-fractionne';
   border?: boolean;
 }) {
   return (
