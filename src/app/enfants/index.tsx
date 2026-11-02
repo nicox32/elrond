@@ -4,9 +4,17 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Hint, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur } from '../../logic/format';
+import { ChildRules } from '../../components/ChildRules';
+import { childStage, type ChildStage } from '../../logic/childRules';
 import { accountValue, addChild, LedgerError, parseBirthDate } from '../../logic/ledger';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { colors } from '../../theme';
+
+const STAGE_LABEL: Record<ChildStage, string> = {
+  minor: 'Mineur · sans frais',
+  adult: 'Majeur · compte à lui transférer',
+  transferred: 'Compte transféré',
+};
 
 export default function ChildrenScreen() {
   const account = useAccount();
@@ -35,8 +43,8 @@ export default function ChildrenScreen() {
   return (
     <Screen testID="screen-enfants">
       <Hint>
-        Ouvre gratuitement un compte pour chacun de tes enfants. Tu y verses de l’or, de l’argent ou du platine depuis
-        ton compte, sans frais, et tu peux le reprendre à tout moment.
+        Ouvre gratuitement un compte pour chacun de tes enfants et verse-lui de l’or, de l’argent ou du platine depuis
+        ton compte, sans frais. Ce que tu verses lui appartient : c’est une épargne pour lui.
       </Hint>
 
       {account.children.length > 0 && <SectionTitle>Comptes enfants</SectionTitle>}
@@ -53,8 +61,7 @@ export default function ChildrenScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{child.name}</Text>
             <Text style={styles.since}>
-              Ouvert le {new Date(child.createdAt).toLocaleDateString('fr-FR')} · {child.transactions.length} opération
-              {child.transactions.length > 1 ? 's' : ''}
+              {STAGE_LABEL[childStage(child)]} · ouvert le {new Date(child.createdAt).toLocaleDateString('fr-FR')}
             </Text>
           </View>
           <Text style={styles.value}>{formatEur(accountValue(child, quote.prices).total)}</Text>
@@ -86,7 +93,7 @@ export default function ChildrenScreen() {
           style={ui.input}
           onSubmitEditing={create}
         />
-        <Hint>Aucun frais sur ce compte avant les 18 ans de l’enfant.</Hint>
+        <ChildRules name="l’enfant" compact />
         <Button title="Ouvrir le compte (gratuit)" onPress={create} disabled={!name.trim() || !birth.trim()} />
       </Card>
       {message && <Message {...message} />}

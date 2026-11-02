@@ -78,6 +78,12 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Bonus de parrainage du filleul (1er achat d’au moins 50 €)', orvia: '+10 LOU en or' },
       { label: 'Frais sur un compte enfant avant les 18 ans', orvia: 'Aucun' },
       {
+        label: 'Retrait d’un compte enfant : pour une dépense faite pour l’enfant, validé par les deux parents',
+        orvia: 'Gratuit',
+      },
+      { label: 'Annulation d’un versement fait par erreur (sous 24 h)', orvia: 'Gratuit' },
+      { label: 'Transfert du compte à l’enfant à ses 18 ans', orvia: 'Gratuit' },
+      {
         label: `Frais d’oxydation : ${FEES.dormancyAfterMonths} mois calendaires sans opération éligible d’au moins 1 €`,
         orvia: `${pct(FEES.dormancyDaily)} du solde par jour, sur ces ${FEES.dormancyAfterMonths} mois`,
       },

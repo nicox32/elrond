@@ -233,8 +233,11 @@ test('frais d’oxydation : 0,02 %/jour facturés pour chaque période de 6 mois
   const t0 = new Date('2026-01-10T12:00:00Z');
   const day = 86_400_000;
   let acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
-  const r = addChild(acc, 'Léa', '2008-01-01', t0); // majeure depuis le 1er janvier 2026
+  // Léa est majeure depuis le 1er janvier 2026 : versement fait avant de renseigner sa date de naissance
+  const r = addChild(acc, 'Léa', undefined, t0);
   acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 50 }, t0);
+  const { setChildBirthDate } = await import('../src/logic/ledger.ts');
+  acc = setChildBirthDate(acc, r.child.id, '2008-01-01');
   // 5 mois plus tard : rien
   const m5 = new Date('2026-06-10T12:00:00Z');
   assert.equal(applyDormancy(acc, prices, m5), acc);
@@ -520,4 +523,66 @@ test('répartition : partage au centime près, vers l’objectif, achat groupé'
   assert.deepEqual(normalizeAllocation({ gold: 2, silver: 1, platinum: 1 }), { gold: 50, silver: 25, platinum: 25 });
   assert.ok(isValidAllocation(target));
   assert.ok(!isValidAllocation({ gold: 50, silver: 30, platinum: 30 }));
+});
+
+test('compte enfant : retraits motivés et validés par le second parent, annulation sous 24 h, majorité', async () => {
+  const { addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const r = await import('../src/logic/childRules.ts');
+  const t0 = new Date('2026-11-02T12:00:00Z');
+  const h = 3_600_000;
+  let acc = buy(createAccount('Nico', t0), prices, 'gold', { unit: 'g', value: 20 }, t0);
+  const c = addChild(acc, 'Léo', '2015-03-05', t0);
+  acc = fundChild(c.account, prices, c.child.id, 'gold', { unit: 'g', value: 10 }, t0);
+  const id = c.child.id;
+  const child = () => acc.children.find((x) => x.id === id)!;
+
+  // Pas de retrait tant que l'autorité parentale n'est pas déclarée, ni sans motif
+  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'education'), LedgerError);
+  assert.throws(() => r.setChildParents(acc, id, 'joint'), LedgerError); // second parent obligatoire
+  acc = r.setChildParents(acc, id, 'joint', { name: 'Marie', secret: 'sel:empreinte' });
+  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, undefined), LedgerError);
+  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'other', '  '), LedgerError);
+
+  // Autorité partagée : la demande attend Marie, le métal reste chez Léo
+  let res = r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 3 }, 'education', 'Ordinateur', new Date(t0.getTime() + 30 * h));
+  assert.equal(res.executed, false);
+  acc = res.account;
+  close(child().holdings.gold, 10);
+  // la réserve des demandes en attente est respectée
+  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 8 }, 'health'), LedgerError);
+  acc = r.approveChildWithdrawal(acc, prices, id, res.request.id, new Date(t0.getTime() + 31 * h));
+  close(child().holdings.gold, 7);
+  assert.match(child().transactions[0].label, /Dépense pour Léo · Études, école \(Ordinateur\)/);
+  assert.throws(() => r.approveChildWithdrawal(acc, prices, id, res.request.id), LedgerError); // déjà traitée
+  // refus
+  res = r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'activities');
+  acc = r.closeChildWithdrawal(res.account, id, res.request.id, 'refused');
+  close(child().holdings.gold, 7);
+
+  // Autorité exercée seul : exécuté tout de suite, motif toujours obligatoire
+  acc = r.setChildParents(acc, id, 'sole');
+  assert.equal(child().coParent, undefined);
+  res = r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'health');
+  assert.equal(res.executed, true);
+  acc = res.account;
+  close(child().holdings.gold, 6);
+
+  // Annulation d'un versement par erreur : seulement dans les 24 h, une seule fois
+  const t1 = new Date('2026-11-10T09:00:00Z');
+  acc = fundChild(acc, prices, id, 'gold', { unit: 'g', value: 2 }, t1);
+  const dep = child().transactions[0];
+  assert.throws(() => r.cancelDeposit(acc, prices, id, dep.id, new Date(t1.getTime() + 25 * h)), LedgerError);
+  acc = r.cancelDeposit(acc, prices, id, dep.id, new Date(t1.getTime() + 2 * h));
+  close(child().holdings.gold, 6);
+  assert.throws(() => r.cancelDeposit(acc, prices, id, dep.id, new Date(t1.getTime() + 3 * h)), LedgerError);
+
+  // Majorité (5 mars 2033) : plus de versement ni de retrait par le parent, transfert du compte
+  const adult = new Date('2033-03-06T12:00:00Z');
+  assert.equal(r.childStage(child(), adult), 'adult');
+  assert.throws(() => fundChild(acc, prices, id, 'gold', { unit: 'g', value: 1 }, adult), LedgerError);
+  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'health', '', adult), LedgerError);
+  assert.throws(() => r.transferChildAccount(acc, id, t1), LedgerError); // pas avant 18 ans
+  acc = r.transferChildAccount(acc, id, adult);
+  assert.equal(r.childStage(child(), adult), 'transferred');
+  assert.match(child().transferCode!, /^ORVIA-T-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
 });

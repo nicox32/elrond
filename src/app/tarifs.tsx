@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ChildRules } from '../components/ChildRules';
 import { Card, Hint, Screen, SectionTitle } from '../components/ui';
 import { FEE_TABLE, FEES } from '../logic/fees';
 import { colors } from '../theme';
@@ -47,6 +48,9 @@ export default function FeesScreen() {
           mois avant.
         </Text>
       </Card>
+
+      <SectionTitle>Comptes enfants : les règles</SectionTitle>
+      <ChildRules name="l’enfant" />
 
       <Hint>Compte de démonstration : aucun frais réel n’est prélevé.</Hint>
     </Screen>

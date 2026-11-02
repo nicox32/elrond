@@ -140,7 +140,12 @@ export default function AccountScreen() {
         <Text style={styles.kidsText}>
           {account.children.length === 0
             ? 'Ouvre gratuitement un compte en or, argent ou platine pour chacun de tes enfants.'
-            : account.children.map((c) => `${c.name} · ${formatEur(accountValue(c, quote.prices).total)}`).join('\n')}
+            : account.children
+                .map(
+                  (c) =>
+                    `${c.name} · ${c.transferredAt ? 'compte transféré' : formatEur(accountValue(c, quote.prices).total)}`,
+                )
+                .join('\n')}
         </Text>
         <Text style={styles.chevron}>›</Text>
       </Pressable>

@@ -63,6 +63,8 @@ export interface Transaction {
   /** Frais facturés sur l'opération, en euros. */
   fees?: number;
   label: string;
+  /** Versement annulé (erreur corrigée sous 24 h). */
+  reversed?: boolean;
 }
 
 export type BeneficiaryKind = 'member' | 'iban';
@@ -98,12 +100,42 @@ export interface Wallet {
   dormancyNotBefore?: string;
 }
 
+/** Motif obligatoire d'un retrait sur le compte d'un enfant : une dépense faite dans son intérêt. */
+export type ChildWithdrawalPurpose = 'education' | 'health' | 'equipment' | 'activities' | 'other';
+
+export interface ChildWithdrawalRequest {
+  id: string;
+  metal: Metal;
+  grams: number;
+  /** Valeur au moment de la demande, pour information. */
+  eur: number;
+  purpose: ChildWithdrawalPurpose;
+  note?: string;
+  createdAt: string;
+  status: 'pending' | 'approved' | 'refused' | 'cancelled';
+  decidedAt?: string;
+}
+
+export interface CoParent {
+  name: string;
+  /** Empreinte salée de son code de validation (jamais le code lui-même). */
+  secret: string;
+}
+
 /** Compte enfant, géré depuis le compte principal. Gratuit. */
 export interface ChildAccount extends Wallet {
   id: string;
   name: string;
   /** Date de naissance (AAAA-MM-JJ). Aucun frais avant les 18 ans ; sans date, le compte reste exonéré. */
   birthDate?: string;
+  /** Autorité parentale : partagée (retraits validés par les deux parents) ou exercée seul. */
+  authority?: 'joint' | 'sole';
+  /** Second parent, qui valide les retraits quand l'autorité est partagée. */
+  coParent?: CoParent;
+  withdrawalRequests?: ChildWithdrawalRequest[];
+  /** Le compte a été transféré à l'enfant devenu majeur (il n'est plus géré par le parent). */
+  transferredAt?: string;
+  transferCode?: string;
 }
 
 /** Carte de paiement Orvia, adossée aux métaux du compte. */

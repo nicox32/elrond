@@ -485,6 +485,12 @@ export function fundChild(
 ): Account {
   assertPositive(q.value, 'La quantité');
   const child = findChild(account, childId);
+  if (child.transferredAt) throw new LedgerError(`Le compte de ${child.name} lui a été transféré.`);
+  if (child.birthDate && majorityDate(child.birthDate).getTime() <= now.getTime()) {
+    throw new LedgerError(
+      `${child.name} est majeur : transfère-lui son compte, puis fais-lui un virement à un membre.`,
+    );
+  }
   const grams = toGrams(q, prices[metal]);
   const value = grams * prices[metal];
   const parent = apply(account, 'family_out', { [metal]: -grams }, value, `Vers le compte de ${child.name}`, now);
@@ -492,7 +498,11 @@ export function fundChild(
   return replaceChild(parent, credited);
 }
 
-/** Reprend du métal d'un compte enfant vers le compte principal. Gratuit. */
+/**
+ * Mouvement brut du compte enfant vers le compte du parent. À n'utiliser qu'au travers des règles de
+ * src/logic/childRules.ts (retrait motivé et validé, ou annulation d'un versement par erreur) : l'argent
+ * versé à un enfant lui appartient.
+ */
 export function withdrawFromChild(
   account: Account,
   prices: Prices,
@@ -500,14 +510,37 @@ export function withdrawFromChild(
   metal: Metal,
   q: Quantity,
   now = new Date(),
+  labels: { child?: string; parent?: string } = {},
 ): Account {
   assertPositive(q.value, 'La quantité');
   const child = findChild(account, childId);
   const grams = toGrams(q, prices[metal]);
   const value = grams * prices[metal];
-  const debited = apply(child, 'family_out', { [metal]: -grams }, value, `Vers le compte de ${account.holder}`, now);
-  const parent = apply(account, 'family_in', { [metal]: grams }, value, `Depuis le compte de ${child.name}`, now);
+  const debited = apply(
+    child,
+    'family_out',
+    { [metal]: -grams },
+    value,
+    labels.child ?? `Vers le compte de ${account.holder}`,
+    now,
+  );
+  const parent = apply(
+    account,
+    'family_in',
+    { [metal]: grams },
+    value,
+    labels.parent ?? `Depuis le compte de ${child.name}`,
+    now,
+  );
   return replaceChild(parent, debited);
+}
+
+export function replaceChildAccount(account: Account, child: ChildAccount): Account {
+  return replaceChild(account, child);
+}
+
+export function getChild(account: Account, childId: string): ChildAccount {
+  return findChild(account, childId);
 }
 
 /** Renseigne (ou corrige) la date de naissance d'un enfant. */
@@ -619,6 +652,7 @@ export function dormancyStatus(wallet: Wallet, now = new Date()) {
 export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now = new Date()): W {
   const exemptUntil = feesExemptUntil(wallet);
   if (exemptUntil && now < exemptUntil) return wallet; // enfant mineur : aucun frais
+  if ((wallet as Partial<ChildAccount>).transferredAt) return wallet; // compte remis à l'enfant majeur
   const last = dormancyAnchor(wallet);
   const charged = wallet.dormancyChargedThrough ? new Date(wallet.dormancyChargedThrough).getTime() : 0;
   let result = wallet;

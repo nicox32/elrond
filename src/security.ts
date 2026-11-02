@@ -72,3 +72,16 @@ export async function authenticateWithBiometrics(reason: string): Promise<boolea
     return false;
   }
 }
+
+/** Empreinte salée d'un code (ex. code du second parent), à garder à la place du code lui-même. */
+export async function createSecret(pin: string): Promise<string> {
+  if (!isValidPinFormat(pin)) throw new Error(`Le code doit faire ${PIN_LENGTH} chiffres.`);
+  const salt = Crypto.randomUUID();
+  return `${salt}:${await hash(salt, pin)}`;
+}
+
+export async function verifySecret(pin: string, stored: string | undefined): Promise<boolean> {
+  if (!stored) return false;
+  const [salt, expected] = stored.split(':');
+  return (await hash(salt, pin)) === expected;
+}
