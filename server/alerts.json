@@ -1,7 +1,8 @@
 {
   "alerts": [
-    { "metal": "gold", "kind": "below", "value": 3400, "unit": "oz" },
-    { "metal": "silver", "kind": "above", "value": 55, "unit": "oz" },
-    { "metal": "silver", "kind": "drop", "value": 5, "window": "24h" }
+    { "metal": "gold", "kind": "belowAvg30", "value": 3 },
+    { "metal": "silver", "kind": "belowAvg30", "value": 5 },
+    { "metal": "gold", "kind": "drop", "value": 8, "window": "7d" },
+    { "metal": "silver", "kind": "drop", "value": 12, "window": "7d" }
   ]
 }
