@@ -21,8 +21,8 @@ export function DormancyNotice({ wallet, name }: { wallet: Wallet; name?: string
       <Text style={styles.title}>{status.inactive ? `${who} est inactif` : `${who} sera bientôt inactif`}</Text>
       <Text style={styles.text}>
         {status.inactive
-          ? `Aucune opération d’au moins 1 € depuis le ${fmt(status.lastMovement)} : des frais d’oxydation ont été prélevés pour ces ${months} mois. Sans opération d’ici le ${fmt(status.nextChargeAt)}, les ${months} mois suivants seront facturés à leur tour (${rate} du solde par jour).`
-          : `Sans opération d’au moins 1 € d’ici le ${fmt(status.nextChargeAt)}, des frais d’oxydation de ${rate} du solde par jour seront prélevés pour ces ${months} mois (environ ${total} du solde). Une opération suffit à remettre le compteur à zéro.`}
+          ? `Aucun achat ni échange de louis d’au moins 1 € depuis le ${fmt(status.lastMovement)} : des frais d’oxydation ont été prélevés pour ces ${months} mois. Sans opération d’ici le ${fmt(status.nextChargeAt)}, les ${months} mois suivants seront facturés à leur tour (${rate} du solde par jour).`
+          : `Sans achat ni échange de louis d’au moins 1 € d’ici le ${fmt(status.nextChargeAt)}, des frais d’oxydation de ${rate} du solde par jour seront prélevés pour ces ${months} mois (environ ${total} du solde). Un achat ou un échange de louis (envoi, conversion, versement familial) suffit à remettre le compteur à zéro.`}
       </Text>
     </View>
   );

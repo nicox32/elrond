@@ -294,3 +294,17 @@ test('compte enfant : aucun frais d’oxydation avant 18 ans, compteur lancé à
   const dated = setChildBirthDate(later, noDate.child.id, '2012-01-01');
   assert.equal(dated.children.find((c) => c.name === 'Ana')!.birthDate, '2012-01-01');
 });
+
+test('opérations qui évitent les frais : achat et échanges de louis, pas les ventes ni les virements IBAN', async () => {
+  const { dormancyStatus } = await import('../src/logic/ledger.ts');
+  const { toLouis } = await import('../src/logic/currency.ts');
+  const t0 = new Date('2026-01-10T12:00:00Z');
+  const acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 10 }, t0);
+  const later = new Date('2026-05-01T12:00:00Z');
+  const sold = sell(acc, prices, 'gold', { unit: 'g', value: 1 }, 'deferred', later);
+  assert.equal(dormancyStatus(sold, later).lastMovement.toISOString(), t0.toISOString()); // la vente ne compte pas
+  const converted = convert(acc, prices, 'gold', 'silver', { unit: 'g', value: 1 }, later);
+  assert.equal(dormancyStatus(converted, later).lastMovement.toISOString(), later.toISOString()); // échange : compte
+  // 1 louis = la valeur d'un gramme d'or
+  close(toLouis(250, prices), 2.5);
+});

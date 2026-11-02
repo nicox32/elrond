@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BalanceChart } from '../../components/BalanceChart';
 import { DormancyNotice } from '../../components/DormancyNotice';
+import { formatLouis, toLouis } from '../../logic/currency';
 import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
@@ -48,7 +49,8 @@ export default function AccountScreen() {
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Solde total</Text>
         <Text style={styles.balance}>{formatEur(value.total)}</Text>
-        <Text style={styles.sub}>Valeur de revente au cours actuel</Text>
+        <Text style={styles.louis}>soit {formatLouis(toLouis(value.total, quote.prices))}</Text>
+        <Text style={styles.sub}>Valeur de revente au cours actuel · 1 louis = 1 g d’or</Text>
         {perf.invested > 0 && (
           <Text style={[styles.gain, { color: perf.gain >= 0 ? colors.up : colors.down }]}>
             {perf.gain >= 0 ? 'Plus-value' : 'Moins-value'} : {perf.gain >= 0 ? '+' : '−'}
@@ -159,6 +161,7 @@ const styles = StyleSheet.create({
   balanceLabel: { color: colors.textMuted, fontSize: 13 },
   balance: { color: colors.text, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'] },
   sub: { color: colors.textMuted, fontSize: 11 },
+  louis: { color: colors.gold, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
   gain: { fontSize: 13, fontWeight: '700', marginTop: 6, fontVariant: ['tabular-nums'] },
   split: {
     flexDirection: 'row',

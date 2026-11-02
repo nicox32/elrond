@@ -6,6 +6,7 @@ import { MetalPicker } from '../../components/MetalPicker';
 import { PinConfirm } from '../../components/PinConfirm';
 import { Segmented } from '../../components/Segmented';
 import { SpeedPicker } from '../../components/SpeedPicker';
+import { formatLouis, toLouis } from '../../logic/currency';
 import { FEES, type SaleSpeed } from '../../logic/fees';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui, Title } from '../../components/ui';
 import { formatEur, formatWeight, parseAmount } from '../../logic/format';
@@ -64,7 +65,7 @@ export default function TransfersScreen() {
     !selected || grams <= 0
       ? ''
       : kind === 'member'
-        ? `Envoyer ${formatWeight(grams, unit)} ${METAL_OF[metal]} (${formatEur(grams * quote.prices[metal])}) à ${selected.name}, gratuitement.`
+        ? `Envoyer ${formatWeight(grams, unit)} ${METAL_OF[metal]}, soit ${formatLouis(toLouis(grams * quote.prices[metal], quote.prices))} (${formatEur(grams * quote.prices[metal])}), à ${selected.name}, gratuitement.`
         : `Vendre ${formatWeight(grams, unit)} ${METAL_OF[metal]} : ${selected.name} reçoit ${formatEur(sale?.received ?? 0)} (${selected.identifier}), après ${formatEur(sale?.fees ?? 0)} de frais${abroad ? `, dont ${FEES.saleAbroadFixed} € pour un compte à l’étranger` : ''}.`;
 
   function saveBeneficiary() {
@@ -136,7 +137,7 @@ export default function TransfersScreen() {
         />
         <Hint>
           {kind === 'member'
-            ? 'Le métal passe directement de ton coffre à celui du membre : immédiat et sans frais.'
+            ? 'Échange de louis : le métal passe directement de ton coffre à celui du membre, immédiat et sans frais.'
             : `Le métal est vendu au cours du moment, puis les euros partent par virement SEPA. Frais : ${(FEES.sale * 100).toLocaleString('fr-FR')}\u00a0% (+ ${FEES.saleAbroadFixed}\u00a0€ vers un compte hors de France).`}
         </Hint>
 

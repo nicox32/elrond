@@ -48,6 +48,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   par empreinte en option, blocage de 30 s après 5 codes faux. Seule une empreinte salée du code est
   conservée, dans le trousseau sécurisé du téléphone.
 - **Graphique d'évolution du solde** (24 h, 7 j, 30 j, tout) et **plus-value latente**.
+- **Le louis (LOU)**, monnaie interne d'Orvia : 1 louis = la valeur d'un gramme d'or au cours du moment ;
+  le solde s'affiche aussi en louis.
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
   achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;
   écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
@@ -55,8 +57,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Comptes enfants gratuits** : un coffre par enfant, alimenté et repris depuis le compte principal
   sans frais, et **aucun frais avant les 18 ans** de l'enfant (date de naissance demandée à l'ouverture ;
   à la majorité, les 6 mois d'inactivité commencent à compter) (`docs/compte-enfant.png`).
-- **Frais d'oxydation** : un compte (principal, ou enfant devenu majeur) laissé 6 mois calendaires sans opération d'au
-  moins 1 € est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
+- **Frais d'oxydation** : un compte (principal, ou enfant devenu majeur) laissé 6 mois calendaires sans achat ni échange de
+  louis (envoi à un membre, conversion, versement familial) d'au moins 1 € est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
   période de 6 mois d'inactivité est facturée de même. L'appli prévient un mois avant (`docs/oxydation.png`).
 
 Sources des cours : [gold-api.com](https://gold-api.com) (métaux) et

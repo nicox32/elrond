@@ -527,9 +527,22 @@ function addMonths(date: Date, months: number): Date {
 /** Montant minimal d'une opération pour qu'elle compte comme un mouvement (et évite les frais d'oxydation). */
 export const MIN_MOVEMENT_EUR = 1;
 
-/** Une opération d'au moins 1 € compte comme un mouvement ; les frais d'oxydation eux-mêmes, jamais. */
+/**
+ * Opérations qui évitent les frais d'oxydation, à partir d'un euro : crédit du compte (achat) et échanges de louis
+ * (envoi à un membre, conversion, versements entre comptes de la famille). Ventes, virements vers un IBAN et frais
+ * ne comptent pas. Les paiements et retraits par carte et le parrainage compteront quand ils existeront.
+ */
+export const MOVEMENT_KINDS: ReadonlySet<TransactionKind> = new Set<TransactionKind>([
+  'buy',
+  'convert',
+  'transfer_member',
+  'family_out',
+  'family_in',
+]);
+
+/** Une opération de la liste ci-dessus, d'au moins 1 €, compte comme un mouvement. */
 export function isMovement(tx: Transaction): boolean {
-  return tx.kind !== 'fee_dormancy' && tx.eur >= MIN_MOVEMENT_EUR;
+  return MOVEMENT_KINDS.has(tx.kind) && tx.eur >= MIN_MOVEMENT_EUR;
 }
 
 /** Date du dernier mouvement (opération d'au moins 1 €), ou de l'ouverture du compte. */
