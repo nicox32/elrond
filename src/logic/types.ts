@@ -55,7 +55,11 @@ export type TransactionKind =
   /** Retrait au distributeur avec la carte Orvia. */
   | 'card_withdrawal'
   /** Bonus de parrainage crédité. */
-  | 'referral_bonus';
+  | 'referral_bonus'
+  /** Euros crédités sur le compte d'attente. */
+  | 'cash_in'
+  /** Euros du compte d'attente renvoyés vers le compte bancaire. */
+  | 'cash_out';
 
 export interface Transaction {
   id: string;
@@ -73,6 +77,8 @@ export interface Transaction {
   label: string;
   /** Versement annulé (erreur corrigée sous 24 h). */
   reversed?: boolean;
+  /** Variation du compte d'attente en euros (achat payé depuis ce compte : négatif). */
+  cash?: number;
   /** Impôt retenu sur une cession (vente, virement bancaire, carte, conversion), en euros. */
   tax?: number;
   /** Régime fiscal retenu pour cet impôt : taxe forfaitaire ou plus-values. */
@@ -204,4 +210,6 @@ export interface Account extends Wallet {
   alertEvents?: AlertEvent[];
   /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
   ntfyTopic?: string;
+  /** Compte d'attente : euros disponibles pour acheter des métaux. */
+  cashEur?: number;
 }

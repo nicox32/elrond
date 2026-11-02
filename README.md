@@ -76,6 +76,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **L'or fractionné** (`src/app/or-fractionne.tsx`, `docs/or-fractionne.png`) : page explicative (or dès 1 €, sans
   stockage à gérer, assuré et audité) et rappel sur l'accueil et chaque coffre : tous les métaux sont gardés par Orvia
   en coffre-fort en port franc, mais appartiennent au client, inscrits à son nom et séparés des biens d'Orvia.
+- **Compte d'attente** (`src/app/attente.tsx`) : euros crédités par virement (IBAN Orvia) ou carte bancaire,
+  investis ensuite selon la répartition (« Investir … selon ma répartition », « Payer avec : compte d'attente ») ;
+  retrait vers la banque avec le code. Créditer compte comme une opération (pas de frais d'oxydation).
 - **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).

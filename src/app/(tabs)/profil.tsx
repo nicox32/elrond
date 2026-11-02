@@ -83,6 +83,12 @@ export default function ProfileScreen() {
           to="/or-fractionne"
           border
         />
+        <LinkRow
+          label="Compte d’attente"
+          hint={`${(account.cashEur ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })} à investir`}
+          to="/attente"
+          border
+        />
         <LinkRow label="Espace Dev" hint="Réservé à Orvia (code) : prime du Gold Oria et conseils" to="/dev" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
@@ -142,7 +148,8 @@ function LinkRow({
     | '/repartition'
     | '/fiscalite'
     | '/or-fractionne'
-    | '/dev';
+    | '/dev'
+    | '/attente';
   border?: boolean;
 }) {
   return (

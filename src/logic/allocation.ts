@@ -1,4 +1,4 @@
-import { accountValue, buy, quoteBuy } from './ledger.ts';
+import { accountValue, buy, type PaySource, quoteBuy } from './ledger.ts';
 import { type Account, type Prices, SPOT_METALS, type SpotMetal } from './types.ts';
 
 /** Répartition en pourcentages par métal (total 100). */
@@ -114,10 +114,11 @@ export function buySplit(
   prices: Prices,
   amounts: Record<SpotMetal, number>,
   now = new Date(),
+  source: PaySource = 'card',
 ): Account {
   let acc = account;
   for (const m of SPOT_METALS) {
-    if (amounts[m] >= 0.01) acc = buy(acc, prices, m, { unit: 'eur', value: amounts[m] }, now);
+    if (amounts[m] >= 0.01) acc = buy(acc, prices, m, { unit: 'eur', value: amounts[m] }, now, source);
   }
   return acc;
 }

@@ -1,3 +1,4 @@
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -18,7 +19,7 @@ import {
   type SplitMode,
 } from '../logic/allocation';
 import { formatEur, formatWeight, parseAmount } from '../logic/format';
-import { LedgerError, METAL_LABEL } from '../logic/ledger';
+import { LedgerError, METAL_LABEL, type PaySource } from '../logic/ledger';
 import { SPOT_METALS } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors, metalColor } from '../theme';
@@ -32,9 +33,15 @@ export default function AllocationScreen() {
   const saved = account.settings.allocation ?? DEFAULT_ALLOCATION;
 
   const [target, setTarget] = useState<Allocation>({ ...saved });
-  const [text, setText] = useState('');
   const [mode, setMode] = useState<SplitMode>('target');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const params = useLocalSearchParams<{ source?: string; t?: string }>();
+  const cash = account.cashEur ?? 0;
+  const [source, setSource] = useState<PaySource>(params.source === 'cash' || cash >= 1 ? 'cash' : 'card');
+  // Arrivée depuis le compte d'attente : on propose d'investir tout le solde.
+  const [text, setText] = useState(() =>
+    params.source === 'cash' && cash > 0 ? String(Math.floor(cash * 100) / 100).replace('.', ',') : '',
+  );
 
   const current = currentAllocation(account, quote.prices);
   const total = allocationTotal(target);
@@ -59,7 +66,7 @@ export default function AllocationScreen() {
   function submit() {
     if (!amounts) return;
     try {
-      commit((acc, p) => buySplit(acc, p, splitAmount(amount, target, mode, acc, p)));
+      commit((acc, p) => buySplit(acc, p, splitAmount(amount, target, mode, acc, p), new Date(), source));
       if (dirty) updateSettings({ allocation: target });
       setText('');
       setMessage({ ok: true, text: `Achat réparti de ${formatEur(amount)} effectué.` });
@@ -126,6 +133,38 @@ export default function AllocationScreen() {
         </Card>
 
         <SectionTitle>Achat réparti</SectionTitle>
+        <Label>Payer avec</Label>
+        <Segmented
+          value={source}
+          onChange={(s) => {
+            setSource(s);
+            setMessage(null);
+          }}
+          options={[
+            { value: 'cash', label: `Compte d’attente (${formatEur(cash)})` },
+            { value: 'card', label: 'Carte bancaire' },
+          ]}
+        />
+        {source === 'cash' && (
+          <View style={styles.cashRow}>
+            <Pressable
+              onPress={() => {
+                setText(String(Math.floor(cash * 100) / 100).replace('.', ','));
+                setMessage(null);
+              }}
+              disabled={cash <= 0}
+              accessibilityRole="button"
+            >
+              <Text style={ui.link}>Tout investir ({formatEur(cash)})</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/attente')} accessibilityRole="link">
+              <Text style={ui.link}>Créditer ›</Text>
+            </Pressable>
+          </View>
+        )}
+        {source === 'cash' && amount > cash + 0.005 && (
+          <Hint style={{ color: colors.down }}>Montant supérieur au compte d’attente ({formatEur(cash)}).</Hint>
+        )}
         <Segmented
           value={mode}
           onChange={setMode}
@@ -175,7 +214,11 @@ export default function AllocationScreen() {
           </Card>
         )}
 
-        <Button title="Acheter" onPress={submit} disabled={!preview || preview.lines.length === 0} />
+        <Button
+          title="Acheter"
+          onPress={submit}
+          disabled={!preview || preview.lines.length === 0 || (source === 'cash' && amount > cash + 0.005)}
+        />
         {message && <Message {...message} />}
         <Hint>Un achat par métal, chacun avec ses frais (or 2,8 %, argent et platine 6,8 %).</Hint>
       </Screen>
@@ -214,6 +257,7 @@ function Step({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  cashRow: { flexDirection: 'row', justifyContent: 'space-between' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   metal: { fontSize: 15, fontWeight: '700' },
   compare: { color: colors.textMuted, fontSize: 12, fontVariant: ['tabular-nums'] },

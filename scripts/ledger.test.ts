@@ -127,7 +127,9 @@ test('migration d’un compte de la première version', () => {
     goldGrams: 2,
     silverGrams: 50,
     goldAllocation: 70,
-    transactions: [{ id: 'a', kind: 'deposit', date: '2026-01-01', goldDelta: 2, silverDelta: 50, eur: 260, label: 'Dépôt' }],
+    transactions: [
+      { id: 'a', kind: 'deposit', date: '2026-01-01', goldDelta: 2, silverDelta: 50, eur: 260, label: 'Dépôt' },
+    ],
   };
   const acc = migrateAccount(v1);
   assert.ok(acc);
@@ -187,7 +189,10 @@ test('relevés de cours : 24 h gardées, relevés rapprochés fusionnés, cours 
   h = addPricePoint(h, q(at(60_000), 999, 'cache')); // ignoré
   assert.equal(h.length, 2);
   h = addPricePoint(h, q(at(PRICE_HISTORY_MS + 20_000), 110)); // le premier relevé sort des 24 h
-  assert.deepEqual(h.map((p) => p.prices.gold), [102, 110]);
+  assert.deepEqual(
+    h.map((p) => p.prices.gold),
+    [102, 110],
+  );
   const trend = metalTrend(h, 'gold', { gold: 110, silver: 1, platinum: 30 });
   assert.deepEqual(trend.values, [102, 110]);
   close(trend.changePct, (8 / 102) * 100);
@@ -199,7 +204,11 @@ test('cours réels : taux de change gardé 10 minutes', async () => {
   let fxCalls = 0;
   const fetchFn = (async (url: string) => {
     if (!url.includes('gold-api')) fxCalls++;
-    return { ok: true, status: 200, json: async () => (url.includes('gold-api') ? { price: 100 } : { rates: { EUR: 0.9 } }) };
+    return {
+      ok: true,
+      status: 200,
+      json: async () => (url.includes('gold-api') ? { price: 100 } : { rates: { EUR: 0.9 } }),
+    };
   }) as unknown as typeof fetch;
   const t = Date.parse('2026-11-02T10:00:00Z');
   await fetchLivePrices(fetchFn, new Date(t));
@@ -264,9 +273,8 @@ test('frais d’oxydation : 0,02 %/jour facturés pour chaque période de 6 mois
 });
 
 test('compte enfant : aucun frais d’oxydation avant 18 ans, compteur lancé à la majorité', async () => {
-  const { addChild, applyDormancy, dormancyStatus, fundChild, parseBirthDate, setChildBirthDate } = await import(
-    '../src/logic/ledger.ts'
-  );
+  const { addChild, applyDormancy, dormancyStatus, fundChild, parseBirthDate, setChildBirthDate } =
+    await import('../src/logic/ledger.ts');
   const now = new Date('2026-11-02T12:00:00Z');
   assert.equal(parseBirthDate('05/03/2015', now), '2015-03-05');
   assert.throws(() => parseBirthDate('31/02/2015', now), LedgerError); // n'existe pas
@@ -291,7 +299,11 @@ test('compte enfant : aucun frais d’oxydation avant 18 ans, compteur lancé à
   close(after.children[0].holdings.gold, 10 * (1 - 0.0002 * 183));
   // Sans date de naissance connue : exonéré
   const noDate = addChild(acc, 'Ana', undefined, t0);
-  const later = applyDormancy(fundChild(noDate.account, prices, noDate.child.id, 'gold', { unit: 'g', value: 5 }, t0), prices, y2);
+  const later = applyDormancy(
+    fundChild(noDate.account, prices, noDate.child.id, 'gold', { unit: 'g', value: 5 }, t0),
+    prices,
+    y2,
+  );
   close(later.children.find((c) => c.name === 'Ana')!.holdings.gold, 5);
   // Date ajoutée ensuite
   const dated = setChildBirthDate(later, noDate.child.id, '2012-01-01');
@@ -313,9 +325,8 @@ test('opérations qui évitent les frais : achat et échanges de louis, pas les 
 });
 
 test('carte Orvia : paiements et retraits gratuits, plafonds, gel, comptent comme mouvements', async () => {
-  const { issueCard, cardPay, cardWithdraw, setCardFrozen, setCardMetal, dormancyStatus, CARD } = await import(
-    '../src/logic/ledger.ts'
-  );
+  const { issueCard, cardPay, cardWithdraw, setCardFrozen, setCardMetal, dormancyStatus, CARD } =
+    await import('../src/logic/ledger.ts');
   const t0 = new Date('2026-03-01T12:00:00Z');
   let acc = buy(createAccount('Nico', t0), prices, 'gold', { unit: 'g', value: 50 }, t0); // 5 000 € d'or
   assert.throws(() => cardPay(acc, prices, 'Boulangerie', 5, t0), LedgerError); // pas encore de carte
@@ -436,7 +447,12 @@ test('alertes : seuils, variation 24 h, moyenne 30 j, sans répétition', async 
   assert.equal(r.events.filter((e) => e.alertId === below.id).length, 1);
   // pas assez de recul : la moyenne 30 j attend (au moins 7 jours de relevés)
   const fresh = addHourlyPoint([], q(now, 3700));
-  r = evaluateAlerts([createAlert({ metal: 'gold', kind: 'belowAvg30', value: 1 })], q(now, 3000), fresh, new Date(now));
+  r = evaluateAlerts(
+    [createAlert({ metal: 'gold', kind: 'belowAvg30', value: 1 })],
+    q(now, 3000),
+    fresh,
+    new Date(now),
+  );
   assert.equal(r.events.length, 0);
   // cours non réels : jamais d'alerte
   r = evaluateAlerts([below], { ...q(now, 3000), source: 'cache' }, hist, new Date(now));
@@ -450,7 +466,12 @@ test('serveur d’alertes : configuration, état conservé, une notification ntf
   clearFxCache();
   const logs: string[] = [];
   const config = parseConfig(
-    { alerts: [{ metal: 'gold', kind: 'below', value: 3500, unit: 'oz' }, { metal: 'gold', kind: 'nope', value: 1 }] },
+    {
+      alerts: [
+        { metal: 'gold', kind: 'below', value: 3500, unit: 'oz' },
+        { metal: 'gold', kind: 'nope', value: 1 },
+      ],
+    },
     (m) => logs.push(m),
   );
   assert.equal(config.length, 1);
@@ -469,7 +490,12 @@ test('serveur d’alertes : configuration, état conservé, une notification ntf
   assert.equal(r.notifications.length, 1);
   assert.match(r.notifications[0].body, /3\s450,00/);
   // 15 minutes plus tard, toujours sous le seuil : pas de répétition (état conservé)
-  r = await runOnce({ config, state: JSON.parse(JSON.stringify(r.state)), fetchFn: fakeFetch, now: new Date(t + 30 * 60_000) });
+  r = await runOnce({
+    config,
+    state: JSON.parse(JSON.stringify(r.state)),
+    fetchFn: fakeFetch,
+    now: new Date(t + 30 * 60_000),
+  });
   assert.equal(r.notifications.length, 0);
   assert.ok(r.state.alerts[alertKey(config[0])]);
   // envoi ntfy
@@ -537,19 +563,40 @@ test('compte enfant : retraits motivés et validés par le second parent, annula
   const child = () => acc.children.find((x) => x.id === id)!;
 
   // Pas de retrait tant que l'autorité parentale n'est pas déclarée, ni sans motif
-  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'education'), LedgerError);
+  assert.throws(
+    () => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'education'),
+    LedgerError,
+  );
   assert.throws(() => r.setChildParents(acc, id, 'joint'), LedgerError); // second parent obligatoire
   acc = r.setChildParents(acc, id, 'joint', { name: 'Marie', secret: 'sel:empreinte' });
-  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, undefined), LedgerError);
-  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'other', '  '), LedgerError);
+  assert.throws(
+    () => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, undefined),
+    LedgerError,
+  );
+  assert.throws(
+    () => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'other', '  '),
+    LedgerError,
+  );
 
   // Autorité partagée : la demande attend Marie, le métal reste chez Léo
-  let res = r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 3 }, 'education', 'Ordinateur', new Date(t0.getTime() + 30 * h));
+  let res = r.requestChildWithdrawal(
+    acc,
+    prices,
+    id,
+    'gold',
+    { unit: 'g', value: 3 },
+    'education',
+    'Ordinateur',
+    new Date(t0.getTime() + 30 * h),
+  );
   assert.equal(res.executed, false);
   acc = res.account;
   close(child().holdings.gold, 10);
   // la réserve des demandes en attente est respectée
-  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 8 }, 'health'), LedgerError);
+  assert.throws(
+    () => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 8 }, 'health'),
+    LedgerError,
+  );
   acc = r.approveChildWithdrawal(acc, prices, id, res.request.id, new Date(t0.getTime() + 31 * h));
   close(child().holdings.gold, 7);
   assert.match(child().transactions[0].label, /Dépense pour Léo · Études, école \(Ordinateur\)/);
@@ -580,9 +627,39 @@ test('compte enfant : retraits motivés et validés par le second parent, annula
   const adult = new Date('2033-03-06T12:00:00Z');
   assert.equal(r.childStage(child(), adult), 'adult');
   assert.throws(() => fundChild(acc, prices, id, 'gold', { unit: 'g', value: 1 }, adult), LedgerError);
-  assert.throws(() => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'health', '', adult), LedgerError);
+  assert.throws(
+    () => r.requestChildWithdrawal(acc, prices, id, 'gold', { unit: 'g', value: 1 }, 'health', '', adult),
+    LedgerError,
+  );
   assert.throws(() => r.transferChildAccount(acc, id, t1), LedgerError); // pas avant 18 ans
   acc = r.transferChildAccount(acc, id, adult);
   assert.equal(r.childStage(child(), adult), 'transferred');
   assert.match(child().transferCode!, /^ORVIA-T-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+});
+
+test('compte d’attente : crédit, achat réparti depuis le compte, retrait', async () => {
+  const { creditCash, withdrawCash, lastMovement } = await import('../src/logic/ledger.ts');
+  const { buySplit, splitAmount } = await import('../src/logic/allocation.ts');
+  const p = { gold: 100, silver: 1, platinum: 30, ecu: 104 };
+  const now = new Date('2026-11-02T10:00:00Z');
+  let acc = creditCash(createAccount('T', new Date('2026-01-01')), 1000, 'transfer', now);
+  assert.equal(acc.cashEur, 1000);
+  assert.equal(acc.transactions[0].kind, 'cash_in');
+  // Créditer compte comme un mouvement (pas de frais d'oxydation)
+  assert.equal(lastMovement(acc).toISOString(), now.toISOString());
+  // Achat réparti 50/25/25 payé depuis le compte d'attente
+  const amounts = splitAmount(800, { gold: 50, silver: 25, platinum: 25 }, 'percent');
+  acc = buySplit(acc, p, amounts, now, 'cash');
+  close(acc.cashEur ?? 0, 200, 0.01);
+  assert.ok(acc.holdings.gold > 0 && acc.holdings.silver > 0 && acc.holdings.platinum > 0);
+  assert.ok(acc.transactions.slice(0, 3).every((t) => t.kind === 'buy' && (t.cash ?? 0) < 0));
+  // Plus que le solde : refusé
+  assert.throws(() => buy(acc, p, 'gold', { unit: 'eur', value: 500 }, now, 'cash'), LedgerError);
+  // L'achat par carte ne touche pas au compte d'attente
+  const byCard = buy(acc, p, 'gold', { unit: 'eur', value: 500 }, now, 'card');
+  close(byCard.cashEur ?? 0, 200, 0.01);
+  // Retrait vers la banque
+  acc = withdrawCash(acc, 150, now);
+  close(acc.cashEur ?? 0, 50, 0.01);
+  assert.throws(() => withdrawCash(acc, 100, now), LedgerError);
 });

@@ -17,6 +17,8 @@ const ICON: Record<TransactionKind, string> = {
   card_payment: '▭',
   card_withdrawal: '€',
   referral_bonus: '★',
+  cash_in: '€',
+  cash_out: '↗',
 };
 
 export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit }) {
@@ -25,7 +27,11 @@ export function TransactionRow({ tx, unit }: { tx: Transaction; unit: WeightUnit
       ? `${formatWeightDelta(tx.deltas[m], unit, m)} Gold Oria`
       : `${formatWeightDelta(tx.deltas[m], unit)} ${m === 'gold' ? METAL_LABEL[m] : METAL_LABEL[m].toLowerCase()}`,
   );
-  const incoming = tx.kind === 'buy' || tx.kind === 'family_in' || tx.kind === 'referral_bonus';
+  if (tx.kind === 'cash_in' || tx.kind === 'cash_out')
+    parts.push(`compte d’attente ${tx.kind === 'cash_in' ? '+' : '−'}${formatEur(tx.eur)}`);
+  else if (tx.cash) parts.push(`payé depuis le compte d’attente`);
+  const incoming =
+    tx.kind === 'buy' || tx.kind === 'family_in' || tx.kind === 'referral_bonus' || tx.kind === 'cash_in';
   const neutral = tx.kind === 'convert';
   const fee = tx.kind === 'fee_dormancy';
 

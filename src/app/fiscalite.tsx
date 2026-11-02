@@ -63,7 +63,7 @@ export default function TaxScreen() {
       <PriceStatus />
       <Hint>
         Ce que rapporterait votre compte si vous vendiez tout votre métal aujourd’hui, au cours du moment, frais de
-        revente déduits, puis après l’impôt prévu par la loi française. Estimation indicative.
+        revente déduits, puis après l’impôt prévu par la loi française.
       </Hint>
 
       {est.metals.length === 0 ? (
@@ -159,15 +159,6 @@ export default function TaxScreen() {
           fait pas partie. Un don ou une succession n’est pas une vente : pas de taxe forfaitaire, mais les règles des
           donations.
         </Bullet>
-        <Text style={styles.note}>
-          Vérifié sur les textes officiels : taxe forfaitaire et seuil (CGI art. 150 VI à 150 VM, BOFiP), abattement de
-          5 % par an au-delà de la 2e année et exonération après 22 ans (CGI art. 150 VC, applicable depuis 2014). Taux
-          de 37,6 % (19 % + 18,6 % de prélèvements sociaux) appliqué depuis le 1er janvier 2026 par les professionnels
-          du secteur à la suite de la loi de financement de la Sécurité sociale pour 2026 ; non encore confirmé sur un
-          texte officiel (36,2 % si cette plus-value n’était pas concernée par la hausse). Estimation pour un
-          particulier résidant en France, sans valeur de conseil fiscal : à faire confirmer par un conseiller ou par
-          votre centre des finances publiques (impots.gouv.fr) avant une vente importante.
-        </Text>
       </Card>
     </Screen>
   );
@@ -382,7 +373,6 @@ const styles = StyleSheet.create({
   metal: { fontSize: 16, fontWeight: '700' },
   muted: { color: colors.textMuted, fontSize: 12 },
   para: { color: colors.text, fontSize: 13, lineHeight: 19 },
-  note: { color: colors.textMuted, fontSize: 11, lineHeight: 16 },
   regimes: { flexDirection: 'row', gap: 8 },
   regime: {
     flex: 1,

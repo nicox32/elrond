@@ -225,15 +225,68 @@ export function quoteBuy(prices: Prices, metal: Metal, q: Quantity) {
   return { grams, paid, fees: paid - grams * prices[metal] };
 }
 
+export type PaySource = 'card' | 'cash';
+
 /**
- * Achète du métal, payé par carte bancaire (fictive). Saisie en euros (montant payé), grammes ou onces.
- * Premier achat d'au moins 50 € d'un filleul : son bonus de parrainage est versé dans la foulée.
+ * Achète du métal, payé par carte bancaire ou depuis le compte d'attente. Saisie en euros (montant payé), grammes
+ * ou onces. Premier achat d'au moins 50 € d'un filleul : son bonus de parrainage est versé dans la foulée.
  */
-export function buy(account: Account, prices: Prices, metal: Metal, q: Quantity, now = new Date()): Account {
+export function buy(
+  account: Account,
+  prices: Prices,
+  metal: Metal,
+  q: Quantity,
+  now = new Date(),
+  source: PaySource = 'card',
+): Account {
   assertPositive(q.value, 'La quantité');
   const { grams, paid, fees } = quoteBuy(prices, metal, q);
-  const bought = apply(account, 'buy', { [metal]: grams }, paid, `Achat ${METAL_OF[metal]}`, now, fees);
+  const cash = account.cashEur ?? 0;
+  if (source === 'cash' && paid > cash + 0.005) {
+    throw new LedgerError(
+      `Solde du compte d’attente insuffisant : ${cash.toFixed(2).replace('.', ',')} € disponibles.`,
+    );
+  }
+  const label = `Achat ${METAL_OF[metal]}${source === 'cash' ? ' · compte d’attente' : ''}`;
+  let bought = apply(account, 'buy', { [metal]: grams }, paid, label, now, fees);
+  if (source === 'cash') {
+    const [tx, ...rest] = bought.transactions;
+    bought = {
+      ...bought,
+      cashEur: round(Math.max(0, cash - paid), 2),
+      transactions: [{ ...tx, cash: -round(paid, 2) }, ...rest],
+    };
+  }
   return paid >= REFERRAL.minFirstPurchase ? payReferralBonus(bought, prices, now) : bought;
+}
+
+// ——— Compte d'attente ———————————————————————————————————————————————
+
+export const CASH_SOURCE_LABEL = { transfer: 'virement bancaire', card: 'carte bancaire' } as const;
+
+/** Crédite le compte d'attente en euros (virement ou carte bancaire). Compte comme un mouvement. */
+export function creditCash(
+  account: Account,
+  amount: number,
+  source: keyof typeof CASH_SOURCE_LABEL = 'transfer',
+  now = new Date(),
+): Account {
+  assertPositive(amount, 'Le montant');
+  const eur = round(amount, 2);
+  const next = apply(account, 'cash_in', {}, eur, `Crédit du compte d’attente · ${CASH_SOURCE_LABEL[source]}`, now);
+  const [tx, ...rest] = next.transactions;
+  return { ...next, cashEur: round((account.cashEur ?? 0) + eur, 2), transactions: [{ ...tx, cash: eur }, ...rest] };
+}
+
+/** Renvoie des euros du compte d'attente vers le compte bancaire du titulaire. */
+export function withdrawCash(account: Account, amount: number, now = new Date()): Account {
+  assertPositive(amount, 'Le montant');
+  const eur = round(amount, 2);
+  const cash = account.cashEur ?? 0;
+  if (eur > cash + 0.005) throw new LedgerError('Solde du compte d’attente insuffisant.');
+  const next = apply(account, 'cash_out', {}, eur, 'Retrait du compte d’attente vers votre banque', now);
+  const [tx, ...rest] = next.transactions;
+  return { ...next, cashEur: round(Math.max(0, cash - eur), 2), transactions: [{ ...tx, cash: -eur }, ...rest] };
 }
 
 /**
@@ -444,7 +497,11 @@ export function removeBeneficiary(account: Account, id: string): Account {
 export function netInvested(account: Pick<Wallet, 'transactions'>): number {
   let total = 0;
   for (const tx of account.transactions) {
-    if (tx.kind === 'buy' || tx.kind === 'family_in') total += tx.eur;
+    // Les euros placés entrent par le compte d'attente ou par un achat payé par carte.
+    if (tx.kind === 'cash_in') total += tx.eur;
+    else if (tx.kind === 'cash_out') total -= tx.eur;
+    else if (tx.kind === 'buy' && tx.cash) continue;
+    else if (tx.kind === 'buy' || tx.kind === 'family_in') total += tx.eur;
     // Le bonus de parrainage est un gain, pas un apport : il apparaît dans la plus-value.
     else if (tx.kind !== 'convert' && tx.kind !== 'fee_dormancy' && tx.kind !== 'referral_bonus') total -= tx.eur;
   }
@@ -636,6 +693,7 @@ export const MOVEMENT_KINDS: ReadonlySet<TransactionKind> = new Set<TransactionK
   'transfer_member',
   'family_out',
   'family_in',
+  'cash_in',
 ]);
 
 /** Une opération de la liste ci-dessus, d'au moins 1 €, compte comme un mouvement. */
