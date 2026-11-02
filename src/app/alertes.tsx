@@ -7,9 +7,9 @@ import { SPOT_METALS } from '../logic/types';
 import { Segmented } from '../components/Segmented';
 import { ServerAlerts } from '../components/ServerAlerts';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
-import { type AlertKind, type AlertWindow, createAlert, describeAlert } from '../logic/alerts';
+import { type AlertKind, type AlertWindow, createAlert, describeAlert, RECOMMENDED_ALERTS } from '../logic/alerts';
 import { formatDate, parseAmount } from '../logic/format';
-import { TROY_OUNCE } from '../logic/ledger';
+import { METAL_LABEL, TROY_OUNCE } from '../logic/ledger';
 import type { Metal } from '../logic/types';
 import { type NotificationPermission, notificationPermission, requestNotificationPermission } from '../notifications';
 import { useAccount, useBank } from '../state/BankProvider';
@@ -62,6 +62,17 @@ export default function AlertsScreen() {
     }
   }
 
+  const key = (a: { metal: string; kind: string; value: number; window?: string }) =>
+    `${a.metal}|${a.kind}|${a.value}|${a.window ?? ''}`;
+  const existing = new Set((account.alerts ?? []).map(key));
+  const missing = RECOMMENDED_ALERTS.filter((a) => !existing.has(key(a)));
+
+  function applyRecommended() {
+    const added = missing.map((a) => createAlert(a));
+    updateAccount((acc) => ({ ...acc, alerts: [...(acc.alerts ?? []), ...added] }));
+    setMessage({ ok: true, text: `${added.length} alerte(s) recommandée(s) ajoutée(s).` });
+  }
+
   function remove(id: string) {
     const run = () => updateAccount((acc) => ({ ...acc, alerts: (acc.alerts ?? []).filter((a) => a.id !== id) }));
     if (Platform.OS === 'web') return run();
@@ -102,6 +113,29 @@ export default function AlertsScreen() {
           )}
         </Card>
       )}
+
+      <SectionTitle>Alertes recommandées</SectionTitle>
+      <Card style={{ gap: 8 }}>
+        <Text style={styles.para}>
+          Réglées selon la volatilité de chaque métal : le Gold Spot (épargne) surtout sur les baisses, l’argent et
+          surtout le platine, plus volatils, sur les baisses et les hausses avec des seuils plus serrés.
+        </Text>
+        {(['gold', 'silver', 'platinum'] as const).map((m) => (
+          <Text key={m} style={styles.muted}>
+            • {METAL_LABEL[m]} :{' '}
+            {RECOMMENDED_ALERTS.filter((a) => a.metal === m)
+              .map((a) => describeAlert({ ...createAlert(a) }).replace(`${METAL_LABEL[m]} `, ''))
+              .join(' ; ')}
+          </Text>
+        ))}
+        <Button
+          title={
+            missing.length ? `Ajouter les ${missing.length} alertes recommandées` : 'Alertes recommandées en place ✓'
+          }
+          onPress={applyRecommended}
+          disabled={!missing.length}
+        />
+      </Card>
 
       <SectionTitle>Nouvelle alerte</SectionTitle>
       <MetalPicker value={metal} onChange={setMetal} metals={SPOT_METALS} />
@@ -255,6 +289,7 @@ export default function AlertsScreen() {
 }
 
 const styles = StyleSheet.create({
+  muted: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   title: { color: colors.text, fontSize: 16, fontWeight: '700' },
   para: { color: colors.text, fontSize: 14, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },

@@ -736,3 +736,14 @@ test('relevés PDF : opérations de la période, soldes de début et de fin, avi
   assert.match(avis, /Avis d’opération/);
   assert.match(avis, new RegExp(acc.transactions[0].id));
 });
+
+test('alertes recommandées : identiques côté appli et serveur, plus serrées sur le platine', async () => {
+  const { RECOMMENDED_ALERTS } = await import('../src/logic/alerts.ts');
+  const { readFileSync } = await import('node:fs');
+  const server = JSON.parse(readFileSync(new URL('../server/alerts.json', import.meta.url), 'utf8')).alerts;
+  assert.deepEqual(server, RECOMMENDED_ALERTS);
+  const drop24 = (m: string) =>
+    RECOMMENDED_ALERTS.find((a) => a.metal === m && a.kind === 'drop' && a.window === '24h')!.value;
+  assert.ok(drop24('platinum') <= drop24('silver'));
+  for (const m of ['gold', 'silver', 'platinum']) assert.ok(RECOMMENDED_ALERTS.some((a) => a.metal === m));
+});

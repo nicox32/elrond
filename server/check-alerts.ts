@@ -10,6 +10,8 @@ import { parseConfig, runOnce, sendNtfy, type ServerState } from './alertServer.
 const CONFIG = new URL('./alerts.json', import.meta.url);
 const STATE = process.env.ALERT_STATE || '.alert-state/state.json';
 const topic = process.env.NTFY_TOPIC?.trim();
+/** Lancement manuel avec « test » : envoie une notification de test avec les cours du moment. */
+const testMode = process.env.ALERT_TEST === 'true';
 
 const readJson = (path: string | URL, fallback: unknown) => {
   try {
@@ -38,7 +40,21 @@ console.log(`${config.length} alerte(s) surveillée(s), ${result.state.hourly.le
 if (!topic) {
   console.warn('NTFY_TOPIC absent : aucune notification envoyée (ajoutez le secret dans les réglages du dépôt).');
 }
-for (const n of result.notifications) {
+const eur = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+const notifications = [...result.notifications];
+const last = result.state.hourly.at(-1);
+if (testMode && last) {
+  const oz = 31.1035;
+  const per = (m: 'gold' | 'silver' | 'platinum') => `${eur(last.prices[m] * oz)}/oz`;
+  const count = (m: string) => config.filter((c) => c.metal === m).length;
+  notifications.unshift({
+    title: 'Test Orvia ✓ : notifications actives',
+    body:
+      `Gold Spot ${per('gold')} · argent ${per('silver')} · platine ${per('platinum')}. ` +
+      `Alertes surveillées toutes les 15 min : Gold Spot ${count('gold')}, argent ${count('silver')}, platine ${count('platinum')}.`,
+  });
+}
+for (const n of notifications) {
   console.log(`Alerte : ${n.title} — ${n.body}`);
   if (topic) {
     try {

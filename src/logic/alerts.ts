@@ -236,6 +236,34 @@ export function alertConfigForServer(alerts: PriceAlert[]) {
     }));
 }
 
+/**
+ * Alertes recommandées, réglées selon la volatilité de chaque métal (variation quotidienne habituelle : or ≈ 1 %,
+ * argent ≈ 2 %, platine ≈ 2 % avec des à-coups plus brusques). L'or sert à épargner : on surveille surtout les
+ * baisses pour renforcer. L'argent et le platine servent à diversifier : on surveille baisses et hausses, avec des
+ * seuils plus serrés et plus tôt pour le platine. Mêmes réglages que server/alerts.json.
+ */
+export const RECOMMENDED_ALERTS: (Pick<PriceAlert, 'metal' | 'kind' | 'value'> & { window?: AlertWindow })[] = [
+  // Gold Spot (épargne)
+  { metal: 'gold', kind: 'drop', value: 3, window: '24h' },
+  { metal: 'gold', kind: 'drop', value: 6, window: '7d' },
+  { metal: 'gold', kind: 'belowAvg30', value: 3 },
+  { metal: 'gold', kind: 'rise', value: 7, window: '7d' },
+  // Argent (diversification, volatil)
+  { metal: 'silver', kind: 'drop', value: 4, window: '24h' },
+  { metal: 'silver', kind: 'rise', value: 5, window: '24h' },
+  { metal: 'silver', kind: 'drop', value: 8, window: '7d' },
+  { metal: 'silver', kind: 'rise', value: 10, window: '7d' },
+  { metal: 'silver', kind: 'belowAvg30', value: 5 },
+  { metal: 'silver', kind: 'aboveAvg30', value: 10 },
+  // Platine (diversification, très volatil : surveillé de plus près)
+  { metal: 'platinum', kind: 'drop', value: 3, window: '24h' },
+  { metal: 'platinum', kind: 'rise', value: 3, window: '24h' },
+  { metal: 'platinum', kind: 'drop', value: 6, window: '7d' },
+  { metal: 'platinum', kind: 'rise', value: 8, window: '7d' },
+  { metal: 'platinum', kind: 'belowAvg30', value: 4 },
+  { metal: 'platinum', kind: 'aboveAvg30', value: 8 },
+];
+
 /** Nom de canal ntfy difficile à deviner. */
 export function generateNtfyTopic(): string {
   const alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
