@@ -2,7 +2,9 @@
   "alerts": [
     { "metal": "gold", "kind": "belowAvg30", "value": 3 },
     { "metal": "silver", "kind": "belowAvg30", "value": 5 },
+    { "metal": "platinum", "kind": "belowAvg30", "value": 5 },
     { "metal": "gold", "kind": "drop", "value": 8, "window": "7d" },
-    { "metal": "silver", "kind": "drop", "value": 12, "window": "7d" }
+    { "metal": "silver", "kind": "drop", "value": 12, "window": "7d" },
+    { "metal": "platinum", "kind": "drop", "value": 12, "window": "7d" }
   ]
 }
