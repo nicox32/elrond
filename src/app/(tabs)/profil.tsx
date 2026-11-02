@@ -55,6 +55,12 @@ export default function ProfileScreen() {
           to="/carte"
         />
         <LinkRow label="Parrainage" hint={account.referral.code} to="/parrainage" border />
+        <LinkRow
+          label="Alertes de prix"
+          hint={`${(account.alerts ?? []).filter((x) => x.enabled).length} alerte(s) active(s)`}
+          to="/alertes"
+          border
+        />
         <LinkRow label="Comptes enfants" hint={`${account.children.length} compte(s) · gratuit`} to="/enfants" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
@@ -108,7 +114,7 @@ function LinkRow({
 }: {
   label: string;
   hint: string;
-  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage';
+  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes';
   border?: boolean;
 }) {
   return (

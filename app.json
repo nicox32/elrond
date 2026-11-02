@@ -36,7 +36,8 @@
         {
           "faceIDPermission": "Orvia utilise Face ID pour déverrouiller ton compte et confirmer tes virements."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

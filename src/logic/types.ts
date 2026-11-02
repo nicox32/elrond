@@ -1,3 +1,5 @@
+import type { AlertEvent, PriceAlert } from './alerts.ts';
+
 export type Metal = 'gold' | 'silver' | 'platinum';
 
 export const METALS: Metal[] = ['gold', 'silver', 'platinum'];
@@ -138,4 +140,8 @@ export interface Account extends Wallet {
   referral: Referral;
   /** L'historique d'achats 2021 a été repris (une seule fois). */
   history2021Imported?: boolean;
+  /** Alertes de prix choisies par l'utilisateur. */
+  alerts?: PriceAlert[];
+  /** Alertes déclenchées (les plus récentes d'abord). */
+  alertEvents?: AlertEvent[];
 }

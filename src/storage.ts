@@ -8,6 +8,7 @@ const ACCOUNT_KEY = 'elrond.account.v2';
 const LEGACY_ACCOUNT_KEY = 'elrond.account.v1';
 const QUOTE_KEY = 'elrond.quote.v1';
 const PRICE_HISTORY_KEY = 'elrond.priceHistory.v1';
+const HOURLY_HISTORY_KEY = 'elrond.priceHourly.v1';
 
 async function readJson(key: string): Promise<unknown> {
   try {
@@ -63,4 +64,14 @@ export async function loadPriceHistory(): Promise<PricePoint[]> {
 
 export function savePriceHistory(history: PricePoint[]): Promise<void> {
   return writeJson(PRICE_HISTORY_KEY, history);
+}
+
+/** Relevés horaires sur 35 jours (alertes de variation sur 7 jours et de moyenne 30 jours). */
+export async function loadHourlyHistory(): Promise<PricePoint[]> {
+  const raw = await readJson(HOURLY_HISTORY_KEY);
+  return isPriceHistory(raw) ? raw : [];
+}
+
+export function saveHourlyHistory(history: PricePoint[]): Promise<void> {
+  return writeJson(HOURLY_HISTORY_KEY, history);
 }

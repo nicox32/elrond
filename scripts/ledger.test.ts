@@ -391,3 +391,52 @@ test('historique 2021 : 12 achats le 5 du mois, 3/4 argent 1/4 or, sans frais ni
   // une seule reprise
   assert.equal(import2021History(acc, DEFAULT_PLAN_2021, now), acc);
 });
+
+test('alertes : seuils, variation 24 h, moyenne 30 j, sans répétition', async () => {
+  const { addHourlyPoint, createAlert, evaluateAlerts, describeAlert } = await import('../src/logic/alerts.ts');
+  const day = 86_400_000;
+  const t0 = Date.parse('2026-10-01T12:00:00Z');
+  const q = (t: number, goldOz: number, silverOz = 50) => ({
+    prices: { gold: goldOz / TROY_OUNCE, silver: silverOz / TROY_OUNCE, platinum: 40 },
+    fetchedAt: new Date(t).toISOString(),
+    source: 'live' as const,
+  });
+  // 32 jours de relevés horaires : or stable à 3 700 €/oz
+  let hist: { t: string; prices: { gold: number; silver: number; platinum: number } }[] = [];
+  for (let h = 0; h <= 32 * 24; h++) hist = addHourlyPoint(hist, q(t0 + h * 3_600_000, 3700));
+  assert.ok(hist.length <= 35 * 24 + 1);
+  const now = t0 + 32 * day;
+
+  const below = createAlert({ metal: 'gold', kind: 'below', value: 3500, unit: 'oz' });
+  const drop = createAlert({ metal: 'gold', kind: 'drop', value: 5, window: '24h' });
+  const avg = createAlert({ metal: 'gold', kind: 'belowAvg30', value: 5 });
+  assert.equal(describeAlert(below).replace(/\s/g, ' '), 'Or sous 3 500,00 €/oz');
+  let alerts = [below, drop, avg];
+
+  // or à 3 600 : rien
+  let r = evaluateAlerts(alerts, q(now, 3600), hist, new Date(now));
+  assert.equal(r.events.length, 0);
+  // or à 3 450 : sous le seuil, -6,8 % sur 24 h, -6,8 % sous la moyenne → 3 alertes
+  r = evaluateAlerts(r.alerts, q(now + 60_000, 3450), hist, new Date(now + 60_000));
+  assert.equal(r.events.length, 3);
+  alerts = r.alerts;
+  assert.ok(alerts.every((a) => !a.armed));
+  // toujours sous le seuil une minute plus tard : pas de répétition
+  r = evaluateAlerts(alerts, q(now + 120_000, 3440), hist, new Date(now + 120_000));
+  assert.equal(r.events.length, 0);
+  // remonte (réarmée), puis rechute avant 6 h : toujours rien ; après 6 h : nouvelle alerte de seuil
+  r = evaluateAlerts(r.alerts, q(now + 180_000, 3600), hist, new Date(now + 180_000));
+  assert.ok(r.alerts.find((a) => a.id === below.id)!.armed);
+  r = evaluateAlerts(r.alerts, q(now + 240_000, 3450), hist, new Date(now + 240_000));
+  assert.equal(r.events.filter((e) => e.alertId === below.id).length, 0);
+  r = evaluateAlerts(r.alerts, q(now + 7 * 3_600_000, 3450), hist, new Date(now + 7 * 3_600_000));
+  assert.equal(r.events.filter((e) => e.alertId === below.id).length, 1);
+  // pas assez de recul : la moyenne 30 j attend (au moins 7 jours de relevés)
+  const fresh = addHourlyPoint([], q(now, 3700));
+  r = evaluateAlerts([createAlert({ metal: 'gold', kind: 'belowAvg30', value: 1 })], q(now, 3000), fresh, new Date(now));
+  assert.equal(r.events.length, 0);
+  // cours non réels : jamais d'alerte
+  r = evaluateAlerts([below], { ...q(now, 3000), source: 'cache' }, hist, new Date(now));
+  assert.equal(r.events.length, 0);
+  assert.throws(() => createAlert({ metal: 'gold', kind: 'drop', value: 0 }));
+});

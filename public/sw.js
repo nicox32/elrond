@@ -1,7 +1,7 @@
 // Service worker d'Orvia : rend l'appli installable et l'ouvre même hors ligne.
 // Réseau d'abord (pour avoir toujours la dernière version), copie locale en secours.
 // Les appels aux API de cours ne sont jamais mis en cache : l'appli gère elle-même le hors-ligne.
-const CACHE = 'orvia-v1';
+const CACHE = 'orvia-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
@@ -25,5 +25,18 @@ self.addEventListener('fetch', (event) => {
         if (request.mode === 'navigate') return caches.match('/elrond/');
         return Response.error();
       }),
+  );
+});
+
+// Appui sur une notification d'alerte : ouvre (ou ramène) l'appli sur l'écran des alertes.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) return client.focus();
+      }
+      return self.clients.openWindow('/elrond/alertes');
+    }),
   );
 });

@@ -78,7 +78,23 @@ export default function AccountScreen() {
         ))}
       </View>
 
-      <SectionTitle>Cours en direct</SectionTitle>
+      <SectionTitle
+        right={
+          <Pressable onPress={() => router.push('/alertes')}>
+            <Text style={ui.link}>
+              🔔 Alertes{account.alerts?.length ? ` (${account.alerts.filter((a) => a.enabled).length})` : ''}
+            </Text>
+          </Pressable>
+        }
+      >
+        Cours en direct
+      </SectionTitle>
+      {account.alertEvents?.[0] && (
+        <Pressable onPress={() => router.push('/alertes')} style={styles.alertBanner} accessibilityRole="button">
+          <Text style={styles.alertBannerTitle}>{account.alertEvents[0].title}</Text>
+          <Text style={styles.alertBannerBody}>{account.alertEvents[0].body}</Text>
+        </Pressable>
+      )}
       <LivePrices unit={unit} />
 
       <SectionTitle>Évolution du solde</SectionTitle>
@@ -236,6 +252,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   kidsText: { color: colors.text, fontSize: 14, lineHeight: 21, flex: 1 },
+  alertBanner: {
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    backgroundColor: colors.goldSoft,
+    gap: 2,
+  },
+  alertBannerTitle: { color: colors.gold, fontSize: 13, fontWeight: '700' },
+  alertBannerBody: { color: colors.text, fontSize: 13, lineHeight: 18 },
   referral: {
     flexDirection: 'row',
     alignItems: 'center',

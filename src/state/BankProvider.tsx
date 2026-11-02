@@ -2,7 +2,9 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { AppState } from 'react-native';
 
 import { applyDormancy, createAccount, recordBalance } from '../logic/ledger';
+import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
+import { notify } from '../notifications';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
 import { clearPin, hasPin, setPin } from '../security';
@@ -10,8 +12,10 @@ import {
   clearAccount,
   loadAccount,
   loadCachedQuote,
+  loadHourlyHistory,
   loadPriceHistory,
   saveAccount,
+  saveHourlyHistory,
   savePriceHistory,
   saveQuote,
 } from '../storage';
@@ -28,6 +32,10 @@ interface BankContextValue {
   quote: PriceQuote;
   /** Relevés de cours réels des dernières 24 h. */
   priceHistory: PricePoint[];
+  /** Relevés horaires des 35 derniers jours. */
+  hourlyHistory: PricePoint[];
+  /** Modifie le compte sans opération (alertes, réglages…). */
+  updateAccount: (fn: (account: Account) => Account) => void;
   refreshing: boolean;
   /** Dernière erreur de chargement des cours, s'il y en a une. */
   priceError: string | null;
@@ -67,6 +75,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account | null>(null);
   const [quote, setQuote] = useState<PriceQuote>(() => referenceQuote());
   const [priceHistory, setPriceHistory] = useState<PricePoint[]>([]);
+  const [hourlyHistory, setHourlyHistory] = useState<PricePoint[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [locked, setLocked] = useState(true);
@@ -78,6 +87,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const quoteRef = useRef(quote);
   const inFlight = useRef<Promise<void> | null>(null);
   const historyRef = useRef<PricePoint[]>([]);
+  const hourlyRef = useRef<PricePoint[]>([]);
 
   const persist = useCallback((next: Account | null) => {
     accountRef.current = next;
@@ -106,6 +116,19 @@ export function BankProvider({ children }: { children: ReactNode }) {
           historyRef.current = history;
           setPriceHistory(history);
           savePriceHistory(history);
+          const hourly = addHourlyPoint(hourlyRef.current, live);
+          hourlyRef.current = hourly;
+          setHourlyHistory(hourly);
+          saveHourlyHistory(hourly);
+          // Alertes de prix : évaluées à chaque cours réel, notifiées une fois.
+          const acc = accountRef.current;
+          if (acc?.alerts?.length) {
+            const r = evaluateAlerts(acc.alerts, live, hourly);
+            if (r.alerts !== acc.alerts || r.events.length) {
+              persist({ ...acc, alerts: r.alerts, alertEvents: addEvents(acc.alertEvents ?? [], r.events) });
+              r.events.forEach((e) => notify(e.title, e.body));
+            }
+          }
           const last = accountRef.current?.balanceHistory.at(-1);
           if (!periodic || !last || Date.now() - new Date(last.date).getTime() >= PERIODIC_BALANCE_MS) snapshot();
         } catch {
@@ -118,20 +141,23 @@ export function BankProvider({ children }: { children: ReactNode }) {
       inFlight.current = run;
       return run;
     },
-    [snapshot],
+    [snapshot, persist],
   );
 
   // Ouverture de l'appli : compte, derniers cours connus, puis cours réels.
   useEffect(() => {
     (async () => {
-      const [acc, cached, pinSet, history] = await Promise.all([
+      const [acc, cached, pinSet, history, hourly] = await Promise.all([
         loadAccount(),
         loadCachedQuote(),
         hasPin(),
         loadPriceHistory(),
+        loadHourlyHistory(),
       ]);
       historyRef.current = history;
       setPriceHistory(history);
+      hourlyRef.current = hourly;
+      setHourlyHistory(hourly);
       if (cached) {
         quoteRef.current = cached;
         setQuote(cached);
@@ -210,6 +236,14 @@ export function BankProvider({ children }: { children: ReactNode }) {
     setLocked(false);
   }, []);
 
+  const updateAccount = useCallback(
+    (fn: (account: Account) => Account) => {
+      const acc = accountRef.current;
+      if (acc) persist(fn(acc));
+    },
+    [persist],
+  );
+
   const updateSettings = useCallback(
     (settings: Partial<Settings>) => {
       const acc = accountRef.current;
@@ -230,6 +264,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
       account,
       quote,
       priceHistory,
+      hourlyHistory,
+      updateAccount,
       refreshing,
       priceError,
       locked,
@@ -247,6 +283,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
       account,
       quote,
       priceHistory,
+      hourlyHistory,
+      updateAccount,
       refreshing,
       priceError,
       locked,

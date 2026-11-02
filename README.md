@@ -58,6 +58,10 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Reprise de l'historique 2021** (Profil) : compte ouvert le 5 janvier 2021, 12 achats le 5 de chaque mois
   (3 845 €, 3/4 argent et 1/4 or par défaut, modifiables), aux cours approximatifs de 2021, sans frais et sans
   oxydation rétroactive (`docs/historique-2021.png`).
+- **Alertes de prix** (🔔 sur l'écran du compte) : seuil de prix, variation sur 24 h ou 7 jours, écart à la
+  moyenne 30 jours, pour chaque métal ; notification une seule fois par franchissement (6 h minimum entre deux),
+  historique avec raccourcis Acheter / Vendre (`docs/alertes.png`). Ce sont les conditions de l'utilisateur, pas
+  des conseils d'investissement. Version web : vérifiées quand l'appli est ouverte (pas encore de serveur).
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
   achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;
   écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
