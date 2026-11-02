@@ -1,4 +1,6 @@
-# Elrond — compte adossé à l'or, à l'argent et au platine (démo)
+# Orvia — compte adossé à l'or, à l'argent et au platine (démo)
+
+<img src="assets/logo.png" width="160" alt="Logo Orvia : pépite d'or" />
 
 Application mobile (Expo / React Native) qui simule un compte dont le solde est détenu en
 métaux précieux. **Les cours sont réels**, mais les achats, ventes et virements sont fictifs :
@@ -24,7 +26,7 @@ Dans Chrome, menu ⋮ → **Ajouter à l'écran d'accueil** pour l'ouvrir comme 
 ## Installer sur Android
 
 Télécharge l'APK depuis ton téléphone :
-**https://github.com/nicox32/elrond/releases/latest/download/elrond.apk**
+**https://github.com/nicox32/elrond/releases/latest/download/orvia.apk**
 
 Il est reconstruit automatiquement à chaque modification (voir `.github/workflows/android-apk.yml`).
 
@@ -67,4 +69,5 @@ npm run lint        # lint
 - `src/logic/` : logique pure (compte, cours, formatage), testée dans `scripts/ledger.test.ts`
 - `src/state/BankProvider.tsx` : état du compte, actualisation des cours, verrouillage
 - `src/security.ts` : code d'accès et empreinte
+- `scripts/brand/make_logo.py` : génère le logo (pépite d'or) et toutes les icônes
 - `src/components/`, `src/features/` : composants, ouverture de compte et déverrouillage

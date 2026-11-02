@@ -1,6 +1,6 @@
 # Construit l'APK Android et le publie dans une « Release » GitHub.
 # Lien de téléchargement direct (dernière version) :
-#   https://github.com/nicox32/elrond/releases/latest/download/elrond.apk
+#   https://github.com/nicox32/elrond/releases/latest/download/orvia.apk
 name: APK Android
 
 on:
@@ -51,21 +51,21 @@ jobs:
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
 
       - name: Renommer l'APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk elrond.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk orvia.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: elrond-apk
-          path: elrond.apk
+          name: orvia-apk
+          path: orvia.apk
 
       - name: Publier la release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: Elrond v1.0.${{ github.run_number }}
+          name: Orvia v1.0.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           make_latest: true
-          files: elrond.apk
+          files: orvia.apk
           body: |
-            Appli de démonstration Elrond (compte adossé à l'or, à l'argent et au platine).
-            Télécharge **elrond.apk** ci-dessous depuis ton téléphone Android pour l'installer.
+            Appli de démonstration Orvia (compte adossé à l'or, à l'argent et au platine).
+            Télécharge **orvia.apk** ci-dessous depuis ton téléphone Android pour l'installer.

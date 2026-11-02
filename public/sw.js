@@ -1,7 +1,7 @@
-// Service worker d'Elrond : rend l'appli installable et l'ouvre même hors ligne.
+// Service worker d'Orvia : rend l'appli installable et l'ouvre même hors ligne.
 // Réseau d'abord (pour avoir toujours la dernière version), copie locale en secours.
 // Les appels aux API de cours ne sont jamais mis en cache : l'appli gère elle-même le hors-ligne.
-const CACHE = 'elrond-v1';
+const CACHE = 'orvia-v1';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));

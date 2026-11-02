@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { PinPad } from '../components/PinPad';
 import { useBank } from '../state/BankProvider';
 import { authenticateWithBiometrics, biometricsAvailable, verifyPin } from '../security';
 import { colors } from '../theme';
+
+const LOGO = require('../../assets/logo.png');
 
 const MAX_ATTEMPTS = 5;
 const COOLDOWN_MS = 30_000;
@@ -18,7 +20,7 @@ export function LockScreen() {
   const attempts = useRef(0);
 
   const tryBiometrics = useCallback(async () => {
-    if (await authenticateWithBiometrics('Déverrouiller Elrond')) unlock();
+    if (await authenticateWithBiometrics('Déverrouiller Orvia')) unlock();
   }, [unlock]);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export function LockScreen() {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.logo}>◆</Text>
+      <Image source={LOGO} style={styles.logo} accessibilityLabel="Orvia" resizeMode="contain" />
       <Text style={styles.hello}>Bonjour {account?.holder}</Text>
       <PinPad
         title="Entre ton code d’accès"
@@ -71,6 +73,6 @@ export function LockScreen() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 6 },
-  logo: { color: colors.gold, fontSize: 36 },
+  logo: { width: 110, height: 110 },
   hello: { color: colors.textMuted, fontSize: 15, marginBottom: 12 },
 });

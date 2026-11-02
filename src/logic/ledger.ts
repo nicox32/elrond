@@ -85,7 +85,7 @@ export function createAccount(holder: string, now = new Date()): Account {
   return {
     version: 2,
     holder,
-    memberId: `EL-${randomDigits(4)}-${randomDigits(4)}`,
+    memberId: `OV-${randomDigits(4)}-${randomDigits(4)}`,
     iban: generateIban(),
     createdAt: now.toISOString(),
     holdings: emptyHoldings(),

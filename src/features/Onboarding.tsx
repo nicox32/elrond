@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, styles as ui } from '../components/ui';
 import { PinPad } from '../components/PinPad';
 import { useBank } from '../state/BankProvider';
 import { colors } from '../theme';
+
+const LOGO = require('../../assets/logo.png');
 
 type Step = 'name' | 'pin' | 'confirm';
 
@@ -56,8 +58,7 @@ export function Onboarding({ existingHolder }: { existingHolder?: string }) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.welcome}>
-        <Text style={styles.logo}>◆</Text>
-        <Text style={styles.brand}>Elrond</Text>
+        <Image source={LOGO} style={styles.logo} accessibilityLabel="Orvia" resizeMode="contain" />
         <Text style={styles.tagline}>Ton argent en or, en argent et en platine physiques, à portée de main.</Text>
         <TextInput
           value={name}
@@ -80,8 +81,7 @@ export function Onboarding({ existingHolder }: { existingHolder?: string }) {
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   welcome: { flex: 1, justifyContent: 'center', padding: 24, gap: 14 },
-  logo: { color: colors.gold, fontSize: 48, textAlign: 'center' },
-  brand: { color: colors.text, fontSize: 34, fontWeight: '800', textAlign: 'center' },
+  logo: { width: 200, height: 200, alignSelf: 'center' },
   tagline: { color: colors.textMuted, fontSize: 15, textAlign: 'center', marginBottom: 20, lineHeight: 21 },
   disclaimer: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginTop: 8, lineHeight: 17 },
 });

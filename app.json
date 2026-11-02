@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "Elrond",
-    "slug": "elrond",
+    "name": "Orvia",
+    "slug": "orvia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nicox32.elrond"
+      "bundleIdentifier": "com.nicox32.orvia"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,29 +18,34 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.nicox32.elrond"
+      "package": "com.nicox32.orvia"
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "name": "Elrond",
-      "shortName": "Elrond",
+      "name": "Orvia",
+      "shortName": "Orvia",
       "themeColor": "#0E0F13",
       "backgroundColor": "#0E0F13"
     },
-    "scheme": "elrond",
+    "scheme": "orvia",
     "plugins": [
       "expo-router",
       "expo-secure-store",
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Elrond utilise Face ID pour déverrouiller ton compte et confirmer tes virements."
+          "faceIDPermission": "Orvia utilise Face ID pour déverrouiller ton compte et confirmer tes virements."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "baseUrl": "/elrond"
+    },
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E0F13"
     }
   }
 }
