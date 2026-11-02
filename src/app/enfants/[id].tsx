@@ -1,19 +1,23 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AmountInput } from '../../components/AmountInput';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { MetalPicker } from '../../components/MetalPicker';
 import { Segmented } from '../../components/Segmented';
 import { TransactionRow } from '../../components/TransactionRow';
-import { Button, Card, Hint, Label, Message, Screen, SectionTitle } from '../../components/ui';
+import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatWeight, parseAmount } from '../../logic/format';
 import {
   accountValue,
   fundChild,
+  dormancyStatus,
   LedgerError,
+  majorityDate,
   METAL_LABEL,
+  parseBirthDate,
+  setChildBirthDate,
   METAL_OF,
   removeChild,
   toGrams,
@@ -37,6 +41,8 @@ export default function ChildScreen() {
   const [amountUnit, setAmountUnit] = useState<AmountUnit>('g');
   const [text, setText] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [birth, setBirth] = useState('');
+  const [birthError, setBirthError] = useState<string | null>(null);
 
   if (!child) {
     return (
@@ -102,6 +108,47 @@ export default function ChildScreen() {
           ))}
         </View>
       </View>
+
+      {child.birthDate ? (
+        <View style={styles.exempt}>
+          <Text style={styles.exemptText}>
+            {dormancyStatus(child).exempt
+              ? `Aucun frais jusqu’aux 18 ans de ${child.name}, le ${majorityDate(child.birthDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}.`
+              : `${child.name} est majeur·e : les règles du compte principal s’appliquent (frais d’oxydation après 6 mois sans opération).`}
+          </Text>
+        </View>
+      ) : (
+        <Card style={{ gap: 8 }}>
+          <Text style={styles.exemptText}>
+            Ajoute la date de naissance de {child.name} : le compte reste sans frais jusqu’à ses 18 ans.
+          </Text>
+          <TextInput
+            value={birth}
+            onChangeText={(t) => {
+              setBirth(t);
+              setBirthError(null);
+            }}
+            placeholder="JJ/MM/AAAA"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="numbers-and-punctuation"
+            style={ui.input}
+          />
+          <Button
+            title="Enregistrer la date"
+            variant="ghost"
+            disabled={!birth.trim()}
+            onPress={() => {
+              try {
+                const iso = parseBirthDate(birth);
+                commit((acc) => setChildBirthDate(acc, child.id, iso));
+              } catch (e) {
+                setBirthError(e instanceof LedgerError ? e.message : 'Date invalide.');
+              }
+            }}
+          />
+          {birthError && <Message ok={false} text={birthError} />}
+        </Card>
+      )}
 
       <DormancyNotice wallet={child} name={child.name} />
 
@@ -179,6 +226,14 @@ const styles = StyleSheet.create({
   metals: { flexDirection: 'row', marginTop: 10, alignSelf: 'stretch' },
   metalName: { fontSize: 12, fontWeight: '700' },
   metalWeight: { color: colors.text, fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  exempt: {
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.up,
+    backgroundColor: 'rgba(52, 211, 153, 0.08)',
+  },
+  exemptText: { color: colors.text, fontSize: 13, lineHeight: 18 },
   preview: {
     color: colors.text,
     backgroundColor: colors.goldSoft,

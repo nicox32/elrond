@@ -233,7 +233,7 @@ test('frais d’oxydation : 0,02 %/jour facturés pour chaque période de 6 mois
   const t0 = new Date('2026-01-10T12:00:00Z');
   const day = 86_400_000;
   let acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
-  const r = addChild(acc, 'Léa', t0);
+  const r = addChild(acc, 'Léa', '2008-01-01', t0); // majeure depuis le 1er janvier 2026
   acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 50 }, t0);
   // 5 mois plus tard : rien
   const m5 = new Date('2026-06-10T12:00:00Z');
@@ -258,4 +258,39 @@ test('frais d’oxydation : 0,02 %/jour facturés pour chaque période de 6 mois
   // une opération d'au moins 1 € remet le compteur à zéro
   const moved = buy(again, prices, 'gold', { unit: 'eur', value: 1 }, m12);
   assert.ok(!dormancyStatus(moved, new Date(m12.getTime() + 30 * day)).inactive);
+});
+
+test('compte enfant : aucun frais d’oxydation avant 18 ans, compteur lancé à la majorité', async () => {
+  const { addChild, applyDormancy, dormancyStatus, fundChild, parseBirthDate, setChildBirthDate } = await import(
+    '../src/logic/ledger.ts'
+  );
+  const now = new Date('2026-11-02T12:00:00Z');
+  assert.equal(parseBirthDate('05/03/2015', now), '2015-03-05');
+  assert.throws(() => parseBirthDate('31/02/2015', now), LedgerError); // n'existe pas
+  assert.throws(() => parseBirthDate('01/01/2030', now), LedgerError); // futur
+  assert.throws(() => parseBirthDate('01/01/2000', now), LedgerError); // déjà majeur
+  assert.throws(() => parseBirthDate('2015-03-05', now), LedgerError); // mauvais format
+
+  const t0 = new Date('2026-01-10T12:00:00Z');
+  let acc = buy(createAccount('Parent', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
+  // Enfant né le 1er juin 2010 : majeur le 1er juin 2028
+  const r = addChild(acc, 'Tom', '2010-06-01', t0);
+  acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 10 }, t0);
+  // 2 ans sans opération, toujours mineur : rien sur son compte (le parent, lui, paie)
+  const y2 = new Date('2028-01-10T12:00:00Z');
+  const charged = applyDormancy(acc, prices, y2);
+  close(charged.children[0].holdings.gold, 10);
+  assert.ok(charged.holdings.gold < 90);
+  assert.ok(dormancyStatus(charged.children[0], y2).exempt);
+  // Majeur le 1er juin 2028 : les 6 mois courent à partir de là → rien avant le 1er décembre 2028
+  assert.equal(applyDormancy(charged, prices, new Date('2028-11-30T12:00:00Z')).children[0], charged.children[0]);
+  const after = applyDormancy(charged, prices, new Date('2028-12-02T12:00:00Z'));
+  close(after.children[0].holdings.gold, 10 * (1 - 0.0002 * 183));
+  // Sans date de naissance connue : exonéré
+  const noDate = addChild(acc, 'Ana', undefined, t0);
+  const later = applyDormancy(fundChild(noDate.account, prices, noDate.child.id, 'gold', { unit: 'g', value: 5 }, t0), prices, y2);
+  close(later.children.find((c) => c.name === 'Ana')!.holdings.gold, 5);
+  // Date ajoutée ensuite
+  const dated = setChildBirthDate(later, noDate.child.id, '2012-01-01');
+  assert.equal(dated.children.find((c) => c.name === 'Ana')!.birthDate, '2012-01-01');
 });

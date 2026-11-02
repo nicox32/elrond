@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Hint, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur } from '../../logic/format';
-import { accountValue, addChild, LedgerError } from '../../logic/ledger';
+import { accountValue, addChild, LedgerError, parseBirthDate } from '../../logic/ledger';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { colors } from '../../theme';
 
@@ -12,17 +12,19 @@ export default function ChildrenScreen() {
   const account = useAccount();
   const { quote, commit } = useBank();
   const [name, setName] = useState('');
+  const [birth, setBirth] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   function create() {
     try {
       let id = '';
       commit((acc) => {
-        const r = addChild(acc, name);
+        const r = addChild(acc, name, parseBirthDate(birth));
         id = r.child.id;
         return r.account;
       });
       setName('');
+      setBirth('');
       setMessage(null);
       router.push({ pathname: '/enfants/[id]', params: { id } });
     } catch (e) {
@@ -71,9 +73,21 @@ export default function ChildrenScreen() {
           placeholder="Prénom de l’enfant"
           placeholderTextColor={colors.textMuted}
           style={ui.input}
+        />
+        <TextInput
+          value={birth}
+          onChangeText={(t) => {
+            setBirth(t);
+            setMessage(null);
+          }}
+          placeholder="Date de naissance (JJ/MM/AAAA)"
+          placeholderTextColor={colors.textMuted}
+          keyboardType="numbers-and-punctuation"
+          style={ui.input}
           onSubmitEditing={create}
         />
-        <Button title="Ouvrir le compte (gratuit)" onPress={create} disabled={!name.trim()} />
+        <Hint>Aucun frais sur ce compte avant les 18 ans de l’enfant.</Hint>
+        <Button title="Ouvrir le compte (gratuit)" onPress={create} disabled={!name.trim() || !birth.trim()} />
       </Card>
       {message && <Message {...message} />}
     </Screen>

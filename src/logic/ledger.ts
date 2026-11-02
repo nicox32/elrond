@@ -414,7 +414,33 @@ export function recordBalance(account: Account, prices: Prices, now = new Date()
 
 // ——— Comptes enfants ———————————————————————————————————————————————
 
-export function addChild(account: Account, name: string, now = new Date()) {
+/** Âge de la majorité : aucun frais sur un compte enfant avant. */
+export const MAJORITY_AGE = 18;
+
+/** Lit une date de naissance « JJ/MM/AAAA » et la renvoie au format AAAA-MM-JJ. L'enfant doit être mineur. */
+export function parseBirthDate(text: string, now = new Date()): string {
+  const m = /^\s*(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\s*$/.exec(text);
+  if (!m) throw new LedgerError('Date de naissance au format JJ/MM/AAAA.');
+  const [day, month, year] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const d = new Date(Date.UTC(year, month - 1, day));
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
+    throw new LedgerError('Cette date n’existe pas.');
+  }
+  if (d.getTime() > now.getTime()) throw new LedgerError('La date de naissance est dans le futur.');
+  const iso = d.toISOString().slice(0, 10);
+  if (majorityDate(iso).getTime() <= now.getTime()) {
+    throw new LedgerError(`Un compte enfant est réservé aux moins de ${MAJORITY_AGE} ans.`);
+  }
+  return iso;
+}
+
+/** Date des 18 ans. */
+export function majorityDate(birthDate: string): Date {
+  const [y, mo, d] = birthDate.split('-').map(Number);
+  return new Date(Date.UTC(y + MAJORITY_AGE, mo - 1, d));
+}
+
+export function addChild(account: Account, name: string, birthDate?: string, now = new Date()) {
   const clean = name.trim();
   if (!clean) throw new LedgerError('Indique le prénom de l’enfant.');
   const child: ChildAccount = {
@@ -424,6 +450,7 @@ export function addChild(account: Account, name: string, now = new Date()) {
     holdings: emptyHoldings(),
     transactions: [],
   };
+  if (birthDate) child.birthDate = birthDate;
   return { account: { ...account, children: [...account.children, child] }, child };
 }
 
@@ -473,6 +500,11 @@ export function withdrawFromChild(
   return replaceChild(parent, debited);
 }
 
+/** Renseigne (ou corrige) la date de naissance d'un enfant. */
+export function setChildBirthDate(account: Account, childId: string, birthDate: string): Account {
+  return replaceChild(account, { ...findChild(account, childId), birthDate });
+}
+
 /** Ferme un compte enfant vide. */
 export function removeChild(account: Account, childId: string): Account {
   const child = findChild(account, childId);
@@ -513,15 +545,42 @@ export function lastMovement(wallet: Wallet): Date {
  * Où en est le compte vis-à-vis de l'inactivité. Les périodes d'inactivité durent 6 mois calendaires
  * à partir du dernier mouvement ; `nextChargeAt` est la fin de la prochaine période non facturée.
  */
-export function dormancyStatus(wallet: Wallet, now = new Date()) {
+/**
+ * Jusqu'à quand le compte est exonéré de frais d'oxydation : pour un enfant, ses 18 ans
+ * (sans date de naissance connue, toujours). `null` : pas d'exonération.
+ */
+export function feesExemptUntil(wallet: Wallet): Date | null {
+  if (!('name' in wallet) || 'holder' in wallet) return null; // compte principal
+  const child = wallet as ChildAccount;
+  return child.birthDate ? majorityDate(child.birthDate) : new Date(8.64e15);
+}
+
+/** Point de départ des 6 mois : le dernier mouvement, ou la majorité pour un compte enfant devenu majeur. */
+function dormancyAnchor(wallet: Wallet): Date {
   const last = lastMovement(wallet);
+  const exempt = feesExemptUntil(wallet);
+  return exempt && exempt > last ? exempt : last;
+}
+
+export function dormancyStatus(wallet: Wallet, now = new Date()) {
+  const exemptUntil = feesExemptUntil(wallet);
+  const exempt = !!exemptUntil && now < exemptUntil;
+  const last = dormancyAnchor(wallet);
   const inactiveFrom = addMonths(last, FEES.dormancyAfterMonths);
   const charged = wallet.dormancyChargedThrough ? new Date(wallet.dormancyChargedThrough).getTime() : 0;
   let k = 1;
   while (addMonths(last, FEES.dormancyAfterMonths * k).getTime() <= Math.max(charged, last.getTime())) k++;
   const nextChargeAt = addMonths(last, FEES.dormancyAfterMonths * k);
   const daysLeft = Math.ceil((nextChargeAt.getTime() - now.getTime()) / DAY_MS);
-  return { inactive: now >= inactiveFrom, inactiveFrom, nextChargeAt, daysLeft, lastMovement: last };
+  return {
+    inactive: !exempt && now >= inactiveFrom,
+    exempt,
+    exemptUntil,
+    inactiveFrom,
+    nextChargeAt,
+    daysLeft: exempt ? Number.POSITIVE_INFINITY : daysLeft,
+    lastMovement: lastMovement(wallet),
+  };
 }
 
 /**
@@ -530,7 +589,9 @@ export function dormancyStatus(wallet: Wallet, now = new Date()) {
  * Une période déjà facturée ne l'est jamais deux fois.
  */
 export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now = new Date()): W {
-  const last = lastMovement(wallet);
+  const exemptUntil = feesExemptUntil(wallet);
+  if (exemptUntil && now < exemptUntil) return wallet; // enfant mineur : aucun frais
+  const last = dormancyAnchor(wallet);
   const charged = wallet.dormancyChargedThrough ? new Date(wallet.dormancyChargedThrough).getTime() : 0;
   let result = wallet;
   for (let k = 1; ; k++) {

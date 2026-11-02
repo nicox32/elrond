@@ -65,6 +65,7 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Envoi de métaux à un membre', orvia: 'Gratuit' },
       { label: 'Réception de métaux d’un membre', orvia: 'Gratuit' },
       { label: 'Compte enfant (ouverture, tenue, alimentation)', orvia: 'Gratuit' },
+      { label: 'Frais sur un compte enfant avant les 18 ans', orvia: 'Aucun' },
       {
         label: `Frais d’oxydation : ${FEES.dormancyAfterMonths} mois calendaires sans opération d’au moins 1 €`,
         orvia: `${pct(FEES.dormancyDaily)} du solde par jour, sur ces ${FEES.dormancyAfterMonths} mois`,

@@ -53,8 +53,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
   envois et réceptions entre membres gratuits.
 - **Comptes enfants gratuits** : un coffre par enfant, alimenté et repris depuis le compte principal
-  sans frais (`docs/compte-enfant.png`).
-- **Frais d'oxydation** : un compte (principal ou enfant) laissé 6 mois calendaires sans opération d'au
+  sans frais, et **aucun frais avant les 18 ans** de l'enfant (date de naissance demandée à l'ouverture ;
+  à la majorité, les 6 mois d'inactivité commencent à compter) (`docs/compte-enfant.png`).
+- **Frais d'oxydation** : un compte (principal, ou enfant devenu majeur) laissé 6 mois calendaires sans opération d'au
   moins 1 € est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
   période de 6 mois d'inactivité est facturée de même. L'appli prévient un mois avant (`docs/oxydation.png`).
 

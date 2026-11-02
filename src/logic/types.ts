@@ -90,6 +90,8 @@ export interface Wallet {
 export interface ChildAccount extends Wallet {
   id: string;
   name: string;
+  /** Date de naissance (AAAA-MM-JJ). Aucun frais avant les 18 ans ; sans date, le compte reste exonéré. */
+  birthDate?: string;
 }
 
 export interface Account extends Wallet {
