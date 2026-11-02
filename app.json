@@ -21,7 +21,11 @@
       "package": "com.nicox32.elrond"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Elrond",
+      "shortName": "Elrond",
+      "themeColor": "#0E0F13",
+      "backgroundColor": "#0E0F13"
     },
     "scheme": "elrond",
     "plugins": [
@@ -35,7 +39,8 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/elrond"
     }
   }
 }

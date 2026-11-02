@@ -1,0 +1,48 @@
+# Publie la version web de l'appli sur GitHub Pages :
+#   https://nicox32.github.io/elrond/
+# Pré-requis (une seule fois) : Settings → Pages → Source : « GitHub Actions ».
+name: Version web
+
+on:
+  push:
+    branches: [ccr-de251d88-j0qjcp, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Construire la version web
+        run: |
+          npx expo export --platform web --output-dir dist
+          # Les liens directs vers un écran (ex. /elrond/virements) renvoient vers l'appli.
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

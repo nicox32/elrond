@@ -15,6 +15,12 @@ aucun argent ni métal réel n'est échangé.
   <img src="docs/verrouillage.png" width="220" alt="Code d'accès" />
 </p>
 
+## Utiliser l'appli dans le navigateur
+
+Version web, sans installation : **https://nicox32.github.io/elrond/**
+Dans Chrome, menu ⋮ → **Ajouter à l'écran d'accueil** pour l'ouvrir comme une appli.
+(Publiée par `.github/workflows/web.yml` ; GitHub Pages doit être réglé sur la source « GitHub Actions ».)
+
 ## Installer sur Android
 
 Télécharge l'APK depuis ton téléphone :
