@@ -1,25 +1,23 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { AUTO_PREMIUM, clampPremium, currentPremium, ECU, ecuHistory, type PremiumMode } from '../logic/ecu';
+import { AUTO_PREMIUM, currentPremium, ECU, ecuHistory } from '../logic/ecu';
 import { FEES } from '../logic/fees';
 import { GAIN_RATE, TAX } from '../logic/tax';
 import { formatEur, formatUnitPrice, formatWeight } from '../logic/format';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { EcuChart } from './EcuChart';
-import { Segmented } from './Segmented';
 import { Card, Hint, SectionTitle } from './ui';
 
 const pct = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
-const STEP = 0.005;
 const pts = (n: number) =>
   `${n >= 0 ? '+' : '−'}${Math.abs(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} pt`;
 
 /** Composition et prix de l'Écu Orvia, avec le réglage de la prime (démonstration, côté Orvia). */
 export function EcuInfo() {
   const account = useAccount();
-  const { quote, updateSettings, hourlyHistory } = useBank();
+  const { quote, hourlyHistory } = useBank();
   const parts = currentPremium(account, quote.prices.gold, hourlyHistory, new Date());
   const premium = parts.premium;
   const chart = useMemo(
@@ -30,8 +28,6 @@ export function EcuInfo() {
     [account, hourlyHistory, quote, premium],
   );
   const gold = quote.prices.gold * ECU.goldGrams;
-  const setPremium = (p: number) =>
-    updateSettings({ ecuPremiumMode: 'manual', ecuPremium: Math.round(clampPremium(p) * 1000) / 1000 });
 
   return (
     <>
@@ -113,68 +109,27 @@ export function EcuInfo() {
 
       <SectionTitle>Comment bouge la prime</SectionTitle>
       <Card style={{ gap: 10 }}>
-        <Segmented
-          value={parts.mode}
-          onChange={(mode: PremiumMode) =>
-            updateSettings(
-              mode === 'manual'
-                ? { ecuPremiumMode: 'manual', ecuPremium: Math.round(parts.premium * 1000) / 1000 }
-                : { ecuPremiumMode: 'auto' },
-            )
-          }
-          options={[
-            { value: 'auto', label: 'Automatique' },
-            { value: 'manual', label: 'Manuelle' },
-          ]}
+        <Text style={styles.para}>
+          La prime évolue d’elle-même, entre {pct(AUTO_PREMIUM.min)} et {pct(AUTO_PREMIUM.max)}, comme sur un vrai
+          marché :
+        </Text>
+        <Row label="Prime de base" value={pct(parts.base)} />
+        <Row
+          label="Cours de l’or face à sa moyenne 30 j"
+          value={parts.market === null ? 'dans 7 jours' : pts(parts.market)}
         />
-        {parts.mode === 'auto' ? (
-          <>
-            <Text style={styles.para}>
-              Comme vous êtes seul sur l’appli, Orvia simule un marché : la prime évolue d’elle-même, entre{' '}
-              {pct(AUTO_PREMIUM.min)} et {pct(AUTO_PREMIUM.max)}, selon trois effets.
-            </Text>
-            <Row label="Prime de base" value={pct(parts.base)} />
-            <Row
-              label="Cours de l’or face à sa moyenne 30 j"
-              value={parts.market === null ? 'dans 7 jours' : pts(parts.market)}
-            />
-            <Text style={styles.muted}>
-              Or sous sa moyenne : les investisseurs achètent, la prime monte. Or qui s’envole : elle baisse.
-            </Text>
-            <Row label="Demande des autres investisseurs (simulée)" value={pts(parts.community)} />
-            <Text style={styles.muted}>Une vague lente, de quelques jours à un mois, comme sur un vrai marché.</Text>
-            <Row label="Vos achats et ventes sur 7 jours" value={pts(parts.flow)} />
-            <Text style={styles.muted}>Acheter pousse la prime vers le haut, vendre la fait redescendre.</Text>
-            <View style={styles.sep} />
-            <Row label="Prime en ce moment" value={pct(parts.premium)} strong />
-          </>
-        ) : (
-          <>
-            <Text style={styles.para}>
-              Vous fixez la prime vous-même, entre {pct(ECU.minPremium)} et {pct(ECU.maxPremium)}, comme le ferait
-              Orvia.
-            </Text>
-            <View style={styles.stepper}>
-              <Pressable
-                onPress={() => setPremium(parts.premium - STEP)}
-                style={styles.step}
-                accessibilityRole="button"
-                accessibilityLabel="Baisser la prime"
-              >
-                <Text style={styles.stepText}>− 0,5</Text>
-              </Pressable>
-              <Text style={styles.premium}>{pct(parts.premium)}</Text>
-              <Pressable
-                onPress={() => setPremium(parts.premium + STEP)}
-                style={styles.step}
-                accessibilityRole="button"
-                accessibilityLabel="Monter la prime"
-              >
-                <Text style={styles.stepText}>+ 0,5</Text>
-              </Pressable>
-            </View>
-          </>
+        <Text style={styles.muted}>
+          Or sous sa moyenne : les investisseurs achètent, la prime monte. Or qui s’envole : elle baisse.
+        </Text>
+        <Row label="Demande des autres investisseurs" value={pts(parts.community)} />
+        <Text style={styles.muted}>Une vague lente, de quelques jours à un mois.</Text>
+        <Row label="Vos achats et ventes sur 7 jours" value={pts(parts.flow)} />
+        <Text style={styles.muted}>Acheter pousse la prime vers le haut, vendre la fait redescendre.</Text>
+        {parts.adjustment !== 0 && (
+          <Row label="Ajustement Orvia (conditions de marché)" value={pts(parts.adjustment)} />
         )}
+        <View style={styles.sep} />
+        <Row label="Prime en ce moment" value={pct(parts.premium)} strong />
         <Hint>
           La prime compte à l’achat comme à la revente : si elle baisse après votre achat, votre Gold Oria perd un peu
           de valeur même si l’or ne bouge pas ; si elle monte, il en gagne.

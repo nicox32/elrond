@@ -46,8 +46,6 @@ export function withEcu(prices: SpotPrices | Prices, premium?: number): Prices {
 //    identique pour tout le monde à un instant donné ;
 // 3. vos propres achats et ventes de Gold Oria sur 7 jours : acheter pousse un peu la prime, vendre la fait baisser.
 
-export type PremiumMode = 'auto' | 'manual';
-
 export const AUTO_PREMIUM = {
   base: ECU.defaultPremium,
   /** Points de prime par point d'écart à la moyenne 30 j (or sous la moyenne → prime plus haute). */
@@ -65,7 +63,10 @@ export const AUTO_PREMIUM = {
   flowMin: -0.005,
   flowMax: 0.01,
   min: 0.01,
-  max: 0.1,
+  max: 0.12,
+  /** Ajustement Orvia (Espace Dev), en points. */
+  adjustMin: -0.03,
+  adjustMax: 0.06,
 } as const;
 
 export interface PremiumParts {
@@ -76,6 +77,8 @@ export interface PremiumParts {
   community: number;
   /** Vos achats et ventes de Gold Oria sur 7 jours. */
   flow: number;
+  /** Ajustement décidé par Orvia (Espace Dev). */
+  adjustment: number;
   premium: number;
 }
 
@@ -111,6 +114,7 @@ export function autoPremium(input: {
   gold: number;
   goldAvg30: number | null;
   netFlowEur: number;
+  adjustment?: number;
 }): PremiumParts {
   const A = AUTO_PREMIUM;
   const market =
@@ -119,29 +123,63 @@ export function autoPremium(input: {
       : null;
   const community = communityDemand(input.at);
   const flow = clamp((input.netFlowEur / 1000) * A.flowPer1000, A.flowMin, A.flowMax);
-  const premium = clamp(A.base + (market ?? 0) + community + flow, A.min, A.max);
-  return { base: A.base, market, community, flow, premium };
+  const adjustment = clamp(input.adjustment ?? 0, A.adjustMin, A.adjustMax);
+  const premium = clamp(A.base + (market ?? 0) + community + flow + adjustment, A.min, A.max);
+  return { base: A.base, market, community, flow, adjustment, premium };
 }
 
-/** Prime en vigueur pour ce compte : réglage manuel, ou prime automatique du marché simulé (par défaut). */
+/** Ajustement Orvia (Espace Dev) en vigueur à une date : le dernier décidé avant elle. */
+export function adjustmentAt(account: Pick<Account, 'settings'> | null | undefined, at: Date): number {
+  let offset = 0;
+  for (const a of account?.settings.ecuPremiumAdjustments ?? []) {
+    if (new Date(a.at).getTime() <= at.getTime()) offset = a.offset;
+  }
+  return offset;
+}
+
+/** Prime en vigueur : marché simulé, plus l'ajustement éventuel décidé par Orvia dans l'Espace Dev. */
 export function currentPremium(
   account: Pick<Account, 'settings' | 'transactions'> | null | undefined,
   gold: number,
   hourly: PricePoint[],
   at = new Date(),
-): PremiumParts & { mode: PremiumMode } {
-  if (account?.settings.ecuPremiumMode === 'manual') {
-    const p = clampPremium(account.settings.ecuPremium);
-    return { base: p, market: null, community: 0, flow: 0, premium: p, mode: 'manual' };
-  }
-  const parts = autoPremium({
+): PremiumParts {
+  return autoPremium({
     at,
     gold,
     goldAvg30: average30(hourly, 'gold', at.getTime()),
     netFlowEur: account ? ecuNetFlow(account.transactions, at) : 0,
+    adjustment: adjustmentAt(account, at),
   });
-  return { ...parts, mode: 'auto' };
 }
+
+/** Scénarios de marché réels, pour l'Espace Dev (ajustement en points ajouté à la prime automatique). */
+export const PREMIUM_SCENARIOS: { id: string; label: string; offset: number; when: string }[] = [
+  {
+    id: 'calm',
+    label: 'Désaffection',
+    offset: -0.015,
+    when: 'Or au plus haut, beaucoup de clients vendent pour encaisser leurs gains, peu d’acheteurs.',
+  },
+  {
+    id: 'normal',
+    label: 'Normal',
+    offset: 0,
+    when: 'Marché habituel : prime de 4 à 5 %, comme un or fractionné stocké.',
+  },
+  {
+    id: 'demand',
+    label: 'Forte demande',
+    offset: 0.02,
+    when: 'Or en forte baisse ou inquiétude économique : les achats affluent, les fondeurs sont chargés.',
+  },
+  {
+    id: 'crisis',
+    label: 'Crise',
+    offset: 0.05,
+    when: 'Panique financière (2008, mars 2020) : pénurie de pièces et petits lingots, primes de 8 à 12 %.',
+  },
+];
 
 /** Historique du prix du Gold Oria et du Gold Spot (€/g), à partir des relevés horaires. */
 export function ecuHistory(

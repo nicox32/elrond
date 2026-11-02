@@ -273,12 +273,17 @@ test('prime automatique du Gold Oria : or sous sa moyenne, demande simulée, vos
     { kind: 'buy', date: '2026-10-01T00:00:00Z', eur: 9000, deltas: { ecu: 70 } },
   ];
   assert.equal(ecuNetFlow(tx, at), 1500);
-  // Mode manuel : la prime réglée
-  const manual = currentPremium(
-    { settings: { unit: 'g', biometrics: false, ecuPremiumMode: 'manual', ecuPremium: 0.07 }, transactions: [] },
-    100,
-    [],
-    at,
-  );
-  assert.equal(manual.premium, 0.07);
+  // Ajustement Orvia (Espace Dev) : valable à partir de sa date, l'ancien mode manuel est ignoré
+  const settings = {
+    unit: 'g' as const,
+    biometrics: false,
+    ecuPremiumMode: 'manual' as const,
+    ecuPremium: 0.15,
+    ecuPremiumAdjustments: [{ at: '2026-11-01T00:00:00Z', offset: 0.02 }],
+  };
+  const before = currentPremium({ settings, transactions: [] }, 100, [], new Date('2026-10-31T00:00:00Z'));
+  const after = currentPremium({ settings, transactions: [] }, 100, [], at);
+  assert.equal(before.adjustment, 0);
+  assert.equal(after.adjustment, 0.02);
+  assert.ok(after.premium < 0.1 && after.premium > before.premium);
 });

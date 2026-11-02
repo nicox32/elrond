@@ -68,8 +68,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   le solde s'affiche aussi en louis.
 - **Gold Oria** (jeton maison, `src/logic/ecu.ts`, `docs/ecu-orvia.png`) : 1 g d'or fin 999,9 conservé au coffre ;
   l'or classique s'appelle **Gold Spot**. Prix d'un gramme = 1 g × cours de l'or × (1 + prime), en direct ; prime automatique (marché simulé : cours de l'or face à sa
-  moyenne 30 j, demande simulée des autres investisseurs, vos achats et ventes sur 7 jours ; entre 1 et 10 %) ou
-  manuelle (0 à 15 %), avec un graphique Gold Oria / Gold Spot (`docs/gold-oria-prime.png`). S'achète en euros, en grammes ou en onces (frais d'achat 1 %), se revend, se convertit,
+  moyenne 30 j, demande simulée des autres investisseurs, vos achats et ventes sur 7 jours ; , entre 1 et 12 %) , ajustable par
+  Orvia dans l'**Espace Dev** (Profil : scénarios Désaffection, Normal, Forte demande, Crise et paliers de 0,25 pt ;
+  `docs/espace-dev.png`), avec un graphique Gold Oria / Gold Spot (`docs/gold-oria-prime.png`). S'achète en euros, en grammes ou en onces (frais d'achat 1 %), se revend, se convertit,
   s'envoie et se verse aux enfants. Fiscalité des jetons : vente exonérée jusqu'à 5 000 €, au-delà 6,5 % du prix de
   vente ou régime des plus-values si moins cher. Compte comme de l'or dans la répartition.
 - **L'or fractionné** (`src/app/or-fractionne.tsx`, `docs/or-fractionne.png`) : page explicative (or dès 1 €, sans

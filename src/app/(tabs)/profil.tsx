@@ -83,6 +83,7 @@ export default function ProfileScreen() {
           to="/or-fractionne"
           border
         />
+        <LinkRow label="Espace Dev" hint="Réservé à Orvia : prime du Gold Oria" to="/dev" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 
@@ -135,7 +136,16 @@ function LinkRow({
 }: {
   label: string;
   hint: string;
-  to: '/enfants' | '/tarifs' | '/carte' | '/parrainage' | '/alertes' | '/repartition' | '/fiscalite' | '/or-fractionne';
+  to:
+    | '/enfants'
+    | '/tarifs'
+    | '/carte'
+    | '/parrainage'
+    | '/alertes'
+    | '/repartition'
+    | '/fiscalite'
+    | '/or-fractionne'
+    | '/dev';
   border?: boolean;
 }) {
   return (
