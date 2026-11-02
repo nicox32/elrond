@@ -50,7 +50,7 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
 - **Graphique d'évolution du solde** (24 h, 7 j, 30 j, tout) et **plus-value latente**.
 - **Plus-value et impôts** (lien « Détail » sous le solde, ou Profil ; `src/logic/tax.ts`, `docs/plus-value-impots.png`) :
   plus-value latente en euros et en %, avant et après impôt, par métal. Règles françaises 2026 : taxe forfaitaire
-  de 11,5 % du prix de vente, ou sur option 37,6 % de la plus-value (19 % + 18,6 % de prélèvements sociaux, taux 2026 à confirmer) avec
+  de 11,5 % du prix de vente, ou sur option 37,6 % de la plus-value (19 % + 18,6 % de prélèvements sociaux, taux appliqué par les professionnels depuis 2026) avec
   un abattement de 5 % par an à partir de la 3e année de détention (exonération après 22 ans). Le régime le moins
   cher est retenu pour chaque métal ; durée de détention calculée en premier entré, premier sorti. Estimation
   indicative, sans valeur de conseil fiscal.

@@ -139,11 +139,12 @@ export default function TaxScreen() {
         </Bullet>
         <Text style={styles.note}>
           Vérifié sur les textes officiels : taxe forfaitaire et seuil (CGI art. 150 VI à 150 VM, BOFiP), abattement de
-          5 % par an au-delà de la 2e année et exonération après 22 ans (CGI art. 150 VC, applicable depuis 2014). À
-          confirmer : le taux des prélèvements sociaux sur cette plus-value en 2026 (18,6 % retenu par prudence depuis
-          la loi de financement de la Sécurité sociale pour 2026, 17,2 % si elle n’est pas concernée par la hausse).
-          Estimation pour un particulier résidant en France, sans valeur de conseil fiscal : à faire confirmer par un
-          conseiller ou par votre centre des finances publiques (impots.gouv.fr) avant une vente importante.
+          5 % par an au-delà de la 2e année et exonération après 22 ans (CGI art. 150 VC, applicable depuis 2014). Taux
+          de 37,6 % (19 % + 18,6 % de prélèvements sociaux) appliqué depuis le 1er janvier 2026 par les professionnels
+          du secteur à la suite de la loi de financement de la Sécurité sociale pour 2026 ; non encore confirmé sur un
+          texte officiel (36,2 % si cette plus-value n’était pas concernée par la hausse). Estimation pour un
+          particulier résidant en France, sans valeur de conseil fiscal : à faire confirmer par un conseiller ou par
+          votre centre des finances publiques (impots.gouv.fr) avant une vente importante.
         </Text>
       </Card>
     </Screen>
