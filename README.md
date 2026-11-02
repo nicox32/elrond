@@ -25,7 +25,7 @@ Dans Chrome, menu ⋮ → **Ajouter à l'écran d'accueil** pour l'ouvrir comme 
 
 ## Installer sur Android
 
-Télécharge l'APK depuis ton téléphone :
+Téléchargez l'APK depuis votre téléphone :
 **https://github.com/nicox32/elrond/releases/latest/download/orvia.apk**
 
 Il est reconstruit automatiquement à chaque modification (voir `.github/workflows/android-apk.yml`).
