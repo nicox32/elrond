@@ -1,1 +1,5 @@
-{ "alerts": [] }
+{
+  "alerts": [
+    { "metal": "gold", "kind": "above", "value": 1, "unit": "oz" }
+  ]
+}
