@@ -179,6 +179,15 @@ export function removeHistory2021(account: Account): Account {
   };
 }
 
+/** Une mise à niveau qui échoue ne doit jamais bloquer l'ouverture : on garde alors le compte tel quel. */
+function safely<T>(value: T, migrate: (v: T) => T): T {
+  try {
+    return migrate(value);
+  } catch {
+    return value;
+  }
+}
+
 /** Met à niveau un compte enregistré par une ancienne version de l'appli. */
 export function migrateAccount(raw: unknown): Account | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -186,8 +195,8 @@ export function migrateAccount(raw: unknown): Account | null {
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
     return {
-      ...removeHistory2021(retireGoldOria(a as Account)),
-      children: Array.isArray(a.children) ? a.children.map(retireGoldOria) : [],
+      ...safely(a as Account, (acc) => removeHistory2021(retireGoldOria(acc))),
+      children: Array.isArray(a.children) ? a.children.map((c: ChildAccount) => safely(c, retireGoldOria)) : [],
       referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
     };
   }

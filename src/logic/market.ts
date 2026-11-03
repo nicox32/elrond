@@ -10,18 +10,23 @@
 
 const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 
-/** Jour (0 = dimanche) et heure décimale à Paris. */
+/** Dernier dimanche d'un mois (UTC), à 1 h UTC : moment des changements d'heure en Europe. */
+function lastSundayUtc(year: number, month: number): number {
+  const d = new Date(Date.UTC(year, month + 1, 0, 1)); // dernier jour du mois, 1 h UTC
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.getTime();
+}
+
+/**
+ * Jour (0 = dimanche) et heure décimale à Paris, calculés sans Intl (indisponible ou incomplet sur certains
+ * téléphones) : UTC+1, ou UTC+2 du dernier dimanche de mars au dernier dimanche d'octobre (1 h UTC).
+ */
 export function parisTime(now: Date): { day: number; hour: number } {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Paris',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
-  return { day, hour: Number(get('hour')) + Number(get('minute')) / 60 };
+  const t = now.getTime();
+  const y = now.getUTCFullYear();
+  const summer = t >= lastSundayUtc(y, 2) && t < lastSundayUtc(y, 9);
+  const local = new Date(t + (summer ? 2 : 1) * 3_600_000);
+  return { day: local.getUTCDay(), hour: local.getUTCHours() + local.getUTCMinutes() / 60 };
 }
 
 export interface MarketStatus {
