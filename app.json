@@ -39,7 +39,15 @@
       ],
       "expo-notifications",
       "expo-sharing",
-      "expo-background-task"
+      "expo-background-task",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "# WorkManager (vérification des cours en arrière-plan) : R8 ne doit pas retirer sa base Room.\n-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.work.impl.** { *; }\n-keep class * extends androidx.work.ListenableWorker { <init>(android.content.Context, androidx.work.WorkerParameters); }\n"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
