@@ -148,9 +148,33 @@ export function resetVaults(account: Account): Account {
     holdings: emptyHoldings(),
     transactions: [],
     balanceHistory: [],
-    history2021Imported: false,
     dormancyChargedThrough: undefined,
     cashEur: 0,
+  };
+}
+
+/**
+ * La reprise de l'historique 2021 a été supprimée : ses 24 achats importés sont retirés, avec le métal qu'ils avaient
+ * ajouté (sans descendre sous zéro), et la date d'ouverture revient au premier vrai mouvement.
+ */
+export function removeHistory2021(account: Account): Account {
+  const imported = account.transactions.filter((t) => t.kind === 'buy' && t.label.includes('historique 2021'));
+  const flagged = (account as Account & { history2021Imported?: boolean }).history2021Imported;
+  if (!imported.length && !flagged) return account;
+  const holdings = { ...account.holdings };
+  for (const t of imported) {
+    for (const m of METALS) holdings[m] = Math.max(0, round(holdings[m] - (t.deltas[m] ?? 0)));
+  }
+  const transactions = account.transactions.filter((t) => !imported.includes(t));
+  const first = transactions.reduce<string | null>((d, t) => (!d || t.date < d ? t.date : d), null);
+  const createdAt = first ?? new Date().toISOString();
+  const { history2021Imported: _, ...rest } = account as Account & { history2021Imported?: boolean };
+  return {
+    ...rest,
+    holdings,
+    transactions,
+    createdAt,
+    balanceHistory: account.balanceHistory.filter((p) => p.date >= createdAt),
   };
 }
 
@@ -161,7 +185,7 @@ export function migrateAccount(raw: unknown): Account | null {
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
     return {
-      ...retireGoldOria(a as Account),
+      ...removeHistory2021(retireGoldOria(a as Account)),
       children: Array.isArray(a.children) ? a.children.map(retireGoldOria) : [],
       referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
     };

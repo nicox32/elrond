@@ -32,8 +32,6 @@ export interface CompanyReport {
   taxCollected: number;
   assets: number;
   operations: number;
-  /** Achats repris d'un autre établissement (historique 2021) : aucun frais pour Orvia. */
-  importedEur: number;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -89,6 +87,5 @@ export function companyReport(
     taxCollected: r2(sum((t) => t.tax ?? 0)),
     assets: r2(assets),
     operations: txs.length,
-    importedEur: r2(sum((t) => (t.kind === 'buy' && t.label.includes('historique 2021') ? t.eur : 0))),
   };
 }

@@ -196,8 +196,6 @@ export interface Account extends Wallet {
   settings: Settings;
   card?: Card;
   referral: Referral;
-  /** L'historique d'achats 2021 a été repris (une seule fois). */
-  history2021Imported?: boolean;
   /** Alertes de prix choisies par l'utilisateur. */
   alerts?: PriceAlert[];
   /** Alertes déclenchées (les plus récentes d'abord). */

@@ -156,12 +156,6 @@ function CompanyDashboard() {
       <Card style={{ gap: 6 }}>
         <Row label="Impôt retenu pour l’État (pas un revenu)" value={formatEur(r.taxCollected)} />
         <Row label="Opérations sur la période" value={String(r.operations)} />
-        {r.importedEur > 0 && (
-          <Text style={styles.muted}>
-            Dont {formatEur(r.importedEur)} d’achats repris d’un autre établissement (historique 2021) : ce métal est
-            gardé et assuré par Orvia, mais n’a rapporté aucun frais d’achat.
-          </Text>
-        )}
         <Text style={styles.muted}>
           Non comptés : intérêts sur les euros du compte d’attente, coût des paiements par carte bancaire, transports de
           métal, et la part de chaque client dans les frais fixes (voir le seuil de rentabilité ci-dessus).

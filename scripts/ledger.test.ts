@@ -380,30 +380,6 @@ test('parrainage : code saisi une fois, bonus de 10 LOU en or au premier achat d
   assert.match(legacy!.referral.code, /^ORVIA-/);
 });
 
-test('historique 2021 : 12 achats le 5 du mois, 3/4 argent 1/4 or, sans frais ni oxydation rétroactive', async () => {
-  const { import2021History, preview2021, DEFAULT_PLAN_2021 } = await import('../src/logic/history2021.ts');
-  const { applyDormancy, dormancyStatus } = await import('../src/logic/ledger.ts');
-  const now = new Date('2026-11-02T12:00:00Z');
-  const p = preview2021(DEFAULT_PLAN_2021);
-  close(p.monthly, 3845 / 12, 0.01);
-  assert.ok(p.silverOz > 130 && p.silverOz < 142, `${p.silverOz} oz d'argent`); // ~136 oz
-  assert.ok(p.goldOz > 0.6 && p.goldOz < 0.66, `${p.goldOz} oz d'or`); // ~0,63 oz
-  const acc = import2021History(createAccount('Nico', now), DEFAULT_PLAN_2021, now);
-  assert.equal(acc.createdAt, '2021-01-05T10:00:00.000Z');
-  assert.equal(acc.transactions.length, 24);
-  assert.ok(acc.transactions.every((t) => t.kind === 'buy' && t.date.slice(8, 10) === '05' && !t.fees));
-  close(unrealizedGain(acc, prices).invested, 3845, 0.05);
-  // valeur aux cours de l'estimation (argent 51 €/oz, or 3 700 €/oz) : ~9 300 €
-  const est = (acc.holdings.silver * 51 + acc.holdings.gold * 3700) / TROY_OUNCE;
-  assert.ok(est > 9000 && est < 9500, `${est} €`);
-  // pas d'oxydation pour 2022-2026, le compteur part de la reprise
-  assert.equal(applyDormancy(acc, prices, now), acc);
-  assert.ok(!dormancyStatus(acc, now).inactive);
-  assert.equal(dormancyStatus(acc, now).nextChargeAt.toISOString().slice(0, 10), '2027-05-02');
-  // une seule reprise
-  assert.equal(import2021History(acc, DEFAULT_PLAN_2021, now), acc);
-});
-
 test('alertes : seuils, variation 24 h, moyenne 30 j, sans répétition', async () => {
   const { addHourlyPoint, createAlert, evaluateAlerts, describeAlert } = await import('../src/logic/alerts.ts');
   const day = 86_400_000;
@@ -806,4 +782,30 @@ test('vider mes coffres : métaux et historique à zéro, compte et enfants gard
   assert.equal(r.children.length, 1);
   assert.equal(r.holder, 'T');
   assert.equal(r.referral.code, acc.referral.code);
+});
+
+test('achats 2021 repris : supprimés avec leur métal, ouverture ramenée au premier vrai mouvement', async () => {
+  const { migrateAccount } = await import('../src/logic/ledger.ts');
+  const p = { gold: 100, silver: 1, platinum: 30 };
+  let acc = createAccount('T', new Date('2021-01-05'));
+  const imported = {
+    id: 'h1',
+    kind: 'buy' as const,
+    date: '2021-01-05T09:00:00Z',
+    deltas: { gold: 3, silver: 0, platinum: 0 },
+    eur: 300,
+    label: 'Achat d’or · historique 2021',
+  };
+  acc = {
+    ...acc,
+    holdings: { ...acc.holdings, gold: 3 },
+    transactions: [imported],
+    history2021Imported: true,
+  } as typeof acc;
+  acc = buy(acc, p, 'gold', { unit: 'g', value: 1 }, new Date('2026-11-01'));
+  const m = migrateAccount(acc)!;
+  close(m.holdings.gold, 1, 1e-6);
+  assert.equal(m.transactions.length, 1);
+  assert.equal(m.createdAt.slice(0, 10), '2026-11-01');
+  assert.equal((m as Record<string, unknown>).history2021Imported, undefined);
 });

@@ -87,9 +87,6 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).
 - **Parrainage** : un code par compte à partager ; le filleul reçoit 10 € en or à son premier achat
   d'au moins 50 € (`docs/parrainage.png`).
-- **Reprise de l'historique 2021** (Profil) : compte ouvert le 5 janvier 2021, 12 achats le 5 de chaque mois
-  (3 845 €, 3/4 argent et 1/4 or par défaut, modifiables), aux cours approximatifs de 2021, sans frais et sans
-  oxydation rétroactive (`docs/historique-2021.png`).
 - **Alertes de prix** (🔔 sur l'écran du compte) : seuil de prix, variation sur 24 h ou 7 jours, écart à la
   moyenne 30 jours, pour chaque métal ; notification une seule fois par franchissement (6 h minimum entre deux),
   historique avec raccourcis Acheter / Vendre (`docs/alertes.png`). Ce sont les conditions de l'utilisateur, pas

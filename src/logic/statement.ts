@@ -147,7 +147,7 @@ export function statementHtml(input: {
         <td>${esc(t.label)}</td>
         <td>${movement(t, unit)}</td>
         <td class="num">${formatEur(t.eur)}</td>
-        <td class="num">${t.kind === 'buy' ? (t.fees ? formatEur(t.fees) : t.label.includes('historique 2021') ? '<span class="muted">hors Orvia</span>' : '0,00 €') : ''}</td>
+        <td class="num">${t.kind === 'buy' ? (t.fees ? formatEur(t.fees) : '0,00 €') : ''}</td>
         <td class="num">${t.kind !== 'buy' && t.fees ? formatEur(t.fees) : ''}${t.tax ? `<br/><span class="muted">impôt ${formatEur(t.tax)}</span>` : ''}</td>
       </tr>`,
     )
