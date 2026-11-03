@@ -747,3 +747,14 @@ test('alertes recommandées : identiques côté appli et serveur, plus serrées 
   assert.ok(drop24('platinum') <= drop24('silver'));
   for (const m of ['gold', 'silver', 'platinum']) assert.ok(RECOMMENDED_ALERTS.some((a) => a.metal === m));
 });
+
+test('notifications de test : une par alerte recommandée, numérotées', async () => {
+  const { RECOMMENDED_ALERTS, testNotification } = await import('../src/logic/alerts.ts');
+  const p = { gold: 113, silver: 1.45, platinum: 41.7 };
+  const all = RECOMMENDED_ALERTS.map((a, i) => testNotification(a, p, i, RECOMMENDED_ALERTS.length));
+  assert.equal(all.length, 16);
+  assert.match(all[0].title, /^Test \(1\/16\) · Alerte Gold Spot · /);
+  assert.match(all[15].title, /^Test \(16\/16\) · Alerte platine · /);
+  assert.ok(all.every((n) => /Cours actuel : .+\/oz\./.test(n.body)));
+  assert.equal(new Set(all.map((n) => n.title)).size, 16);
+});

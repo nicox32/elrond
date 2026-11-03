@@ -7,11 +7,23 @@ import { SPOT_METALS } from '../logic/types';
 import { Segmented } from '../components/Segmented';
 import { ServerAlerts } from '../components/ServerAlerts';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
-import { type AlertKind, type AlertWindow, createAlert, describeAlert, RECOMMENDED_ALERTS } from '../logic/alerts';
+import {
+  type AlertKind,
+  type AlertWindow,
+  createAlert,
+  describeAlert,
+  RECOMMENDED_ALERTS,
+  testNotification,
+} from '../logic/alerts';
 import { formatDate, parseAmount } from '../logic/format';
 import { METAL_LABEL, TROY_OUNCE } from '../logic/ledger';
 import type { Metal } from '../logic/types';
-import { type NotificationPermission, notificationPermission, requestNotificationPermission } from '../notifications';
+import {
+  type NotificationPermission,
+  notificationPermission,
+  notify,
+  requestNotificationPermission,
+} from '../notifications';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 
@@ -71,6 +83,26 @@ export default function AlertsScreen() {
     const added = missing.map((a) => createAlert(a));
     updateAccount((acc) => ({ ...acc, alerts: [...(acc.alerts ?? []), ...added] }));
     setMessage({ ok: true, text: `${added.length} alerte(s) recommandée(s) ajoutée(s).` });
+  }
+
+  async function testAll() {
+    const list = (account.alerts ?? []).filter((a) => a.enabled);
+    if (!list.length) return setMessage({ ok: false, text: 'Aucune alerte active à tester.' });
+    if (permission !== 'granted') {
+      const p = await requestNotificationPermission();
+      setPermission(p);
+      if (p !== 'granted') return setMessage({ ok: false, text: 'Autorisez les notifications pour faire le test.' });
+    }
+    setMessage({ ok: true, text: `Envoi de ${list.length} notifications de test…` });
+    for (const [i, a] of list.entries()) {
+      const n = testNotification(a, quote.prices, i, list.length);
+      await notify(n.title, n.body);
+      await new Promise((r) => setTimeout(r, 1200));
+    }
+    setMessage({
+      ok: true,
+      text: `${list.length} notifications de test envoyées : vérifiez le volet de notifications.`,
+    });
   }
 
   function remove(id: string) {
@@ -244,6 +276,14 @@ export default function AlertsScreen() {
         </Card>
       )}
       {alerts.length > 0 && <Hint>Appui long sur une alerte pour la supprimer.</Hint>}
+
+      {(account.alerts ?? []).some((a) => a.enabled) && (
+        <Button
+          title={`Tester mes ${(account.alerts ?? []).filter((a) => a.enabled).length} alertes sur ce téléphone`}
+          variant="ghost"
+          onPress={testAll}
+        />
+      )}
 
       <SectionTitle>Alertes déclenchées</SectionTitle>
       {events.length === 0 ? (

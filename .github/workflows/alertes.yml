@@ -12,6 +12,10 @@ on:
         description: 'Envoyer une notification de test'
         type: boolean
         default: false
+      tout:
+        description: 'Tester chaque alerte (une notification par alerte)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -43,6 +47,7 @@ jobs:
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           ALERT_TEST: ${{ inputs.test }}
+          ALERT_TEST_ALL: ${{ inputs.tout }}
         run: node server/check-alerts.ts
 
       - name: Garder l'état

@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+import { testNotification } from '../src/logic/alerts.ts';
 import { parseConfig, runOnce, sendNtfy, type ServerState } from './alertServer.ts';
 
 const CONFIG = new URL('./alerts.json', import.meta.url);
@@ -12,6 +13,8 @@ const STATE = process.env.ALERT_STATE || '.alert-state/state.json';
 const topic = process.env.NTFY_TOPIC?.trim();
 /** Lancement manuel avec « test » : envoie une notification de test avec les cours du moment. */
 const testMode = process.env.ALERT_TEST === 'true';
+/** Lancement manuel avec « tester chaque alerte » : une notification de test par alerte surveillée. */
+const testAll = process.env.ALERT_TEST_ALL === 'true';
 
 const readJson = (path: string | URL, fallback: unknown) => {
   try {
@@ -54,11 +57,15 @@ if (testMode && last) {
       `Alertes surveillées toutes les 15 min : Gold Spot ${count('gold')}, argent ${count('silver')}, platine ${count('platinum')}.`,
   });
 }
+if (testAll && last) {
+  config.forEach((c, i) => notifications.push(testNotification(c, last.prices, i, config.length)));
+}
 for (const n of notifications) {
   console.log(`Alerte : ${n.title} — ${n.body}`);
   if (topic) {
     try {
       await sendNtfy(topic, n);
+      if (notifications.length > 3) await new Promise((r) => setTimeout(r, 1500));
     } catch (e) {
       console.warn(`Envoi ntfy impossible : ${e}`);
     }

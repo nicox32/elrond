@@ -264,6 +264,22 @@ export const RECOMMENDED_ALERTS: (Pick<PriceAlert, 'metal' | 'kind' | 'value'> &
   { metal: 'platinum', kind: 'aboveAvg30', value: 8 },
 ];
 
+/** Notification de test d'une alerte : le message reçu quand sa condition sera remplie. */
+export function testNotification(
+  a: Pick<PriceAlert, 'metal' | 'kind' | 'value'> & Partial<Pick<PriceAlert, 'unit' | 'window'>>,
+  prices: Pick<Prices, 'gold' | 'silver' | 'platinum'>,
+  index?: number,
+  total?: number,
+): { title: string; body: string } {
+  const label = a.metal === 'gold' ? METAL_LABEL.gold : METAL_LABEL[a.metal].toLowerCase();
+  const desc = describeAlert({ id: '', enabled: true, armed: true, createdAt: '', ...a } as PriceAlert);
+  const n = index !== undefined && total ? ` (${index + 1}/${total})` : '';
+  return {
+    title: `Test${n} · Alerte ${label} · ${desc}`,
+    body: `Notification de test : c’est ce message que vous recevrez quand la condition sera remplie. Cours actuel : ${eur((prices[a.metal as 'gold'] ?? 0) * TROY_OUNCE)}/oz.`,
+  };
+}
+
 /** Nom de canal ntfy difficile à deviner. */
 export function generateNtfyTopic(): string {
   const alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
