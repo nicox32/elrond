@@ -2,7 +2,7 @@
  * L'Écu Orvia : jeton d'investissement maison, 1 g d'or fin 999,9 frappé pour Orvia et conservé au coffre.
  *
  * Son prix suit l'or en direct : prix d'un écu = 1 g × cours de l'or × (1 + prime). La prime couvre la frappe et
- * reflète la demande : Orvia la fixe (entre 0 et 15 %) et peut la faire varier. Elle est retrouvée à la revente.
+ * reflète la demande : Orvia la fixe (entre 1,5 et 10 %) et peut la faire varier. Elle est retrouvée à la revente.
  * Fiscalité : traité comme de l'or d'investissement (taxe forfaitaire ou plus-values), tant que le statut
  * particulier des jetons n'est pas confirmé par un texte officiel.
  */
@@ -17,8 +17,9 @@ export const ECU = {
   fineness: '999,9',
   /** Prime sur la valeur de l'or contenu, par défaut. */
   defaultPremium: 0.04,
-  minPremium: 0,
-  maxPremium: 0.15,
+  /** Fourchette réaliste : 1,5 % (proche de la prime réelle d'un or fractionné stocké) à 10 % (crise). */
+  minPremium: 0.015,
+  maxPremium: 0.1,
 } as const;
 
 export function clampPremium(p: number | undefined): number {
@@ -62,8 +63,9 @@ export const AUTO_PREMIUM = {
   flowPer1000: 0.001,
   flowMin: -0.005,
   flowMax: 0.01,
-  min: 0.01,
-  max: 0.12,
+  /** Plafond et plancher appliqués à la prime finale, après tous les effets et l'ajustement Orvia. */
+  min: ECU.minPremium,
+  max: ECU.maxPremium,
   /** Ajustement Orvia (Espace Dev), en points. */
   adjustMin: -0.03,
   adjustMax: 0.06,
@@ -177,7 +179,7 @@ export const PREMIUM_SCENARIOS: { id: string; label: string; offset: number; whe
     id: 'crisis',
     label: 'Crise',
     offset: 0.05,
-    when: 'Panique financière (2008, mars 2020) : pénurie de pièces et petits lingots, primes de 8 à 12 %.',
+    when: 'Panique financière (2008, mars 2020) : pénurie de pièces et petits lingots, primes de 8 à 10 %.',
   },
 ];
 

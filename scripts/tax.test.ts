@@ -351,3 +351,19 @@ test('Espace Dev : conseils pour monter, baisser ou garder la prime', async () =
   assert.equal(high.action, 'lower');
   close(high.toOffset, 0.045, 1e-9);
 });
+
+test('prime du Gold Oria : fourchette finale 1,5 – 10 %, après tous les effets et l’ajustement', async () => {
+  const { AUTO_PREMIUM, autoPremium } = await import('../src/logic/ecu.ts');
+  const at = new Date('2026-11-04T12:00:00Z');
+  assert.equal(AUTO_PREMIUM.min, 0.015);
+  assert.equal(AUTO_PREMIUM.max, 0.1);
+  // Tout au maximum : or 10 % sous sa moyenne, gros achats, ajustement +6 pt → plafonné à 10 %
+  const top = autoPremium({ at, gold: 90, goldAvg30: 100, netFlowEur: 1e6, adjustment: 0.06 });
+  assert.equal(top.premium, 0.1);
+  // Tout au minimum : or qui s'envole, ventes, ajustement −3 pt → plancher 1,5 %
+  const low = autoPremium({ at, gold: 150, goldAvg30: 100, netFlowEur: -1e6, adjustment: -0.03 });
+  assert.equal(low.premium, 0.015);
+  // Désaffection (−1,5 pt) sur un marché normal : reste dans la fourchette
+  const calm = autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: 0, adjustment: -0.015 });
+  assert.ok(calm.premium > 0.015 && calm.premium < 0.04);
+});
