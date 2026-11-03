@@ -138,6 +138,22 @@ export function retireGoldOria<W extends Wallet>(w: W): W {
   return { ...w, holdings: { ...holdings, gold: round(holdings.gold + grams) }, transactions: [tx, ...w.transactions] };
 }
 
+/**
+ * Vide les coffres du compte principal : métaux, historique des opérations et du solde remis à zéro. Le titulaire,
+ * le code, les réglages, les alertes, le compte d'attente et les comptes enfants sont gardés.
+ */
+export function resetVaults(account: Account): Account {
+  return {
+    ...account,
+    holdings: emptyHoldings(),
+    transactions: [],
+    balanceHistory: [],
+    history2021Imported: false,
+    dormancyChargedThrough: undefined,
+    cashEur: 0,
+  };
+}
+
 /** Met à niveau un compte enregistré par une ancienne version de l'appli. */
 export function migrateAccount(raw: unknown): Account | null {
   if (!raw || typeof raw !== 'object') return null;

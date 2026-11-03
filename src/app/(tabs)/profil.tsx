@@ -3,9 +3,11 @@ import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { History2021 } from '../../components/History2021';
+import { PinConfirm } from '../../components/PinConfirm';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate } from '../../logic/format';
+import { resetVaults } from '../../logic/ledger';
 import { loyalty } from '../../logic/loyalty';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { authenticateWithBiometrics, biometricsAvailable } from '../../security';
@@ -13,7 +15,8 @@ import { colors } from '../../theme';
 
 export default function ProfileScreen() {
   const account = useAccount();
-  const { updateSettings, resetAccount } = useBank();
+  const { updateSettings, resetAccount, updateAccount } = useBank();
+  const [vaultConfirm, setVaultConfirm] = useState(false);
   const [bioAvailable, setBioAvailable] = useState(false);
 
   useEffect(() => {
@@ -138,7 +141,21 @@ export default function ProfileScreen() {
 
       <SectionTitle>Compte</SectionTitle>
       <Hint>Cours réels de l’or, de l’argent et du platine au comptant, convertis en euros.</Hint>
+      <Button title="Vider mes coffres" variant="ghost" onPress={() => setVaultConfirm(true)} />
+      <Hint>
+        Remet à zéro vos métaux et votre historique d’opérations. Votre compte, votre code, vos alertes et les comptes
+        enfants sont gardés.
+      </Hint>
       <Button title="Fermer le compte" variant="danger" onPress={confirmReset} />
+      <PinConfirm
+        visible={vaultConfirm}
+        summary="Vider tous vos coffres : Gold Spot, argent et platine, et effacer l’historique des opérations."
+        onConfirm={() => {
+          setVaultConfirm(false);
+          updateAccount((acc) => resetVaults(acc));
+        }}
+        onCancel={() => setVaultConfirm(false)}
+      />
     </Screen>
   );
 }

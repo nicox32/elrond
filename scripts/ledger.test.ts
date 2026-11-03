@@ -713,13 +713,13 @@ test('relevés PDF : opérations de la période, soldes de début et de fin, avi
     now,
   });
   assert.match(last, /Relevé de compte · Compte principal/);
-  assert.match(last, /Crédit du compte d’attente/);
+  assert.doesNotMatch(last, /Crédit du compte d’attente|Compte d’attente</); // le compte d'attente n'y figure plus
   assert.match(last, /Achat d’argent · compte d’attente/);
   assert.doesNotMatch(last, /Vente/); // novembre : hors période
-  assert.match(last, /2 opération\(s\)/);
-  // Solde de début (1er octobre) : 2 g d'or ; de fin (31 octobre) : 400 € en attente
+  assert.match(last, /1 opération\(s\)/);
+  assert.match(last, /Frais d’achat payés<b>6,80/); // 6,8 % de 100 € d'argent
+  // Solde de début (1er octobre) : 2 g d'or
   assert.match(last, /Solde au 01 octobre 2026<\/div><div>Gold Spot<b>2,000 g/);
-  assert.match(last, /Compte d’attente<b>400,00/);
   // Coffre Gold Spot seul : l'achat d'argent n'y figure pas
   const vault = statementHtml({
     account: acc,
@@ -793,4 +793,17 @@ test('tableau de bord Société Orvia : revenus des frais, coûts estimés, seui
   assert.ok(r.costs.custody > 0 && r.costs.kyc === COMPANY.kycPerAccount);
   close(r.margin, r.revenue.total - r.costs.total, 0.02);
   assert.ok(r.breakEvenClients! > 1000);
+});
+
+test('vider mes coffres : métaux et historique à zéro, compte et enfants gardés', async () => {
+  const { resetVaults, addChild } = await import('../src/logic/ledger.ts');
+  const p = { gold: 100, silver: 1, platinum: 30 };
+  let acc = buy(createAccount('T'), p, 'gold', { unit: 'g', value: 5 });
+  acc = addChild(acc, 'Léo', '2015-03-05').account;
+  const r = resetVaults(acc);
+  assert.deepEqual(r.holdings, { gold: 0, silver: 0, platinum: 0 });
+  assert.equal(r.transactions.length, 0);
+  assert.equal(r.children.length, 1);
+  assert.equal(r.holder, 'T');
+  assert.equal(r.referral.code, acc.referral.code);
 });

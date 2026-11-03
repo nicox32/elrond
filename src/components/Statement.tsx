@@ -22,7 +22,7 @@ export function StatementCard({
   walletName,
   scope = { kind: 'all' },
 }: {
-  wallet?: Wallet & { cashEur?: number };
+  wallet?: Wallet;
   walletName: string;
   scope?: StatementScope;
 }) {

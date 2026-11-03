@@ -146,8 +146,12 @@ export default function TaxScreen() {
         </Bullet>
         <Bullet>
           Pas de seuil d’exonération pour l’or, l’argent et le platine : celui de 5 000 € concerne les bijoux et objets
-          d’art ou de collection. La taxe forfaitaire se déclare sur le formulaire 2091-SD, la plus-value sur le 2048-M
-          ; le professionnel qui rachète le métal s’en charge en général.
+          d’art ou de collection.
+        </Bullet>
+        <Bullet>
+          <Text style={styles.bold}>Orvia s’occupe de tout :</Text> à chaque vente, elle calcule l’impôt, le retient sur
+          le montant versé, remplit la déclaration (formulaire 2091-SD pour la taxe forfaitaire, 2048-M pour la
+          plus-value) et le reverse aux impôts. Vous n’avez rien à déclarer pour ces ventes.
         </Bullet>
         <Bullet>
           Sont concernés l’or, l’argent et le platine (lingots, barres, pièces frappées après 1800). Le palladium n’en

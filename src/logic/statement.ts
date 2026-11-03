@@ -38,10 +38,11 @@ export function periodRange(period: StatementPeriod, createdAt: string, now = ne
 }
 
 /** Ce que couvre un relevé : tout le compte, un seul métal (coffre), ou le compte d'attente. */
-export type StatementScope = { kind: 'all' } | { kind: 'metal'; metal: Metal } | { kind: 'cash' };
+export type StatementScope = { kind: 'all' } | { kind: 'metal'; metal: Metal };
 
 const inScope = (t: Transaction, scope: StatementScope) =>
-  scope.kind === 'all' ? true : scope.kind === 'cash' ? !!t.cash : (t.deltas[scope.metal] ?? 0) !== 0;
+  // Les mouvements du seul compte d'attente (crédit, retrait en euros) n'apparaissent pas sur les relevés de métal.
+  t.kind !== 'cash_in' && t.kind !== 'cash_out' && (scope.kind === 'all' || (t.deltas[scope.metal] ?? 0) !== 0);
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -61,21 +62,18 @@ function movement(t: Transaction, unit: WeightUnit): string {
   const parts = METALS.filter((m) => t.deltas[m]).map(
     (m) => `${formatWeightDelta(t.deltas[m], unit, m)} ${METAL_LABEL[m]}`,
   );
-  if (t.cash) parts.push(`${t.cash > 0 ? '+' : '−'}${formatEur(Math.abs(t.cash))} compte d’attente`);
   return parts.join('<br/>') || '—';
 }
 
 /** Soldes (métal et compte d'attente) à une date, en remontant l'historique depuis les soldes actuels. */
-function balancesAt(wallet: Wallet & { cashEur?: number }, at: Date) {
+function balancesAt(wallet: Wallet, at: Date) {
   const holdings = { ...wallet.holdings };
-  let cash = wallet.cashEur ?? 0;
   for (const t of wallet.transactions) {
     if (new Date(t.date).getTime() <= at.getTime()) continue;
     for (const m of METALS) holdings[m] -= t.deltas[m] ?? 0;
-    cash -= t.cash ?? 0;
   }
   for (const m of METALS) if (Math.abs(holdings[m]) < 1e-6) holdings[m] = 0;
-  return { holdings, cash: Math.round(cash * 100) / 100 };
+  return { holdings };
 }
 
 const STYLE = `
@@ -108,19 +106,18 @@ function header(account: Account, title: string, subtitle: string) {
   <div class="muted">${esc(subtitle)}</div>`;
 }
 
-function holdingsLines(holdings: Record<Metal, number>, cash: number, prices: Prices, unit: WeightUnit) {
+function holdingsLines(holdings: Record<Metal, number>, prices: Prices, unit: WeightUnit) {
   const rows = METALS.filter((m) => holdings[m] > 1e-6).map(
     (m) =>
       `<div>${METAL_LABEL[m]}<b>${formatQty(m, holdings[m], unit).replace(/ de .*$| d’.*$/, '')}</b><span class="muted">≈ ${formatEur(holdings[m] * prices[m])}</span></div>`,
   );
-  if (cash > 0) rows.push(`<div>Compte d’attente<b>${formatEur(cash)}</b></div>`);
   return rows.join('') || '<div>Aucun avoir</div>';
 }
 
 /** Relevé de compte (compte principal, compte enfant, coffre ou compte d'attente) sur une période. */
 export function statementHtml(input: {
   account: Account;
-  wallet: Wallet & { cashEur?: number };
+  wallet: Wallet;
   walletName: string;
   scope: StatementScope;
   period: StatementPeriod;
@@ -138,13 +135,10 @@ export function statementHtml(input: {
     .sort((a, b) => a.date.localeCompare(b.date));
   const opening = balancesAt(wallet, new Date(from.getTime() - 1));
   const closing = balancesAt(wallet, to);
-  const scopeLabel =
-    scope.kind === 'metal'
-      ? ` · coffre ${METAL_LABEL[scope.metal]}`
-      : scope.kind === 'cash'
-        ? ' · compte d’attente'
-        : '';
-  const fees = txs.reduce((s, t) => s + (t.fees ?? 0), 0);
+  const scopeLabel = scope.kind === 'metal' ? ` · coffre ${METAL_LABEL[scope.metal]}` : '';
+  const buyFees = txs.reduce((s, t) => s + (t.kind === 'buy' ? (t.fees ?? 0) : 0), 0);
+  const otherFees = txs.reduce((s, t) => s + (t.kind !== 'buy' && t.kind !== 'fee_dormancy' ? (t.fees ?? 0) : 0), 0);
+  const dormancy = txs.reduce((s, t) => s + (t.kind === 'fee_dormancy' ? t.eur : 0), 0);
   const taxes = txs.reduce((s, t) => s + (t.tax ?? 0), 0);
   const rows = txs
     .map(
@@ -153,19 +147,26 @@ export function statementHtml(input: {
         <td>${esc(t.label)}</td>
         <td>${movement(t, unit)}</td>
         <td class="num">${formatEur(t.eur)}</td>
-        <td class="num">${t.fees ? formatEur(t.fees) : ''}${t.tax ? `<br/><span class="muted">impôt ${formatEur(t.tax)}</span>` : ''}</td>
+        <td class="num">${t.kind === 'buy' ? (t.fees ? formatEur(t.fees) : t.label.includes('historique 2021') ? '<span class="muted">hors Orvia</span>' : '0,00 €') : ''}</td>
+        <td class="num">${t.kind !== 'buy' && t.fees ? formatEur(t.fees) : ''}${t.tax ? `<br/><span class="muted">impôt ${formatEur(t.tax)}</span>` : ''}</td>
       </tr>`,
     )
     .join('');
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Relevé ${esc(walletName)}</title><style>${STYLE}</style></head><body>
   ${header(account, `Relevé de compte · ${walletName}${scopeLabel}`, `${PERIOD_LABEL[period]} : du ${day(from)} au ${day(to)}`)}
-  <div class="box"><div class="muted">Solde au ${day(from)}</div>${holdingsLines(opening.holdings, opening.cash, prices, unit)}</div>
+  <div class="box"><div class="muted">Solde au ${day(from)}</div>${holdingsLines(opening.holdings, prices, unit)}</div>
   <table>
-    <thead><tr><th>Date</th><th>Opération</th><th>Mouvement</th><th class="num">Montant</th><th class="num">Frais / impôt</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="5" class="muted">Aucune opération sur la période.</td></tr>'}</tbody>
-    ${txs.length ? `<tfoot><tr class="tot"><td colspan="3">${txs.length} opération(s)</td><td></td><td class="num">${formatEur(fees)}${taxes ? `<br/>impôt ${formatEur(taxes)}` : ''}</td></tr></tfoot>` : ''}
+    <thead><tr><th>Date</th><th>Opération</th><th>Mouvement</th><th class="num">Montant</th><th class="num">Frais d’achat</th><th class="num">Autres frais / impôt</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="6" class="muted">Aucune opération sur la période.</td></tr>'}</tbody>
+    ${txs.length ? `<tfoot><tr class="tot"><td colspan="4">${txs.length} opération(s)</td><td class="num">${formatEur(buyFees)}</td><td class="num">${formatEur(otherFees)}${taxes ? `<br/>impôt ${formatEur(taxes)}` : ''}</td></tr></tfoot>` : ''}
   </table>
-  <div class="box"><div class="muted">Solde au ${day(to)}<br/>(valorisé au cours du jour d’édition)</div>${holdingsLines(closing.holdings, closing.cash, prices, unit)}</div>
+  <div class="box">
+    <div>Frais d’achat payés<b>${formatEur(buyFees)}</b></div>
+    <div>Frais de revente, virement et conversion<b>${formatEur(otherFees)}</b></div>
+    ${dormancy ? `<div>Frais d’oxydation<b>${formatEur(dormancy)}</b></div>` : ''}
+    <div>Impôt retenu et reversé pour vous<b>${formatEur(taxes)}</b></div>
+  </div>
+  <div class="box"><div class="muted">Solde au ${day(to)}<br/>(valorisé au cours du jour d’édition)</div>${holdingsLines(closing.holdings, prices, unit)}</div>
   <div class="foot">Orvia · métaux conservés en coffre-fort en port franc, propriété du titulaire, inscrits à son nom et séparés des biens d’Orvia.</div>
   </body></html>`;
 }
@@ -181,7 +182,7 @@ export function operationHtml(account: Account, walletName: string, t: Transacti
     ${line('Date', stamp(t.date))}
     ${line('Mouvement', movement(t, unit))}
     ${line('Montant', formatEur(t.eur))}
-    ${t.fees ? line('Frais', formatEur(t.fees)) : ''}
+    ${t.fees ? line(t.kind === 'buy' ? 'Frais d’achat' : 'Frais', formatEur(t.fees)) : ''}
     ${t.tax ? line(`Impôt retenu (${t.taxRegime === 'gain' ? 'régime des plus-values' : 'taxe forfaitaire'})`, formatEur(t.tax)) : ''}
     ${t.loyaltyLou ? line('Louis de fidélité échangés', `${t.loyaltyLou} LOU`) : ''}
   </table>

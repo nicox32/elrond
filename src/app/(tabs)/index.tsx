@@ -41,8 +41,7 @@ export default function AccountScreen() {
   const { quote } = useBank();
   const unit = account.settings.unit;
   const value = accountValue(account, quote.prices);
-  const cash = account.cashEur ?? 0;
-  const total = value.total + cash;
+  const total = value.total;
   const tax = estimateTax(account, quote.prices);
 
   return (
@@ -54,7 +53,7 @@ export default function AccountScreen() {
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Solde total</Text>
         <Text style={styles.balance}>{formatEur(total)}</Text>
-        <Text style={styles.sub}>Valeur de revente au cours actuel, compte d’attente compris</Text>
+        <Text style={styles.sub}>Valeur de revente au cours actuel</Text>
         <Pressable onPress={() => router.push('/fidelite')} accessibilityRole="link">
           <Text style={styles.loyalty}>★ {formatLou(loyalty(account).balance)} de fidélité ›</Text>
         </Pressable>
@@ -81,14 +80,6 @@ export default function AccountScreen() {
           )}
         </View>
       </View>
-
-      <Pressable onPress={() => router.push('/attente')} style={styles.cash} accessibilityRole="button">
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cashLabel}>Compte d’attente</Text>
-          <Text style={styles.cashValue}>{formatEur(cash)}</Text>
-        </View>
-        <Text style={ui.link}>{cash >= 1 ? 'Investir ›' : 'Créditer ›'}</Text>
-      </Pressable>
 
       <View style={styles.quickRow}>
         {QUICK.map((q) => (
@@ -229,19 +220,6 @@ export default function AccountScreen() {
 
 const styles = StyleSheet.create({
   loyalty: { color: colors.gold, fontSize: 13, fontWeight: '700', marginTop: 4 },
-  cash: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  cashLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  cashValue: { color: colors.text, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
   taxRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   taxText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   taxLink: { color: colors.gold, fontSize: 13, fontWeight: '700' },
