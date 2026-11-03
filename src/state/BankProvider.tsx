@@ -5,9 +5,7 @@ import { applyDormancy, createAccount, recordBalance } from '../logic/ledger';
 import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
-import { currentPremium, withEcu } from '../logic/ecu';
 import { marketStatus } from '../logic/market';
-import { premiumAdvice } from '../logic/premiumAdvice';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
 import { clearPin, hasPin, setPin } from '../security';
@@ -75,6 +73,8 @@ export function useAccount(): Account {
   return account;
 }
 
+const spotOnly = (p: Prices): Prices => ({ gold: p.gold, silver: p.silver, platinum: p.platinum });
+
 export function BankProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<Account | null>(null);
@@ -94,12 +94,8 @@ export function BankProvider({ children }: { children: ReactNode }) {
   const historyRef = useRef<PricePoint[]>([]);
   const hourlyRef = useRef<PricePoint[]>([]);
 
-  /** Cours avec le prix de l'Écu Orvia, selon la prime réglée (et pour d'anciens cours enregistrés sans écu). */
-  const pricesNow = useCallback(
-    (q: PriceQuote = quoteRef.current) =>
-      withEcu(q.prices, currentPremium(accountRef.current, q.prices.gold, hourlyRef.current).premium),
-    [],
-  );
+  /** Cours actuels (les anciens cours enregistrés peuvent contenir le Gold Oria arrêté : on ne garde que les métaux). */
+  const pricesNow = useCallback((q: PriceQuote = quoteRef.current) => spotOnly(q.prices), []);
 
   const persist = useCallback((next: Account | null) => {
     accountRef.current = next;
@@ -141,16 +137,6 @@ export function BankProvider({ children }: { children: ReactNode }) {
               r.events.forEach((e) => notify(e.title, e.body));
             }
           }
-          // Espace Dev activé : prévient quand l'appli conseille de monter ou baisser la prime du Gold Oria.
-          const dev = accountRef.current;
-          if (dev?.settings.devCodeHash) {
-            const advice = premiumAdvice(dev, live.prices.gold, hourly);
-            const actionable = advice.action === 'raise' || advice.action === 'lower';
-            if (actionable && dev.settings.devAdviceNotified !== advice.key) {
-              persist({ ...dev, settings: { ...dev.settings, devAdviceNotified: advice.key } });
-              notify('Espace Dev · prime du Gold Oria', `${advice.title}. ${advice.reasons[0]}`);
-            }
-          }
           const last = accountRef.current?.balanceHistory.at(-1);
           if (!periodic || !last || Date.now() - new Date(last.date).getTime() >= PERIODIC_BALANCE_MS) snapshot();
         } catch {
@@ -186,7 +172,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
       }
       // Ouverture : prélève les frais d'oxydation dus depuis la dernière visite.
       const base = (cached ?? quoteRef.current).prices;
-      const prices = withEcu(base, currentPremium(acc, base.gold, hourly).premium);
+      const prices = spotOnly(base);
       const charged = acc ? applyDormancy(acc, prices) : null;
       if (charged && charged !== acc) saveAccount(charged);
       accountRef.current = charged;
@@ -289,15 +275,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
     setLocked(true);
   }, [persist]);
 
-  // Prix du Gold Oria : cours de l'or × (1 + prime), prime manuelle ou du marché simulé.
-  const ecuPremium = useMemo(
-    () => currentPremium(account, quote.prices.gold, hourlyHistory, new Date()),
-    [account, quote, hourlyHistory],
-  );
-  const pricedQuote = useMemo(
-    () => ({ ...quote, prices: withEcu(quote.prices, ecuPremium.premium) }),
-    [quote, ecuPremium],
-  );
+  const pricedQuote = useMemo(() => ({ ...quote, prices: spotOnly(quote.prices) }), [quote]);
 
   const value = useMemo<BankContextValue>(
     () => ({

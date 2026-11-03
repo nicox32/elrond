@@ -35,11 +35,12 @@ export function TransactionRow({
   walletName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const parts = METALS.filter((m) => tx.deltas[m]).map((m) =>
-    m === 'ecu'
-      ? `${formatWeightDelta(tx.deltas[m], unit, m)} Gold Oria`
-      : `${formatWeightDelta(tx.deltas[m], unit)} ${m === 'gold' ? METAL_LABEL[m] : METAL_LABEL[m].toLowerCase()}`,
+  const parts = METALS.filter((m) => tx.deltas[m]).map(
+    (m) => `${formatWeightDelta(tx.deltas[m], unit)} ${m === 'gold' ? METAL_LABEL[m] : METAL_LABEL[m].toLowerCase()}`,
   );
+  // Anciennes opérations en Gold Oria (jeton arrêté) : affichées telles qu'elles ont eu lieu.
+  const oria = (tx.deltas as Record<string, number>).ecu;
+  if (oria) parts.push(`${oria > 0 ? '+' : '−'}${Math.abs(oria).toFixed(3).replace('.', ',')} g Gold Oria`);
   if (tx.kind === 'cash_in' || tx.kind === 'cash_out')
     parts.push(`compte d’attente ${tx.kind === 'cash_in' ? '+' : '−'}${formatEur(tx.eur)}`);
   else if (tx.cash) parts.push(`payé depuis le compte d’attente`);

@@ -134,7 +134,7 @@ test('migration d’un compte de la première version', () => {
   const acc = migrateAccount(v1);
   assert.ok(acc);
   assert.equal(acc.version, 2);
-  assert.deepEqual(acc.holdings, { gold: 2, silver: 50, platinum: 0, ecu: 0 });
+  assert.deepEqual(acc.holdings, { gold: 2, silver: 50, platinum: 0 });
   assert.equal(acc.transactions[0].kind, 'buy');
   assert.equal(acc.iban, 'FR76 1111');
   assert.equal(migrateAccount(null), null);
@@ -638,7 +638,7 @@ test('compte enfant : retraits motivés et validés par le second parent, annula
 test('compte d’attente : crédit, achat réparti depuis le compte, retrait', async () => {
   const { creditCash, withdrawCash, lastMovement } = await import('../src/logic/ledger.ts');
   const { buySplit, splitAmount } = await import('../src/logic/allocation.ts');
-  const p = { gold: 100, silver: 1, platinum: 30, ecu: 104 };
+  const p = { gold: 100, silver: 1, platinum: 30 };
   const now = new Date('2026-11-02T10:00:00Z');
   let acc = creditCash(createAccount('T', new Date('2026-01-01')), 1000, 'transfer', now);
   assert.equal(acc.cashEur, 1000);
@@ -665,7 +665,7 @@ test('compte d’attente : crédit, achat réparti depuis le compte, retrait', a
 test('fidélité : points modestes pour l’épargne régulière, échange contre du métal', async () => {
   const { loyalty, LOYALTY } = await import('../src/logic/loyalty.ts');
   const { redeemLoyalty } = await import('../src/logic/ledger.ts');
-  const p = { gold: 100, silver: 1, platinum: 30, ecu: 104 };
+  const p = { gold: 100, silver: 1, platinum: 30 };
   let acc = createAccount('T', new Date('2021-01-05'));
   // 12 achats mensuels de 320 € en 2021
   for (let m = 0; m < 12; m++)
@@ -686,8 +686,8 @@ test('fidélité : points modestes pour l’épargne régulière, échange contr
   assert.ok(l.earned / 3840 < 0.01 * 5);
   // Échange : 10 LOU minimum, 1 LOU = 1 € de métal sans frais
   assert.throws(() => redeemLoyalty(acc, p, 5, 'gold', now), LedgerError);
-  const r = redeemLoyalty(acc, p, 20, 'ecu', now);
-  close(r.holdings.ecu, 20 / p.ecu);
+  const r = redeemLoyalty(acc, p, 20, 'gold', now);
+  close(r.holdings.gold - acc.holdings.gold, 20 / p.gold);
   assert.equal(loyalty(r, now).balance, l.earned - 20);
   assert.throws(() => redeemLoyalty(r, p, 50, 'gold', now), LedgerError);
   assert.equal(LOYALTY.minRedeem, 10);
@@ -696,7 +696,7 @@ test('fidélité : points modestes pour l’épargne régulière, échange contr
 test('relevés PDF : opérations de la période, soldes de début et de fin, avis d’opération', async () => {
   const { statementHtml, operationHtml } = await import('../src/logic/statement.ts');
   const { creditCash } = await import('../src/logic/ledger.ts');
-  const p = { gold: 100, silver: 1, platinum: 30, ecu: 104 };
+  const p = { gold: 100, silver: 1, platinum: 30 };
   let acc = createAccount('Nicolas', new Date('2026-09-01'));
   acc = buy(acc, p, 'gold', { unit: 'g', value: 2 }, new Date('2026-09-10'));
   acc = creditCash(acc, 500, 'transfer', new Date('2026-10-03'));
@@ -778,4 +778,19 @@ test('place de Londres : séance 9 h – 18 h (heure de Paris) en semaine', asyn
   assert.equal(londonStatus(new Date('2026-11-04T18:00:00Z')).next, 'ouvre demain à 9 h'); // 19 h
   assert.equal(londonStatus(new Date('2026-11-06T18:00:00Z')).next, 'ouvre lundi à 9 h'); // vendredi 19 h
   assert.equal(londonStatus(new Date('2026-11-07T12:00:00Z')).open, false); // samedi
+});
+
+test('tableau de bord Société Orvia : revenus des frais, coûts estimés, seuil de rentabilité', async () => {
+  const { companyReport, COMPANY } = await import('../src/logic/company.ts');
+  const p = { gold: 100, silver: 1, platinum: 30 };
+  let acc = createAccount('T', new Date('2025-11-01'));
+  acc = buy(acc, p, 'silver', { unit: 'eur', value: 1000 }, new Date('2026-01-10'));
+  acc = buy(acc, p, 'gold', { unit: 'eur', value: 500 }, new Date('2026-02-10'));
+  acc = sell(acc, p, 'gold', { unit: 'g', value: 1 }, 'deferred', new Date('2026-03-10'));
+  const r = companyReport(acc, p, 'year', new Date('2026-11-01'));
+  close(r.revenue.buy, 1000 * 0.068 + 500 * 0.028, 0.02);
+  close(r.revenue.sale, 100 * FEES.sale, 0.02);
+  assert.ok(r.costs.custody > 0 && r.costs.kyc === COMPANY.kycPerAccount);
+  close(r.margin, r.revenue.total - r.costs.total, 0.02);
+  assert.ok(r.breakEvenClients! > 1000);
 });

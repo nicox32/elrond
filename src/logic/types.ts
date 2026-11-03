@@ -5,17 +5,17 @@ export type SpotMetal = 'gold' | 'silver' | 'platinum';
 
 export const SPOT_METALS: SpotMetal[] = ['gold', 'silver', 'platinum'];
 
-/** Actifs détenus : les trois métaux et l'Écu Orvia (jeton d'1 g d'or fin, voir ecu.ts). */
-export type Metal = SpotMetal | 'ecu';
+/** Métaux détenus. */
+export type Metal = SpotMetal;
 
-export const METALS: Metal[] = ['gold', 'silver', 'platinum', 'ecu'];
+export const METALS: Metal[] = ['gold', 'silver', 'platinum'];
 
 export type SpotPrices = Record<SpotMetal, number>;
 
-/** Prix en euros par gramme pour chaque métal ; pour l'écu, prix d'un écu. */
+/** Prix en euros par gramme, pour chaque métal. */
 export type Prices = Record<Metal, number>;
 
-/** Quantités en grammes pour chaque métal ; pour l'écu, nombre d'écus (1 écu = 1 g d'or fin). */
+/** Quantités en grammes, pour chaque métal. */
 export type Holdings = Record<Metal, number>;
 
 export type PriceSource = 'live' | 'cache' | 'reference';
@@ -109,18 +109,8 @@ export interface Settings {
   biometrics: boolean;
   /** Répartition cible des achats, en % par métal (total 100). */
   allocation?: Record<SpotMetal, number>;
-  /** Anciens réglages manuels de la prime du Gold Oria (ignorés : la prime est toujours automatique). */
-  ecuPremium?: number;
-  ecuPremiumMode?: 'auto' | 'manual';
-  /**
-   * Espace Dev : ajustements de la prime du Gold Oria décidés par Orvia, en points (0,01 = 1 point),
-   * chacun valable à partir de sa date.
-   */
-  ecuPremiumAdjustments?: { at: string; offset: number; reason?: string }[];
-  /** Espace Dev : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
+  /** Tableau de bord Société Orvia : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
   devCodeHash?: string;
-  /** Dernier conseil de prime notifié, pour ne pas le répéter. */
-  devAdviceNotified?: string;
 }
 
 /** Ce qu'un compte détient et son historique (compte principal ou compte enfant). */

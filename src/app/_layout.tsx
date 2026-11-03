@@ -61,7 +61,7 @@ function AppStack() {
       <Stack.Screen name="repartition" options={{ title: 'Répartition' }} />
       <Stack.Screen name="fidelite" options={{ title: 'Fidélité' }} />
       <Stack.Screen name="attente" options={{ title: 'Compte d’attente' }} />
-      <Stack.Screen name="dev" options={{ title: 'Espace Dev' }} />
+      <Stack.Screen name="dev" options={{ title: 'Société Orvia' }} />
       <Stack.Screen name="or-fractionne" options={{ title: 'L’or fractionné' }} />
       <Stack.Screen name="fiscalite" options={{ title: 'Plus-value et impôts' }} />
     </Stack>

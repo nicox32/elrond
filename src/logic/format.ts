@@ -24,7 +24,7 @@ export function formatWeightDelta(grams: number, unit: WeightUnit = 'g', metal?:
   return `${grams > 0 ? '+' : grams < 0 ? '−' : ''}${formatWeight(Math.abs(grams), unit, metal)}`;
 }
 
-/** « 2,500 g de Gold Spot », « 3,000 g de Gold Oria ». */
+/** « 2,500 g de Gold Spot », « 30,00 g d’argent ». */
 export function formatQty(metal: Metal, grams: number, unit: WeightUnit = 'g'): string {
   return `${formatWeight(grams, unit)} ${METAL_OF[metal]}`;
 }

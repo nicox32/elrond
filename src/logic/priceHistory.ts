@@ -40,9 +40,7 @@ export interface MetalTrend {
 
 /** Évolution d'un métal sur les relevés gardés (jusqu'à 24 h), terminée par le cours actuel. */
 export function metalTrend(history: PricePoint[], metal: Metal, current: Prices): MetalTrend {
-  // L'écu suit l'or : sa courbe est celle de l'or, à la prime actuelle.
-  const ecuRatio = current.gold > 0 ? current.ecu / current.gold : 0;
-  const values = history.map((p) => (metal === 'ecu' ? p.prices.gold * ecuRatio : p.prices[metal]));
+  const values = history.map((p) => p.prices[metal]);
   if (values.length === 0 || values[values.length - 1] !== current[metal]) values.push(current[metal]);
   const first = values[0];
   return {

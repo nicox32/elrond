@@ -1,4 +1,4 @@
-import { DEFERRED_DAYS, FEES, resaleUnit, type SaleSpeed } from './fees.ts';
+import { DEFERRED_DAYS, FEES, type SaleSpeed } from './fees.ts';
 import { LOYALTY, loyalty } from './loyalty.ts';
 import { gramsForNet, type SaleTax, saleTax } from './tax.ts';
 import {
@@ -34,7 +34,6 @@ export const METAL_LABEL: Record<Metal, string> = {
   gold: 'Gold Spot',
   silver: 'Argent',
   platinum: 'Platine',
-  ecu: 'Gold Oria',
 };
 
 /** « d'or », « d'argent », « de platine ». */
@@ -42,11 +41,10 @@ export const METAL_OF: Record<Metal, string> = {
   gold: 'de Gold Spot',
   silver: 'd’argent',
   platinum: 'de platine',
-  ecu: 'de Gold Oria',
 };
 
 export function emptyHoldings(): Holdings {
-  return { gold: 0, silver: 0, platinum: 0, ecu: 0 };
+  return { gold: 0, silver: 0, platinum: 0 };
 }
 
 /** Prix effectif d'un gramme à l'achat, frais de gestion compris (frais en part du montant payé). */
@@ -56,7 +54,7 @@ export function buyPrice(prices: Prices, metal: Metal): number {
 
 /** Prix net d'un gramme à la revente par virement, hors frais fixe vers l'étranger. */
 export function sellPrice(prices: Prices, metal: Metal, speed: SaleSpeed = 'deferred'): number {
-  return resaleUnit(prices, metal) * (1 - FEES.sale - (speed === 'immediate' ? FEES.immediateSpread : 0));
+  return prices[metal] * (1 - FEES.sale - (speed === 'immediate' ? FEES.immediateSpread : 0));
 }
 
 /** Valeur de revente d'un compte en euros (virement différé en France), par métal et au total. */
@@ -105,20 +103,50 @@ export function createAccount(holder: string, now = new Date()): Account {
   };
 }
 
+/** Prime de revente du Gold Oria au moment de son arrêt : 1 g de Gold Oria valait environ 1,015 g d'or. */
+const GOLD_ORIA_TO_GOLD = 1.015;
+
+/**
+ * Le jeton Gold Oria a été arrêté : le solde restant (1 g de Gold Oria = 1 g d'or fin) est converti en Gold Spot,
+ * sans frais, à sa valeur de revente ; le prix de revient d'origine est conservé pour l'impôt.
+ */
+export function retireGoldOria<W extends Wallet>(w: W): W {
+  const raw = w.holdings as Record<string, number>;
+  const ecu = Number(raw.ecu) || 0;
+  const holdings = { ...emptyHoldings(), gold: raw.gold ?? 0, silver: raw.silver ?? 0, platinum: raw.platinum ?? 0 };
+  if (ecu <= 1e-9) return { ...w, holdings };
+  let gramsIn = 0;
+  let eurIn = 0;
+  for (const t of w.transactions) {
+    const d = (t.deltas as Record<string, number>).ecu ?? 0;
+    if (d <= 0) continue;
+    gramsIn += d;
+    if (t.kind === 'buy' || t.kind === 'family_in') eurIn += t.eur;
+    else if (t.kind === 'convert') eurIn += t.eur * (1 - FEES.conversion) - (t.tax ?? 0);
+  }
+  const cost = gramsIn > 0 ? (eurIn * ecu) / gramsIn : 0;
+  const grams = round(ecu * GOLD_ORIA_TO_GOLD);
+  const tx: Transaction = {
+    id: newId(),
+    kind: 'convert',
+    date: new Date().toISOString(),
+    deltas: { gold: grams, silver: 0, platinum: 0 },
+    // Le nouveau lot d'or garde le prix de revient du Gold Oria (voir holdingLots).
+    eur: round(cost / (1 - FEES.conversion), 2),
+    label: `Gold Oria arrêté : ${ecu.toFixed(3).replace('.', ',')} g convertis en Gold Spot, sans frais`,
+  };
+  return { ...w, holdings: { ...holdings, gold: round(holdings.gold + grams) }, transactions: [tx, ...w.transactions] };
+}
+
 /** Met à niveau un compte enregistré par une ancienne version de l'appli. */
 export function migrateAccount(raw: unknown): Account | null {
   if (!raw || typeof raw !== 'object') return null;
   const a = raw as Record<string, any>;
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
-    // L'Écu Orvia est arrivé après : solde à zéro sur les comptes existants.
-    const withEcu = <W extends { holdings: Record<string, number> }>(w: W): W => ({
-      ...w,
-      holdings: { ...emptyHoldings(), ...w.holdings },
-    });
     return {
-      ...withEcu(a as Account),
-      children: Array.isArray(a.children) ? a.children.map(withEcu) : [],
+      ...retireGoldOria(a as Account),
+      children: Array.isArray(a.children) ? a.children.map(retireGoldOria) : [],
       referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
     };
   }
@@ -137,7 +165,7 @@ export function migrateAccount(raw: unknown): Account | null {
         id: String(t.id),
         kind: kindMap[t.kind] ?? 'buy',
         date: String(t.date),
-        deltas: { gold: Number(t.goldDelta) || 0, silver: Number(t.silverDelta) || 0, platinum: 0, ecu: 0 },
+        deltas: { gold: Number(t.goldDelta) || 0, silver: Number(t.silverDelta) || 0, platinum: 0 },
         eur: Number(t.eur) || 0,
         label: String(t.label ?? ''),
       }))
@@ -145,7 +173,7 @@ export function migrateAccount(raw: unknown): Account | null {
   return {
     ...base,
     iban: typeof a.iban === 'string' ? a.iban : base.iban,
-    holdings: { gold: Number(a.goldGrams) || 0, silver: Number(a.silverGrams) || 0, platinum: 0, ecu: 0 },
+    holdings: { gold: Number(a.goldGrams) || 0, silver: Number(a.silverGrams) || 0, platinum: 0 },
     transactions,
   };
 }
@@ -315,7 +343,7 @@ export function quoteSale(
   const gross = grams * net - fixed;
   const tax = wallet ? saleTax(wallet, metal, grams, Math.max(0, gross), now) : null;
   const received = gross - (tax?.tax ?? 0);
-  return { grams, gross, received, fees: grams * resaleUnit(prices, metal) - gross, tax };
+  return { grams, gross, received, fees: grams * prices[metal] - gross, tax };
 }
 
 /** Vend du métal ; les euros sont versés sur le compte bancaire du titulaire (fictif, en France). */
@@ -350,8 +378,8 @@ export function quoteConvert(
   wallet?: Pick<Wallet, 'transactions'>,
   now = new Date(),
 ) {
-  const grams = toGrams(q, resaleUnit(prices, from));
-  const gross = grams * resaleUnit(prices, from);
+  const grams = toGrams(q, prices[from]);
+  const gross = grams * prices[from];
   // Échanger un métal contre un autre est une cession : l'impôt est retenu avant le rachat.
   const cession = gross * (1 - FEES.conversion);
   const tax = wallet ? saleTax(wallet, from, grams, cession, now) : null;
@@ -954,7 +982,7 @@ function cardDebit(
   // Paiements et retraits par carte : revente du métal sans frais, au cours du moment. C'est une cession : on vend
   // un peu plus de métal pour couvrir l'impôt, le commerçant reçoit le montant exact.
   const metal = card.fundingMetal;
-  const unitPrice = resaleUnit(prices, metal);
+  const unitPrice = prices[metal];
   const grams = gramsForNet(account, metal, amount, unitPrice, 0, now);
   const tax = saleTax(account, metal, grams, grams * unitPrice, now);
   return apply(account, kind, { [metal]: -grams }, amount, label, now, 0, tax);

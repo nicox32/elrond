@@ -14,7 +14,7 @@ export default function LoyaltyScreen() {
   const account = useAccount();
   const { commit } = useBank();
   const l = loyalty(account);
-  const [metal, setMetal] = useState<Metal>('ecu');
+  const [metal, setMetal] = useState<Metal>('gold');
   const [text, setText] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const L = LOYALTY;

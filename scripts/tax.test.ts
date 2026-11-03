@@ -187,194 +187,31 @@ test('compte enfant : le don compte à sa valeur et à sa date de versement', as
   );
 });
 
-test('Écu Orvia : prix = 1 g d’or × (1 + prime), achat, vente avec impôt, ancien compte migré', async () => {
-  const { ECU, ecuPrice, withEcu } = await import('../src/logic/ecu.ts');
+test('Gold Oria arrêté : solde converti en Gold Spot sans frais, prix de revient conservé', async () => {
   const { migrateAccount } = await import('../src/logic/ledger.ts');
-  close(ecuPrice(100), 100 * (1 + ECU.defaultPremium), 1e-9);
-  close(ecuPrice(100, 0.1), 110, 1e-9);
-  close(ecuPrice(100, 0.5), 100 * (1 + ECU.maxPremium), 1e-9); // prime plafonnée
-  const p2021 = withEcu({ gold: 100, silver: 1, platinum: 30 });
-  let acc = buy(createAccount('T'), p2021, 'ecu', { unit: 'g', value: 3 }, new Date('2021-06-01'));
-  assert.equal(acc.holdings.ecu, 3);
-  close(acc.transactions[0].eur, (3 * 100 * (1 + ECU.defaultPremium)) / (1 - FEES.buy.ecu));
-  // L'or monte : l'écu suit, l'impôt s'applique comme pour l'or
-  const p2026 = withEcu({ gold: 150, silver: 1, platinum: 30 });
-  acc = sell(acc, p2026, 'ecu', { unit: 'g', value: 1 }, 'deferred', new Date('2026-11-02'));
-  // Régime des jetons : vente jusqu'à 5 000 € exonérée
-  assert.ok(!acc.transactions[0].tax);
-  close(acc.holdings.ecu, 2, 1e-9);
-  // Compte enregistré avant l'écu : solde à zéro ajouté
-  const old = migrateAccount({ ...createAccount('V'), holdings: { gold: 1, silver: 0, platinum: 0 } });
-  assert.equal(old!.holdings.ecu, 0);
-});
-
-test('Écu Orvia : régime des jetons (exonéré jusqu’à 5 000 €, puis 6,5 % ou plus-values)', async () => {
-  const { withEcu } = await import('../src/logic/ecu.ts');
-  const { saleTax, gramsForNet } = await import('../src/logic/tax.ts');
-  const now = new Date('2026-11-02');
-  const p = withEcu({ gold: 111.99, silver: 1, platinum: 30 });
-  // Exemple d'une once : 31,1035 écus achetés 1 600 € en 2021
-  let acc = createAccount('T');
-  acc = buy(
-    acc,
-    withEcu({ gold: 49.5, silver: 1, platinum: 30 }),
-    'ecu',
-    { unit: 'eur', value: 1600 },
-    new Date('2021-03-01'),
-  );
-  const price = acc.holdings.ecu * p.ecu * (1 - FEES.sale);
-  const small = saleTax(acc, 'ecu', acc.holdings.ecu, price, now);
-  assert.ok(price < 5000);
-  assert.equal(small.tax, 0);
-  assert.equal(small.tokenExempt, true);
-  // Au-delà de 5 000 € : 6,5 % du prix ou plus-values (le moins cher)
-  const big = buy(
-    createAccount('T'),
-    withEcu({ gold: 100, silver: 1, platinum: 30 }),
-    'ecu',
-    { unit: 'g', value: 60 },
-    new Date('2021-03-01'),
-  );
-  const bigPrice = 60 * p.ecu * (1 - FEES.sale);
-  const t = saleTax(big, 'ecu', 60, bigPrice, now);
-  assert.ok(bigPrice > 5000);
-  close(t.flatTax, bigPrice * 0.065);
-  close(t.tax, Math.min(t.flatTax, t.gainTax ?? Infinity));
-  // Saisie en euros juste sous le seuil : montant exact, sans impôt
-  close(gramsForNet(big, 'ecu', 4990, p.ecu * (1 - FEES.sale), 0, now) * p.ecu * (1 - FEES.sale), 4990);
-});
-
-test('prime automatique du Gold Oria : or sous sa moyenne, demande simulée, vos achats', async () => {
-  const { AUTO_PREMIUM, autoPremium, communityDemand, currentPremium, ecuNetFlow } =
-    await import('../src/logic/ecu.ts');
-  const at = new Date('2026-11-02T12:00:00Z');
-  const flat = autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: 0 });
-  close(flat.premium, AUTO_PREMIUM.base + communityDemand(at), 1e-9);
-  // Or 5 % sous sa moyenne : +2 pt
-  const dip = autoPremium({ at, gold: 95, goldAvg30: 100, netFlowEur: 0 });
-  close(dip.market!, 0.02, 1e-9);
-  assert.ok(dip.premium > flat.premium);
-  // Or qui s'envole : effet plafonné à −1 pt
-  close(autoPremium({ at, gold: 130, goldAvg30: 100, netFlowEur: 0 }).market!, -0.01, 1e-9);
-  // Achats nets de 3 000 € sur 7 jours : +0,3 pt ; ventes : baisse
-  close(autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: 3000 }).flow, 0.003, 1e-9);
-  assert.ok(autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: -3000 }).flow < 0);
-  // La demande simulée bouge au fil des jours, dans ses bornes
-  const days = Array.from({ length: 60 }, (_, i) => communityDemand(new Date(at.getTime() + i * 86_400_000)));
-  assert.ok(Math.max(...days) - Math.min(...days) > 0.004);
-  assert.ok(days.every((d) => Math.abs(d) <= 0.0066));
-  // Toujours entre 1 % et 10 %
-  assert.ok(autoPremium({ at, gold: 50, goldAvg30: 100, netFlowEur: 1e7 }).premium <= AUTO_PREMIUM.max);
-  // Flux : achats de Gold Oria uniquement, sur 7 jours
-  const tx = [
-    { kind: 'buy', date: '2026-10-30T00:00:00Z', eur: 2000, deltas: { ecu: 15 } },
-    { kind: 'sell', date: '2026-10-31T00:00:00Z', eur: 500, deltas: { ecu: -4 } },
-    { kind: 'buy', date: '2026-10-31T00:00:00Z', eur: 900, deltas: { gold: 7 } },
-    { kind: 'buy', date: '2026-10-01T00:00:00Z', eur: 9000, deltas: { ecu: 70 } },
-  ];
-  assert.equal(ecuNetFlow(tx, at), 1500);
-  // Ajustement Orvia (Espace Dev) : valable à partir de sa date, l'ancien mode manuel est ignoré
-  const settings = {
-    unit: 'g' as const,
-    biometrics: false,
-    ecuPremiumMode: 'manual' as const,
-    ecuPremium: 0.15,
-    ecuPremiumAdjustments: [{ at: '2026-11-01T00:00:00Z', offset: 0.02 }],
+  const acc = createAccount('T', new Date('2026-01-01'));
+  const legacy = {
+    ...acc,
+    holdings: { gold: 2, silver: 0, platinum: 0, ecu: 10 },
+    transactions: [
+      {
+        id: 'a',
+        kind: 'buy',
+        date: '2026-02-01T10:00:00Z',
+        deltas: { gold: 0, silver: 0, platinum: 0, ecu: 10 },
+        eur: 1250,
+        label: 'Achat de Gold Oria',
+      },
+    ],
   };
-  const before = currentPremium({ settings, transactions: [] }, 100, [], new Date('2026-10-31T00:00:00Z'));
-  const after = currentPremium({ settings, transactions: [] }, 100, [], at);
-  assert.equal(before.adjustment, 0);
-  assert.equal(after.adjustment, 0.02);
-  assert.ok(after.premium < 0.1 && after.premium > before.premium);
-});
-
-test('Espace Dev : conseils pour monter, baisser ou garder la prime', async () => {
-  const { premiumAdvice } = await import('../src/logic/premiumAdvice.ts');
-  const now = new Date('2026-11-02T12:00:00Z');
-  const hist = (f: (daysAgo: number) => number) =>
-    Array.from({ length: 20 * 24 }, (_, i) => {
-      const h = 20 * 24 - i;
-      return {
-        t: new Date(now.getTime() - h * 3_600_000).toISOString(),
-        prices: { gold: f(h / 24), silver: 1, platinum: 30, ecu: 0 },
-      };
-    });
-  const base = { unit: 'g' as const, biometrics: false };
-  // Pas assez de données
-  assert.equal(premiumAdvice({ settings: base }, 100, [], now).action, 'wait-data');
-  // Marché stable : garder
-  const flat = premiumAdvice(
-    { settings: base },
-    100,
-    hist(() => 100),
-    now,
+  const m = migrateAccount(legacy)!;
+  assert.equal((m.holdings as Record<string, number>).ecu, undefined);
+  close(m.holdings.gold, 2 + 10 * 1.015, 1e-6);
+  assert.match(m.transactions[0].label, /Gold Oria arrêté/);
+  const lots = holdingLots(m).gold;
+  close(
+    lots.reduce((s, l) => s + l.cost, 0),
+    1250,
+    0.05,
   );
-  assert.equal(flat.action, 'hold');
-  // Or 5 % sous sa moyenne : monter par palier de 0,5 pt vers « Forte demande »
-  const dip = premiumAdvice(
-    { settings: base },
-    95.9,
-    hist((d) => 96 + 8 * (d / 20)),
-    now,
-  );
-  assert.equal(dip.action, 'raise');
-  assert.equal(dip.scenario.id, 'demand');
-  close(dip.toOffset, 0.005, 1e-9);
-  // Krach sur 7 jours : crise, on rejoint directement +5 pt, même juste après un ajustement
-  const recent = { ...base, ecuPremiumAdjustments: [{ at: '2026-11-01T00:00:00Z', offset: 0.005 }] };
-  const crash = premiumAdvice(
-    { settings: recent },
-    88,
-    hist((d) => (d > 7 ? 100 : 100 - (7 - d) * 1.5)),
-    now,
-  );
-  assert.equal(crash.scenario.id, 'crisis');
-  assert.equal(crash.action, 'raise');
-  close(crash.toOffset, 0.05, 1e-9);
-  // Hors crise, un ajustement il y a 1 jour : attendre
-  const wait = premiumAdvice(
-    { settings: recent },
-    95.9,
-    hist((d) => 96 + 8 * (d / 20)),
-    now,
-  );
-  assert.equal(wait.action, 'hold');
-  assert.match(wait.title, /Attendez/);
-  // Or au plus haut (+8 % vs moyenne, +4 % sur 7 j) avec un ajustement de crise ancien : baisser
-  const old = { ...base, ecuPremiumAdjustments: [{ at: '2026-09-01T00:00:00Z', offset: 0.05 }] };
-  const high = premiumAdvice(
-    { settings: old },
-    108,
-    hist((d) => (d > 7 ? 100 : 104)),
-    now,
-  );
-  assert.equal(high.action, 'lower');
-  close(high.toOffset, 0.045, 1e-9);
-});
-
-test('prime du Gold Oria : fourchette finale 1 – 10 %, après tous les effets et l’ajustement', async () => {
-  const { AUTO_PREMIUM, autoPremium } = await import('../src/logic/ecu.ts');
-  const at = new Date('2026-11-04T12:00:00Z');
-  assert.equal(AUTO_PREMIUM.min, 0.01);
-  assert.equal(AUTO_PREMIUM.max, 0.1);
-  // Tout au maximum : or 10 % sous sa moyenne, gros achats, ajustement +6 pt → plafonné à 10 %
-  const top = autoPremium({ at, gold: 90, goldAvg30: 100, netFlowEur: 1e6, adjustment: 0.06 });
-  assert.equal(top.premium, 0.1);
-  // Tout au minimum : or qui s'envole, ventes, ajustement −3 pt → plancher 1 %
-  const low = autoPremium({ at, gold: 150, goldAvg30: 100, netFlowEur: -1e6, adjustment: -0.03 });
-  assert.equal(low.premium, 0.01);
-  // Désaffection (−1,5 pt) sur un marché normal : reste dans la fourchette
-  const calm = autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: 0, adjustment: -0.015 });
-  assert.ok(calm.premium >= 0.01 && calm.premium < 0.03);
-});
-
-test('Gold Oria : prime de revente un point sous la prime d’achat, jamais sous l’or', async () => {
-  const { resaleUnit, ECU_RESALE_SPREAD } = await import('../src/logic/fees.ts');
-  const { sellPrice } = await import('../src/logic/ledger.ts');
-  const p = { gold: 100, silver: 1, platinum: 30, ecu: 103 };
-  close(resaleUnit(p, 'ecu'), 102, 1e-9);
-  close(sellPrice(p, 'ecu'), 102 * (1 - FEES.sale), 1e-9);
-  close(resaleUnit({ ...p, ecu: 100.5 }, 'ecu'), 100, 1e-9); // prime 0,5 % → revente au cours de l'or
-  assert.equal(resaleUnit(p, 'gold'), 100);
-  assert.equal(ECU_RESALE_SPREAD, 0.01);
 });

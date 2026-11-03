@@ -6,11 +6,9 @@ export type Allocation = Record<SpotMetal, number>;
 
 const zero = (): Allocation => ({ gold: 0, silver: 0, platinum: 0 });
 
-/** Valeur par métal ; les Écus Orvia comptent comme de l'or (ils en contiennent). */
+/** Valeur par métal et totale. */
 function spotValue(account: Pick<Account, 'holdings'>, prices: Prices) {
-  const v = accountValue(account, prices);
-  const byMetal = { gold: v.byMetal.gold + v.byMetal.ecu, silver: v.byMetal.silver, platinum: v.byMetal.platinum };
-  return { byMetal, total: v.total };
+  return accountValue(account, prices);
 }
 
 export const DEFAULT_ALLOCATION: Allocation = { gold: 50, silver: 25, platinum: 25 };

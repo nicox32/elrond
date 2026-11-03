@@ -96,7 +96,12 @@ export default function ProfileScreen() {
           to="/fidelite"
           border
         />
-        <LinkRow label="Espace Dev" hint="Réservé à Orvia (code) : prime du Gold Oria et conseils" to="/dev" border />
+        <LinkRow
+          label="Société Orvia"
+          hint="Tableau de bord (code) : revenus et coûts de la société"
+          to="/dev"
+          border
+        />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 

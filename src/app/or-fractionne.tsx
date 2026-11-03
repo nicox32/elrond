@@ -52,7 +52,7 @@ export default function FractionalGoldScreen() {
       <SectionTitle>Où est votre métal ?</SectionTitle>
       <Card style={{ gap: 8 }}>
         <Text style={styles.para}>
-          Tous les métaux (Gold Spot, Gold Oria, argent et platine) sont gardés par Orvia dans un{' '}
+          Tous les métaux (Gold Spot, argent et platine) sont gardés par Orvia dans un{' '}
           <Text style={styles.bold}>coffre-fort situé en port franc</Text>, une zone sous douane très sécurisée.
         </Text>
         <Text style={styles.para}>

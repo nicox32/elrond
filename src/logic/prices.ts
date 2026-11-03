@@ -1,12 +1,11 @@
 import { TROY_OUNCE } from './ledger.ts';
-import { withEcu } from './ecu.ts';
 import { type PriceQuote, type Prices, SPOT_METALS, type SpotMetal, type SpotPrices } from './types.ts';
 
 /**
  * Cours indicatifs (€/g) utilisés uniquement si aucun cours réel n'a jamais pu être chargé.
  * L'appli l'indique alors clairement à l'écran.
  */
-export const REFERENCE_PRICES: Prices = withEcu({ gold: 105, silver: 1.25, platinum: 32 });
+export const REFERENCE_PRICES: Prices = { gold: 105, silver: 1.25, platinum: 32 };
 
 const SYMBOL: Record<SpotMetal, string> = { gold: 'XAU', silver: 'XAG', platinum: 'XPT' };
 
@@ -85,8 +84,7 @@ export async function fetchLivePrices(fetchFn: Fetch = fetch, now = new Date()):
   SPOT_METALS.forEach((m, i) => {
     spot[m] = usdOunceToEurGram(usd[i], rate);
   });
-  // Le prix de l'écu suit l'or ; la prime réglée par Orvia est appliquée par BankProvider.
-  const prices = withEcu(spot);
+  const prices: Prices = spot;
   return { prices, fetchedAt: now.toISOString(), source: 'live' };
 }
 

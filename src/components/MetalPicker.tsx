@@ -30,7 +30,7 @@ export function MetalPicker({ value, onChange, exclude, metals = METALS }: Props
             >
               <View style={[styles.dot, { backgroundColor: metalColor[m] }]} />
               <Text style={[styles.text, active && { color: colors.text }]} numberOfLines={1}>
-                {m === 'ecu' ? 'Oria' : m === 'gold' ? 'Spot' : METAL_LABEL[m]}
+                {METAL_LABEL[m]}
               </Text>
             </Pressable>
           );
