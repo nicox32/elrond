@@ -6,6 +6,7 @@ import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
 import { marketStatus } from '../logic/market';
+import { amountPerRun, planNotice, runPlan } from '../logic/plan';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
 import { clearPin, hasPin, setPin } from '../security';
@@ -135,6 +136,17 @@ export function BankProvider({ children }: { children: ReactNode }) {
             if (r.alerts !== acc.alerts || r.events.length) {
               persist({ ...acc, alerts: r.alerts, alertEvents: addEvents(acc.alertEvents ?? [], r.events) });
               r.events.forEach((e) => notify(e.title, e.body));
+            }
+          }
+          // Achats programmés dus : passés au cours réel qui vient d'arriver.
+          const before = accountRef.current;
+          if (before?.plan?.active) {
+            const prices = spotOnly(live.prices);
+            const r = runPlan(applyDormancy(before, prices), prices);
+            if (r.done || r.skipped) {
+              persist(recordBalance(r.account, prices));
+              const n = planNotice(r, amountPerRun(before.plan));
+              if (n) notify(n.title, n.body);
             }
           }
           const last = accountRef.current?.balanceHistory.at(-1);

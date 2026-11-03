@@ -23,7 +23,7 @@ async function writeJson(key: string, value: unknown): Promise<void> {
   try {
     await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // La démo continue même si l'enregistrement échoue.
+    // L’appli continue même si l’enregistrement échoue.
   }
 }
 

@@ -58,6 +58,18 @@ jobs:
           name: orvia-apk
           path: orvia.apk
 
+  # Démarrage vérifié sur un téléphone Android virtuel : sans succès, rien n'est publié.
+  smoke:
+    uses: ./.github/workflows/test-apk.yml
+
+  release:
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: orvia-apk
+
       - name: Publier la release
         uses: softprops/action-gh-release@v2
         with:
@@ -67,5 +79,6 @@ jobs:
           make_latest: true
           files: orvia.apk
           body: |
-            Appli de démonstration Orvia (compte adossé à l'or, à l'argent et au platine).
-            Télécharge **orvia.apk** ci-dessous depuis ton téléphone Android pour l'installer.
+            Orvia : votre épargne en Gold Spot, argent et platine.
+            Téléchargez **orvia.apk** ci-dessous depuis votre téléphone Android pour l'installer.
+            Version testée au démarrage sur un téléphone Android virtuel avant publication.

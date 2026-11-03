@@ -1,9 +1,11 @@
 # Test de démarrage : construit l'APK pour émulateur (x86_64), l'installe sur un Android virtuel,
-# l'ouvre et récupère le journal (plantages compris). Lancement manuel.
+# l'ouvre et récupère le journal (plantages compris). Échoue si l'appli se ferme.
+# Lancé automatiquement avant chaque publication de l'APK (workflow « APK Android »), ou à la main.
 name: Test APK sur émulateur
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   smoke:
@@ -42,14 +44,15 @@ jobs:
             adb logcat -c
             adb shell monkey -p com.nicox32.orvia -c android.intent.category.LAUNCHER 1
             sleep 30
-            adb shell pidof com.nicox32.orvia && echo "APPLI TOUJOURS OUVERTE" || echo "APPLI FERMEE"
             adb logcat -d -v brief > logcat.txt || true
             grep -E "FATAL|AndroidRuntime|ReactNativeJS|Exception|Error" logcat.txt | grep -iv "chatty" | head -120 || true
             adb exec-out screencap -p > screen.png || true
+            adb shell pidof com.nicox32.orvia > /dev/null && echo "APPLI TOUJOURS OUVERTE" || { echo "APPLI FERMEE"; exit 1; }
+            ! grep -q "FATAL EXCEPTION" logcat.txt || { echo "PLANTAGE DANS LE JOURNAL"; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: test-apk
+          name: test-apk-${{ github.run_id }}
           path: |
             logcat.txt
             screen.png

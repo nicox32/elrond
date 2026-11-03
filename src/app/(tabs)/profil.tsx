@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { BackupCard } from '../../components/BackupCard';
 import { History2019 } from '../../components/History2019';
 import { PinConfirm } from '../../components/PinConfirm';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
-import { formatDate } from '../../logic/format';
+import { formatDate, formatEur as formatEurShort } from '../../logic/format';
 import { resetVaults } from '../../logic/ledger';
 import { loyalty } from '../../logic/loyalty';
 import { useAccount, useBank } from '../../state/BankProvider';
@@ -88,6 +89,16 @@ export default function ProfileScreen() {
           border
         />
         <LinkRow
+          label="Achats programmés"
+          hint={
+            account.plan?.active
+              ? `${formatEurShort(account.plan.amount)} ${account.plan.frequency === 'weekly' ? 'par semaine' : 'par mois'}`
+              : 'Investir automatiquement chaque semaine ou chaque mois'
+          }
+          to="/programme"
+          border
+        />
+        <LinkRow
           label="Compte d’attente"
           hint={`${(account.cashEur ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })} à investir`}
           to="/attente"
@@ -110,6 +121,9 @@ export default function ProfileScreen() {
 
       <SectionTitle>Historique</SectionTitle>
       <History2019 />
+
+      <SectionTitle>Sauvegarde</SectionTitle>
+      <BackupCard />
 
       <SectionTitle>Affichage</SectionTitle>
       <Label>Unité de poids</Label>
@@ -179,6 +193,7 @@ function LinkRow({
     | '/or-fractionne'
     | '/dev'
     | '/attente'
+    | '/programme'
     | '/fidelite';
   border?: boolean;
 }) {

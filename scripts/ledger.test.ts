@@ -818,7 +818,7 @@ test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais com
   assert.equal(p.purchases, 1635);
   close(p.total, 10218.75, 0.01);
   const acc = import2019History(createAccount('T', new Date('2026-11-01')), now);
-  assert.equal(acc.transactions.length, 1635 * 3);
+  assert.ok(acc.transactions.length < 1000, `historique allégé : ${acc.transactions.length}`);
   assert.equal(acc.createdAt.slice(0, 10), '2019-01-04');
   close(
     acc.transactions.reduce((s, t) => s + t.eur, 0),
@@ -835,4 +835,94 @@ test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais com
   close(acc.holdings.platinum, 81.7, 0.2);
   assert.equal(loyalty(acc, now).earned, 156);
   assert.equal(import2019History(acc, now), acc); // une seule fois
+});
+
+test('allègement : les achats de plus de 12 mois sont regroupés par mois sans rien perdre', async () => {
+  const { compactHistory } = await import('../src/logic/compact.ts');
+  const { saleTax } = await import('../src/logic/tax.ts');
+  const { loyalty } = await import('../src/logic/loyalty.ts');
+  const p = { gold: 3800, silver: 45, platinum: 1000 };
+  let acc = createAccount('T', new Date('2023-01-01'));
+  for (let d = new Date('2023-01-02'); d < new Date('2026-11-01'); d = new Date(d.getTime() + 2 * 86_400_000)) {
+    acc = buy(acc, p, 'gold', { unit: 'eur', value: 10 }, d);
+    acc = buy(acc, p, 'silver', { unit: 'eur', value: 5 }, d);
+  }
+  const now = new Date('2026-11-03');
+  const c = compactHistory(acc, now, true);
+  assert.ok(c.transactions.length < acc.transactions.length / 3);
+  const sum = (w: typeof acc, f: (t: (typeof acc.transactions)[number]) => number) =>
+    w.transactions.reduce((s, t) => s + f(t), 0);
+  close(
+    sum(c, (t) => t.eur),
+    sum(acc, (t) => t.eur),
+    0.01,
+  );
+  close(
+    sum(c, (t) => t.fees ?? 0),
+    sum(acc, (t) => t.fees ?? 0),
+    0.01,
+  );
+  close(
+    sum(c, (t) => t.deltas.gold),
+    acc.holdings.gold,
+    1e-4,
+  );
+  assert.equal(loyalty(c, now).earned, loyalty(acc, now).earned);
+  // l'impôt ne peut qu'être identique ou plus prudent (date du dernier achat du mois)
+  const t1 = saleTax(acc, 'gold', acc.holdings.gold / 2, (acc.holdings.gold / 2) * 6000, now);
+  const t2 = saleTax(c, 'gold', acc.holdings.gold / 2, (acc.holdings.gold / 2) * 6000, now);
+  assert.ok(Math.abs(t1.tax - t2.tax) < Math.max(1, t1.tax * 0.02), `${t1.tax} vs ${t2.tax}`);
+  assert.equal(compactHistory(c, now, true).transactions.length, c.transactions.length);
+});
+
+test('sauvegarde : export puis restauration à l’identique, fichiers étrangers refusés', async () => {
+  const { makeBackup, readBackup } = await import('../src/logic/backup.ts');
+  let acc = createAccount('T', new Date('2026-10-01'));
+  acc = buy(
+    acc,
+    { gold: 3800, silver: 45, platinum: 1000 },
+    'gold',
+    { unit: 'eur', value: 100 },
+    new Date('2026-10-02'),
+  );
+  const text = makeBackup(acc, new Date('2026-11-03'));
+  assert.ok(!/pin/i.test(Object.keys(JSON.parse(text)).join()));
+  const back = readBackup(text);
+  assert.deepEqual(back.account.holdings, acc.holdings);
+  assert.equal(back.account.transactions.length, 1);
+  assert.equal(back.exportedAt, '2026-11-03T00:00:00.000Z');
+  assert.throws(() => readBackup('pas du json'), /pas une sauvegarde/);
+  assert.throws(() => readBackup('{"app":"autre","version":1}'), /pas une sauvegarde/);
+  assert.throws(() => readBackup('{"app":"orvia","version":9,"account":{}}'), /plus récente/);
+  assert.throws(() => readBackup('{"app":"orvia","version":1,"account":null}'), /abîmée/);
+});
+
+test('achats programmés : 25 €/semaine sur 4 jours, rattrapage, compte d’attente insuffisant', async () => {
+  const { newPlan, dueRuns, runPlan, amountPerRun, nextRun } = await import('../src/logic/plan.ts');
+  const p = { gold: 3800, silver: 45, platinum: 1000 };
+  const start = new Date('2026-11-02T08:00:00'); // lundi
+  let acc = createAccount('T', start);
+  acc = { ...acc, plan: newPlan(start) };
+  assert.equal(amountPerRun(acc.plan!), 6.25);
+  assert.equal(nextRun(acc.plan!, start)!.getDay(), 1); // aujourd'hui 10 h
+  const later = new Date('2026-11-09T12:00:00'); // lundi suivant
+  assert.equal(dueRuns(acc.plan!, later).length, 5); // lun, mer, ven, dim, lun
+  const r = runPlan(acc, p, later);
+  assert.equal(r.done, 5);
+  close(
+    r.account.transactions.reduce((s, t) => s + t.eur, 0),
+    31.25,
+    0.02,
+  );
+  assert.ok(r.account.transactions.every((t) => t.label?.includes('achat programmé')));
+  assert.equal(runPlan(r.account, p, later).done, 0); // rien en double
+  // Compte d'attente vide : sauté, signalé, pas réessayé en boucle.
+  const cash = { ...acc, plan: { ...acc.plan!, source: 'cash' as const } };
+  const s = runPlan(cash, p, later);
+  assert.equal(s.done, 0);
+  assert.equal(s.skipped, 5);
+  assert.match(s.message!, /insuffisant/);
+  assert.equal(dueRuns(s.account.plan!, later).length, 0);
+  // En pause : rien.
+  assert.equal(runPlan({ ...acc, plan: { ...acc.plan!, active: false } }, p, later).done, 0);
 });

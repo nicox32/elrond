@@ -1,4 +1,5 @@
 import { DEFERRED_DAYS, FEES, type SaleSpeed } from './fees.ts';
+import { compactHistory } from './compact.ts';
 import { LOYALTY, loyalty } from './loyalty.ts';
 import { gramsForNet, type SaleTax, saleTax } from './tax.ts';
 import {
@@ -195,8 +196,10 @@ export function migrateAccount(raw: unknown): Account | null {
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
     return {
-      ...safely(a as Account, (acc) => removeHistory2021(retireGoldOria(acc))),
-      children: Array.isArray(a.children) ? a.children.map((c: ChildAccount) => safely(c, retireGoldOria)) : [],
+      ...safely(a as Account, (acc) => compactHistory(removeHistory2021(retireGoldOria(acc)))),
+      children: Array.isArray(a.children)
+        ? a.children.map((c: ChildAccount) => safely(c, (w) => compactHistory(retireGoldOria(w))))
+        : [],
       referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
     };
   }

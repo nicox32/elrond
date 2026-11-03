@@ -130,6 +130,11 @@ export default function AllocationScreen() {
           </View>
           <Hint>Gold Spot / argent / platine. Votre répartition sert à chaque achat réparti.</Hint>
           {dirty && <Button title="Enregistrer ma répartition" variant="ghost" onPress={save} disabled={!valid} />}
+          <Pressable onPress={() => router.push('/programme')} accessibilityRole="link">
+            <Text style={ui.link}>
+              {account.plan?.active ? 'Achats programmés : actifs ›' : 'Programmer des achats automatiques ›'}
+            </Text>
+          </Pressable>
         </Card>
 
         <SectionTitle>Achat réparti</SectionTitle>

@@ -206,4 +206,6 @@ export interface Account extends Wallet {
   ntfyTopic?: string;
   /** Compte d'attente : euros disponibles pour acheter des métaux. */
   cashEur?: number;
+  /** Achats programmés. */
+  plan?: import('./plan.ts').BuyPlan;
 }

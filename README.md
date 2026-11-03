@@ -27,7 +27,8 @@ Dans Chrome, menu ⋮ → **Ajouter à l'écran d'accueil** pour l'ouvrir comme 
 Téléchargez l'APK depuis votre téléphone :
 **https://github.com/nicox32/elrond/releases/latest/download/orvia.apk**
 
-Il est reconstruit automatiquement à chaque modification (voir `.github/workflows/android-apk.yml`).
+Il est reconstruit automatiquement à chaque modification (voir `.github/workflows/android-apk.yml`), puis ouvert sur
+un téléphone Android virtuel (`.github/workflows/test-apk.yml`) : il n'est publié que s'il démarre sans plantage.
 
 ## Fonctionnalités
 
@@ -82,6 +83,15 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   dernier, 12 mois, tout) pour le compte principal (Historique), chaque coffre, chaque compte enfant et le compte
   d'attente, avec soldes de début et de fin ; avis d'opération en touchant une opération. Téléphone : PDF partagé ou
   enregistré (expo-print, expo-sharing) ; navigateur : impression « Enregistrer au format PDF ».
+- **Achats programmés** (Profil ou Répartition → `src/app/programme.tsx`, `src/logic/plan.ts`) : montant par semaine
+  (partagé sur les jours choisis) ou par mois, payé par carte ou par le compte d'attente, réparti selon votre objectif.
+  Les achats dus passent au cours réel à l'ouverture de l'appli, pendant son utilisation et en arrière-plan (rattrapage
+  jusqu'à 31 jours) ; un achat impossible (compte d'attente insuffisant) est sauté et notifié.
+- **Sauvegarde** (Profil → Sauvegarde, `src/logic/backup.ts`) : export du compte dans un fichier JSON (Google Drive,
+  e-mail…) et restauration sur un autre téléphone, confirmée par le code ; le code d'accès n'est jamais exporté.
+- **Historique allégé** (`src/logic/compact.ts`) : au-delà de 600 opérations, les achats de plus de 12 mois sont
+  regroupés par mois et par métal (mêmes montants, frais et grammes ; date du dernier achat du mois, donc impôt jamais
+  sous-estimé).
 - **Reprise de l'épargne depuis 2019** (Profil → Historique, `src/logic/history2019.ts`) : compte ouvert le 4 janvier
   2019, 25 € par semaine en 4 achats (lundi, mercredi, vendredi, dimanche), 50 % Gold Spot, 25 % argent, 25 % platine,
   frais d'achat Orvia compris, aux cours moyens annuels estimés ; une seule fois.

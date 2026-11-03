@@ -2,7 +2,9 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 
 import { addEvents, addHourlyPoint, evaluateAlerts } from './logic/alerts';
+import { applyDormancy, recordBalance } from './logic/ledger';
 import { marketStatus } from './logic/market';
+import { amountPerRun, dueRuns, planNotice, runPlan } from './logic/plan';
 import { addPricePoint } from './logic/priceHistory';
 import { fetchLivePrices } from './logic/prices';
 import { notify } from './notifications';
@@ -24,8 +26,20 @@ export const PRICE_TASK = 'orvia-verification-cours';
 
 TaskManager.defineTask(PRICE_TASK, async () => {
   try {
-    const account = await loadAccount();
-    if (!account?.alerts?.some((a) => a.enabled)) return BackgroundTask.BackgroundTaskResult.Success;
+    const stored = await loadAccount();
+    if (!stored) return BackgroundTask.BackgroundTaskResult.Success;
+    let account = stored;
+    // Achats programmés dus, même appli fermée (au dernier cours réel).
+    if (account.plan && dueRuns(account.plan).length) {
+      const live = await fetchLivePrices();
+      const prices = { gold: live.prices.gold, silver: live.prices.silver, platinum: live.prices.platinum };
+      const r = runPlan(applyDormancy(account, prices), prices);
+      account = recordBalance(r.account, prices);
+      await Promise.all([saveAccount(account), saveQuote(live)]);
+      const n = planNotice(r, amountPerRun(stored.plan!));
+      if (n) await notify(n.title, n.body);
+    }
+    if (!account.alerts?.some((a) => a.enabled)) return BackgroundTask.BackgroundTaskResult.Success;
     // Marché fermé : les cours ne bougent pas, inutile de réveiller le réseau (économie de batterie).
     if (!marketStatus().open) return BackgroundTask.BackgroundTaskResult.Success;
     const [live, hourlyBefore, history] = await Promise.all([

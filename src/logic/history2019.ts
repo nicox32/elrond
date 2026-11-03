@@ -4,6 +4,7 @@
  * Orvia compris. Les cours sont des moyennes annuelles estimées (€/once), pas les cours exacts de chaque jour.
  */
 import { FEES } from './fees.ts';
+import { compactHistory } from './compact.ts';
 import { emptyHoldings, newId, TROY_OUNCE } from './ledger.ts';
 import type { Account, BalancePoint, Metal, Transaction } from './types.ts';
 
@@ -84,14 +85,17 @@ export function import2019History(account: Account, now = new Date()): Account {
   }
   for (const m of ['gold', 'silver', 'platinum'] as Metal[]) holdings[m] += cumulative[m];
   const start = new Date(`${PLAN_2019.start}T10:00:00`).toISOString();
-  return {
-    ...account,
-    createdAt: account.createdAt < start ? account.createdAt : start,
-    holdings,
-    transactions: [...account.transactions, ...txs.reverse()].sort((a, b) => b.date.localeCompare(a.date)),
-    balanceHistory: [...points, ...account.balanceHistory].sort((a, b) => a.date.localeCompare(b.date)),
-    // Les achats ont eu lieu régulièrement : pas de frais d'oxydation rétroactifs.
-    dormancyNotBefore: now.toISOString(),
-    history2019Imported: true,
-  };
+  return compactHistory(
+    {
+      ...account,
+      createdAt: account.createdAt < start ? account.createdAt : start,
+      holdings,
+      transactions: [...account.transactions, ...txs.reverse()].sort((a, b) => b.date.localeCompare(a.date)),
+      balanceHistory: [...points, ...account.balanceHistory].sort((a, b) => a.date.localeCompare(b.date)),
+      // Les achats ont eu lieu régulièrement : pas de frais d'oxydation rétroactifs.
+      dormancyNotBefore: now.toISOString(),
+      history2019Imported: true,
+    },
+    now,
+  );
 }
