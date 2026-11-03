@@ -82,6 +82,9 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   dernier, 12 mois, tout) pour le compte principal (Historique), chaque coffre, chaque compte enfant et le compte
   d'attente, avec soldes de début et de fin ; avis d'opération en touchant une opération. Téléphone : PDF partagé ou
   enregistré (expo-print, expo-sharing) ; navigateur : impression « Enregistrer au format PDF ».
+- **Reprise de l'épargne depuis 2019** (Profil → Historique, `src/logic/history2019.ts`) : compte ouvert le 4 janvier
+  2019, 25 € par semaine en 4 achats (lundi, mercredi, vendredi, dimanche), 50 % Gold Spot, 25 % argent, 25 % platine,
+  frais d'achat Orvia compris, aux cours moyens annuels estimés ; une seule fois.
 - **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).

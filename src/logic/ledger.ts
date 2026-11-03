@@ -150,6 +150,7 @@ export function resetVaults(account: Account): Account {
     balanceHistory: [],
     dormancyChargedThrough: undefined,
     cashEur: 0,
+    history2019Imported: false,
   };
 }
 

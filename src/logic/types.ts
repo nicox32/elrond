@@ -200,6 +200,8 @@ export interface Account extends Wallet {
   alerts?: PriceAlert[];
   /** Alertes déclenchées (les plus récentes d'abord). */
   alertEvents?: AlertEvent[];
+  /** L'épargne régulière depuis 2019 a été reprise (une seule fois). */
+  history2019Imported?: boolean;
   /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
   ntfyTopic?: string;
   /** Compte d'attente : euros disponibles pour acheter des métaux. */

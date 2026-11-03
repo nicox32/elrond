@@ -809,3 +809,30 @@ test('achats 2021 repris : supprimés avec leur métal, ouverture ramenée au pr
   assert.equal(m.createdAt.slice(0, 10), '2026-11-01');
   assert.equal((m as Record<string, unknown>).history2021Imported, undefined);
 });
+
+test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais compris, une seule fois', async () => {
+  const { import2019History, preview2019 } = await import('../src/logic/history2019.ts');
+  const { loyalty } = await import('../src/logic/loyalty.ts');
+  const now = new Date('2026-11-03T12:00:00');
+  const p = preview2019(now);
+  assert.equal(p.purchases, 1635);
+  close(p.total, 10218.75, 0.01);
+  const acc = import2019History(createAccount('T', new Date('2026-11-01')), now);
+  assert.equal(acc.transactions.length, 1635 * 3);
+  assert.equal(acc.createdAt.slice(0, 10), '2019-01-04');
+  close(
+    acc.transactions.reduce((s, t) => s + t.eur, 0),
+    10218.75,
+    0.5,
+  );
+  close(
+    acc.transactions.reduce((s, t) => s + (t.fees ?? 0), 0),
+    490.5,
+    1,
+  );
+  close(acc.holdings.gold, 84.3, 0.2);
+  close(acc.holdings.silver, 3339.5, 3);
+  close(acc.holdings.platinum, 81.7, 0.2);
+  assert.equal(loyalty(acc, now).earned, 156);
+  assert.equal(import2019History(acc, now), acc); // une seule fois
+});
