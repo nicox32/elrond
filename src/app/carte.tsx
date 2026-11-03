@@ -19,6 +19,7 @@ import {
   setCardMetal,
 } from '../logic/ledger';
 import { useAccount, useBank } from '../state/BankProvider';
+import { resaleUnit } from '../logic/fees';
 import { describeTax, gramsForNet, saleTax } from '../logic/tax';
 import { colors } from '../theme';
 
@@ -67,8 +68,9 @@ export default function CardScreen() {
   const amount = parseAmount(text);
   const valid = Number.isFinite(amount) && amount > 0;
   const metal = card.fundingMetal;
-  const grams = valid ? gramsForNet(account, metal, amount, quote.prices[metal]) : 0;
-  const tax = valid ? saleTax(account, metal, grams, grams * quote.prices[metal]) : null;
+  const unitPrice = resaleUnit(quote.prices, metal);
+  const grams = valid ? gramsForNet(account, metal, amount, unitPrice) : 0;
+  const tax = valid ? saleTax(account, metal, grams, grams * unitPrice) : null;
   const usedPay = cardUsage(account, 'card_payment', 30);
   const usedCash = cardUsage(account, 'card_withdrawal', 7);
   const summary = valid

@@ -113,8 +113,9 @@ function DevPanel() {
   return (
     <Screen testID="screen-dev">
       <Hint>
-        Espace réservé à Orvia. Les clients ne choisissent pas la prime : c’est Orvia qui l’ajuste selon le marché.
-        Chaque ajustement s’applique à partir de maintenant, sans modifier le passé.
+        Espace de test. En production, la prime suit seulement la formule publique (base + demande), sans ajustement
+        manuel : ces réglages servent à voir ce qui arrive au client quand la prime bouge. Chaque ajustement s’applique
+        à partir de maintenant, sans modifier le passé.
       </Hint>
 
       <SectionTitle>Conseil du moment</SectionTitle>
@@ -205,7 +206,7 @@ function DevPanel() {
         <Text style={styles.para}>
           <Text style={styles.bold}>Repères réels.</Text> Sur l’or physique, la prime dépend de la taille : 0,5 à 1,5 %
           pour un lingot d’1 kg, 3 à 6 % pour une pièce d’une once, 8 à 15 % pour un petit lingot d’1 g. Un or
-          fractionné stocké en coffre se situe autour de 4 à 5 % : c’est la base du Gold Oria.
+          fractionné stocké en coffre se situe entre 1,5 et 4 % en marché normal : la base du Gold Oria est de 2,5 %.
         </Text>
         <Text style={styles.para}>
           <Text style={styles.bold}>Montez-la</Text> quand la demande dépasse ce que vous pouvez faire frapper : or en

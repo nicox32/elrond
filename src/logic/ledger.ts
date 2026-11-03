@@ -1,4 +1,4 @@
-import { DEFERRED_DAYS, FEES, type SaleSpeed } from './fees.ts';
+import { DEFERRED_DAYS, FEES, resaleUnit, type SaleSpeed } from './fees.ts';
 import { LOYALTY, loyalty } from './loyalty.ts';
 import { gramsForNet, type SaleTax, saleTax } from './tax.ts';
 import {
@@ -56,7 +56,7 @@ export function buyPrice(prices: Prices, metal: Metal): number {
 
 /** Prix net d'un gramme à la revente par virement, hors frais fixe vers l'étranger. */
 export function sellPrice(prices: Prices, metal: Metal, speed: SaleSpeed = 'deferred'): number {
-  return prices[metal] * (1 - FEES.sale - (speed === 'immediate' ? FEES.immediateSpread : 0));
+  return resaleUnit(prices, metal) * (1 - FEES.sale - (speed === 'immediate' ? FEES.immediateSpread : 0));
 }
 
 /** Valeur de revente d'un compte en euros (virement différé en France), par métal et au total. */
@@ -315,7 +315,7 @@ export function quoteSale(
   const gross = grams * net - fixed;
   const tax = wallet ? saleTax(wallet, metal, grams, Math.max(0, gross), now) : null;
   const received = gross - (tax?.tax ?? 0);
-  return { grams, gross, received, fees: grams * prices[metal] - gross, tax };
+  return { grams, gross, received, fees: grams * resaleUnit(prices, metal) - gross, tax };
 }
 
 /** Vend du métal ; les euros sont versés sur le compte bancaire du titulaire (fictif, en France). */
@@ -350,8 +350,8 @@ export function quoteConvert(
   wallet?: Pick<Wallet, 'transactions'>,
   now = new Date(),
 ) {
-  const grams = toGrams(q, prices[from]);
-  const gross = grams * prices[from];
+  const grams = toGrams(q, resaleUnit(prices, from));
+  const gross = grams * resaleUnit(prices, from);
   // Échanger un métal contre un autre est une cession : l'impôt est retenu avant le rachat.
   const cession = gross * (1 - FEES.conversion);
   const tax = wallet ? saleTax(wallet, from, grams, cession, now) : null;
@@ -954,8 +954,9 @@ function cardDebit(
   // Paiements et retraits par carte : revente du métal sans frais, au cours du moment. C'est une cession : on vend
   // un peu plus de métal pour couvrir l'impôt, le commerçant reçoit le montant exact.
   const metal = card.fundingMetal;
-  const grams = gramsForNet(account, metal, amount, prices[metal], 0, now);
-  const tax = saleTax(account, metal, grams, grams * prices[metal], now);
+  const unitPrice = resaleUnit(prices, metal);
+  const grams = gramsForNet(account, metal, amount, unitPrice, 0, now);
+  const tax = saleTax(account, metal, grams, grams * unitPrice, now);
   return apply(account, kind, { [metal]: -grams }, amount, label, now, 0, tax);
 }
 

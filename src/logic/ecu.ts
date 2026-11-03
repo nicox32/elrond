@@ -2,7 +2,7 @@
  * L'Écu Orvia : jeton d'investissement maison, 1 g d'or fin 999,9 frappé pour Orvia et conservé au coffre.
  *
  * Son prix suit l'or en direct : prix d'un écu = 1 g × cours de l'or × (1 + prime). La prime couvre la frappe et
- * reflète la demande : Orvia la fixe (entre 1,5 et 10 %) et peut la faire varier. Elle est retrouvée à la revente.
+ * reflète la demande, selon une formule publique (base + demande), entre 1 et 10 %. Elle est retrouvée à la revente.
  * Fiscalité : traité comme de l'or d'investissement (taxe forfaitaire ou plus-values), tant que le statut
  * particulier des jetons n'est pas confirmé par un texte officiel.
  */
@@ -16,9 +16,13 @@ export const ECU = {
   goldGrams: 1,
   fineness: '999,9',
   /** Prime sur la valeur de l'or contenu, par défaut. */
-  defaultPremium: 0.04,
-  /** Fourchette réaliste : 1,5 % (proche de la prime réelle d'un or fractionné stocké) à 10 % (crise). */
-  minPremium: 0.015,
+  /** Prime de base, au milieu de la zone d'un marché normal (1,5 à 4 %). */
+  defaultPremium: 0.025,
+  /**
+   * Fourchette publiée dans les conditions : 1 % (coût de fabrication et de garde) à 10 % (crise). En marché
+   * normal, la prime reste entre 1,5 et 4 %.
+   */
+  minPremium: 0.01,
   maxPremium: 0.1,
 } as const;
 
@@ -167,7 +171,7 @@ export const PREMIUM_SCENARIOS: { id: string; label: string; offset: number; whe
     id: 'normal',
     label: 'Normal',
     offset: 0,
-    when: 'Marché habituel : prime de 4 à 5 %, comme un or fractionné stocké.',
+    when: 'Marché habituel : prime de 1,5 à 4 %, comme un or fractionné stocké.',
   },
   {
     id: 'demand',

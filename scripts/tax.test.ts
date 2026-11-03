@@ -196,7 +196,7 @@ test('Écu Orvia : prix = 1 g d’or × (1 + prime), achat, vente avec impôt, a
   const p2021 = withEcu({ gold: 100, silver: 1, platinum: 30 });
   let acc = buy(createAccount('T'), p2021, 'ecu', { unit: 'g', value: 3 }, new Date('2021-06-01'));
   assert.equal(acc.holdings.ecu, 3);
-  close(acc.transactions[0].eur, (3 * 104) / (1 - FEES.buy.ecu));
+  close(acc.transactions[0].eur, (3 * 100 * (1 + ECU.defaultPremium)) / (1 - FEES.buy.ecu));
   // L'or monte : l'écu suit, l'impôt s'applique comme pour l'or
   const p2026 = withEcu({ gold: 150, silver: 1, platinum: 30 });
   acc = sell(acc, p2026, 'ecu', { unit: 'g', value: 1 }, 'deferred', new Date('2026-11-02'));
@@ -352,18 +352,29 @@ test('Espace Dev : conseils pour monter, baisser ou garder la prime', async () =
   close(high.toOffset, 0.045, 1e-9);
 });
 
-test('prime du Gold Oria : fourchette finale 1,5 – 10 %, après tous les effets et l’ajustement', async () => {
+test('prime du Gold Oria : fourchette finale 1 – 10 %, après tous les effets et l’ajustement', async () => {
   const { AUTO_PREMIUM, autoPremium } = await import('../src/logic/ecu.ts');
   const at = new Date('2026-11-04T12:00:00Z');
-  assert.equal(AUTO_PREMIUM.min, 0.015);
+  assert.equal(AUTO_PREMIUM.min, 0.01);
   assert.equal(AUTO_PREMIUM.max, 0.1);
   // Tout au maximum : or 10 % sous sa moyenne, gros achats, ajustement +6 pt → plafonné à 10 %
   const top = autoPremium({ at, gold: 90, goldAvg30: 100, netFlowEur: 1e6, adjustment: 0.06 });
   assert.equal(top.premium, 0.1);
-  // Tout au minimum : or qui s'envole, ventes, ajustement −3 pt → plancher 1,5 %
+  // Tout au minimum : or qui s'envole, ventes, ajustement −3 pt → plancher 1 %
   const low = autoPremium({ at, gold: 150, goldAvg30: 100, netFlowEur: -1e6, adjustment: -0.03 });
-  assert.equal(low.premium, 0.015);
+  assert.equal(low.premium, 0.01);
   // Désaffection (−1,5 pt) sur un marché normal : reste dans la fourchette
   const calm = autoPremium({ at, gold: 100, goldAvg30: 100, netFlowEur: 0, adjustment: -0.015 });
-  assert.ok(calm.premium > 0.015 && calm.premium < 0.04);
+  assert.ok(calm.premium >= 0.01 && calm.premium < 0.03);
+});
+
+test('Gold Oria : prime de revente un point sous la prime d’achat, jamais sous l’or', async () => {
+  const { resaleUnit, ECU_RESALE_SPREAD } = await import('../src/logic/fees.ts');
+  const { sellPrice } = await import('../src/logic/ledger.ts');
+  const p = { gold: 100, silver: 1, platinum: 30, ecu: 103 };
+  close(resaleUnit(p, 'ecu'), 102, 1e-9);
+  close(sellPrice(p, 'ecu'), 102 * (1 - FEES.sale), 1e-9);
+  close(resaleUnit({ ...p, ecu: 100.5 }, 'ecu'), 100, 1e-9); // prime 0,5 % → revente au cours de l'or
+  assert.equal(resaleUnit(p, 'gold'), 100);
+  assert.equal(ECU_RESALE_SPREAD, 0.01);
 });

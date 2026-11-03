@@ -1,4 +1,4 @@
-import type { Metal } from './types.ts';
+import type { Metal, Prices } from './types.ts';
 
 /**
  * Grille tarifaire d'Orvia : celle de Veracash, avec 0,2 point de moins sur chaque frais en pourcentage.
@@ -20,6 +20,18 @@ export const FEES = {
   /** Un compte est inactif après ce nombre de mois sans mouvement. */
   dormancyAfterMonths: 6,
 } as const;
+
+/**
+ * Gold Oria : la prime de revente est inférieure d'un point à la prime d'achat (jamais négative), et affichée.
+ * Ex. : prime d'achat 2,5 % → prime de revente 1,5 %.
+ */
+export const ECU_RESALE_SPREAD = 0.01;
+
+/** Prix unitaire de référence à la revente (avant frais) : cours du métal ; pour le Gold Oria, prime de revente. */
+export function resaleUnit(prices: Prices, metal: Metal): number {
+  if (metal !== 'ecu') return prices[metal];
+  return Math.max(prices.gold, prices.ecu - prices.gold * ECU_RESALE_SPREAD);
+}
 
 /** Délai d'un virement différé (sans écart), en jours ouvrés. */
 export const DEFERRED_DAYS = 2;

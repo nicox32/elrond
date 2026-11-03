@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AUTO_PREMIUM, currentPremium, ECU, ecuHistory } from '../logic/ecu';
-import { FEES } from '../logic/fees';
+import { ECU_RESALE_SPREAD, FEES, resaleUnit } from '../logic/fees';
 import { GAIN_RATE, TAX } from '../logic/tax';
 import { formatEur, formatUnitPrice, formatWeight } from '../logic/format';
 import { useAccount, useBank } from '../state/BankProvider';
@@ -20,6 +20,7 @@ export function EcuInfo() {
   const { quote, hourlyHistory } = useBank();
   const parts = currentPremium(account, quote.prices.gold, hourlyHistory, new Date());
   const premium = parts.premium;
+  const resalePremium = Math.max(0, premium - ECU_RESALE_SPREAD);
   const chart = useMemo(
     () => [
       ...ecuHistory(account, hourlyHistory),
@@ -54,12 +55,17 @@ export function EcuInfo() {
       <SectionTitle>Son prix, en détail</SectionTitle>
       <Card style={{ gap: 8 }}>
         <Row label="Or fin (1 g au cours du Gold Spot)" value={formatEur(gold)} />
-        <Row label={`Prime Orvia (${pct(premium)})`} value={`+ ${formatEur(gold * premium)}`} />
+        <Row label={`Prime à l’achat (${pct(premium)})`} value={`+ ${formatEur(gold * premium)}`} />
         <View style={styles.sep} />
         <Row label="Prix d’un gramme de Gold Oria" value={formatUnitPrice(quote.prices.ecu, 'g')} strong />
+        <Row
+          label={`Prime à la revente (${pct(resalePremium)}, 1 point de moins)`}
+          value={formatUnitPrice(resaleUnit(quote.prices, 'ecu'), 'g')}
+        />
         <Text style={styles.muted}>
-          Le prix suit le cours de l’or en direct. La prime couvre la frappe et reflète la demande : vous la retrouvez à
-          la revente. À l’achat s’ajoutent {pct(FEES.buy.ecu)} de frais, à la revente {pct(FEES.sale)}.
+          Le prix suit le cours de l’or en direct. La prime couvre la frappe et la garde, et reflète la demande. À la
+          revente, elle est d’un point plus basse qu’à l’achat (jamais sous 0 %). À l’achat s’ajoutent{' '}
+          {pct(FEES.buy.ecu)} de frais, à la revente {pct(FEES.sale)}.
         </Text>
       </Card>
 
@@ -110,8 +116,8 @@ export function EcuInfo() {
       <SectionTitle>Comment bouge la prime</SectionTitle>
       <Card style={{ gap: 10 }}>
         <Text style={styles.para}>
-          La prime évolue d’elle-même, entre {pct(AUTO_PREMIUM.min)} et {pct(AUTO_PREMIUM.max)}, comme sur un vrai
-          marché :
+          La prime suit une formule publique, sans décision cachée : base + effet du cours de l’or + demande. Elle reste
+          toujours entre {pct(AUTO_PREMIUM.min)} et {pct(AUTO_PREMIUM.max)} (en marché normal, entre 1,5 et 4 %) :
         </Text>
         <Row label="Prime de base" value={pct(parts.base)} />
         <Row
@@ -125,14 +131,13 @@ export function EcuInfo() {
         <Text style={styles.muted}>Une vague lente, de quelques jours à un mois.</Text>
         <Row label="Vos achats et ventes sur 7 jours" value={pts(parts.flow)} />
         <Text style={styles.muted}>Acheter pousse la prime vers le haut, vendre la fait redescendre.</Text>
-        {parts.adjustment !== 0 && (
-          <Row label="Ajustement Orvia (conditions de marché)" value={pts(parts.adjustment)} />
-        )}
+        {parts.adjustment !== 0 && <Row label="Scénario de test (Espace Dev)" value={pts(parts.adjustment)} />}
         <View style={styles.sep} />
         <Row label="Prime en ce moment" value={pct(parts.premium)} strong />
         <Hint>
-          La prime compte à l’achat comme à la revente : si elle baisse après votre achat, votre Gold Oria perd un peu
-          de valeur même si l’or ne bouge pas ; si elle monte, il en gagne.
+          Conditions : prime plafonnée à {pct(AUTO_PREMIUM.max)} et jamais sous {pct(AUTO_PREMIUM.min)}, prime de
+          revente un point sous la prime d’achat. Si la prime baisse après votre achat, votre Gold Oria perd un peu de
+          valeur même si l’or ne bouge pas ; si elle monte, il en gagne.
         </Hint>
       </Card>
 

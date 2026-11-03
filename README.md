@@ -64,8 +64,8 @@ Il est reconstruit automatiquement à chaque modification (voir `.github/workflo
   l'exonération. Le métal versé est un don : prix de revient = valeur le jour du versement, durée de détention à partir
   de cette date.
 - **Gold Oria** (jeton maison, `src/logic/ecu.ts`, `docs/ecu-orvia.png`) : 1 g d'or fin 999,9 conservé au coffre ;
-  l'or classique s'appelle **Gold Spot**. Prix d'un gramme = 1 g × cours de l'or × (1 + prime), en direct ; prime automatique (cours de l'or face à sa moyenne 30 j,
-  demande des autres investisseurs, vos achats et ventes sur 7 jours ; entre 1 et 12 %), ajustable par
+  l'or classique s'appelle **Gold Spot**. Prix d'un gramme = 1 g × cours de l'or × (1 + prime), en direct ; prime de revente un point sous la prime d'achat ; prime automatique (formule publique, base 2,5 %) (cours de l'or face à sa moyenne 30 j,
+  demande des autres investisseurs, vos achats et ventes sur 7 jours ; entre 1 et 10 %), ajustable par
   Orvia dans l'**Espace Dev** (Profil, protégé par son propre code ; conseil automatique « montez / baissez /
   gardez la prime » avec notification, `src/logic/premiumAdvice.ts` ; scénarios Désaffection, Normal, Forte demande, Crise et paliers de 0,25 pt ;
   `docs/espace-dev.png`), avec un graphique Gold Oria / Gold Spot (`docs/gold-oria-prime.png`). S'achète en euros, en grammes ou en onces (frais d'achat 1 %), se revend, se convertit,

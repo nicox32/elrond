@@ -11,7 +11,7 @@
  * Pas de seuil d'exonération pour l'or, l'argent et le platine d'investissement (le seuil de 5 000 € vise les bijoux
  * et objets d'art). Estimation indicative : à faire confirmer par un conseiller fiscal.
  */
-import { FEES } from './fees.ts';
+import { FEES, resaleUnit } from './fees.ts';
 import { type Metal, METALS, type Prices, type Wallet } from './types.ts';
 
 export const TAX = {
@@ -148,7 +148,7 @@ export function estimateTax(
   const metals: MetalTax[] = [];
   for (const m of METALS) {
     const grams = wallet.holdings[m];
-    const value = grams * prices[m] * (1 - FEES.sale);
+    const value = grams * resaleUnit(prices, m) * (1 - FEES.sale);
     if (grams <= 1e-6 || value <= 0) continue;
     const t = saleTax(wallet, m, grams, value, now, allLots[m]);
     metals.push({
@@ -369,7 +369,7 @@ export function taxOutlook(
   now = new Date(),
 ): TaxOutlook | null {
   const grams = wallet.holdings[metal];
-  const price = grams * prices[metal] * (1 - FEES.sale);
+  const price = grams * resaleUnit(prices, metal) * (1 - FEES.sale);
   if (grams <= 1e-6 || price <= 0) return null;
   const lots = holdingLots(wallet)[metal];
   const at = (d: Date): TaxOutlookPoint => {
