@@ -770,3 +770,12 @@ test('horaires du marché (heure de Paris) : ouvert en semaine, pause du soir, f
   assert.equal(marketStatus(new Date('2026-11-08T22:00:00Z')).reason, 'weekend'); // dimanche 23 h
   assert.equal(marketStatus(new Date('2026-11-08T23:30:00Z')).open, true); // lundi 0 h 30
 });
+
+test('place de Londres : séance 9 h – 18 h (heure de Paris) en semaine', async () => {
+  const { londonStatus } = await import('../src/logic/market.ts');
+  assert.equal(londonStatus(new Date('2026-11-04T09:00:00Z')).open, true); // mercredi 10 h
+  assert.equal(londonStatus(new Date('2026-11-04T07:30:00Z')).next, 'ouvre à 9 h'); // 8 h 30
+  assert.equal(londonStatus(new Date('2026-11-04T18:00:00Z')).next, 'ouvre demain à 9 h'); // 19 h
+  assert.equal(londonStatus(new Date('2026-11-06T18:00:00Z')).next, 'ouvre lundi à 9 h'); // vendredi 19 h
+  assert.equal(londonStatus(new Date('2026-11-07T12:00:00Z')).open, false); // samedi
+});

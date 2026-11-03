@@ -44,3 +44,28 @@ export function marketStatus(now = new Date()): MarketStatus {
 
 export const MARKET_HOURS =
   'Du lundi 0 h au vendredi 23 h (heure de Paris), avec une pause chaque soir de 23 h à minuit. Fermé le week-end.';
+
+/**
+ * Place de Londres (LBMA), principal marché physique de l'or, de l'argent et du platine : séance de 8 h à 17 h,
+ * heure de Londres, soit de 9 h à 18 h à Paris (les deux pays changent d'heure les mêmes jours). Prix de référence
+ * fixés aux enchères chaque jour ouvré (heure de Paris) : or à 11 h 30 et 16 h, argent à 13 h, platine à 10 h 45
+ * et 15 h.
+ */
+export const LONDON = {
+  open: 9,
+  close: 18,
+  fixings: [
+    { metal: 'or', times: '11 h 30 et 16 h' },
+    { metal: 'argent', times: '13 h' },
+    { metal: 'platine', times: '10 h 45 et 15 h' },
+  ],
+} as const;
+
+export function londonStatus(now = new Date()): { open: boolean; next: string } {
+  const { day, hour } = parisTime(now);
+  const weekday = day >= 1 && day <= 5;
+  if (weekday && hour >= LONDON.open && hour < LONDON.close) return { open: true, next: 'ferme à 18 h' };
+  if (weekday && hour < LONDON.open) return { open: false, next: 'ouvre à 9 h' };
+  if (day >= 1 && day <= 4) return { open: false, next: 'ouvre demain à 9 h' };
+  return { open: false, next: 'ouvre lundi à 9 h' };
+}
