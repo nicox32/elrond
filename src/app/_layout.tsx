@@ -6,10 +6,13 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LockScreen } from '../features/LockScreen';
 import { Onboarding } from '../features/Onboarding';
 import { BankProvider, useBank } from '../state/BankProvider';
+import { registerBackgroundChecks } from '../background';
 import { setupPwa } from '../pwa';
 import { colors } from '../theme';
 
 setupPwa();
+// Vérification des cours en arrière-plan (téléphone) : la tâche est déclarée dès le chargement de l'appli.
+registerBackgroundChecks();
 
 function Gate() {
   const { loading, account, locked, needsPin } = useBank();

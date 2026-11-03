@@ -18,6 +18,7 @@ import {
 import { formatDate, parseAmount } from '../logic/format';
 import { METAL_LABEL, TROY_OUNCE } from '../logic/ledger';
 import type { Metal } from '../logic/types';
+import { registerBackgroundChecks } from '../background';
 import {
   type NotificationPermission,
   notificationPermission,
@@ -51,8 +52,10 @@ export default function AlertsScreen() {
   const [text, setText] = useState('');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const [background, setBackground] = useState<boolean | null>(null);
   useEffect(() => {
     notificationPermission().then(setPermission);
+    registerBackgroundChecks().then(setBackground);
   }, []);
 
   const current = unit === 'oz' ? quote.prices[metal] * TROY_OUNCE : quote.prices[metal];
@@ -316,6 +319,25 @@ export default function AlertsScreen() {
             </View>
           </Card>
         ))
+      )}
+
+      {Platform.OS !== 'web' && (
+        <>
+          <SectionTitle>Appli fermée : vérification sur ce téléphone</SectionTitle>
+          <Card style={{ gap: 6 }}>
+            <Text style={styles.para}>
+              {background
+                ? '✓ Active : Android réveille Orvia environ toutes les 15 minutes (parfois plus, pour économiser la batterie). L’appli relève les cours et vous notifie elle-même, même fermée.'
+                : background === false
+                  ? 'Indisponible : la vérification en arrière-plan est bloquée par le téléphone.'
+                  : 'Vérification…'}
+            </Text>
+            <Text style={styles.muted}>
+              Sur Xiaomi, pour qu’elle ne soit pas coupée : appui long sur l’icône Orvia → Infos sur l’appli →
+              Économiseur de batterie → Pas de restrictions, et activez Démarrage automatique.
+            </Text>
+          </Card>
+        </>
       )}
 
       <SectionTitle>Même appli fermée</SectionTitle>

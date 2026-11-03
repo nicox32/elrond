@@ -38,7 +38,8 @@
         }
       ],
       "expo-notifications",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-background-task"
     ],
     "experiments": {
       "typedRoutes": true,
