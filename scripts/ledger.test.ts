@@ -758,3 +758,15 @@ test('notifications de test : une par alerte recommandée, numérotées', async 
   assert.ok(all.every((n) => /Cours actuel : .+\/oz\./.test(n.body)));
   assert.equal(new Set(all.map((n) => n.title)).size, 16);
 });
+
+test('horaires du marché (heure de Paris) : ouvert en semaine, pause du soir, fermé le week-end', async () => {
+  const { marketStatus } = await import('../src/logic/market.ts');
+  // Novembre : Paris = UTC+1
+  assert.equal(marketStatus(new Date('2026-11-04T09:00:00Z')).open, true); // mercredi 10 h
+  assert.equal(marketStatus(new Date('2026-11-04T22:30:00Z')).reason, 'pause'); // mercredi 23 h 30
+  assert.equal(marketStatus(new Date('2026-11-06T21:30:00Z')).open, true); // vendredi 22 h 30
+  assert.equal(marketStatus(new Date('2026-11-06T22:30:00Z')).reason, 'weekend'); // vendredi 23 h 30
+  assert.equal(marketStatus(new Date('2026-11-07T12:00:00Z')).reason, 'weekend'); // samedi
+  assert.equal(marketStatus(new Date('2026-11-08T22:00:00Z')).reason, 'weekend'); // dimanche 23 h
+  assert.equal(marketStatus(new Date('2026-11-08T23:30:00Z')).open, true); // lundi 0 h 30
+});

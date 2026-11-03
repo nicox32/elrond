@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 
 import { AmountInput } from '../../components/AmountInput';
 import { MetalPicker } from '../../components/MetalPicker';
+import { MarketHours } from '../../components/MarketHours';
 import { PriceStatus } from '../../components/PriceStatus';
 import { Segmented } from '../../components/Segmented';
 import { SpeedPicker } from '../../components/SpeedPicker';
@@ -102,6 +103,7 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
       <Screen testID="screen-operations">
         <Title>Opérations</Title>
         <PriceStatus />
+        <MarketHours />
         <Pressable onPress={() => router.push('/repartition')} style={styles.splitLink} accessibilityRole="link">
           <Text style={styles.splitText}>Achat réparti Gold Spot / argent / platine en un geste</Text>
           <Text style={ui.link}>Répartition ›</Text>
