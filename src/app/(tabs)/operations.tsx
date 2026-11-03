@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 import { AmountInput } from '../../components/AmountInput';
 import { MetalPicker } from '../../components/MetalPicker';
 import { MarketHours } from '../../components/MarketHours';
+import { marketStatus } from '../../logic/market';
 import { PriceStatus } from '../../components/PriceStatus';
 import { Segmented } from '../../components/Segmented';
 import { SpeedPicker } from '../../components/SpeedPicker';
@@ -174,7 +175,14 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
           )}
         </View>
 
-        {preview && <Text style={styles.preview}>{preview}</Text>}
+        {preview && (
+          <Text style={styles.preview}>
+            {preview}
+            {!marketStatus().open && mode !== 'convert'
+              ? ` Marché ${marketStatus().reason === 'pause' ? 'en pause' : 'fermé'} : opération au dernier cours connu, celui affiché ici.`
+              : ''}
+          </Text>
+        )}
         {quote.source === 'reference' && (
           <Hint style={{ color: colors.warning }}>
             Attention : les cours réels n’ont pas pu être chargés, l’opération utilise des cours indicatifs.

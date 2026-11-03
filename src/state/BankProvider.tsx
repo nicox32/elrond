@@ -6,6 +6,7 @@ import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
 import { currentPremium, withEcu } from '../logic/ecu';
+import { marketStatus } from '../logic/market';
 import { premiumAdvice } from '../logic/premiumAdvice';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
@@ -24,6 +25,8 @@ import {
 
 /** Actualisation automatique des cours tant que l'appli est à l'écran. */
 export const LIVE_REFRESH_MS = 30_000;
+/** Marché fermé (nuit, week-end) : les cours ne bougent pas, une actualisation toutes les 10 minutes suffit. */
+export const CLOSED_REFRESH_MS = 10 * 60_000;
 
 /** Pendant l'actualisation automatique, un point du graphique du solde au plus tous les quarts d'heure. */
 const PERIODIC_BALANCE_MS = 15 * 60_000;
@@ -194,12 +197,20 @@ export function BankProvider({ children }: { children: ReactNode }) {
     })();
   }, [refreshPrices]);
 
-  // Cours en direct : actualisation toutes les 30 s tant que l'appli est au premier plan.
+  // Cours en direct : actualisation toutes les 30 s tant que l'appli est au premier plan (10 min marché fermé).
   useEffect(() => {
     if (loading) return;
     let timer: ReturnType<typeof setInterval> | null = null;
     const start = () => {
-      if (!timer) timer = setInterval(() => refreshPrices(true), LIVE_REFRESH_MS);
+      if (!timer) {
+        let last = 0;
+        timer = setInterval(() => {
+          const every = marketStatus().open ? LIVE_REFRESH_MS : CLOSED_REFRESH_MS;
+          if (Date.now() - last < every - 1000) return;
+          last = Date.now();
+          refreshPrices(true);
+        }, LIVE_REFRESH_MS);
+      }
     };
     const stop = () => {
       if (timer) clearInterval(timer);

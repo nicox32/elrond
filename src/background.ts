@@ -2,6 +2,7 @@ import * as BackgroundTask from 'expo-background-task';
 import * as TaskManager from 'expo-task-manager';
 
 import { addEvents, addHourlyPoint, evaluateAlerts } from './logic/alerts';
+import { marketStatus } from './logic/market';
 import { addPricePoint } from './logic/priceHistory';
 import { fetchLivePrices } from './logic/prices';
 import { notify } from './notifications';
@@ -25,6 +26,8 @@ TaskManager.defineTask(PRICE_TASK, async () => {
   try {
     const account = await loadAccount();
     if (!account?.alerts?.some((a) => a.enabled)) return BackgroundTask.BackgroundTaskResult.Success;
+    // Marché fermé : les cours ne bougent pas, inutile de réveiller le réseau (économie de batterie).
+    if (!marketStatus().open) return BackgroundTask.BackgroundTaskResult.Success;
     const [live, hourlyBefore, history] = await Promise.all([
       fetchLivePrices(),
       loadHourlyHistory(),

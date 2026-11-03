@@ -6,6 +6,7 @@ import { formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/
 import { METAL_LABEL } from '../logic/ledger';
 import { metalTrend } from '../logic/priceHistory';
 import { METALS, type WeightUnit } from '../logic/types';
+import { marketStatus } from '../logic/market';
 import { LIVE_REFRESH_MS, useBank } from '../state/BankProvider';
 import { colors, metalColor, metalSymbol } from '../theme';
 
@@ -15,16 +16,19 @@ const SPARK_H = 30;
 export function LivePrices({ unit }: { unit: WeightUnit }) {
   const { quote, priceHistory } = useBank();
   const live = quote.source === 'live';
+  const market = marketStatus();
   const other: WeightUnit = unit === 'g' ? 'oz' : 'g';
 
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <View style={[styles.liveDot, { backgroundColor: live ? colors.up : colors.warning }]} />
+        <View style={[styles.liveDot, { backgroundColor: live && market.open ? colors.up : colors.warning }]} />
         <Text style={styles.headerText}>
-          {live
-            ? `En direct · ${formatTimeWithSeconds(quote.fetchedAt)} · toutes les ${LIVE_REFRESH_MS / 1000} s`
-            : 'Cours réels indisponibles pour le moment'}
+          {!live
+            ? 'Cours réels indisponibles pour le moment'
+            : market.open
+              ? `En direct · ${formatTimeWithSeconds(quote.fetchedAt)} · toutes les ${LIVE_REFRESH_MS / 1000} s`
+              : `Marché ${market.reason === 'pause' ? 'en pause' : 'fermé'} · dernier cours, ${market.next}`}
         </Text>
       </View>
 
