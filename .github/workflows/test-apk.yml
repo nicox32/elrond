@@ -1,0 +1,55 @@
+# Test de démarrage : construit l'APK pour émulateur (x86_64), l'installe sur un Android virtuel,
+# l'ouvre et récupère le journal (plantages compris). Lancement manuel.
+name: Test APK sur émulateur
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      - run: npx expo prebuild --platform android --no-install
+      - name: Compiler l'APK (x86_64)
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
+      - name: Activer KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Lancer sur émulateur et lire le journal
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
+            adb logcat -c
+            adb shell monkey -p com.nicox32.orvia -c android.intent.category.LAUNCHER 1
+            sleep 30
+            adb shell pidof com.nicox32.orvia && echo "APPLI TOUJOURS OUVERTE" || echo "APPLI FERMEE"
+            adb logcat -d -v brief > logcat.txt || true
+            grep -E "FATAL|AndroidRuntime|ReactNativeJS|Exception|Error" logcat.txt | grep -iv "chatty" | head -120 || true
+            adb exec-out screencap -p > screen.png || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-apk
+          path: |
+            logcat.txt
+            screen.png
