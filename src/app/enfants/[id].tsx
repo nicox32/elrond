@@ -8,7 +8,7 @@ import { CodeConfirm } from '../../components/CodeConfirm';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { MetalPicker } from '../../components/MetalPicker';
 import { ShareViewCard } from '../../components/ShareViewCard';
-import { StatementCard } from '../../components/Statement';
+import { ChildStatementCard, StatementCard } from '../../components/Statement';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import {
@@ -530,6 +530,7 @@ export default function ChildScreen() {
           ))}
         </Card>
       )}
+      <ChildStatementCard child={child} />
       <StatementCard wallet={child} walletName={`Compte de ${name}`} />
       {stage !== 'transferred' && <ShareViewCard child={child} parent={account.holder} prices={quote.prices} />}
 

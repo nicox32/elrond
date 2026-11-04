@@ -9,7 +9,8 @@ import {
   type StatementScope,
   statementHtml,
 } from '../logic/statement';
-import type { Transaction, Wallet } from '../logic/types';
+import { childStatementHtml } from '../logic/childStatement';
+import type { ChildAccount, Transaction, Wallet } from '../logic/types';
 import { exportPdf } from '../pdf';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
@@ -56,6 +57,33 @@ export function StatementCard({
               prices: quote.prices,
             });
             await exportPdf(html, `Relevé ${walletName}`);
+          } catch {
+            setError('Le relevé n’a pas pu être créé.');
+          }
+        }}
+      />
+      {error && <Message ok={false} text={error} />}
+    </Card>
+  );
+}
+
+/** Relevé d'épargne complet d'un compte enfant (PDF), à envoyer à l'autre parent. */
+export function ChildStatementCard({ child }: { child: ChildAccount }) {
+  const account = useAccount();
+  const { quote } = useBank();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <Card style={{ gap: 10 }}>
+      <Text style={styles.title}>Relevé d’épargne de {child.name} (PDF)</Text>
+      <Text style={styles.muted}>
+        Valeur, total versé, plus-value, versements par année, règles de protection et fiscalité, depuis l’ouverture.
+      </Text>
+      <Button
+        title="Télécharger le relevé d’épargne"
+        onPress={async () => {
+          setError(null);
+          try {
+            await exportPdf(childStatementHtml(account, child, quote.prices), `Relevé d’épargne de ${child.name}`);
           } catch {
             setError('Le relevé n’a pas pu être créé.');
           }

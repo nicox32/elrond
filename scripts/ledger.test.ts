@@ -1035,3 +1035,18 @@ test('dons à l’enfant depuis 2022 : 50 € le 5 du mois, 50/50 Gold Spot et a
   assert.deepEqual(a.holdings, account.holdings); // compte principal inchangé
   assert.equal(importGifts2022(a, child.id, now), a);
 });
+
+test('relevé d’épargne enfant : 58 versements, total versé, règles et mention de suivi', async () => {
+  const { importGifts2022 } = await import('../src/logic/childGifts.ts');
+  const { childStatementHtml } = await import('../src/logic/childStatement.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const now = new Date('2026-11-04T12:00:00');
+  const { account, child } = addChild(createAccount('Nicolas', now), 'Léo', '2016-03-12', now);
+  const a = importGifts2022(account, child.id, now);
+  const html = childStatementHtml(a, a.children[0], { gold: 113, silver: 1.4, platinum: 41 }, now);
+  assert.match(html, /58 versements/);
+  assert.match(html, /2\s900,00\s€/);
+  assert.match(html, /12 mars 2034/);
+  assert.match(html, /ni un certificat de dépôt/);
+  assert.match(html, /data:image\/png;base64,/);
+});

@@ -98,6 +98,10 @@ un téléphone Android virtuel (`.github/workflows/test-apk.yml`) : il n'est pub
   frais d'achat Orvia compris ; une seule fois. Chaque achat au cours moyen réel de son mois en €/once
   (`src/logic/monthlyPrices.ts`, calculé par `.github/workflows/cours-mensuels.yml` à partir des cours quotidiens et du
   taux BCE du jour) ; une reprise faite avec les anciennes moyennes annuelles peut être recalculée en un geste.
+- **Relevé d'épargne d'un compte enfant** (écran du compte enfant, `src/logic/childStatement.ts`,
+  `docs/exemple-releve-epargne-enfant.pdf`) : PDF avec logo, valeur au cours du jour, total versé, plus-value,
+  versements par année, règles de protection, fiscalité et derniers mouvements ; présenté comme un relevé de suivi
+  (ni certificat de dépôt, ni preuve de détention).
 - **Dons à un enfant depuis 2022** (Profil → Historique, sous la reprise 2019, `src/logic/childGifts.ts`) : 50 € le 5
   de chaque mois depuis le 5 janvier 2022, 50 % Gold Spot et 50 % argent, au cours moyen réel de chaque mois, frais
   d'achat compris, ajoutés au compte de l'enfant choisi (le compte principal ne change pas) ; une seule fois.
