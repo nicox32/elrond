@@ -1,20 +1,131 @@
-{
+ {
   "alerts": [
-    { "metal": "gold", "kind": "drop", "value": 3, "window": "24h" },
-    { "metal": "gold", "kind": "drop", "value": 6, "window": "7d" },
-    { "metal": "gold", "kind": "belowAvg30", "value": 3 },
-    { "metal": "gold", "kind": "rise", "value": 7, "window": "7d" },
-    { "metal": "silver", "kind": "drop", "value": 4, "window": "24h" },
-    { "metal": "silver", "kind": "rise", "value": 5, "window": "24h" },
-    { "metal": "silver", "kind": "drop", "value": 8, "window": "7d" },
-    { "metal": "silver", "kind": "rise", "value": 10, "window": "7d" },
-    { "metal": "silver", "kind": "belowAvg30", "value": 5 },
-    { "metal": "silver", "kind": "aboveAvg30", "value": 10 },
-    { "metal": "platinum", "kind": "drop", "value": 3, "window": "24h" },
-    { "metal": "platinum", "kind": "rise", "value": 3, "window": "24h" },
-    { "metal": "platinum", "kind": "drop", "value": 6, "window": "7d" },
-    { "metal": "platinum", "kind": "rise", "value": 8, "window": "7d" },
-    { "metal": "platinum", "kind": "belowAvg30", "value": 4 },
-    { "metal": "platinum", "kind": "aboveAvg30", "value": 8 }
+    {
+      "metal": "gold",
+      "kind": "drop",
+      "value": 3,
+      "window": "24h"
+    },
+    {
+      "metal": "gold",
+      "kind": "drop",
+      "value": 6,
+      "window": "7d"
+    },
+    {
+      "metal": "gold",
+      "kind": "belowAvg30",
+      "value": 3
+    },
+    {
+      "metal": "gold",
+      "kind": "rise",
+      "value": 7,
+      "window": "7d"
+    },
+    {
+      "metal": "silver",
+      "kind": "drop",
+      "value": 4,
+      "window": "24h"
+    },
+    {
+      "metal": "silver",
+      "kind": "rise",
+      "value": 5,
+      "window": "24h"
+    },
+    {
+      "metal": "silver",
+      "kind": "drop",
+      "value": 8,
+      "window": "7d"
+    },
+    {
+      "metal": "silver",
+      "kind": "rise",
+      "value": 10,
+      "window": "7d"
+    },
+    {
+      "metal": "silver",
+      "kind": "belowAvg30",
+      "value": 5
+    },
+    {
+      "metal": "silver",
+      "kind": "aboveAvg30",
+      "value": 10
+    },
+    {
+      "metal": "platinum",
+      "kind": "drop",
+      "value": 3,
+      "window": "24h"
+    },
+    {
+      "metal": "platinum",
+      "kind": "rise",
+      "value": 3,
+      "window": "24h"
+    },
+    {
+      "metal": "platinum",
+      "kind": "drop",
+      "value": 6,
+      "window": "7d"
+    },
+    {
+      "metal": "platinum",
+      "kind": "rise",
+      "value": 8,
+      "window": "7d"
+    },
+    {
+      "metal": "platinum",
+      "kind": "belowAvg30",
+      "value": 4
+    },
+    {
+      "metal": "platinum",
+      "kind": "aboveAvg30",
+      "value": 8
+    },
+    {
+      "metal": "gold",
+      "kind": "below",
+      "value": 102,
+      "unit": "g"
+    },
+    {
+      "metal": "gold",
+      "kind": "below",
+      "value": 108,
+      "unit": "g"
+    },
+    {
+      "metal": "silver",
+      "kind": "below",
+      "value": 1.29,
+      "unit": "g"
+    },
+    {
+      "metal": "silver",
+      "kind": "below",
+      "value": 1.35,
+      "unit": "g"
+    },
+    {
+      "metal": "platinum",
+      "kind": "below",
+      "value": 39.2,
+      "unit": "g"
+    },
+    {
+      "metal": "platinum",
+      "kind": "below",
+      "value": 37,
+      "unit": "g"
+    }
   ]
-}
+}   
