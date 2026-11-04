@@ -41,3 +41,6 @@ yarn-error.*
 /android
 android/
 ios/
+
+# Clé de signature Orvia et son mot de passe : jamais dans Git.
+signing/

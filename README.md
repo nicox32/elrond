@@ -31,6 +31,10 @@ Il est reconstruit automatiquement à chaque modification, numéroté 1.1.<n° d
 Profil) (voir `.github/workflows/android-apk.yml`), puis ouvert sur
 un téléphone Android virtuel (`.github/workflows/test-apk.yml`) : il n'est publié que s'il démarre sans plantage.
 
+Signature : avec la clé Orvia (`plugins/withReleaseSigning.js`) quand les secrets GitHub `ORVIA_KEYSTORE_B64` et
+`ORVIA_KEYSTORE_PASSWORD` sont définis, sinon avec la clé de test d'Android. La clé et son mot de passe ne sont
+jamais dans Git (dossier `signing/` ignoré).
+
 ## Fonctionnalités
 
 - **Cours réels** de l'or, de l'argent et du platine (au comptant, en dollars par once, convertis en

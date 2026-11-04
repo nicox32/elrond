@@ -57,9 +57,30 @@ jobs:
       - name: Générer le projet Android
         run: npx expo prebuild --platform android --no-install
 
+      # Clé Orvia (secrets ORVIA_KEYSTORE_B64 et ORVIA_KEYSTORE_PASSWORD) ; sans eux, clé de test Android.
+      - name: Clé de signature
+        env:
+          KEYSTORE_B64: ${{ secrets.ORVIA_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/orvia.p12"
+            echo "ORVIA_KEYSTORE_FILE=$RUNNER_TEMP/orvia.p12" >> "$GITHUB_ENV"
+            echo "Signature avec la clé Orvia"
+          else
+            echo "::warning::Secrets de signature absents : APK signé avec la clé de test Android"
+          fi
+
       - name: Compiler l'APK
         working-directory: android
+        env:
+          ORVIA_KEYSTORE_PASSWORD: ${{ secrets.ORVIA_KEYSTORE_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Vérifier la signature
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/release/app-release.apk | grep -E "Signer #1 certificate (DN|SHA-256)"
+          rm -f "$RUNNER_TEMP/orvia.p12"
 
       - name: Renommer l'APK
         run: cp android/app/build/outputs/apk/release/app-release.apk orvia.apk
