@@ -1,0 +1,28 @@
+# Diagnostic : cherche les flux d'actualités (RSS/Atom) des sites sur les métaux précieux et vérifie
+# s'ils répondent (et autorisent l'accès navigateur, CORS). Lancement manuel.
+name: Sources d'actualités
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in \
+            https://www.or.fr/feed https://www.or.fr/rss https://www.or.fr/actualites/rss https://www.or.fr/actualites/feed https://www.or.fr/rss.xml \
+            https://www.gold.fr/feed https://www.gold.fr/rss https://www.gold.fr/actualites/feed https://www.gold.fr/rss.xml https://www.gold.fr/blog/feed \
+            https://www.bullionvault.fr/gold-news/rss https://www.bullionvault.fr/gold-news/rss.do https://www.bullionvault.com/gold-news/rss.do https://www.bullionvault.fr/rss \
+            https://www.aucoffre.com/feed https://www.aucoffre.com/rss https://www.aucoffre.com/blog/feed https://www.aucoffre.com/actualites/feed https://blog.aucoffre.com/feed; do
+            code=$(curl -sS -L -m 20 -o /tmp/b -D /tmp/h -w '%{http_code} %{content_type}' -A 'Mozilla/5.0 (compatible; OrviaNews/1.0)' -H 'Origin: https://nicox32.github.io' "$u" 2>&1 || true)
+            cors=$(grep -i '^access-control-allow-origin' /tmp/h | tail -1 | tr -d '\r')
+            items=$(grep -o '<item\|<entry' /tmp/b 2>/dev/null | wc -l)
+            echo "=== $u -> $code | items=$items | ${cors:-pas de CORS}"
+            grep -o '<title>[^<]*</title>' /tmp/b 2>/dev/null | head -3
+          done
+          echo "=== pages d'accueil (liens RSS déclarés)"
+          for u in https://www.or.fr https://www.gold.fr https://www.bullionvault.fr https://www.aucoffre.com; do
+            curl -sS -L -m 20 -A 'Mozilla/5.0' "$u" -o /tmp/p || true
+            echo "--- $u"; grep -oiE '<link[^>]+(rss|atom)[^>]*>' /tmp/p | head -5
+          done
