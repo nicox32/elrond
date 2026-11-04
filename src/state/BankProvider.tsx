@@ -7,6 +7,7 @@ import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
 import { marketStatus } from '../logic/market';
 import { runGiftPlans } from '../logic/childGiftPlan';
+import { runDipBot } from '../logic/dipBot';
 import { amountPerRun, planNotice, runPlan } from '../logic/plan';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
@@ -149,6 +150,18 @@ export function BankProvider({ children }: { children: ReactNode }) {
               const n = planNotice(r, amountPerRun(before.plan));
               if (n) notify(n.title, n.body);
             }
+          }
+          // Bot d'achat sur baisse : au cours réel qui vient d'arriver, avec les relevés horaires (moyenne 30 j).
+          const forDip = accountRef.current;
+          if (forDip?.dipBot?.active) {
+            const prices = spotOnly(live.prices);
+            const d = runDipBot(applyDormancy(forDip, prices), prices, hourly);
+            if (d.account.transactions.length !== forDip.transactions.length || d.notices.length) {
+              persist(recordBalance(d.account, prices));
+            } else if (d.account.dipBot !== forDip.dipBot) {
+              persist(d.account);
+            }
+            d.notices.forEach((n) => notify(n.title, n.body));
           }
           // Dons mensuels aux enfants : rappel le jour prévu, ou don automatique.
           const forGifts = accountRef.current;

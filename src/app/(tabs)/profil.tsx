@@ -101,6 +101,16 @@ export default function ProfileScreen() {
           border
         />
         <LinkRow
+          label="Bot d’achat sur baisse"
+          hint={
+            account.dipBot?.active
+              ? 'Actif : achète en plus quand un métal baisse'
+              : 'Acheter en plus quand un métal baisse'
+          }
+          to="/bot"
+          border
+        />
+        <LinkRow
           label="Compte d’attente"
           hint={`${(account.cashEur ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })} à investir`}
           to="/attente"
@@ -200,6 +210,7 @@ function LinkRow({
     | '/dev'
     | '/attente'
     | '/programme'
+    | '/bot'
     | '/fidelite';
   border?: boolean;
 }) {

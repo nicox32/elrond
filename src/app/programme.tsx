@@ -197,6 +197,9 @@ export default function PlanScreen() {
           </Hint>
         )}
         {saved && <Button title="Supprimer les achats programmés" variant="ghost" onPress={remove} />}
+        <Text style={[ui.link, { textAlign: 'center' }]} onPress={() => router.push('/bot')}>
+          {account.dipBot?.active ? 'Bot d’achat sur baisse : actif ›' : 'Acheter en plus quand un métal baisse ›'}
+        </Text>
       </Screen>
     </KeyboardAvoidingView>
   );

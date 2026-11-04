@@ -79,6 +79,8 @@ export interface Transaction {
   label: string;
   /** Achat repris de l'épargne depuis 2019 (et non passé dans l'appli). */
   origin?: 'history2019' | 'childGifts2022';
+  /** Achat passé par le bot d'achat sur baisse (simple ou double). */
+  dip?: 'normal' | 'strong';
   /** Versement annulé (erreur corrigée sous 24 h). */
   reversed?: boolean;
   /** Louis de fidélité échangés (opération « loyalty_redeem »). */
@@ -218,4 +220,6 @@ export interface Account extends Wallet {
   cashEur?: number;
   /** Achats programmés. */
   plan?: import('./plan.ts').BuyPlan;
+  /** Bot d'achat sur baisse (en plus des achats programmés). */
+  dipBot?: import('./dipBot.ts').DipBot;
 }

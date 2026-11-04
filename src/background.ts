@@ -5,6 +5,7 @@ import { addEvents, addHourlyPoint, evaluateAlerts } from './logic/alerts';
 import { applyDormancy, recordBalance } from './logic/ledger';
 import { marketStatus } from './logic/market';
 import { giftDue, runGiftPlans } from './logic/childGiftPlan';
+import { runDipBot } from './logic/dipBot';
 import { amountPerRun, dueRuns, planNotice, runPlan } from './logic/plan';
 import { addPricePoint } from './logic/priceHistory';
 import { fetchLivePrices } from './logic/prices';
@@ -49,7 +50,8 @@ TaskManager.defineTask(PRICE_TASK, async () => {
       await Promise.all([saveAccount(account), saveQuote(live)]);
       for (const n of g.notices) await notify(n.title, n.body);
     }
-    if (!account.alerts?.some((a) => a.enabled)) return BackgroundTask.BackgroundTaskResult.Success;
+    const wantsAlerts = !!account.alerts?.some((a) => a.enabled);
+    if (!wantsAlerts && !account.dipBot?.active) return BackgroundTask.BackgroundTaskResult.Success;
     // Marché fermé : les cours ne bougent pas, inutile de réveiller le réseau (économie de batterie).
     if (!marketStatus().open) return BackgroundTask.BackgroundTaskResult.Success;
     const [live, hourlyBefore, history] = await Promise.all([
@@ -59,7 +61,18 @@ TaskManager.defineTask(PRICE_TASK, async () => {
     ]);
     const hourly = addHourlyPoint(hourlyBefore, live);
     await Promise.all([saveQuote(live), saveHourlyHistory(hourly), savePriceHistory(addPricePoint(history, live))]);
-    const r = evaluateAlerts(account.alerts, live, hourly);
+    // Bot d'achat sur baisse, avec la moyenne 30 jours des relevés horaires.
+    if (account.dipBot?.active) {
+      const prices = { gold: live.prices.gold, silver: live.prices.silver, platinum: live.prices.platinum };
+      const d = runDipBot(applyDormancy(account, prices), prices, hourly);
+      if (d.account !== account) {
+        account = recordBalance(d.account, prices);
+        await saveAccount(account);
+      }
+      for (const n of d.notices) await notify(n.title, n.body);
+    }
+    if (!wantsAlerts) return BackgroundTask.BackgroundTaskResult.Success;
+    const r = evaluateAlerts(account.alerts!, live, hourly);
     if (r.alerts !== account.alerts || r.events.length) {
       await saveAccount({ ...account, alerts: r.alerts, alertEvents: addEvents(account.alertEvents ?? [], r.events) });
       for (const e of r.events) await notify(e.title, e.body);
