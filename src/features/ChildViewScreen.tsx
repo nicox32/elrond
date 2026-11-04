@@ -42,6 +42,13 @@ export function ChildViewScreen({ view }: { view: ChildView }) {
         possible.
       </Hint>
 
+      {view.m ? (
+        <Card style={{ gap: 6 }}>
+          <Text style={styles.noteFrom}>Message de {view.p}</Text>
+          <Text style={styles.note}>{view.m}</Text>
+        </Card>
+      ) : null}
+
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>Valeur du compte</Text>
         <Text style={styles.heroValue} testID="view-total">
@@ -161,4 +168,6 @@ const styles = StyleSheet.create({
   rowSub: { color: colors.textMuted, fontSize: 13 },
   rowValue: { color: colors.text, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
   rule: { color: colors.text, fontSize: 14, lineHeight: 20 },
+  noteFrom: { color: colors.gold, fontSize: 13, fontWeight: '700' },
+  note: { color: colors.text, fontSize: 15, lineHeight: 22 },
 });

@@ -994,3 +994,22 @@ test('reprise 2019 recalculée aux cours mensuels : achats faits dans l’appli 
   assert.equal(r.transactions.filter((t) => t.origin !== 'history2019').length, 1);
   assert.equal(reprice2019History(r, now), r);
 });
+
+test('lien en lecture seule : le message pour l’autre parent est transmis', async () => {
+  const { makeChildView, childViewLink, readChildView, defaultShareNote } = await import('../src/logic/shareView.ts');
+  const child = {
+    id: 'c1',
+    name: 'Théo',
+    coParent: { name: 'Nadia', secret: 'x' },
+    createdAt: '2022-03-01T10:00:00Z',
+    holdings: { gold: 1, silver: 0, platinum: 0 },
+    transactions: [],
+  };
+  const note = defaultShareNote(child as never);
+  assert.match(note, /^Salut Nadia, .* pour Théo en 2022\./);
+  assert.match(note, /100 000 €/);
+  const v = readChildView(
+    childViewLink(makeChildView(child as never, 'Nicolas', { gold: 110, silver: 1, platinum: 35 }, new Date(), note)),
+  )!;
+  assert.equal(v.m, note);
+});

@@ -35,11 +35,36 @@ export interface ChildView {
   o: [string, string, number, number, number, number][];
   /** Nombre total d'opérations. */
   t: number;
+  /** Message du parent qui partage. */
+  m?: string;
 }
 
 const r = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
 
-export function makeChildView(child: ChildAccount, parent: string, prices: Prices, now = new Date()): ChildView {
+/** Message proposé par défaut (modifiable avant le partage). */
+export function defaultShareNote(child: ChildAccount): string {
+  const other = child.coParent?.name ?? '';
+  const first = [child.createdAt, ...child.transactions.map((t) => t.date)].filter(Boolean).sort()[0];
+  const year = first ? new Date(first).getFullYear() : new Date().getFullYear();
+  return (
+    `Salut${other ? ` ${other}` : ''}, je t'envoie le dernier relevé du compte or/argent que j'ai ouvert pour ` +
+    `${child.name} en ${year}. C'est un compte d'épargne pour ses 18 ans, que j'alimente seul. L'argent lui ` +
+    `appartient et reste bloqué pour lui : je ne peux rien retirer sans ton accord, et tu ne peux rien retirer sans ` +
+    `le mien. Tu n'as rien à payer ni aucune démarche à faire, c'est juste pour ton information.\n\n` +
+    `Côté impôts : en France, chaque parent peut donner jusqu'à 100 000 € à son enfant (tous les 15 ans) sans aucun ` +
+    `droit de donation. On en est très loin, donc il n'y a rien à payer sur l'argent versé pour ${child.name}. ` +
+    `Seule exception, plus tard : s'il revend du métal, l'impôt sur la vente des métaux s'appliquerait (Orvia choisit ` +
+    `automatiquement le moins cher), et il disparaît complètement après 22 ans de détention.`
+  );
+}
+
+export function makeChildView(
+  child: ChildAccount,
+  parent: string,
+  prices: Prices,
+  now = new Date(),
+  note?: string,
+): ChildView {
   const lots = holdingLots(child);
   const cost = { gold: 0, silver: 0, platinum: 0 } as Record<Metal, number>;
   for (const m of METALS)
@@ -72,6 +97,7 @@ export function makeChildView(child: ChildAccount, parent: string, prices: Price
         r(t.deltas.platinum ?? 0, 4),
       ]),
     t: child.transactions.length,
+    ...(note?.trim() ? { m: note.trim().slice(0, 2000) } : {}),
   };
 }
 

@@ -162,6 +162,8 @@ export interface ChildAccount extends Wallet {
   /** Le compte a été transféré à l'enfant devenu majeur (il n'est plus géré par le parent). */
   transferredAt?: string;
   transferCode?: string;
+  /** Message affiché en haut du lien en lecture seule envoyé à l'autre parent. */
+  shareNote?: string;
 }
 
 /** Carte de paiement Orvia, adossée aux métaux du compte. */
