@@ -1,5 +1,5 @@
-# Diagnostic : cherche les flux d'actualités (RSS/Atom) des sites sur les métaux précieux et vérifie
-# s'ils répondent (et autorisent l'accès navigateur, CORS). Lancement manuel.
+# Diagnostic : lit les vrais flux d'actualités avec le code de l'appli (src/logic/news.ts) et affiche le résultat.
+# Lancement manuel.
 name: Sources d'actualités
 
 on:
@@ -9,10 +9,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          for u in https://www.or.fr/actualites/rss https://www.gold.fr/feed https://or.bullionvault.fr/actualites-de-l-or/rss.xml https://www.loretlargent.info/feed/; do
-            curl -sS -L -m 20 -A 'Mozilla/5.0' "$u" -o /tmp/b
-            echo "=== $u ($(wc -c < /tmp/b) octets)"
-            head -c 300 /tmp/b; echo; echo "--- premier article :"
-            python3 -c "import sys;t=open('/tmp/b',encoding='utf-8',errors='replace').read();i=t.find('<item');print(t[i:i+1800])"
-          done
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/news-live.ts
