@@ -94,7 +94,7 @@ jamais dans Git (dossier `signing/` ignoré).
   jusqu'à 31 jours) ; un achat impossible (compte d'attente insuffisant) est sauté et notifié.
 - **Bot d'achat sur baisse** (Profil → Bot d'achat sur baisse, `src/app/bot.tsx`, `src/logic/dipBot.ts`) : en plus de
   l'achat régulier, achat d'un métal sous son prix fixe (€/g) ou sous sa moyenne 30 jours (Gold Spot −5 %, argent −8 %,
-  platine −7 %), double en baisse forte (−10 %, argent −15 %) ; un achat par métal sur 7 jours, plafond mensuel ; prix
+  platine −7 %), double en baisse forte (−10 %, argent −15 %) ; un achat par métal sur 7 jours, plafond mensuel (300 € par défaut) ; prix
   fixes remis à jour chaque mois (moyenne 30 jours −7 % / −10 %) ; comparaison du prix moyen payé par gramme avec
   l'achat régulier. Paiement par le compte d'attente ou la carte. Inactif tant qu'il n'est pas enregistré.
 - **Sauvegarde** (Profil → Sauvegarde, `src/logic/backup.ts`) : export du compte dans un fichier JSON (Google Drive,

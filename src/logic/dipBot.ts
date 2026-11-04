@@ -49,7 +49,7 @@ export function newDipBot(now = new Date()): DipBot {
   return {
     active: true,
     amount: 25,
-    monthlyCap: 216,
+    monthlyCap: 300,
     source: 'cash',
     rules: {
       gold: { enabled: true, avgDropPct: 5, strongDropPct: 10, fixedPrice: 108, fixedGapPct: 7 },
