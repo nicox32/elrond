@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { BackupCard } from '../../components/BackupCard';
+import { ChildGifts2022 } from '../../components/ChildGifts2022';
 import { History2019 } from '../../components/History2019';
 import { PinConfirm } from '../../components/PinConfirm';
 import { Segmented } from '../../components/Segmented';
@@ -122,6 +123,7 @@ export default function ProfileScreen() {
 
       <SectionTitle>Historique</SectionTitle>
       <History2019 />
+      <ChildGifts2022 />
 
       <SectionTitle>Sauvegarde</SectionTitle>
       <BackupCard />

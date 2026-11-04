@@ -1013,3 +1013,25 @@ test('lien en lecture seule : le message pour l’autre parent est transmis', as
   )!;
   assert.equal(v.m, note);
 });
+
+test('dons à l’enfant depuis 2022 : 50 € le 5 du mois, 50/50 Gold Spot et argent, une seule fois', async () => {
+  const { importGifts2022, previewGifts2022 } = await import('../src/logic/childGifts.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const now = new Date('2026-11-04T12:00:00');
+  const { account, child } = addChild(createAccount('Nicolas', new Date('2026-10-01')), 'Théo', '2016-03-12');
+  const p = previewGifts2022(now);
+  assert.equal(p.gifts, 58); // janvier 2022 → octobre 2026 (le 5 novembre n'est pas encore passé)
+  assert.equal(p.total, 2900);
+  const a = importGifts2022(account, child.id, now);
+  const c = a.children[0];
+  assert.equal(c.transactions.length, 58 * 2);
+  close(
+    c.transactions.reduce((s, t) => s + t.eur, 0),
+    2900,
+    0.01,
+  );
+  assert.ok(c.holdings.gold > 0 && c.holdings.silver > 0 && c.holdings.platinum === 0);
+  assert.equal(c.createdAt.slice(0, 10), '2022-01-05');
+  assert.deepEqual(a.holdings, account.holdings); // compte principal inchangé
+  assert.equal(importGifts2022(a, child.id, now), a);
+});

@@ -78,7 +78,7 @@ export interface Transaction {
   fees?: number;
   label: string;
   /** Achat repris de l'épargne depuis 2019 (et non passé dans l'appli). */
-  origin?: 'history2019';
+  origin?: 'history2019' | 'childGifts2022';
   /** Versement annulé (erreur corrigée sous 24 h). */
   reversed?: boolean;
   /** Louis de fidélité échangés (opération « loyalty_redeem »). */
@@ -164,6 +164,8 @@ export interface ChildAccount extends Wallet {
   transferCode?: string;
   /** Message affiché en haut du lien en lecture seule envoyé à l'autre parent. */
   shareNote?: string;
+  /** Les dons mensuels depuis 2022 ont été repris (une seule fois). */
+  gifts2022Imported?: boolean;
 }
 
 /** Carte de paiement Orvia, adossée aux métaux du compte. */
