@@ -48,7 +48,8 @@
           }
         }
       ],
-      "./plugins/withReleaseSigning"
+      "./plugins/withReleaseSigning",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
