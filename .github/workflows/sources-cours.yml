@@ -1,0 +1,27 @@
+# Diagnostic : vérifie que les sources de cours (principale et secours) répondent, et si elles autorisent
+# l'accès depuis le navigateur (en-tête CORS, utile pour la version web). Lancement manuel.
+name: Sources de cours
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in \
+            https://api.gold-api.com/price/XAU \
+            https://api.gold-api.com/price/XPT \
+            https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAU/USD \
+            https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XAG/USD \
+            https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/XPT/USD \
+            https://data-asg.goldprice.org/dbXRates/USD \
+            https://api.metals.live/v1/spot \
+            https://api.frankfurter.dev/v1/latest?base=USD\&symbols=EUR \
+            https://open.er-api.com/v6/latest/USD; do
+            echo "=== $u"
+            curl -sS -m 20 -D /tmp/h -o /tmp/b -H 'Origin: https://nicox32.github.io' -A 'Mozilla/5.0' "$u" || true
+            head -1 /tmp/h; grep -i '^access-control-allow-origin' /tmp/h || echo "(pas de CORS)"
+            head -c 400 /tmp/b; echo
+          done
