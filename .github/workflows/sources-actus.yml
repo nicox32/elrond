@@ -10,13 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for u in https://www.bullionvault.fr/gold-news https://www.bullionvault.com/gold-news https://www.aucoffre.com/actualites https://www.aucoffre.com/actualite https://www.aucoffre.com/blog https://www.aucoffre.com/sitemap.xml https://www.bullionvault.fr/sitemap.xml; do
-            curl -sS -L -m 20 -A 'Mozilla/5.0' "$u" -o /tmp/p -w "=== $u -> %{http_code} %{url_effective}\n" || true
-            grep -oiE '(href|src)="[^"]*(rss|feed|atom|\.xml)[^"]*"' /tmp/p | sort -u | head -8
-            grep -oiE '<loc>[^<]*(news|actu|blog)[^<]*</loc>' /tmp/p | head -5
-            grep -oiE 'href="[^"]*(gold-news|actualite)[^"]*/[^"]+"' /tmp/p | sort -u | head -5
-          done
-          for u in https://www.bullionvault.fr/gold-news/rss.xml https://www.bullionvault.com/gold-news/rss https://www.bullionvault.com/gold-news/feed https://www.bullionvault.fr/gold-news/feed https://www.aucoffre.com/rss.xml https://www.aucoffre.com/actualites/rss https://www.aucoffre.com/actualites.rss; do
-            code=$(curl -sS -L -m 20 -o /tmp/b -w '%{http_code} %{content_type}' -A 'Mozilla/5.0' "$u" 2>&1 || true)
-            echo "=== $u -> $code | items=$(grep -o '<item\|<entry' /tmp/b | wc -l)"
+          for u in https://www.loretlargent.info/feed/ https://loretlargent.info/feed/ \
+            https://or.bullionvault.fr/gold-news/rss https://or.bullionvault.fr/gold-news https://or.bullionvault.fr/ \
+            https://www.bullionvault.com/gold-news/rss.xml https://www.bullionvault.com/gold-news/news/rss https://www.bullionvault.com/gold-news/gold-price-news; do
+            code=$(curl -sS -L -m 20 -o /tmp/b -D /tmp/h -w '%{http_code} %{content_type} %{url_effective}' -A 'Mozilla/5.0' -H 'Origin: https://nicox32.github.io' "$u" 2>&1 || true)
+            cors=$(grep -i '^access-control-allow-origin' /tmp/h | tail -1 | tr -d '\r')
+            echo "=== $u -> $code | items=$(grep -o '<item\|<entry' /tmp/b | wc -l) | ${cors:-pas de CORS}"
+            grep -o '<title>[^<]*</title>' /tmp/b | head -3
+            grep -oiE '(href)="[^"]*(rss|feed|atom)[^"]*"' /tmp/b | sort -u | head -5
+            grep -oiE 'href="/gold-news/[a-z-]+/[^"]+"' /tmp/b | sort -u | head -4
+            grep -oiE 'href="[^"]*(actualit|gold-news)[^"]*"' /tmp/b | sort -u | head -6
           done
