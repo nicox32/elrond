@@ -96,7 +96,8 @@ jamais dans Git (dossier `signing/` ignoré).
   l'achat régulier, achat d'un métal sous son prix fixe (€/g) ou sous sa moyenne 30 jours (Gold Spot −5 %, argent −8 %,
   platine −7 %), double en baisse forte (−10 %, argent −15 %) ; un achat par métal sur 7 jours, plafond mensuel (300 € par défaut) ; prix
   fixes remis à jour chaque mois (moyenne 30 jours −7 % / −10 %) ; comparaison du prix moyen payé par gramme avec
-  l'achat régulier. Paiement par le compte d'attente ou la carte. Inactif tant qu'il n'est pas enregistré.
+  l'achat régulier. Paiement par le compte d'attente ou la carte. Chaque achat notifié dans l'appli et sur le canal
+  ntfy choisi (`src/logic/ntfyClient.ts`). Inactif tant qu'il n'est pas enregistré.
 - **Sauvegarde** (Profil → Sauvegarde, `src/logic/backup.ts`) : export du compte dans un fichier JSON (Google Drive,
   e-mail…) et restauration sur un autre téléphone, confirmée par le code ; le code d'accès n'est jamais exporté.
 - **Historique allégé** (`src/logic/compact.ts`) : au-delà de 600 opérations, les achats de plus de 12 mois sont

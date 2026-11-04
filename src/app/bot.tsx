@@ -16,6 +16,7 @@ import {
 } from '../logic/dipBot';
 import { formatDate, formatEur, parseAmount } from '../logic/format';
 import { METAL_LABEL } from '../logic/ledger';
+import { isValidTopic, publishNtfy } from '../logic/ntfyClient';
 import { SPOT_METALS, type SpotMetal } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors, metalColor } from '../theme';
@@ -43,7 +44,10 @@ export default function DipBotScreen() {
     platinum: String(bot.rules.platinum.fixedPrice).replace('.', ','),
   }));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [topic, setTopic] = useState(account.ntfyTopic ?? '');
+  const [ntfyMsg, setNtfyMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const now = new Date();
+  const cleanTopic = topic.trim();
   const prices = quote.prices;
   const waitDays = daysUntilAverage(hourlyHistory, now);
   const spent = dipSpentThisMonth(account, now);
@@ -72,12 +76,28 @@ export default function DipBotScreen() {
       // Un bot relancé repart de zéro pour la comparaison.
       startedAt: !saved || (!saved.active && bot.active) ? now.toISOString() : saved.startedAt,
     };
-    updateAccount((a) => ({ ...a, dipBot: value }));
+    updateAccount((a) => ({ ...a, dipBot: value, ...(cleanTopic ? { ntfyTopic: cleanTopic } : {}) }));
     setBot(value);
     setMsg({
       ok: true,
       text: value.active ? 'Bot d’achat enregistré : il surveille les cours.' : 'Bot d’achat en pause.',
     });
+  }
+
+  async function testNtfy() {
+    if (!isValidTopic(cleanTopic)) {
+      setNtfyMsg({ ok: false, text: 'Indiquez d’abord votre canal ntfy (sans espace).' });
+      return;
+    }
+    try {
+      await publishNtfy(cleanTopic, {
+        title: 'Test · Bot d’achat sur baisse',
+        body: 'Notification de test : c’est ici que vous recevrez les achats faits par le bot.',
+      });
+      setNtfyMsg({ ok: true, text: 'Test envoyé : vérifiez votre canal dans ntfy.' });
+    } catch {
+      setNtfyMsg({ ok: false, text: 'Envoi impossible : vérifiez votre connexion et le nom du canal.' });
+    }
   }
 
   const comparison = saved ? compareDip(account, saved.startedAt) : [];
@@ -211,6 +231,38 @@ export default function DipBotScreen() {
             Gold Spot, {bot.rules.silver.fixedGapPct} % pour l’argent et le platine. Dernière mise à jour le{' '}
             {formatDate(bot.fixedUpdatedAt)}, prochaine vers le {formatDate(nextRefresh.toISOString())}.
           </Hint>
+          <View style={styles.switchRow}>
+            <Text style={[styles.switchLabel, { fontSize: 15 }]}>Notifications aussi sur ntfy</Text>
+            <Switch
+              value={bot.ntfy !== false}
+              onValueChange={(ntfy) => setBot({ ...bot, ntfy })}
+              trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
+            />
+          </View>
+          {bot.ntfy !== false && (
+            <>
+              <Label>Canal ntfy (celui de vos alertes)</Label>
+              <TextInput
+                value={topic}
+                onChangeText={(t) => {
+                  setTopic(t);
+                  setNtfyMsg(null);
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="orvia-…"
+                placeholderTextColor={colors.textMuted}
+                style={ui.input}
+                accessibilityLabel="Canal ntfy"
+              />
+              <Hint>
+                Chaque achat du bot (ou achat impossible) vous est envoyé sur ce canal, en plus de la notification de
+                l’appli.
+              </Hint>
+              <Button title="Envoyer un test sur ntfy" variant="ghost" onPress={testNtfy} />
+              {ntfyMsg && <Message {...ntfyMsg} />}
+            </>
+          )}
           {error && <Message ok={false} text={error} />}
           {msg && <Message {...msg} />}
           <Button title="Enregistrer" onPress={save} disabled={!!error} />

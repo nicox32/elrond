@@ -96,3 +96,24 @@ test('bot : comparaison du prix moyen payé par gramme, achat sur baisse vs acha
   assert.equal(gold.regular.count, 1);
   assert.ok(gold.diffPct! < -10); // payé ~10 % moins cher par gramme
 });
+
+test('bot : notifications ntfy (canal valide, envoi JSON avec accents)', async () => {
+  const { isValidTopic, publishNtfy } = await import('../src/logic/ntfyClient.ts');
+  assert.equal(isValidTopic('orvia-abc123_x'), true);
+  assert.equal(isValidTopic('orvia-abc qq'), false);
+  assert.equal(isValidTopic(''), false);
+  let sent: { url: string; body: Record<string, unknown> } | null = null;
+  const fake = (async (url: string, init: { body: string }) => {
+    sent = { url, body: JSON.parse(init.body) };
+    return { ok: true, status: 200 };
+  }) as unknown as typeof fetch;
+  await publishNtfy(
+    'orvia-abc',
+    { title: 'Achat sur baisse : Gold Spot', body: '25,00 € achetés à 104,00 €/g.' },
+    fake,
+  );
+  assert.equal(sent!.url, 'https://ntfy.sh');
+  assert.equal(sent!.body.topic, 'orvia-abc');
+  assert.equal(sent!.body.title, 'Achat sur baisse : Gold Spot');
+  await assert.rejects(publishNtfy('mauvais canal', { title: 'x', body: 'y' }, fake));
+});

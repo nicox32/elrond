@@ -6,6 +6,7 @@ import { applyDormancy, recordBalance } from './logic/ledger';
 import { marketStatus } from './logic/market';
 import { giftDue, runGiftPlans } from './logic/childGiftPlan';
 import { runDipBot } from './logic/dipBot';
+import { isValidTopic, publishNtfy } from './logic/ntfyClient';
 import { amountPerRun, dueRuns, planNotice, runPlan } from './logic/plan';
 import { addPricePoint } from './logic/priceHistory';
 import { fetchLivePrices } from './logic/prices';
@@ -69,7 +70,12 @@ TaskManager.defineTask(PRICE_TASK, async () => {
         account = recordBalance(d.account, prices);
         await saveAccount(account);
       }
-      for (const n of d.notices) await notify(n.title, n.body);
+      for (const n of d.notices) {
+        await notify(n.title, n.body);
+        if (account.dipBot?.ntfy !== false && isValidTopic(account.ntfyTopic)) {
+          await publishNtfy(account.ntfyTopic, n).catch(() => {});
+        }
+      }
     }
     if (!wantsAlerts) return BackgroundTask.BackgroundTaskResult.Success;
     const r = evaluateAlerts(account.alerts!, live, hourly);

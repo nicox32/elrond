@@ -8,6 +8,7 @@ import { notify } from '../notifications';
 import { marketStatus } from '../logic/market';
 import { runGiftPlans } from '../logic/childGiftPlan';
 import { runDipBot } from '../logic/dipBot';
+import { isValidTopic, publishNtfy } from '../logic/ntfyClient';
 import { amountPerRun, planNotice, runPlan } from '../logic/plan';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
@@ -161,7 +162,12 @@ export function BankProvider({ children }: { children: ReactNode }) {
             } else if (d.account.dipBot !== forDip.dipBot) {
               persist(d.account);
             }
-            d.notices.forEach((n) => notify(n.title, n.body));
+            d.notices.forEach((n) => {
+              notify(n.title, n.body);
+              if (forDip.dipBot?.ntfy !== false && isValidTopic(forDip.ntfyTopic)) {
+                publishNtfy(forDip.ntfyTopic, n).catch(() => {});
+              }
+            });
           }
           // Dons mensuels aux enfants : rappel le jour prévu, ou don automatique.
           const forGifts = accountRef.current;

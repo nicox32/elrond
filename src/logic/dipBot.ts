@@ -36,6 +36,8 @@ export interface DipBot {
   lastBuyAt: Partial<Record<SpotMetal, string>>;
   /** Dernier achat impossible signalé (par métal), pour ne pas prévenir en boucle. */
   lastSkipAt?: Partial<Record<SpotMetal, string>>;
+  /** Notifications du bot aussi envoyées sur le canal ntfy du compte. */
+  ntfy?: boolean;
 }
 
 export const DIP_LIMITS = {
@@ -59,6 +61,7 @@ export function newDipBot(now = new Date()): DipBot {
     startedAt: now.toISOString(),
     fixedUpdatedAt: now.toISOString(),
     lastBuyAt: {},
+    ntfy: true,
   };
 }
 
