@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AmountInput } from '../../components/AmountInput';
+import { ChildGiftCard } from '../../components/ChildGiftCard';
 import { ChildRules } from '../../components/ChildRules';
 import { CodeConfirm } from '../../components/CodeConfirm';
 import { DormancyNotice } from '../../components/DormancyNotice';
@@ -517,6 +518,13 @@ export default function ChildScreen() {
             </Hint>
           )}
           {wMsg && <Message {...wMsg} />}
+        </>
+      )}
+
+      {stage === 'minor' && (
+        <>
+          <SectionTitle>Don mensuel</SectionTitle>
+          <ChildGiftCard child={child} />
         </>
       )}
 

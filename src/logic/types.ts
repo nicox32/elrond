@@ -166,6 +166,8 @@ export interface ChildAccount extends Wallet {
   shareNote?: string;
   /** Les dons mensuels depuis 2022 ont été repris (une seule fois). */
   gifts2022Imported?: boolean;
+  /** Don mensuel du parent : rappel le jour prévu, ou don automatique. */
+  giftPlan?: import('./childGiftPlan.ts').ChildGiftPlan;
 }
 
 /** Carte de paiement Orvia, adossée aux métaux du compte. */

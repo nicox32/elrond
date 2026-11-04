@@ -6,6 +6,7 @@ import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
 import { marketStatus } from '../logic/market';
+import { runGiftPlans } from '../logic/childGiftPlan';
 import { amountPerRun, planNotice, runPlan } from '../logic/plan';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
 import type { Account, PriceQuote, Prices, Settings } from '../logic/types';
@@ -148,6 +149,14 @@ export function BankProvider({ children }: { children: ReactNode }) {
               const n = planNotice(r, amountPerRun(before.plan));
               if (n) notify(n.title, n.body);
             }
+          }
+          // Dons mensuels aux enfants : rappel le jour prévu, ou don automatique.
+          const forGifts = accountRef.current;
+          if (forGifts?.children.some((c) => c.giftPlan?.active)) {
+            const prices = spotOnly(live.prices);
+            const g = runGiftPlans(forGifts, prices);
+            if (g.account !== forGifts) persist(recordBalance(g.account, prices));
+            g.notices.forEach((n) => notify(n.title, n.body));
           }
           const last = accountRef.current?.balanceHistory.at(-1);
           if (!periodic || !last || Date.now() - new Date(last.date).getTime() >= PERIODIC_BALANCE_MS) snapshot();

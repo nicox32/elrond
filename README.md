@@ -37,7 +37,7 @@ jamais dans Git (dossier `signing/` ignoré).
 
 ## Fonctionnalités
 
-- **Cours réels** de l'or, de l'argent et du platine (au comptant, en dollars par once, convertis en
+- **Cours réels** (source principale gold-api.com, secours Swissquote dans l'appli et le serveur d'alertes) de l'or, de l'argent et du platine (au comptant, en dollars par once, convertis en
   euros par gramme). Actualisés à l'ouverture de l'appli, au retour dans l'appli, à sa fermeture et
   d'un appui sur la barre des cours. Hors ligne, l'appli garde les derniers cours connus et le signale.
 - **Cours en direct** des trois métaux sur l'écran du compte, actualisés toutes les 30 s, avec leur
@@ -106,6 +106,9 @@ jamais dans Git (dossier `signing/` ignoré).
   `docs/exemple-releve-epargne-enfant.pdf`) : PDF avec logo, valeur au cours du jour, total versé, plus-value,
   versements par année, règles de protection, fiscalité et derniers mouvements ; présenté comme un relevé de suivi
   (ni certificat de dépôt, ni preuve de détention).
+- **Don mensuel à un enfant** (écran du compte enfant, `src/logic/childGiftPlan.ts`) : montant, jour du mois et
+  répartition ; le jour prévu, rappel par notification et don en un geste (« Faire le don », ou « Pas ce mois-ci »),
+  ou don automatique si vous le choisissez. Le métal est acheté sur le compte du parent puis versé gratuitement.
 - **Dons à un enfant depuis 2022** (Profil → Historique, sous la reprise 2019, `src/logic/childGifts.ts`) : 50 € le 5
   de chaque mois depuis le 5 janvier 2022, 50 % Gold Spot et 50 % argent, au cours moyen réel de chaque mois, frais
   d'achat compris, ajoutés au compte de l'enfant choisi (le compte principal ne change pas) ; une seule fois.

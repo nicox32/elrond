@@ -1050,3 +1050,62 @@ test('relevé d’épargne enfant : 58 versements, total versé, règles et ment
   assert.match(html, /ni un certificat de dépôt/);
   assert.match(html, /data:image\/png;base64,/);
 });
+
+test('don mensuel à l’enfant : rappel une fois, don en un geste, automatique, rien en double', async () => {
+  const { newGiftPlan, giftDue, giveMonthlyGift, runGiftPlans, skipMonthlyGift, giftAmounts } =
+    await import('../src/logic/childGiftPlan.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const p = { gold: 110, silver: 1.4, platinum: 40 };
+  const start = new Date('2026-11-04T09:00:00');
+  const r0 = addChild(createAccount('Nicolas', start), 'Théo', '2016-03-12', start);
+  let a = { ...r0.account, children: r0.account.children.map((c) => ({ ...c, giftPlan: newGiftPlan() })) };
+  assert.deepEqual(giftAmounts(newGiftPlan()), { gold: 40, silver: 10, platinum: 0 });
+  assert.equal(giftDue(a.children[0].giftPlan, start), false); // le 4 : pas encore
+  const day = new Date('2026-11-05T09:00:00');
+  assert.equal(giftDue(a.children[0].giftPlan, day), true);
+  // Manuel : un seul rappel dans le mois.
+  let r = runGiftPlans(a, p, day);
+  assert.equal(r.notices.length, 1);
+  assert.match(r.notices[0].title, /Don du mois à Théo/);
+  assert.equal(runGiftPlans(r.account, p, day).notices.length, 0);
+  // Don en un geste : 50 € achetés sur le compte du parent, tout versé à l'enfant.
+  a = giveMonthlyGift(r.account, p, r0.child.id, day);
+  const c = a.children[0];
+  close(c.holdings.gold, (40 * (1 - 0.028)) / 110, 1e-6);
+  close(c.holdings.silver, (10 * (1 - 0.068)) / 1.4, 1e-6);
+  close(a.holdings.gold, 0, 1e-9);
+  assert.equal(giftDue(c.giftPlan, day), false);
+  assert.ok(a.transactions.some((t) => t.label.includes('don à Théo')));
+  // Mois suivant en automatique.
+  a = { ...a, children: a.children.map((x) => ({ ...x, giftPlan: { ...x.giftPlan!, auto: true } })) };
+  r = runGiftPlans(a, p, new Date('2026-12-05T10:00:00'));
+  assert.equal(r.notices[0].title, 'Don à Théo effectué');
+  assert.ok(r.account.children[0].holdings.gold > c.holdings.gold);
+  // Sauter un mois.
+  const s = skipMonthlyGift(r.account, r0.child.id, new Date('2027-01-06T10:00:00'));
+  assert.equal(giftDue(s.children[0].giftPlan, new Date('2027-01-20T10:00:00')), false);
+});
+
+test('cours réels : source de secours (Swissquote) si la principale est en panne', async () => {
+  const { clearFxCache } = await import('../src/logic/prices.ts');
+  clearFxCache();
+  const calls: string[] = [];
+  const fakeFetch = (async (url: string) => {
+    calls.push(url);
+    if (url.includes('gold-api')) return { ok: false, status: 503, json: async () => ({}) };
+    if (url.includes('swissquote')) {
+      const mid = url.includes('/XAU/') ? 3110.34768 : url.includes('/XAG/') ? 31.1034768 : 1000;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => [{ spreadProfilePrices: [{ bid: mid - 1, ask: mid + 1 }] }],
+      };
+    }
+    return { ok: true, status: 200, json: async () => ({ rates: { EUR: 0.9 } }) };
+  }) as unknown as typeof fetch;
+  const quote = await fetchLivePrices(fakeFetch);
+  close(quote.prices.gold, 90);
+  close(quote.prices.silver, 0.9);
+  assert.ok(calls.some((u) => u.includes('swissquote')));
+  clearFxCache();
+});

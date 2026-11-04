@@ -4,6 +4,7 @@ import * as TaskManager from 'expo-task-manager';
 import { addEvents, addHourlyPoint, evaluateAlerts } from './logic/alerts';
 import { applyDormancy, recordBalance } from './logic/ledger';
 import { marketStatus } from './logic/market';
+import { giftDue, runGiftPlans } from './logic/childGiftPlan';
 import { amountPerRun, dueRuns, planNotice, runPlan } from './logic/plan';
 import { addPricePoint } from './logic/priceHistory';
 import { fetchLivePrices } from './logic/prices';
@@ -38,6 +39,15 @@ TaskManager.defineTask(PRICE_TASK, async () => {
       await Promise.all([saveAccount(account), saveQuote(live)]);
       const n = planNotice(r, amountPerRun(stored.plan!));
       if (n) await notify(n.title, n.body);
+    }
+    // Dons mensuels aux enfants dus : rappel ou don automatique, même appli fermée.
+    if (account.children.some((c) => !c.transferredAt && giftDue(c.giftPlan))) {
+      const live = await fetchLivePrices();
+      const prices = { gold: live.prices.gold, silver: live.prices.silver, platinum: live.prices.platinum };
+      const g = runGiftPlans(applyDormancy(account, prices), prices);
+      account = recordBalance(g.account, prices);
+      await Promise.all([saveAccount(account), saveQuote(live)]);
+      for (const n of g.notices) await notify(n.title, n.body);
     }
     if (!account.alerts?.some((a) => a.enabled)) return BackgroundTask.BackgroundTaskResult.Success;
     // Marché fermé : les cours ne bougent pas, inutile de réveiller le réseau (économie de batterie).

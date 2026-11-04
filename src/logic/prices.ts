@@ -31,10 +31,36 @@ function positive(n: unknown): number {
   return v;
 }
 
-/** Cours au comptant en dollars par once troy (api.gold-api.com, gratuit, sans clé). */
-async function fetchUsdPerOunce(fetchFn: Fetch, metal: SpotMetal): Promise<number> {
+/** Source principale : api.gold-api.com (gratuit, sans clé). */
+async function fromGoldApi(fetchFn: Fetch, metal: SpotMetal): Promise<number> {
   const data = await getJson(fetchFn, `https://api.gold-api.com/price/${SYMBOL[metal]}`);
   return positive(data?.price);
+}
+
+/**
+ * Source de secours : cotations publiques de Swissquote (milieu entre achat et vente). Elle n'autorise pas
+ * l'accès depuis un navigateur : elle sert dans l'appli Android, la version web garde alors les derniers cours.
+ */
+async function fromSwissquote(fetchFn: Fetch, metal: SpotMetal): Promise<number> {
+  const data = await getJson(
+    fetchFn,
+    `https://forex-data-feed.swissquote.com/public-quotes/bboquotes/instrument/${SYMBOL[metal]}/USD`,
+  );
+  const quote = Array.isArray(data) ? data[0]?.spreadProfilePrices?.[0] : null;
+  return positive((positive(quote?.bid) + positive(quote?.ask)) / 2);
+}
+
+/** Cours au comptant en dollars par once troy : source principale, puis secours si elle ne répond pas. */
+async function fetchUsdPerOunce(fetchFn: Fetch, metal: SpotMetal): Promise<number> {
+  try {
+    return await fromGoldApi(fetchFn, metal);
+  } catch (first) {
+    try {
+      return await fromSwissquote(fetchFn, metal);
+    } catch {
+      throw first;
+    }
+  }
 }
 
 /** Taux de change USD → EUR, avec une seconde source en secours. */
