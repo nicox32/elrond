@@ -84,23 +84,20 @@ export async function runOnce(opts: {
   };
 }
 
-/** Envoie une notification sur un canal ntfy. */
+/**
+ * Envoie une notification sur un canal ntfy, exactement comme l'appli (API JSON, accents compris, sans lien au
+ * toucher : la notification ouvre ntfy, où le message reste affiché).
+ */
 export async function sendNtfy(
   topic: string,
   n: Notification,
   fetchFn: typeof fetch = fetch,
   server = 'https://ntfy.sh',
 ) {
-  const res = await fetchFn(`${server}/${encodeURIComponent(topic)}`, {
+  const res = await fetchFn(server, {
     method: 'POST',
-    body: n.body,
-    headers: {
-      // En-têtes HTTP en ASCII : le titre accentué passe par l'encodage RFC 2047 accepté par ntfy.
-      Title: `=?UTF-8?B?${Buffer.from(n.title, 'utf8').toString('base64')}?=`,
-      Tags: 'bell,coin',
-      Priority: 'high',
-      Click: 'https://nicox32.github.io/elrond/alertes',
-    },
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic, title: n.title, message: n.body, tags: ['bell', 'coin'], priority: 4 }),
   });
   if (!res.ok) throw new Error(`ntfy a répondu ${res.status}`);
 }

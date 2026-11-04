@@ -479,9 +479,12 @@ test('serveur d’alertes : configuration, état conservé, une notification ntf
     return { ok: true, status: 200 };
   }) as unknown as typeof fetch;
   await sendNtfy('orvia-test', { title: 'Alerte or · Or sous 3 500 €/oz', body: 'Cours actuel : 3 450 €/oz.' }, ntfy);
-  assert.equal(calls[0].url, 'https://ntfy.sh/orvia-test');
+  assert.equal(calls[0].url, 'https://ntfy.sh');
   assert.equal(calls[0].init.method, 'POST');
-  assert.match(String((calls[0].init.headers as Record<string, string>).Title), /^=\?UTF-8\?B\?/);
+  const sent = JSON.parse(String(calls[0].init.body));
+  assert.equal(sent.topic, 'orvia-test');
+  assert.equal(sent.title, 'Alerte or · Or sous 3 500 €/oz');
+  assert.equal(sent.click, undefined); // le toucher ouvre ntfy, pas le site
 });
 
 test('export des alertes vers le serveur : actives seulement, lisibles par le serveur', async () => {
