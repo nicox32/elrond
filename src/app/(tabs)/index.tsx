@@ -8,6 +8,7 @@ import { OrviaCard } from '../../components/OrviaCard';
 import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
+import { HomeNews } from '../../components/HomeNews';
 import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
 import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
@@ -115,6 +116,8 @@ export default function AccountScreen() {
       <Card>
         <BalanceChart points={account.balanceHistory} />
       </Card>
+
+      <HomeNews />
 
       <SectionTitle>Ma carte</SectionTitle>
       {account.card ? (

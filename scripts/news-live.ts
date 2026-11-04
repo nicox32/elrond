@@ -7,6 +7,8 @@ for (const s of NEWS_SOURCES) {
   const items = r.items.filter((n) => n.source === s.id);
   console.log(`\n## ${sourceName(s.id)} : ${items.length} articles`);
   for (const n of items.slice(0, 2)) {
-    console.log(`- ${n.date ?? 'sans date'} | ${n.title}\n  ${n.summary}\n  auteur=${n.author ?? '-'} image=${n.image ? 'oui' : 'non'}`);
+    console.log(
+      `- ${n.date ?? 'sans date'} | ${n.title}\n  ${n.summary}\n  auteur=${n.author ?? '-'} image=${n.image ? 'oui' : 'non'}`,
+    );
   }
 }

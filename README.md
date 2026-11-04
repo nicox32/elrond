@@ -106,6 +106,11 @@ jamais dans Git (dossier `signing/` ignoré).
   `docs/exemple-releve-epargne-enfant.pdf`) : PDF avec logo, valeur au cours du jour, total versé, plus-value,
   versements par année, règles de protection, fiscalité et derniers mouvements ; présenté comme un relevé de suivi
   (ni certificat de dépôt, ni preuve de détention).
+- **Actualités** (écran du compte → « Tout voir », `src/app/actualites.tsx`, `src/logic/news.ts`) : titres, résumés
+  et images des flux RSS publics d'Or.fr, Gold.fr, BullionVault (France) et AuCOFFRE (blog « L'or et l'argent »),
+  les plus récents d'abord, filtre par site, lecture de l'article sur son site ; gardées en cache (hors connexion),
+  rechargées toutes les 30 min. Ces sites n'autorisant pas la lecture depuis un navigateur, la section sert dans
+  l'appli Android (la version web propose les liens vers les sites). Diagnostic : `.github/workflows/sources-actus.yml`.
 - **Don mensuel à un enfant** (écran du compte enfant, `src/logic/childGiftPlan.ts`) : montant, jour du mois et
   répartition ; le jour prévu, rappel par notification et don en un geste (« Faire le don », ou « Pas ce mois-ci »),
   ou don automatique si vous le choisissez. Le métal est acheté sur le compte du parent puis versé gratuitement.

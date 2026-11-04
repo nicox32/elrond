@@ -75,3 +75,15 @@ export async function loadHourlyHistory(): Promise<PricePoint[]> {
 export function saveHourlyHistory(history: PricePoint[]): Promise<void> {
   return writeJson(HOURLY_HISTORY_KEY, history);
 }
+
+const NEWS_KEY = 'elrond.news.v1';
+
+/** Dernières actualités chargées (affichées tout de suite, et hors connexion). */
+export async function loadCachedNews(): Promise<import('./logic/news').NewsResult | null> {
+  const data = (await readJson(NEWS_KEY)) as import('./logic/news').NewsResult | null;
+  return data && Array.isArray(data.items) ? data : null;
+}
+
+export async function saveNews(news: import('./logic/news').NewsResult): Promise<void> {
+  await writeJson(NEWS_KEY, news);
+}
