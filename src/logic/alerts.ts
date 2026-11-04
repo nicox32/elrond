@@ -55,7 +55,13 @@ const MAX_EVENTS = 50;
 
 export const HOURLY_HISTORY_MS = 35 * 24 * 3_600_000;
 
-/** Garde au plus un relevé par heure sur 35 jours. */
+const HOUR_MS = 3_600_000;
+
+/**
+ * Garde un relevé par heure (heure pleine) sur 35 jours : un nouveau cours remplace celui de la même heure,
+ * sinon il s'ajoute. (Comparer à « moins d'une heure depuis le dernier relevé » remplaçait sans fin le dernier
+ * point quand les cours arrivent toutes les 15 minutes : l'historique ne grandissait plus.)
+ */
 export function addHourlyPoint(history: PricePoint[], quote: PriceQuote): PricePoint[] {
   if (quote.source !== 'live') return history;
   const time = new Date(quote.fetchedAt).getTime();
@@ -64,7 +70,7 @@ export function addHourlyPoint(history: PricePoint[], quote: PriceQuote): PriceP
     return t >= time - HOURLY_HISTORY_MS && t < time;
   });
   const last = kept[kept.length - 1];
-  if (last && time - new Date(last.t).getTime() < 3_600_000) kept.pop();
+  if (last && Math.floor(new Date(last.t).getTime() / HOUR_MS) === Math.floor(time / HOUR_MS)) kept.pop();
   kept.push({ t: quote.fetchedAt, prices: { ...quote.prices } });
   return kept;
 }

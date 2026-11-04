@@ -1115,3 +1115,17 @@ test('cours réels : source de secours (Swissquote) si la principale est en pann
   assert.ok(calls.some((u) => u.includes('swissquote')));
   clearFxCache();
 });
+
+test('relevés horaires : un cours toutes les 15 minutes fait bien un point par heure', async () => {
+  const { addHourlyPoint } = await import('../src/logic/alerts.ts');
+  let h: { t: string; prices: { gold: number; silver: number; platinum: number } }[] = [];
+  const start = new Date('2026-11-04T11:19:36Z').getTime();
+  for (let i = 0; i < 22; i++) {
+    const t = new Date(start + i * 15 * 60_000).toISOString();
+    h = addHourlyPoint(h, { prices: { gold: 100 + i, silver: 1, platinum: 30 }, fetchedAt: t, source: 'live' });
+  }
+  // De 11 h 19 à 16 h 34 : heures 11, 12, 13, 14, 15 et 16 → 6 points, chacun avec le dernier cours de son heure.
+  assert.equal(h.length, 6);
+  assert.equal(h.at(-1)!.prices.gold, 121);
+  assert.equal(h[0].prices.gold, 102); // 11 h 49, dernier cours de l'heure de 11 h
+});

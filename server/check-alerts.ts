@@ -2,6 +2,7 @@
  * Point d'entrée du serveur d'alertes. Lancer : node server/check-alerts.ts
  * Variables : NTFY_TOPIC (canal secret, obligatoire pour envoyer), ALERT_STATE (fichier d'état).
  */
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
@@ -40,6 +41,8 @@ mkdirSync(dirname(STATE), { recursive: true });
 writeFileSync(STATE, JSON.stringify(result.state));
 
 console.log(`${config.length} alerte(s) surveillée(s), ${result.state.hourly.length} relevé(s) horaires.`);
+// Empreinte du canal (ne révèle pas son nom) : permet de vérifier que les alertes partent vers le bon canal.
+if (topic) console.log(`Canal ntfy : empreinte ${createHash('sha256').update(topic).digest('hex').slice(0, 12)}.`);
 if (!topic) {
   console.warn('NTFY_TOPIC absent : aucune notification envoyée (ajoutez le secret dans les réglages du dépôt).');
 }
