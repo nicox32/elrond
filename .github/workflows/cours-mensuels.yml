@@ -1,0 +1,16 @@
+# Calcule les cours moyens mensuels en euros (or, argent, platine) depuis 2019 et les affiche dans le journal.
+# Sert à mettre à jour src/logic/monthlyPrices.ts (reprise de l'épargne depuis 2019).
+name: Cours mensuels
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cours:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          echo "DEBUT_JSON"
+          python3 scripts/monthly-prices.py "$(date -u +%Y-%m-%d)"
+          echo "FIN_JSON"
