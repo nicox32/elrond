@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
@@ -170,6 +171,9 @@ export default function ProfileScreen() {
         }}
         onCancel={() => setVaultConfirm(false)}
       />
+      <Text style={styles.version} testID="app-version">
+        Orvia · version {Constants.expoConfig?.version ?? '—'}
+      </Text>
     </Screen>
   );
 }
@@ -224,6 +228,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  version: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginTop: 16 },
   rowLabel: { color: colors.textMuted, fontSize: 11 },
   rowValue: { color: colors.text, fontSize: 15, fontWeight: '600' },
   link: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 10 },

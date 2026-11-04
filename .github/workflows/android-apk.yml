@@ -43,6 +43,17 @@ jobs:
           npm run typecheck
           npm run lint
 
+      # Le numéro affiché dans l'appli (Profil) est celui de la release : 1.1.<numéro de construction>.
+      - name: Numéro de version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const c = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            c.expo.version = '1.1.${{ github.run_number }}';
+            c.expo.android = { ...c.expo.android, versionCode: ${{ github.run_number }} };
+            fs.writeFileSync('app.json', JSON.stringify(c, null, 2));
+          "
+
       - name: Générer le projet Android
         run: npx expo prebuild --platform android --no-install
 
@@ -73,8 +84,8 @@ jobs:
       - name: Publier la release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Orvia v1.0.${{ github.run_number }}
+          tag_name: v1.1.${{ github.run_number }}
+          name: Orvia v1.1.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           make_latest: true
           files: orvia.apk
