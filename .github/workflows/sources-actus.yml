@@ -10,14 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          for u in https://www.loretlargent.info/feed/ https://loretlargent.info/feed/ \
-            https://or.bullionvault.fr/gold-news/rss https://or.bullionvault.fr/gold-news https://or.bullionvault.fr/ \
-            https://www.bullionvault.com/gold-news/rss.xml https://www.bullionvault.com/gold-news/news/rss https://www.bullionvault.com/gold-news/gold-price-news; do
-            code=$(curl -sS -L -m 20 -o /tmp/b -D /tmp/h -w '%{http_code} %{content_type} %{url_effective}' -A 'Mozilla/5.0' -H 'Origin: https://nicox32.github.io' "$u" 2>&1 || true)
-            cors=$(grep -i '^access-control-allow-origin' /tmp/h | tail -1 | tr -d '\r')
-            echo "=== $u -> $code | items=$(grep -o '<item\|<entry' /tmp/b | wc -l) | ${cors:-pas de CORS}"
-            grep -o '<title>[^<]*</title>' /tmp/b | head -3
-            grep -oiE '(href)="[^"]*(rss|feed|atom)[^"]*"' /tmp/b | sort -u | head -5
-            grep -oiE 'href="/gold-news/[a-z-]+/[^"]+"' /tmp/b | sort -u | head -4
-            grep -oiE 'href="[^"]*(actualit|gold-news)[^"]*"' /tmp/b | sort -u | head -6
+          for u in https://or.bullionvault.fr/actualites-de-l-or/rss https://or.bullionvault.fr/actualites-de-l-or/rss.xml https://or.bullionvault.fr/actualites-de-l-or/feed https://or.bullionvault.fr/actualites-de-l-or/news/rss https://or.bullionvault.fr/actualites-de-l-or/news https://or.bullionvault.fr/actualites-de-l-or; do
+            code=$(curl -sS -L -m 20 -o /tmp/b -w '%{http_code} %{content_type}' -A 'Mozilla/5.0' "$u" 2>&1 || true)
+            echo "=== $u -> $code | items=$(grep -o '<item\|<entry' /tmp/b | wc -l)"
+            grep -oiE 'href="[^"]*(rss|feed)[^"]*"' /tmp/b | sort -u | head -4
+            grep -oE '<a [^>]*href="/actualites-de-l-or/[a-z_]+/[^"]+"[^>]*>' /tmp/b | head -4
+            grep -oE '<h[23][^>]*>[^<]{10,140}</h[23]>' /tmp/b | head -4
           done
+          for u in https://or.bullionvault.fr/actualites-de-l-or/news; do curl -sS -L -m 20 -A 'Mozilla/5.0' "$u" -o /tmp/b; grep -n 'actualites-de-l-or/news/' /tmp/b | head -6 | cut -c1-400; done
