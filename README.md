@@ -130,7 +130,7 @@ jamais dans Git (dossier `signing/` ignoré).
   moyenne 30 jours, pour chaque métal ; notification une seule fois par franchissement (6 h minimum entre deux),
   historique avec raccourcis Acheter / Vendre (`docs/alertes.png`). Ce sont les conditions de l'utilisateur, pas
   des conseils d'investissement. Version web : vérifiées quand l'appli est ouverte (pas encore de serveur).
-- **Alertes 24 h/24** : `.github/workflows/alertes.yml` vérifie les cours toutes les 15 minutes avec la même
+- **Alertes 24 h/24** : `.github/workflows/alertes.yml` vérifie les cours toutes les 15 minutes (GitHub lançant les tâches programmées avec retard, chaque lancement tourne en boucle 5 h 30) avec la même
   logique que l'appli (`server/alertServer.ts`) et envoie les alertes par [ntfy](https://ntfy.sh). Réglages :
   secret `NTFY_TOPIC` (canal secret généré dans l'appli), alertes dans `server/alerts.json` (export depuis l'écran
   Alertes). L'état (relevés, alertes déjà envoyées) est gardé dans le cache GitHub Actions.

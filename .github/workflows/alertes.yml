@@ -1,6 +1,9 @@
 # Serveur d'alertes Orvia : vérifie les cours toutes les 15 minutes et envoie les alertes par ntfy.
-# Réglages (une fois) : secret NTFY_TOPIC = votre canal ntfy ; alertes dans server/alerts.json.
-# Lancement manuel avec « test » coché : envoie une notification de test.
+# GitHub lance les tâches programmées avec beaucoup de retard (toutes les 4 à 7 h) : chaque lancement
+# programmé tourne donc en boucle près de 6 h, avec une vérification toutes les 15 minutes ; le lancement
+# suivant attend son tour, ce qui donne une surveillance continue.
+# Réglages (une fois) : secret NTFY_TOPIC = votre canal ntfy ; alertes dans server/alerts.json (relu à chaque tour).
+# Lancement manuel : une seule vérification (« test » coché : notification de test).
 name: Alertes de prix
 
 on:
@@ -16,18 +19,23 @@ on:
         description: 'Tester chaque alerte (une notification par alerte)'
         type: boolean
         default: false
+      boucle:
+        description: 'Surveiller en continu (toutes les 15 min pendant 5 h 30)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
+# Une seule boucle à la fois ; un lancement manuel ne l'attend pas.
 concurrency:
-  group: alertes
+  group: alertes-${{ (github.event_name == 'schedule' || inputs.boucle) && 'boucle' || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +56,16 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           ALERT_TEST: ${{ inputs.test }}
           ALERT_TEST_ALL: ${{ inputs.tout }}
-        run: node server/check-alerts.ts
+          LOOP: ${{ github.event_name == 'schedule' || inputs.boucle }}
+        run: |
+          if [ "$LOOP" != "true" ]; then node server/check-alerts.ts; exit $?; fi
+          # 22 tours de 15 minutes (5 h 30), sous la limite de durée de la tâche.
+          for i in $(seq 1 22); do
+            start=$(date +%s)
+            git pull -q --ff-only || true
+            node server/check-alerts.ts || echo "::warning::Tour $i en échec, nouvel essai dans 15 minutes"
+            if [ "$i" -lt 22 ]; then sleep $(( 900 - ($(date +%s) - start) % 900 )); fi
+          done
 
       - name: Garder l'état
         if: always()
