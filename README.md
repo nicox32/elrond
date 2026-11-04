@@ -95,7 +95,13 @@ un téléphone Android virtuel (`.github/workflows/test-apk.yml`) : il n'est pub
   sous-estimé).
 - **Reprise de l'épargne depuis 2019** (Profil → Historique, `src/logic/history2019.ts`) : compte ouvert le 4 janvier
   2019, 25 € par semaine en 4 achats (lundi, mercredi, vendredi, dimanche), 50 % Gold Spot, 25 % argent, 25 % platine,
-  frais d'achat Orvia compris, aux cours moyens annuels estimés ; une seule fois.
+  frais d'achat Orvia compris ; une seule fois. Chaque achat au cours moyen réel de son mois en €/once
+  (`src/logic/monthlyPrices.ts`, calculé par `.github/workflows/cours-mensuels.yml` à partir des cours quotidiens et du
+  taux BCE du jour) ; une reprise faite avec les anciennes moyennes annuelles peut être recalculée en un geste.
+- **Lien en lecture seule d'un compte enfant** (écran du compte enfant → « Partager le compte de … »,
+  `src/logic/shareView.ts`) : lien vers la version web, sans appli ni code, qui montre la valeur aux cours du moment,
+  les coffres, les règles de protection et les derniers mouvements, sans aucune opération possible. Les données sont
+  après le « # » du lien (jamais envoyées au serveur) ; c'est une photo du compte au moment du partage.
 - **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
   ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
   (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).

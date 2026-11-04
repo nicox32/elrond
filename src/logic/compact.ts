@@ -38,7 +38,7 @@ function groupKey(t: Transaction): string | null {
   const metals = METALS.filter((m) => (t.deltas[m] ?? 0) > 0);
   if (metals.length !== 1) return null;
   const d = new Date(t.date);
-  return `${d.getFullYear()}-${d.getMonth()}|${metals[0]}|${t.cash ? 'cash' : 'card'}`;
+  return `${d.getFullYear()}-${d.getMonth()}|${metals[0]}|${t.cash ? 'cash' : 'card'}|${t.origin ?? ''}`;
 }
 
 export function compactHistory<W extends Wallet>(wallet: W, now = new Date(), force = false): W {
@@ -89,6 +89,7 @@ export function compactHistory<W extends Wallet>(wallet: W, now = new Date(), fo
       ),
       ...(cash ? { cash: r(cash, 4) } : {}),
       label: `Achats ${OF[metal]} · ${MONTHS[d.getMonth()]} ${d.getFullYear()} (${txs.length} achats regroupés)`,
+      ...(last.origin ? { origin: last.origin } : {}),
     });
   }
   kept.sort((a, b) => b.date.localeCompare(a.date));

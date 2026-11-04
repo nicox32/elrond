@@ -7,6 +7,7 @@ import { ChildRules } from '../../components/ChildRules';
 import { CodeConfirm } from '../../components/CodeConfirm';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { MetalPicker } from '../../components/MetalPicker';
+import { ShareViewCard } from '../../components/ShareViewCard';
 import { StatementCard } from '../../components/Statement';
 import { TransactionRow } from '../../components/TransactionRow';
 import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
@@ -530,6 +531,7 @@ export default function ChildScreen() {
         </Card>
       )}
       <StatementCard wallet={child} walletName={`Compte de ${name}`} />
+      {stage !== 'transferred' && <ShareViewCard child={child} parent={account.holder} prices={quote.prices} />}
 
       {stage === 'minor' && empty && <Button title={`Fermer le compte de ${name}`} variant="danger" onPress={close} />}
       {message && <Message {...message} />}

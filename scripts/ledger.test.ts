@@ -830,9 +830,11 @@ test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais com
     490.5,
     1,
   );
-  close(acc.holdings.gold, 84.3, 0.2);
-  close(acc.holdings.silver, 3339.5, 3);
-  close(acc.holdings.platinum, 81.7, 0.2);
+  close(acc.holdings.gold, 83.68, 0.05);
+  close(acc.holdings.silver, 3316.7, 1);
+  close(acc.holdings.platinum, 80.0, 0.05);
+  assert.equal(acc.history2019Prices, 'monthly');
+  assert.ok(acc.transactions.every((t) => t.origin === 'history2019'));
   assert.equal(loyalty(acc, now).earned, 156);
   assert.equal(import2019History(acc, now), acc); // une seule fois
 });
@@ -925,4 +927,70 @@ test('achats programmés : 25 €/semaine sur 4 jours, rattrapage, compte d’at
   assert.equal(dueRuns(s.account.plan!, later).length, 0);
   // En pause : rien.
   assert.equal(runPlan({ ...acc, plan: { ...acc.plan!, active: false } }, p, later).done, 0);
+});
+
+test('lien en lecture seule : le compte enfant se relit à l’identique, accents compris', async () => {
+  const { makeChildView, childViewLink, readChildView } = await import('../src/logic/shareView.ts');
+  const child = {
+    id: 'c1',
+    name: 'Léo',
+    birthDate: '2015-06-01',
+    authority: 'joint' as const,
+    holdings: { gold: 2.5, silver: 10, platinum: 0 },
+    transactions: [
+      {
+        id: 't',
+        kind: 'family_deposit' as const,
+        date: '2026-10-01T10:00:00Z',
+        deltas: { gold: 2.5, silver: 10, platinum: 0 },
+        eur: 400,
+        label: 'Versement de Nicolas',
+      },
+    ],
+  };
+  const v = makeChildView(child as never, 'Nicolas', { gold: 110, silver: 1.3, platinum: 35 }, new Date('2026-11-04'));
+  const link = childViewLink(v);
+  assert.match(link, /^https:\/\/nicox32\.github\.io\/elrond\/#vue=[A-Za-z0-9_-]+$/);
+  const back = readChildView(link)!;
+  assert.equal(back.n, 'Léo');
+  assert.deepEqual(back.h, child.holdings);
+  assert.equal(back.o[0][1], 'Versement de Nicolas');
+  assert.equal(back.j, true);
+  assert.equal(readChildView('#vue=abîmé'), null);
+  assert.equal(readChildView('https://nicox32.github.io/elrond/'), null);
+});
+
+test('reprise 2019 recalculée aux cours mensuels : achats faits dans l’appli gardés', async () => {
+  const { import2019History, reprice2019History, needsMonthlyReprice } = await import('../src/logic/history2019.ts');
+  const now = new Date('2026-11-03T12:00:00');
+  const fresh = import2019History(createAccount('T', new Date('2026-11-01')), now);
+  // Ancienne reprise : sans marque d'origine, cours annuels (grammes +1 %), regroupée.
+  let old = {
+    ...fresh,
+    history2019Prices: undefined,
+    holdings: {
+      gold: fresh.holdings.gold * 1.01,
+      silver: fresh.holdings.silver * 1.01,
+      platinum: fresh.holdings.platinum * 1.01,
+    },
+    transactions: fresh.transactions.map(({ origin: _o, ...t }) => ({
+      ...t,
+      deltas: { gold: t.deltas.gold * 1.01, silver: t.deltas.silver * 1.01, platinum: t.deltas.platinum * 1.01 },
+    })),
+  };
+  old = buy(
+    old,
+    { gold: 110, silver: 1.3, platinum: 40 },
+    'gold',
+    { unit: 'eur', value: 100 },
+    new Date('2026-11-02T15:12:31'),
+  );
+  assert.ok(needsMonthlyReprice(old));
+  const r = reprice2019History(old, now);
+  assert.ok(!needsMonthlyReprice(r));
+  const mine = old.holdings.gold - fresh.holdings.gold * 1.01;
+  close(r.holdings.gold, fresh.holdings.gold + mine, 1e-3);
+  close(r.holdings.silver, fresh.holdings.silver, 1e-3);
+  assert.equal(r.transactions.filter((t) => t.origin !== 'history2019').length, 1);
+  assert.equal(reprice2019History(r, now), r);
 });

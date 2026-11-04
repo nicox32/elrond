@@ -1,10 +1,12 @@
 import { type ErrorBoundaryProps, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { ChildViewScreen } from '../features/ChildViewScreen';
 import { LockScreen } from '../features/LockScreen';
 import { Onboarding } from '../features/Onboarding';
+import { readChildView } from '../logic/shareView';
 import { BankProvider, useBank } from '../state/BankProvider';
 import { registerBackgroundChecks } from '../background';
 import { setupPwa } from '../pwa';
@@ -99,7 +101,20 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   );
 }
 
+/** Lien en lecture seule d'un compte enfant (navigateur) : affiché sans compte ni code. */
+const sharedView = Platform.OS === 'web' && typeof window !== 'undefined' ? readChildView(window.location.hash) : null;
+
 export default function RootLayout() {
+  if (sharedView) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.root}>
+          <StatusBar style="light" />
+          <ChildViewScreen view={sharedView} />
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.root} edges={['top']}>

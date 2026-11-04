@@ -77,6 +77,8 @@ export interface Transaction {
   /** Frais facturés sur l'opération, en euros. */
   fees?: number;
   label: string;
+  /** Achat repris de l'épargne depuis 2019 (et non passé dans l'appli). */
+  origin?: 'history2019';
   /** Versement annulé (erreur corrigée sous 24 h). */
   reversed?: boolean;
   /** Louis de fidélité échangés (opération « loyalty_redeem »). */
@@ -202,6 +204,8 @@ export interface Account extends Wallet {
   alertEvents?: AlertEvent[];
   /** L'épargne régulière depuis 2019 a été reprise (une seule fois). */
   history2019Imported?: boolean;
+  /** Cours utilisés pour cette reprise : moyennes mensuelles réelles (sinon, anciennes moyennes annuelles). */
+  history2019Prices?: 'monthly';
   /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
   ntfyTopic?: string;
   /** Compte d'attente : euros disponibles pour acheter des métaux. */

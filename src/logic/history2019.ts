@@ -1,11 +1,12 @@
 /**
  * Reprise d'une épargne régulière depuis 2019 : 25 € par semaine, en 4 achats de 6,25 € (lundi, mercredi, vendredi
  * et dimanche), du 4 janvier 2019 à aujourd'hui, répartis 50 % Gold Spot, 25 % argent, 25 % platine, frais d'achat
- * Orvia compris. Les cours sont des moyennes annuelles estimées (€/once), pas les cours exacts de chaque jour.
+ * Orvia compris. Chaque achat est passé au cours moyen réel de son mois (€/once, voir monthlyPrices.ts).
  */
 import { FEES } from './fees.ts';
 import { compactHistory } from './compact.ts';
-import { emptyHoldings, newId, TROY_OUNCE } from './ledger.ts';
+import { emptyHoldings, LedgerError, newId, TROY_OUNCE } from './ledger.ts';
+import { monthlyEurOz } from './monthlyPrices.ts';
 import type { Account, BalancePoint, Metal, Transaction } from './types.ts';
 
 export const PLAN_2019 = {
@@ -15,18 +16,6 @@ export const PLAN_2019 = {
   days: [1, 3, 5, 0],
   share: { gold: 0.5, silver: 0.25, platinum: 0.25 } as Record<Metal, number>,
 } as const;
-
-/** Cours moyens estimés par année, en euros par once. */
-export const AVG_EUR_OZ: Record<number, Record<Metal, number>> = {
-  2019: { gold: 1255, silver: 14.5, platinum: 775 },
-  2020: { gold: 1550, silver: 18, platinum: 775 },
-  2021: { gold: 1520, silver: 21.5, platinum: 920 },
-  2022: { gold: 1700, silver: 20.5, platinum: 910 },
-  2023: { gold: 1800, silver: 21.8, platinum: 890 },
-  2024: { gold: 2200, silver: 26.5, platinum: 880 },
-  2025: { gold: 2950, silver: 33, platinum: 1050 },
-  2026: { gold: 3450, silver: 42, platinum: 1250 },
-};
 
 const LABEL: Record<Metal, string> = { gold: 'de Gold Spot', silver: 'd’argent', platinum: 'de platine' };
 
@@ -56,7 +45,7 @@ export function import2019History(account: Account, now = new Date()): Account {
   const cumulative = emptyHoldings();
   let lastMonth = -1;
   for (const day of purchaseDays(now)) {
-    const prices = AVG_EUR_OZ[day.getFullYear()] ?? AVG_EUR_OZ[2026];
+    const prices = monthlyEurOz(day);
     for (const m of ['gold', 'silver', 'platinum'] as Metal[]) {
       const eur = Math.round(each * PLAN_2019.share[m] * 10000) / 10000;
       // Frais gardés au dixième de centime : sur des achats de quelques euros, l'arrondi au centime fausserait le total.
@@ -71,9 +60,10 @@ export function import2019History(account: Account, now = new Date()): Account {
         eur,
         fees,
         label: `Achat ${LABEL[m]} · épargne depuis 2019`,
+        origin: 'history2019',
       });
     }
-    // Un point de solde par mois, aux cours moyens de l'année.
+    // Un point de solde par mois, au cours moyen du mois.
     if (day.getMonth() !== lastMonth) {
       lastMonth = day.getMonth();
       const value = (['gold', 'silver', 'platinum'] as Metal[]).reduce(
@@ -95,6 +85,60 @@ export function import2019History(account: Account, now = new Date()): Account {
       // Les achats ont eu lieu régulièrement : pas de frais d'oxydation rétroactifs.
       dormancyNotBefore: now.toISOString(),
       history2019Imported: true,
+      history2019Prices: 'monthly',
+    },
+    now,
+  );
+}
+
+/** Achat venant d'une reprise 2019 (y compris regroupé par l'allègement de l'historique d'une version précédente). */
+function isImported(t: Transaction): boolean {
+  if (t.origin === 'history2019') return true;
+  if (t.kind !== 'buy' || t.cash) return false;
+  return t.label.includes('épargne depuis 2019') || /achats regroupés\)$/.test(t.label);
+}
+
+/** Point du graphique ajouté par la reprise (posé pile à l'heure, contrairement aux points enregistrés en direct). */
+const isImportedPoint = (p: BalancePoint) => /T\d\d:00:00\.000Z$/.test(p.date);
+
+/** La reprise doit-elle être recalculée avec les cours mensuels ? */
+export function needsMonthlyReprice(account: Account): boolean {
+  return !!account.history2019Imported && account.history2019Prices !== 'monthly';
+}
+
+/**
+ * Recalcule une reprise faite avec les anciennes moyennes annuelles : mêmes achats et mêmes montants, grammes au
+ * cours réel de chaque mois. Les opérations passées dans l'appli ne bougent pas.
+ */
+export function reprice2019History(account: Account, now = new Date()): Account {
+  if (!needsMonthlyReprice(account)) return account;
+  const removed = emptyHoldings();
+  const kept: Transaction[] = [];
+  for (const t of account.transactions) {
+    if (isImported(t)) for (const m of ['gold', 'silver', 'platinum'] as Metal[]) removed[m] += t.deltas[m] ?? 0;
+    else kept.push(t);
+  }
+  const fresh = import2019History(
+    { ...account, holdings: emptyHoldings(), transactions: [], balanceHistory: [], history2019Imported: false },
+    now,
+  );
+  const holdings = emptyHoldings();
+  for (const m of ['gold', 'silver', 'platinum'] as Metal[]) {
+    holdings[m] = account.holdings[m] - removed[m] + fresh.holdings[m];
+    if (holdings[m] < -1e-6) {
+      throw new LedgerError('Recalcul impossible : une partie de ce métal a déjà été vendue ou transférée.');
+    }
+    holdings[m] = Math.max(0, holdings[m]);
+  }
+  return compactHistory(
+    {
+      ...account,
+      holdings,
+      transactions: [...kept, ...fresh.transactions].sort((a, b) => b.date.localeCompare(a.date)),
+      balanceHistory: [...account.balanceHistory.filter((p) => !isImportedPoint(p)), ...fresh.balanceHistory].sort(
+        (a, b) => a.date.localeCompare(b.date),
+      ),
+      history2019Prices: 'monthly',
     },
     now,
   );
