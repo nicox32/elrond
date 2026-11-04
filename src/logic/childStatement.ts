@@ -150,6 +150,6 @@ export function childStatementHtml(account: Account, child: ChildAccount, prices
       : ''
   }
 
-  <div class="foot">Relevé de suivi édité par l’application Orvia (version alpha de test). Il récapitule les versements et les quantités enregistrés dans l’application, valorisés au cours du jour d’édition. Il ne constitue ni un certificat de dépôt, ni une preuve de détention de métaux.</div>
+  <div class="foot">Relevé de suivi édité par l’application Orvia. Il récapitule les versements et les quantités enregistrés dans l’application, valorisés au cours du jour d’édition. Il ne constitue ni un certificat de dépôt, ni une preuve de détention de métaux.</div>
   </body></html>`;
 }
