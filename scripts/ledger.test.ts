@@ -717,7 +717,13 @@ test('alertes recommandées : identiques côté appli et serveur, plus serrées 
   const { RECOMMENDED_ALERTS } = await import('../src/logic/alerts.ts');
   const { readFileSync } = await import('node:fs');
   const server = JSON.parse(readFileSync(new URL('../server/alerts.json', import.meta.url), 'utf8')).alerts;
-  assert.deepEqual(server, RECOMMENDED_ALERTS);
+  // Les 16 alertes recommandées d'abord, puis les paliers d'achat personnels (prix en €/g).
+  assert.deepEqual(server.slice(0, RECOMMENDED_ALERTS.length), RECOMMENDED_ALERTS);
+  assert.ok(
+    server
+      .slice(RECOMMENDED_ALERTS.length)
+      .every((a: { kind: string; unit?: string }) => a.kind === 'below' && a.unit === 'g'),
+  );
   const drop24 = (m: string) =>
     RECOMMENDED_ALERTS.find((a) => a.metal === m && a.kind === 'drop' && a.window === '24h')!.value;
   assert.ok(drop24('platinum') <= drop24('silver'));
