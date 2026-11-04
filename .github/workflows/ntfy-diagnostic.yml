@@ -1,0 +1,16 @@
+# Diagnostic : liste les messages reçus par le canal ntfy (secret NTFY_TOPIC) sur les 6 dernières heures :
+# heure, titre et longueur du texte, sans jamais afficher le nom du canal. Lancement manuel.
+name: Diagnostic ntfy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  messages:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          curl -sS -m 30 "https://ntfy.sh/${NTFY_TOPIC}/json?poll=1&since=6h" \
+            | jq -r '"\(.time | todate) · \(.event) · titre=\(.title // "(aucun)") · texte=\((.message // "") | length) car. · priorité=\(.priority // 3)"'
