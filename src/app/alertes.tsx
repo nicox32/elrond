@@ -12,9 +12,13 @@ import {
   type AlertWindow,
   createAlert,
   describeAlert,
+  metalOfServerTitle,
   RECOMMENDED_ALERTS,
+  serverAlertMessages,
+  serverTriggers,
   testNotification,
 } from '../logic/alerts';
+import { fetchNtfyMessages, isValidTopic, type NtfyMessage } from '../logic/ntfyClient';
 import { formatDate, parseAmount } from '../logic/format';
 import { METAL_LABEL, TROY_OUNCE } from '../logic/ledger';
 import type { Metal } from '../logic/types';
@@ -57,6 +61,27 @@ export default function AlertsScreen() {
     notificationPermission().then(setPermission);
     registerBackgroundChecks().then(setBackground);
   }, []);
+
+  // Alertes envoyées par le serveur (canal ntfy) ces 7 derniers jours : affichées comme celles de l'appli.
+  const [serverMsgs, setServerMsgs] = useState<NtfyMessage[]>([]);
+  const topic = account.ntfyTopic;
+  useEffect(() => {
+    if (!isValidTopic(topic)) return;
+    let alive = true;
+    fetchNtfyMessages(topic, '7d')
+      .then((m) => alive && setServerMsgs(serverAlertMessages(m)))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [topic]);
+  const serverHits = serverTriggers(alerts, serverMsgs);
+  const feed = [
+    ...events.map((e) => ({ id: e.id, title: e.title, body: e.body, date: e.date, metal: e.metal, server: false })),
+    ...serverMsgs.map((m) => ({ ...m, metal: metalOfServerTitle(m.title) ?? 'gold', server: true })),
+  ]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 20);
 
   const current = unit === 'oz' ? quote.prices[metal] * TROY_OUNCE : quote.prices[metal];
 
@@ -265,7 +290,13 @@ export default function AlertsScreen() {
               >
                 <Text style={styles.alertText}>{describeAlert(a)}</Text>
                 <Text style={styles.alertMeta}>
-                  {a.lastTriggeredAt ? `Dernière alerte le ${formatDate(a.lastTriggeredAt)}` : 'Pas encore déclenchée'}
+                  {(() => {
+                    const local = a.lastTriggeredAt;
+                    const server = serverHits[a.id];
+                    if (server && (!local || server > local))
+                      return `Dernière alerte le ${formatDate(server)} (serveur)`;
+                    return local ? `Dernière alerte le ${formatDate(local)}` : 'Pas encore déclenchée';
+                  })()}
                 </Text>
               </Pressable>
               <Switch
@@ -289,14 +320,17 @@ export default function AlertsScreen() {
       )}
 
       <SectionTitle>Alertes déclenchées</SectionTitle>
-      {events.length === 0 ? (
+      {feed.length === 0 ? (
         <Hint>Rien pour l’instant. Les cours sont vérifiés toutes les 30 secondes quand l’appli est ouverte.</Hint>
       ) : (
-        events.slice(0, 20).map((e) => (
+        feed.map((e) => (
           <Card key={e.id} style={{ gap: 8 }}>
             <Text style={styles.eventTitle}>{e.title}</Text>
             <Text style={styles.para}>{e.body}</Text>
-            <Text style={styles.alertMeta}>{formatDate(e.date)}</Text>
+            <Text style={styles.alertMeta}>
+              {formatDate(e.date)}
+              {e.server ? ' · envoyée par le serveur (ntfy)' : ''}
+            </Text>
             <View style={styles.actions}>
               <View style={{ flex: 1 }}>
                 <Button

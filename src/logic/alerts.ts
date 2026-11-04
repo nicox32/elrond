@@ -293,3 +293,32 @@ export function generateNtfyTopic(): string {
   for (let i = 0; i < 20; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
   return `orvia-${s}`;
 }
+
+// ——— Alertes déclenchées par le serveur (lues sur le canal ntfy) ————————————————
+
+/** Métal d'une notification du serveur, d'après son titre (« Alerte platine · … »). */
+export function metalOfServerTitle(title: string): Metal | null {
+  if (/^Alerte Gold Spot/i.test(title)) return 'gold';
+  if (/^Alerte argent/i.test(title)) return 'silver';
+  if (/^Alerte platine/i.test(title)) return 'platinum';
+  return null;
+}
+
+/** Notifications d'alerte réelles reçues du serveur (les tests et les messages du bot sont écartés). */
+export function serverAlertMessages<T extends { title: string }>(messages: T[]): T[] {
+  return messages.filter((m) => metalOfServerTitle(m.title) !== null);
+}
+
+/** Dernier déclenchement côté serveur de chaque alerte (même description dans le titre). */
+export function serverTriggers(
+  alerts: PriceAlert[],
+  messages: { title: string; date: string }[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const a of alerts) {
+    const desc = describeAlert(a);
+    const hit = serverAlertMessages(messages).find((m) => m.title.endsWith(` · ${desc}`));
+    if (hit) out[a.id] = hit.date;
+  }
+  return out;
+}

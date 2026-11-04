@@ -1132,3 +1132,37 @@ test('relevés horaires : un cours toutes les 15 minutes fait bien un point par 
   assert.equal(h.at(-1)!.prices.gold, 121);
   assert.equal(h[0].prices.gold, 102); // 11 h 49, dernier cours de l'heure de 11 h
 });
+
+test('alertes du serveur lues sur ntfy : rattachées à l’alerte de l’appli, tests écartés', async () => {
+  const { createAlert, describeAlert, serverTriggers, serverAlertMessages, metalOfServerTitle } =
+    await import('../src/logic/alerts.ts');
+  const { fetchNtfyMessages } = await import('../src/logic/ntfyClient.ts');
+  const ndjson = [
+    { id: 'a', event: 'open', time: 1793780000 },
+    {
+      id: 'b',
+      event: 'message',
+      time: 1793780441,
+      // Titre construit comme le serveur : « Alerte <métal> · <description de l'alerte> ».
+      title: `Alerte platine · ${describeAlert(createAlert({ metal: 'platinum', kind: 'rise', value: 3, window: '24h' }))}`,
+      message: '+4,9 % sur 24 h · 1 336,65 €/oz.',
+    },
+    { id: 'c', event: 'message', time: 1793781000, title: 'Test Orvia ✓ : notifications actives', message: '…' },
+    { id: 'd', event: 'message', time: 1793781100, title: 'Achat sur baisse : Gold Spot', message: '…' },
+  ]
+    .map((x) => JSON.stringify(x))
+    .join('\n');
+  const fake = (async (url: string) => {
+    assert.match(url, /^https:\/\/ntfy\.sh\/orvia-abc\/json\?poll=1&since=7d$/);
+    return { ok: true, status: 200, text: async () => ndjson };
+  }) as unknown as typeof fetch;
+  const msgs = await fetchNtfyMessages('orvia-abc', '7d', fake);
+  assert.equal(msgs.length, 3);
+  assert.equal(serverAlertMessages(msgs).length, 1);
+  assert.equal(metalOfServerTitle(msgs.at(-1)!.title), 'platinum');
+  const up = createAlert({ metal: 'platinum', kind: 'rise', value: 3, window: '24h' });
+  const down = createAlert({ metal: 'platinum', kind: 'drop', value: 3, window: '24h' });
+  const t = serverTriggers([up, down], msgs);
+  assert.equal(t[up.id], new Date(1793780441 * 1000).toISOString());
+  assert.equal(t[down.id], undefined);
+});

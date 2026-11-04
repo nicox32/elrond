@@ -22,3 +22,36 @@ export async function publishNtfy(
   });
   if (!res.ok) throw new Error(`ntfy : HTTP ${res.status}`);
 }
+
+export interface NtfyMessage {
+  id: string;
+  /** Date d'arrivée (ISO). */
+  date: string;
+  title: string;
+  body: string;
+}
+
+/** Messages reçus par un canal ntfy sur une période (ex. « 7d »), du plus récent au plus ancien. */
+export async function fetchNtfyMessages(topic: string, since = '7d', fetchFn: Fetch = fetch): Promise<NtfyMessage[]> {
+  if (!isValidTopic(topic)) return [];
+  const res = await fetchFn(`${NTFY_SERVER}/${topic}/json?poll=1&since=${since}`);
+  if (!res.ok) throw new Error(`ntfy : HTTP ${res.status}`);
+  const out: NtfyMessage[] = [];
+  for (const line of (await res.text()).split('\n')) {
+    if (!line.trim()) continue;
+    try {
+      const m = JSON.parse(line) as { id?: string; event?: string; time?: number; title?: string; message?: string };
+      if (m.event === 'message' && m.id && typeof m.time === 'number') {
+        out.push({
+          id: m.id,
+          date: new Date(m.time * 1000).toISOString(),
+          title: m.title ?? '',
+          body: m.message ?? '',
+        });
+      }
+    } catch {
+      // ligne illisible : ignorée
+    }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
+}
