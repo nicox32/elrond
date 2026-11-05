@@ -130,8 +130,8 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Déclaration des dons** (compte enfant → Déclaration des dons, `src/logic/giftRecap.ts`,
   `docs/exemple-recapitulatif-dons-2735.pdf`) : récapitulatif PDF par trimestre ou par année pour le formulaire 2735
   (donateur, bénéficiaire, acceptation par le représentant légal, dons avec grammes et valeur au jour du don, total,
-  abattement de 100 000 € sur 15 ans utilisé et restant), trimestres marqués comme déclarés, rappel au début de chaque
-  trimestre ; section « Donations à vos enfants » dans Plus-value et impôts.
+  abattement de 100 000 € sur 15 ans utilisé et restant), trimestres à signer au doigt dans l'appli (signature ajoutée au récapitulatif, cases donateur et représentant
+  légal), trimestres marqués comme déclarés, rappel « à signer et déclarer » au début de chaque trimestre ; section « Donations à vos enfants » dans Plus-value et impôts.
 - **Don mensuel à un enfant** (écran du compte enfant, `src/logic/childGiftPlan.ts`) : montant, jour du mois et
   répartition ; le jour prévu, rappel par notification et don en un geste (« Faire le don », ou « Pas ce mois-ci »),
   ou don automatique si vous le choisissez. Le métal est acheté sur le compte du parent puis versé gratuitement.

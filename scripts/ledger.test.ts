@@ -1317,3 +1317,22 @@ test('compte d’essai : remplace le compte principal, le compte de l’enfant r
   );
   assert.ok(b.history900Imported);
 });
+
+test('dons : trimestres à signer, signature reprise dans le récapitulatif PDF', async () => {
+  const { quartersToSign, giftRecapHtml } = await import('../src/logic/giftRecap.ts');
+  const { importGifts2022 } = await import('../src/logic/childGifts.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const now = new Date('2026-11-05T12:00:00');
+  const r = addChild(createAccount('Nicolas', now), 'Théo', '2016-03-12', now);
+  const a = importGifts2022(r.account, r.child.id, now);
+  const c = a.children[0];
+  // Les 4 derniers trimestres passés ont des dons : tous à signer, du plus ancien au plus récent.
+  assert.deepEqual(quartersToSign(c, now), ['2025-T4', '2026-T1', '2026-T2', '2026-T3']);
+  const sig = { signedAt: '2026-11-05T12:30:00.000Z', path: 'M10 10 L50 40 L90 20', w: 320, h: 160 };
+  const signed = { ...c, signedQuarters: { '2026-T3': sig } };
+  assert.deepEqual(quartersToSign(signed, now), ['2025-T4', '2026-T1', '2026-T2']);
+  const html = giftRecapHtml(a, signed, 'lastQuarter', now);
+  assert.equal((html.match(/M10 10 L50 40 L90 20/g) ?? []).length, 2); // donateur + représentant légal
+  assert.match(html, /Signé dans l’application le 5 novembre 2026/);
+  assert.doesNotMatch(giftRecapHtml(a, c, 'lastQuarter', now), /Signé dans l’application/);
+});

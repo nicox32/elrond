@@ -6,7 +6,7 @@
 import { formatEur } from './format.ts';
 import { METAL_LABEL } from './ledger.ts';
 import { LOGO_PNG_BASE64 } from './logoData.ts';
-import { type Account, type ChildAccount, type Metal, METALS } from './types.ts';
+import { type Account, type ChildAccount, type Metal, METALS, type QuarterSignature } from './types.ts';
 
 export const GIFT_ALLOWANCE = { amount: 100_000, years: 15 } as const;
 
@@ -87,6 +87,26 @@ const day = (d: Date | string) =>
   new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 const grams = (g: number) => `${g.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g`;
 
+/** Signature dessinée, mise à l'échelle dans la case, avec sa date. */
+function signatureBlock(sig: QuarterSignature): string {
+  const h = 54;
+  const w = Math.round((sig.w / sig.h) * h);
+  return `<svg viewBox="0 0 ${sig.w} ${sig.h}" width="${w}" height="${h}"><path d="${esc(sig.path)}" fill="none" stroke="#1d3a8a" stroke-width="${Math.max(2, sig.w / 120)}" stroke-linecap="round" stroke-linejoin="round"/></svg><div style="color:#1d3a8a;font-size:9px">Signé dans l’application le ${day(sig.signedAt)}</div>`;
+}
+
+/** Trimestres passés avec des dons, pas encore signés (du plus ancien au plus récent), sur les 4 derniers. */
+export function quartersToSign(child: ChildAccount, now = new Date()): string[] {
+  const out: string[] = [];
+  for (let i = 4; i >= 1; i--) {
+    const q = Math.floor(now.getMonth() / 3) - i;
+    const from = new Date(now.getFullYear(), q * 3, 1);
+    const to = new Date(now.getFullYear(), q * 3 + 3, 1);
+    const key = quarterKey(from);
+    if (childGifts(child, from, to).length && !child.signedQuarters?.[key]) out.push(key);
+  }
+  return out;
+}
+
 /** Récapitulatif des dons d'une période, prêt pour le formulaire 2735 (HTML imprimable en PDF). */
 export function giftRecapHtml(account: Account, child: ChildAccount, period: GiftPeriod, now = new Date()): string {
   const { from, to, label } = giftPeriodRange(period, now);
@@ -96,6 +116,9 @@ export function giftRecapHtml(account: Account, child: ChildAccount, period: Gif
   for (const g of gifts) for (const m of METALS) totals[m] += g.grams[m];
   const used = METALS.filter((m) => totals[m] > 0);
   const allowance = allowanceUsed(child, now);
+  // Signature dessinée dans l'appli pour ce trimestre (récapitulatifs trimestriels seulement).
+  const qKey = period === 'quarter' || period === 'lastQuarter' ? quarterKey(from) : null;
+  const sig = qKey ? child.signedQuarters?.[qKey] : undefined;
   const rows = gifts
     .map(
       (g) =>
@@ -125,7 +148,8 @@ export function giftRecapHtml(account: Account, child: ChildAccount, period: Gif
   ol { margin: 0; padding-left: 18px; } li { margin: 3px 0; }
   .note { background: #faf6ec; border-left: 3px solid #b8902c; padding: 8px 12px; }
   .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; }
-  .sign div { border-top: 1px solid #1d1f24; padding-top: 4px; color: #6b7080; font-size: 10px; height: 46px; }
+  .sign > div { border-top: 1px solid #1d1f24; padding-top: 4px; color: #6b7080; font-size: 10px; min-height: 46px; }
+  .sign svg { display: block; margin-top: 4px; }
   .foot { margin-top: 16px; padding-top: 8px; border-top: 1px solid #ddd; color: #8a8f9c; font-size: 9px; }
   </style></head><body>
   <div class="head">
@@ -162,7 +186,10 @@ export function giftRecapHtml(account: Account, child: ChildAccount, period: Gif
   <h2>Bon à savoir</h2>
   <div class="note">Le don manuel est irrévocable : le métal appartient à l’enfant et ne peut pas être repris par le donateur. La déclaration donne une date certaine au don. Pour une revente future par l’enfant, la valeur déclarée et la date du don servent en principe de prix et de date d’acquisition. Gardez ce récapitulatif avec les relevés et les factures d’achat d’origine.</div>
 
-  <div class="sign"><div>Le donateur — date et signature</div><div>Le représentant légal, pour l’enfant — date et signature</div></div>
+  <div class="sign">
+    <div>Le donateur — date et signature${sig ? signatureBlock(sig) : ''}</div>
+    <div>Le représentant légal, pour l’enfant — date et signature${sig ? signatureBlock(sig) : ''}</div>
+  </div>
 
   <div class="foot">Récapitulatif établi par l’application Orvia d’après les versements enregistrés sur le compte de l’enfant. Il aide à remplir la déclaration ; il ne constitue ni une attestation d’un dépositaire, ni un conseil juridique ou fiscal.</div>
   </body></html>`;
@@ -183,8 +210,8 @@ export function runDeclarationReminders(account: Account, now = new Date()) {
     if (!gifts.length) return c;
     const total = gifts.reduce((s, g) => s + g.value, 0);
     notices.push({
-      title: `Dons à ${c.name} : à déclarer`,
-      body: `${gifts.length} don${gifts.length > 1 ? 's' : ''} au ${quarterLabel(prevKey)} (${formatEur(total)}). Récapitulatif pour le formulaire 2735 dans son compte.`,
+      title: `Dons à ${c.name} : à signer et déclarer`,
+      body: `${gifts.length} don${gifts.length > 1 ? 's' : ''} au ${quarterLabel(prevKey)} (${formatEur(total)}). Signez le récapitulatif dans son compte, puis déclarez-le (formulaire 2735).`,
     });
     changed = true;
     return { ...c, declarationRemindedFor: prevKey };

@@ -119,6 +119,14 @@ export interface Settings {
   address?: PostalAddress;
 }
 
+/** Signature dessinée à l'écran : tracé SVG (coordonnées dans une boîte w × h) et date. */
+export interface QuarterSignature {
+  signedAt: string;
+  path: string;
+  w: number;
+  h: number;
+}
+
 export interface PostalAddress {
   /** Civilité et nom tels qu'imprimés (ex. « M. Nicolas Moga ») ; sinon le prénom du compte. */
   name?: string;
@@ -182,6 +190,8 @@ export interface ChildAccount extends Wallet {
   giftPlan?: import('./childGiftPlan.ts').ChildGiftPlan;
   /** Trimestres dont les dons ont été déclarés (« 2026-T4 »). */
   declaredQuarters?: string[];
+  /** Récapitulatifs de dons signés dans l'appli, par trimestre (« 2026-T4 »). */
+  signedQuarters?: Record<string, QuarterSignature>;
   /** Dernier trimestre pour lequel le rappel de déclaration a été envoyé. */
   declarationRemindedFor?: string;
 }

@@ -10,6 +10,7 @@ import {
   giftRecapHtml,
   quarterKey,
   quarterLabel,
+  quartersToSign,
 } from '../logic/giftRecap';
 import { replaceChildAccount } from '../logic/ledger';
 import type { ChildAccount } from '../logic/types';
@@ -17,6 +18,7 @@ import { exportPdf } from '../pdf';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Segmented } from './Segmented';
+import { SignaturePad } from './SignaturePad';
 import { Button, Card, Hint, Message } from './ui';
 
 /** Dons à l'enfant : récapitulatif pour le formulaire 2735, abattement, et trimestres déclarés. */
@@ -37,6 +39,9 @@ export function GiftRecapCard({ child }: { child: ChildAccount }) {
     giftPeriodRange('lastQuarter', now).to,
   );
   const declared = child.declaredQuarters?.includes(lastQ);
+  const toSign = quartersToSign(child, now);
+  const [signing, setSigning] = useState<string | null>(null);
+  const lastSig = child.signedQuarters?.[lastQ];
 
   async function download() {
     try {
@@ -84,6 +89,20 @@ export function GiftRecapCard({ child }: { child: ChildAccount }) {
         don).
       </Hint>
       <Button title="Télécharger le récapitulatif (PDF)" variant="ghost" onPress={download} disabled={!gifts.length} />
+      {toSign.length > 0 && (
+        <View style={styles.toSign}>
+          <Text style={styles.toSignTitle}>À signer : {toSign.map(quarterLabel).join(', ')}</Text>
+          <Text style={styles.toSignSub}>
+            Signez au doigt : votre signature (donateur et représentant légal) est ajoutée au récapitulatif PDF.
+          </Text>
+          <Button title={`Signer le ${quarterLabel(toSign[0])}`} onPress={() => setSigning(toSign[0])} />
+        </View>
+      )}
+      {lastSig && (
+        <Hint>
+          {quarterLabel(lastQ)} : récapitulatif signé le {new Date(lastSig.signedAt).toLocaleDateString('fr-FR')} ✓
+        </Hint>
+      )}
       {lastQGifts.length > 0 && (
         <>
           <Hint>
@@ -98,6 +117,23 @@ export function GiftRecapCard({ child }: { child: ChildAccount }) {
         </>
       )}
       {msg && <Message {...msg} />}
+      <SignaturePad
+        visible={!!signing}
+        title={signing ? `Signer les dons du ${quarterLabel(signing)}` : ''}
+        summary={`En tant que donateur et représentant légal de ${child.name}, je confirme ces dons manuels, irrévocables.`}
+        onCancel={() => setSigning(null)}
+        onSign={(sig) => {
+          const key = signing!;
+          setSigning(null);
+          updateAccount((a) =>
+            replaceChildAccount(a, { ...child, signedQuarters: { ...child.signedQuarters, [key]: sig } }),
+          );
+          setMsg({
+            ok: true,
+            text: `${quarterLabel(key)} signé. Téléchargez le récapitulatif : votre signature y figure.`,
+          });
+        }}
+      />
     </Card>
   );
 }
@@ -109,4 +145,7 @@ const styles = StyleSheet.create({
   allowanceSub: { color: colors.textMuted, fontSize: 12 },
   bar: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
   fill: { height: 6, backgroundColor: colors.gold },
+  toSign: { backgroundColor: colors.goldSoft, borderRadius: 12, padding: 12, gap: 6 },
+  toSignTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  toSignSub: { color: colors.text, fontSize: 12 },
 });
