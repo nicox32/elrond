@@ -135,6 +135,10 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Don mensuel à un enfant** (écran du compte enfant, `src/logic/childGiftPlan.ts`) : montant, jour du mois et
   répartition ; le jour prévu, rappel par notification et don en un geste (« Faire le don », ou « Pas ce mois-ci »),
   ou don automatique si vous le choisissez. Le métal est acheté sur le compte du parent puis versé gratuitement.
+- **Compte d'essai « 900 € avec des pauses »** (Profil → Historique, `src/logic/history900.ts`) : sur des coffres
+  vides, 36 versements de 25 € le 5 du mois depuis le 4 janvier 2019 avec des pauses de 9 à 15 mois ; frais
+  d'oxydation appliqués par la règle de l'appli à chaque période de 6 mois sans opération ; achats selon la
+  répartition, au cours moyen réel du mois. Le versement du mois en cours n'est pas ajouté.
 - **Dons à un enfant depuis 2022** (Profil → Historique, sous la reprise 2019, `src/logic/childGifts.ts`) : 50 € le 5
   de chaque mois depuis le 5 janvier 2022, 50 % Gold Spot et 50 % argent, au cours moyen réel de chaque mois, frais
   d'achat compris, ajoutés au compte de l'enfant choisi (le compte principal ne change pas) ; une seule fois.

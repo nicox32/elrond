@@ -7,6 +7,7 @@ import { AddressCard } from '../../components/AddressCard';
 import { BackupCard } from '../../components/BackupCard';
 import { ChildGifts2022 } from '../../components/ChildGifts2022';
 import { History2019 } from '../../components/History2019';
+import { History900 } from '../../components/History900';
 import { PinConfirm } from '../../components/PinConfirm';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
@@ -141,6 +142,7 @@ export default function ProfileScreen() {
       <SectionTitle>Historique</SectionTitle>
       <History2019 />
       <ChildGifts2022 />
+      <History900 />
 
       <SectionTitle>Relevés</SectionTitle>
       <AddressCard />

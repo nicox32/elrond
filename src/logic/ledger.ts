@@ -152,6 +152,7 @@ export function resetVaults(account: Account): Account {
     dormancyChargedThrough: undefined,
     cashEur: 0,
     history2019Imported: false,
+    history900Imported: false,
   };
 }
 

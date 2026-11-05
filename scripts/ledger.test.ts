@@ -1270,3 +1270,31 @@ test('fidélité : plus de LOU sur la carte (elle vend du métal), un LOU par mo
   assert.equal(l.earned, before + 1);
   assert.equal((l as unknown as Record<string, unknown>).fromCard, undefined);
 });
+
+test('compte d’essai 900 € : 36 versements, pauses avec frais d’oxydation, rien ce mois-ci', async () => {
+  const { import900History, preview900 } = await import('../src/logic/history900.ts');
+  const now = new Date('2026-11-05T14:00:00');
+  assert.deepEqual(preview900(now), { payments: 36, total: 900 });
+  const a = import900History(createAccount('Nicolas', now), now);
+  const buys = a.transactions.filter((t) => t.kind === 'buy');
+  close(
+    buys.reduce((s, t) => s + t.eur, 0),
+    900,
+    0.01,
+  );
+  const dorm = a.transactions.filter((t) => t.kind === 'fee_dormancy');
+  assert.ok(dorm.length >= 5, `${dorm.length} frais d’oxydation`);
+  assert.ok(dorm.every((t) => t.eur > 0));
+  assert.equal(a.createdAt.slice(0, 10), '2019-01-04');
+  assert.ok(!a.transactions.some((t) => t.date.startsWith('2026-11'))); // pas le versement d'aujourd'hui
+  assert.equal(import900History(a, now), a); // une seule fois
+  // Refusé sur un compte qui a déjà des opérations.
+  const used = buy(
+    createAccount('X', now),
+    { gold: 100, silver: 1, platinum: 30 },
+    'gold',
+    { unit: 'eur', value: 10 },
+    now,
+  );
+  assert.throws(() => import900History(used, now), /Videz d’abord vos coffres/);
+});

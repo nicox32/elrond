@@ -78,7 +78,7 @@ export interface Transaction {
   fees?: number;
   label: string;
   /** Achat repris de l'épargne depuis 2019 (et non passé dans l'appli). */
-  origin?: 'history2019' | 'childGifts2022';
+  origin?: 'history2019' | 'childGifts2022' | 'history900';
   /** Achat passé par le bot d'achat sur baisse (simple ou double). */
   dip?: 'normal' | 'strong';
   /** Versement annulé (erreur corrigée sous 24 h). */
@@ -226,6 +226,8 @@ export interface Account extends Wallet {
   alertEvents?: AlertEvent[];
   /** L'épargne régulière depuis 2019 a été reprise (une seule fois). */
   history2019Imported?: boolean;
+  /** Le compte d'essai « 900 € avec pauses » a été chargé. */
+  history900Imported?: boolean;
   /** Cours utilisés pour cette reprise : moyennes mensuelles réelles (sinon, anciennes moyennes annuelles). */
   history2019Prices?: 'monthly';
   /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
