@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CodeConfirm } from '../components/CodeConfirm';
+import { ChildGifts2022 } from '../components/ChildGifts2022';
+import { History2019 } from '../components/History2019';
+import { History900 } from '../components/History900';
+import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
+import { resetVaults } from '../logic/ledger';
 import { COMPANY, type CompanyPeriod, companyReport } from '../logic/company';
 import { formatEur } from '../logic/format';
 import { createSecret, isValidPinFormat, verifySecret } from '../security';
@@ -93,7 +98,8 @@ export default function DevScreen() {
 
 function CompanyDashboard() {
   const account = useAccount();
-  const { quote } = useBank();
+  const { quote, updateAccount } = useBank();
+  const [vaultConfirm, setVaultConfirm] = useState(false);
   const [period, setPeriod] = useState<CompanyPeriod>('year');
   const r = companyReport(account, quote.prices, period);
   const years = r.years.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
@@ -161,6 +167,26 @@ function CompanyDashboard() {
           métal, et la part de chaque client dans les frais fixes (voir le seuil de rentabilité ci-dessus).
         </Text>
       </Card>
+
+      <SectionTitle>Outils du compte</SectionTitle>
+      <Hint>Réservés à la société : reprises d’historique et remise à zéro des coffres du compte principal.</Hint>
+      <History2019 />
+      <ChildGifts2022 />
+      <History900 />
+      <Button title="Vider les coffres du compte principal" variant="ghost" onPress={() => setVaultConfirm(true)} />
+      <Hint>
+        Remet à zéro les métaux et l’historique du compte principal. Le compte, le code, les alertes et les comptes
+        enfants sont gardés.
+      </Hint>
+      <PinConfirm
+        visible={vaultConfirm}
+        summary="Vider tous les coffres du compte principal (Gold Spot, argent, platine) et effacer son historique d’opérations."
+        onConfirm={() => {
+          setVaultConfirm(false);
+          updateAccount((acc) => resetVaults(acc));
+        }}
+        onCancel={() => setVaultConfirm(false)}
+      />
     </Screen>
   );
 }

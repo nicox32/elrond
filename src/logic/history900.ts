@@ -78,7 +78,7 @@ export function preview900(now = new Date()) {
 export function import900History(account: Account, now = new Date()): Account {
   if (account.history900Imported) return account;
   if (account.transactions.length > 0 || Object.values(account.holdings).some((g) => g > 1e-9)) {
-    throw new LedgerError('Videz d’abord vos coffres (Profil → Vider mes coffres) : ce compte d’essai part de zéro.');
+    throw new LedgerError('Videz d’abord vos coffres (Société Orvia → Outils du compte) : ce compte d’essai part de zéro.');
   }
   const start = new Date(`${HISTORY900.start}T09:00:00`);
   const target = account.settings.allocation ?? DEFAULT_ALLOCATION;

@@ -5,14 +5,9 @@ import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'reac
 
 import { AddressCard } from '../../components/AddressCard';
 import { BackupCard } from '../../components/BackupCard';
-import { ChildGifts2022 } from '../../components/ChildGifts2022';
-import { History2019 } from '../../components/History2019';
-import { History900 } from '../../components/History900';
-import { PinConfirm } from '../../components/PinConfirm';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate, formatEur as formatEurShort } from '../../logic/format';
-import { resetVaults } from '../../logic/ledger';
 import { loyalty } from '../../logic/loyalty';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { authenticateWithBiometrics, biometricsAvailable } from '../../security';
@@ -20,8 +15,7 @@ import { colors } from '../../theme';
 
 export default function ProfileScreen() {
   const account = useAccount();
-  const { updateSettings, resetAccount, updateAccount } = useBank();
-  const [vaultConfirm, setVaultConfirm] = useState(false);
+  const { updateSettings, resetAccount } = useBank();
   const [bioAvailable, setBioAvailable] = useState(false);
 
   useEffect(() => {
@@ -139,11 +133,6 @@ export default function ProfileScreen() {
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 
-      <SectionTitle>Historique</SectionTitle>
-      <History2019 />
-      <ChildGifts2022 />
-      <History900 />
-
       <SectionTitle>Relevés</SectionTitle>
       <AddressCard />
 
@@ -180,21 +169,7 @@ export default function ProfileScreen() {
 
       <SectionTitle>Compte</SectionTitle>
       <Hint>Cours réels de l’or, de l’argent et du platine au comptant, convertis en euros.</Hint>
-      <Button title="Vider mes coffres" variant="ghost" onPress={() => setVaultConfirm(true)} />
-      <Hint>
-        Remet à zéro vos métaux et votre historique d’opérations. Votre compte, votre code, vos alertes et les comptes
-        enfants sont gardés.
-      </Hint>
       <Button title="Fermer le compte" variant="danger" onPress={confirmReset} />
-      <PinConfirm
-        visible={vaultConfirm}
-        summary="Vider tous vos coffres : Gold Spot, argent et platine, et effacer l’historique des opérations."
-        onConfirm={() => {
-          setVaultConfirm(false);
-          updateAccount((acc) => resetVaults(acc));
-        }}
-        onCancel={() => setVaultConfirm(false)}
-      />
       <Text style={styles.version} testID="app-version">
         Orvia · version {Constants.expoConfig?.version ?? '—'}
       </Text>

@@ -109,7 +109,7 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Historique allégé** (`src/logic/compact.ts`) : au-delà de 600 opérations, les achats de plus de 12 mois sont
   regroupés par mois et par métal (mêmes montants, frais et grammes ; date du dernier achat du mois, donc impôt jamais
   sous-estimé).
-- **Reprise de l'épargne depuis 2019** (Profil → Historique, `src/logic/history2019.ts`) : compte ouvert le 4 janvier
+- **Reprise de l'épargne depuis 2019** (Société Orvia → Outils du compte, `src/logic/history2019.ts`) : compte ouvert le 4 janvier
   2019, 25 € par semaine en 4 achats (lundi, mercredi, vendredi, dimanche), 50 % Gold Spot, 25 % argent, 25 % platine,
   frais d'achat Orvia compris ; une seule fois. Chaque achat au cours moyen réel de son mois en €/once
   (`src/logic/monthlyPrices.ts`, calculé par `.github/workflows/cours-mensuels.yml` à partir des cours quotidiens et du
@@ -135,11 +135,11 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Don mensuel à un enfant** (écran du compte enfant, `src/logic/childGiftPlan.ts`) : montant, jour du mois et
   répartition ; le jour prévu, rappel par notification et don en un geste (« Faire le don », ou « Pas ce mois-ci »),
   ou don automatique si vous le choisissez. Le métal est acheté sur le compte du parent puis versé gratuitement.
-- **Compte d'essai « 900 € avec des pauses »** (Profil → Historique, `src/logic/history900.ts`) : sur des coffres
+- **Compte d'essai « 900 € avec des pauses »** (Société Orvia → Outils du compte, `src/logic/history900.ts`) : sur des coffres
   vides, 36 versements de 25 € le 5 du mois depuis le 4 janvier 2019 avec des pauses de 9 à 15 mois ; frais
   d'oxydation appliqués par la règle de l'appli à chaque période de 6 mois sans opération ; achats selon la
   répartition, au cours moyen réel du mois. Le versement du mois en cours n'est pas ajouté.
-- **Dons à un enfant depuis 2022** (Profil → Historique, sous la reprise 2019, `src/logic/childGifts.ts`) : 50 € le 5
+- **Dons à un enfant depuis 2022** (Société Orvia → Outils du compte, `src/logic/childGifts.ts`) : 50 € le 5
   de chaque mois depuis le 5 janvier 2022, 50 % Gold Spot et 50 % argent, au cours moyen réel de chaque mois, frais
   d'achat compris, ajoutés au compte de l'enfant choisi (le compte principal ne change pas) ; une seule fois.
 - **Lien en lecture seule d'un compte enfant** (écran du compte enfant → « Partager le compte de … »,
