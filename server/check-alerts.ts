@@ -16,6 +16,8 @@ const topic = process.env.NTFY_TOPIC?.trim();
 const testMode = process.env.ALERT_TEST === 'true';
 /** Lancement manuel avec « tester chaque alerte » : une notification de test par alerte surveillée. */
 const testAll = process.env.ALERT_TEST_ALL === 'true';
+/** Lancement manuel avec « bot » : un exemple de chaque notification du bot d'achat sur baisse. */
+const testBot = process.env.ALERT_TEST_BOT === 'true';
 
 const readJson = (path: string | URL, fallback: unknown) => {
   try {
@@ -62,6 +64,27 @@ if (testMode && last) {
 }
 if (testAll && last) {
   config.forEach((c, i) => notifications.push(testNotification(c, last.prices, i, config.length)));
+}
+if (testBot && last) {
+  const g = (m: 'gold' | 'silver' | 'platinum') => eur(last.prices[m]);
+  notifications.push(
+    {
+      title: 'Test (1/4) · Achat sur baisse : Gold Spot',
+      body: `25,00 € achetés à ${g('gold')}/g, 5,2 % sous sa moyenne 30 jours.`,
+    },
+    {
+      title: 'Test (2/4) · Achat sur baisse : argent (baisse forte, achat double)',
+      body: `50,00 € achetés à ${g('silver')}/g, 15,4 % sous sa moyenne 30 jours.`,
+    },
+    {
+      title: 'Test (3/4) · Achat sur baisse impossible : platine',
+      body: 'Platine sous 38,00 €/g, mais solde du compte d’attente insuffisant : 12,40 € disponibles.',
+    },
+    {
+      title: 'Test (4/4) · Bot d’achat : prix fixes mis à jour',
+      body: 'Gold Spot sous 108,00 €/g · argent sous 1,35 €/g · platine sous 38,00 €/g',
+    },
+  );
 }
 for (const n of notifications) {
   console.log(`Alerte : ${n.title} — ${n.body}`);

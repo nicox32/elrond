@@ -19,6 +19,10 @@ on:
         description: 'Tester chaque alerte (une notification par alerte)'
         type: boolean
         default: false
+      bot:
+        description: 'Tester les notifications du bot d’achat (4 exemples)'
+        type: boolean
+        default: false
       boucle:
         description: 'Surveiller en continu (toutes les 15 min pendant 5 h 30)'
         type: boolean
@@ -56,6 +60,7 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           ALERT_TEST: ${{ inputs.test }}
           ALERT_TEST_ALL: ${{ inputs.tout }}
+          ALERT_TEST_BOT: ${{ inputs.bot }}
           LOOP: ${{ github.event_name == 'schedule' || inputs.boucle }}
         run: |
           if [ "$LOOP" != "true" ]; then node server/check-alerts.ts; exit $?; fi
