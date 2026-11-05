@@ -27,6 +27,9 @@ Dans Chrome, menu ⋮ → **Ajouter à l'écran d'accueil** pour l'ouvrir comme 
 Téléchargez l'APK depuis votre téléphone :
 **https://github.com/nicox32/elrond/releases/latest/download/orvia.apk**
 
+Chaque version publie aussi le même fichier sous le nom `orvia-1.1.<n>.apk` (numéro affiché en bas du Profil),
+visible sur https://github.com/nicox32/elrond/releases/latest.
+
 Il est reconstruit automatiquement à chaque modification, numéroté 1.1.<n° de construction> (affiché en bas du
 Profil) (voir `.github/workflows/android-apk.yml`), puis ouvert sur
 un téléphone Android virtuel (`.github/workflows/test-apk.yml`) : il n'est publié que s'il démarre sans plantage.

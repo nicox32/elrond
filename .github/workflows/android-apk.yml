@@ -106,6 +106,10 @@ jobs:
         with:
           name: orvia-apk
 
+      # Même APK sous un nom qui porte la version, pour ne pas confondre avec une ancienne.
+      - name: Nommer l'APK avec sa version
+        run: cp orvia.apk "orvia-1.1.${{ github.run_number }}.apk"
+
       - name: Publier la release
         uses: softprops/action-gh-release@v2
         with:
@@ -113,8 +117,10 @@ jobs:
           name: Orvia v1.1.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           make_latest: true
-          files: orvia.apk
+          files: |
+            orvia.apk
+            orvia-1.1.${{ github.run_number }}.apk
           body: |
-            Orvia : votre épargne en Gold Spot, argent et platine.
-            Téléchargez **orvia.apk** ci-dessous depuis votre téléphone Android pour l'installer.
+            Orvia 1.1.${{ github.run_number }} : votre épargne en Gold Spot, argent et platine.
+            Téléchargez **orvia-1.1.${{ github.run_number }}.apk** (ou orvia.apk, identique) depuis votre téléphone Android pour l'installer.
             Version testée au démarrage sur un téléphone Android virtuel avant publication.
