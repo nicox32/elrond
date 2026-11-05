@@ -101,6 +101,12 @@ export default function ProfileScreen() {
           border
         />
         <LinkRow
+          label="Notifications ntfy"
+          hint="Toutes les alertes et achats du bot reçus sur votre canal"
+          to="/notifications"
+          border
+        />
+        <LinkRow
           label="Bot d’achat sur baisse"
           hint={
             account.dipBot?.active
@@ -211,6 +217,7 @@ function LinkRow({
     | '/attente'
     | '/programme'
     | '/bot'
+    | '/notifications'
     | '/fidelite';
   border?: boolean;
 }) {

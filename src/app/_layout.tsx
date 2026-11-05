@@ -69,6 +69,7 @@ function AppStack() {
       <Stack.Screen name="or-fractionne" options={{ title: 'L’or fractionné' }} />
       <Stack.Screen name="fiscalite" options={{ title: 'Plus-value et impôts' }} />
       <Stack.Screen name="actualites" options={{ title: 'Actualités' }} />
+      <Stack.Screen name="notifications" options={{ title: 'Notifications ntfy' }} />
     </Stack>
   );
 }

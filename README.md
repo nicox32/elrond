@@ -112,6 +112,10 @@ jamais dans Git (dossier `signing/` ignoré).
   `docs/exemple-releve-epargne-enfant.pdf`) : PDF avec logo, valeur au cours du jour, total versé, plus-value,
   versements par année, règles de protection, fiscalité et derniers mouvements ; présenté comme un relevé de suivi
   (ni certificat de dépôt, ni preuve de détention).
+- **Notifications ntfy** (Profil → Notifications ntfy, `src/app/notifications.tsx`) : tout ce qui arrive sur le canal
+  ntfy du compte (alertes du serveur, achats du bot, tests), filtrable, mis à jour toutes les 30 s ; gardé sur le
+  téléphone (ntfy.sh ne garde les messages que 12 h). Les alertes du serveur apparaissent aussi dans l'écran Alertes
+  et la dernière (moins de 24 h) sur l'écran du compte.
 - **Actualités** (écran du compte → « Tout voir », `src/app/actualites.tsx`, `src/logic/news.ts`) : titres, résumés
   et images des flux RSS publics d'Or.fr, Gold.fr, BullionVault (France) et AuCOFFRE (blog « L'or et l'argent »),
   les plus récents d'abord, filtre par site, lecture de l'article sur son site ; gardées en cache (hors connexion),

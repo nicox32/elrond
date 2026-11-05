@@ -9,6 +9,7 @@ import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { HomeNews } from '../../components/HomeNews';
+import { HomeNtfyBanner } from '../../components/HomeNtfyBanner';
 import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
 import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
@@ -110,6 +111,7 @@ export default function AccountScreen() {
           <Text style={styles.alertBannerBody}>{account.alertEvents[0].body}</Text>
         </Pressable>
       )}
+      <HomeNtfyBanner topic={account.ntfyTopic} after={account.alertEvents?.[0]?.date} />
       <LivePrices unit={unit} />
 
       <SectionTitle>Évolution du solde</SectionTitle>

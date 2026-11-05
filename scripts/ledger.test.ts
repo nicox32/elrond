@@ -1166,3 +1166,20 @@ test('alertes du serveur lues sur ntfy : rattachées à l’alerte de l’appli,
   assert.equal(t[up.id], new Date(1793780441 * 1000).toISOString());
   assert.equal(t[down.id], undefined);
 });
+
+test('boîte ntfy : messages fusionnés sans doublon, classés par type', async () => {
+  const { mergeInbox, inboxKind } = await import('../src/logic/ntfyClient.ts');
+  const a = { id: '1', date: '2026-11-04T23:33:54.000Z', title: 'Alerte platine · x', body: '' };
+  const b = { id: '2', date: '2026-11-04T23:39:00.000Z', title: 'Test Orvia ✓ : notifications actives', body: '' };
+  const c = { id: '3', date: '2026-11-05T08:00:00.000Z', title: 'Achat sur baisse : Gold Spot', body: '' };
+  const merged = mergeInbox([a, b], [b, c]);
+  assert.deepEqual(
+    merged.map((m) => m.id),
+    ['3', '2', '1'],
+  );
+  assert.deepEqual(
+    merged.map((m) => inboxKind(m.title)),
+    ['bot', 'test', 'alert'],
+  );
+  assert.equal(mergeInbox(merged, [], 2).length, 2);
+});

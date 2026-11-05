@@ -87,3 +87,15 @@ export async function loadCachedNews(): Promise<import('./logic/news').NewsResul
 export async function saveNews(news: import('./logic/news').NewsResult): Promise<void> {
   await writeJson(NEWS_KEY, news);
 }
+
+const NTFY_INBOX_KEY = 'elrond.ntfyInbox.v1';
+
+/** Messages reçus sur le canal ntfy, gardés sur le téléphone (ntfy.sh ne les garde que 12 h). */
+export async function loadNtfyInbox(): Promise<import('./logic/ntfyClient').NtfyMessage[]> {
+  const data = await readJson(NTFY_INBOX_KEY);
+  return Array.isArray(data) ? (data as import('./logic/ntfyClient').NtfyMessage[]) : [];
+}
+
+export async function saveNtfyInbox(messages: import('./logic/ntfyClient').NtfyMessage[]): Promise<void> {
+  await writeJson(NTFY_INBOX_KEY, messages);
+}

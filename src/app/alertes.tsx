@@ -18,7 +18,7 @@ import {
   serverTriggers,
   testNotification,
 } from '../logic/alerts';
-import { fetchNtfyMessages, isValidTopic, type NtfyMessage } from '../logic/ntfyClient';
+import { useNtfyInbox } from '../state/useNtfyInbox';
 import { formatDate, parseAmount } from '../logic/format';
 import { METAL_LABEL, TROY_OUNCE } from '../logic/ledger';
 import type { Metal } from '../logic/types';
@@ -62,19 +62,9 @@ export default function AlertsScreen() {
     registerBackgroundChecks().then(setBackground);
   }, []);
 
-  // Alertes envoyées par le serveur (canal ntfy) ces 7 derniers jours : affichées comme celles de l'appli.
-  const [serverMsgs, setServerMsgs] = useState<NtfyMessage[]>([]);
-  const topic = account.ntfyTopic;
-  useEffect(() => {
-    if (!isValidTopic(topic)) return;
-    let alive = true;
-    fetchNtfyMessages(topic, '7d')
-      .then((m) => alive && setServerMsgs(serverAlertMessages(m)))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, [topic]);
+  // Alertes envoyées par le serveur, lues sur le canal ntfy (et gardées sur le téléphone).
+  const inbox = useNtfyInbox(account.ntfyTopic);
+  const serverMsgs = serverAlertMessages(inbox.messages);
   const serverHits = serverTriggers(alerts, serverMsgs);
   const feed = [
     ...events.map((e) => ({ id: e.id, title: e.title, body: e.body, date: e.date, metal: e.metal, server: false })),
@@ -319,7 +309,15 @@ export default function AlertsScreen() {
         />
       )}
 
-      <SectionTitle>Alertes déclenchées</SectionTitle>
+      <SectionTitle
+        right={
+          <Pressable onPress={() => router.push('/notifications')} accessibilityRole="link">
+            <Text style={ui.link}>Tout le canal ›</Text>
+          </Pressable>
+        }
+      >
+        Alertes déclenchées
+      </SectionTitle>
       {feed.length === 0 ? (
         <Hint>Rien pour l’instant. Les cours sont vérifiés toutes les 30 secondes quand l’appli est ouverte.</Hint>
       ) : (

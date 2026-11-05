@@ -55,3 +55,20 @@ export async function fetchNtfyMessages(topic: string, since = '7d', fetchFn: Fe
   }
   return out.sort((a, b) => b.date.localeCompare(a.date));
 }
+
+/** Ajoute les nouveaux messages à ceux déjà gardés (sans doublon), les plus récents d'abord, 300 au plus. */
+export function mergeInbox(kept: NtfyMessage[], fresh: NtfyMessage[], max = 300): NtfyMessage[] {
+  const byId = new Map<string, NtfyMessage>();
+  for (const m of [...kept, ...fresh]) byId.set(m.id, m);
+  return [...byId.values()].sort((a, b) => b.date.localeCompare(a.date)).slice(0, max);
+}
+
+export type InboxKind = 'alert' | 'bot' | 'test' | 'other';
+
+/** Type d'un message du canal, d'après son titre. */
+export function inboxKind(title: string): InboxKind {
+  if (/^Test\b/i.test(title)) return 'test';
+  if (/^Alerte (Gold Spot|argent|platine)\b/i.test(title)) return 'alert';
+  if (/^(Achat sur baisse|Bot d’achat)/i.test(title)) return 'bot';
+  return 'other';
+}
