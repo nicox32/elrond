@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Platform, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { formatEur } from '../logic/format';
-import { import900History, preview900 } from '../logic/history900';
+import { preview900, replaceWith900History } from '../logic/history900';
 import { LedgerError } from '../logic/ledger';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
+import { PinConfirm } from './PinConfirm';
 import { Button, Card, Hint, Message } from './ui';
 
 /** Compte d'essai : 900 € versés depuis 2019, avec de longues pauses et des frais d'oxydation. */
@@ -13,8 +14,9 @@ export function History900() {
   const account = useAccount();
   const { updateAccount } = useBank();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const p = preview900();
-  const empty = account.transactions.length === 0;
+  const kids = account.children.map((c) => c.name).join(', ');
 
   if (account.history900Imported) {
     const dorm = account.transactions.filter((t) => t.kind === 'fee_dormancy');
@@ -31,22 +33,11 @@ export function History900() {
 
   const run = () => {
     try {
-      updateAccount((a) => import900History(a));
+      updateAccount((a) => replaceWith900History(a));
       setMsg({ ok: true, text: 'Compte d’essai chargé : voyez l’Historique et vos relevés.' });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Chargement impossible.' });
     }
-  };
-  const confirm = () => {
-    if (Platform.OS === 'web') return run();
-    Alert.alert(
-      'Charger le compte d’essai ?',
-      `${p.payments} versements (${formatEur(p.total)}) et les frais d’oxydation des pauses seront ajoutés.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Charger', onPress: run },
-      ],
-    );
   };
 
   return (
@@ -57,9 +48,22 @@ export function History900() {
         Chaque pause de plus de 6 mois entraîne des frais d’oxydation, comme pour un vrai compte. Achats selon votre
         répartition, au cours moyen réel de chaque mois, frais compris. Le versement de ce mois n’est pas ajouté.
       </Hint>
-      {!empty && <Hint>Videz d’abord vos coffres (plus bas, rubrique Compte) : ce compte d’essai part de zéro.</Hint>}
+      <Hint>
+        Il remplace l’historique et les coffres de votre compte principal
+        {kids ? ` ; le compte de ${kids} reste inchangé` : ''}. Exportez d’abord une sauvegarde pour pouvoir revenir en
+        arrière.
+      </Hint>
       {msg && <Message {...msg} />}
-      <Button title="Charger le compte d’essai" variant="ghost" onPress={confirm} disabled={!empty} />
+      <Button title="Charger le compte d’essai" variant="ghost" onPress={() => setConfirming(true)} />
+      <PinConfirm
+        visible={confirming}
+        summary={`Remplacer votre compte principal par le compte d’essai (${formatEur(p.total)} depuis 2019).${kids ? ` Le compte de ${kids} ne change pas.` : ''}`}
+        onConfirm={() => {
+          setConfirming(false);
+          run();
+        }}
+        onCancel={() => setConfirming(false)}
+      />
     </Card>
   );
 }

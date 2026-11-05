@@ -6,7 +6,7 @@
  * Le versement du mois en cours n'est pas ajouté.
  */
 import { buySplit, DEFAULT_ALLOCATION, splitAmount } from './allocation.ts';
-import { applyDormancy, LedgerError, recordBalance, TROY_OUNCE } from './ledger.ts';
+import { applyDormancy, LedgerError, recordBalance, resetVaults, TROY_OUNCE } from './ledger.ts';
 import { monthlyEurOz } from './monthlyPrices.ts';
 import type { Account, Prices } from './types.ts';
 
@@ -105,4 +105,12 @@ export function import900History(account: Account, now = new Date()): Account {
   // Pause en cours (depuis le dernier versement) : frais dus jusqu'à aujourd'hui.
   acc = applyDormancy(acc, pricesOfMonth(now), now);
   return { ...acc, history900Imported: true };
+}
+
+/**
+ * Remplace le compte principal par le compte d'essai : coffres et historique remis à zéro, puis chargés. Les
+ * comptes enfants, les réglages, l'adresse, les alertes, le bot et les achats programmés sont gardés tels quels.
+ */
+export function replaceWith900History(account: Account, now = new Date()): Account {
+  return import900History(resetVaults(account), now);
 }

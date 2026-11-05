@@ -1298,3 +1298,22 @@ test('compte d’essai 900 € : 36 versements, pauses avec frais d’oxydation,
   );
   assert.throws(() => import900History(used, now), /Videz d’abord vos coffres/);
 });
+
+test('compte d’essai : remplace le compte principal, le compte de l’enfant reste inchangé', async () => {
+  const { replaceWith900History } = await import('../src/logic/history900.ts');
+  const { importGifts2022 } = await import('../src/logic/childGifts.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const now = new Date('2026-11-05T14:00:00');
+  const r = addChild(createAccount('Nicolas', now), 'Théo', '2016-03-12', now);
+  let a = importGifts2022(r.account, r.child.id, now);
+  a = buy(a, { gold: 100, silver: 1, platinum: 30 }, 'gold', { unit: 'eur', value: 500 }, now);
+  const theo = a.children[0];
+  const b = replaceWith900History(a, now);
+  assert.deepEqual(b.children[0], theo);
+  close(
+    b.transactions.filter((t) => t.kind === 'buy').reduce((s, t) => s + t.eur, 0),
+    900,
+    0.01,
+  );
+  assert.ok(b.history900Imported);
+});
