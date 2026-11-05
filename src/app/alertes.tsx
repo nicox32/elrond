@@ -18,6 +18,7 @@ import {
   serverTriggers,
   testNotification,
 } from '../logic/alerts';
+import { isValidTopic, publishNtfy } from '../logic/ntfyClient';
 import { useNtfyInbox } from '../state/useNtfyInbox';
 import { formatDate, parseAmount } from '../logic/format';
 import { METAL_LABEL, TROY_OUNCE } from '../logic/ledger';
@@ -111,15 +112,22 @@ export default function AlertsScreen() {
       setPermission(p);
       if (p !== 'granted') return setMessage({ ok: false, text: 'Autorisez les notifications pour faire le test.' });
     }
+    const topic = account.ntfyTopic;
+    const toNtfy = isValidTopic(topic);
     setMessage({ ok: true, text: `Envoi de ${list.length} notifications de test…` });
+    let ntfyFailed = 0;
     for (const [i, a] of list.entries()) {
       const n = testNotification(a, quote.prices, i, list.length);
       await notify(n.title, n.body);
-      await new Promise((r) => setTimeout(r, 1200));
+      // Aussi sur le canal ntfy, comme les vraies alertes du serveur.
+      if (toNtfy) await publishNtfy(topic, n, fetch, ['bell', 'coin']).catch(() => ntfyFailed++);
+      await new Promise((r) => setTimeout(r, 1500));
     }
     setMessage({
-      ok: true,
-      text: `${list.length} notifications de test envoyées : vérifiez le volet de notifications.`,
+      ok: ntfyFailed === 0,
+      text: toNtfy
+        ? `${list.length} notifications de test envoyées sur ce téléphone et sur votre canal ntfy${ntfyFailed ? ` (${ntfyFailed} échec(s) vers ntfy)` : ''}.`
+        : `${list.length} notifications de test envoyées sur ce téléphone. Indiquez votre canal ntfy (Bot d’achat sur baisse) pour les recevoir aussi dans ntfy.`,
     });
   }
 
@@ -303,7 +311,7 @@ export default function AlertsScreen() {
 
       {(account.alerts ?? []).some((a) => a.enabled) && (
         <Button
-          title={`Tester mes ${(account.alerts ?? []).filter((a) => a.enabled).length} alertes sur ce téléphone`}
+          title={`Tester mes ${(account.alerts ?? []).filter((a) => a.enabled).length} alertes${isValidTopic(account.ntfyTopic) ? ' (téléphone + ntfy)' : ' sur ce téléphone'}`}
           variant="ghost"
           onPress={testAll}
         />
