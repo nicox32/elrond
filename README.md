@@ -88,7 +88,9 @@ jamais dans Git (dossier `signing/` ignoré).
   500 € achetés, 1 LOU par mois avec au moins 25 € versés à un compte enfant, 1 LOU par anniversaire du compte
   et 5 LOU tous les 5 ans ; rien sur les paiements par carte (qui vendent du métal), les ventes,
   conversions ou virements. 1 LOU s'échange contre 1 € de métal sans frais, dès 10 LOU.
-- **Relevés PDF** (`src/logic/statement.ts`, `docs/exemple-releve.pdf`) : relevé de compte par période (ce mois, mois
+- **Relevés PDF** (`src/logic/statement.ts`, `docs/exemple-releve.pdf`) : une ligne par opération avec grammes, prix
+  au gramme, frais d'achat, autres frais et impôt ; soldes de début et de fin avec prix moyen payé (frais compris) ;
+  adresse du titulaire (Profil → Relevés), aussi sur les relevés des comptes enfants. Relevé par période (ce mois, mois
   dernier, 12 mois, tout) pour le compte principal (Historique), chaque coffre, chaque compte enfant et le compte
   d'attente, avec soldes de début et de fin ; avis d'opération en touchant une opération. Téléphone : PDF partagé ou
   enregistré (expo-print, expo-sharing) ; navigateur : impression « Enregistrer au format PDF ».

@@ -269,6 +269,8 @@ export function statementHtml(input: {
   <table>
     <tr><th>Métal</th><th class="num">Au ${day(from)}</th><th class="num">Variation</th><th class="num">Au ${day(to)}</th><th class="num">Prix moyen payé</th><th class="num">Valeur au cours du jour</th></tr>
     ${metals
+      // Un métal à zéro du début à la fin de la période n'apporte rien au relevé.
+      .filter((m) => opening[m] > 1e-9 || closing[m] > 1e-9 || lines.some((l) => l.m === m))
       .map((m) => {
         const dv = closing[m] - opening[m];
         const avg = avgPaid(m);
