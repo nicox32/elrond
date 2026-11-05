@@ -121,6 +121,11 @@ jamais dans Git (dossier `signing/` ignoré).
   les plus récents d'abord, filtre par site, lecture de l'article sur son site ; gardées en cache (hors connexion),
   rechargées toutes les 30 min. Ces sites n'autorisant pas la lecture depuis un navigateur, la section sert dans
   l'appli Android (la version web propose les liens vers les sites). Diagnostic : `.github/workflows/sources-actus.yml`.
+- **Déclaration des dons** (compte enfant → Déclaration des dons, `src/logic/giftRecap.ts`,
+  `docs/exemple-recapitulatif-dons-2735.pdf`) : récapitulatif PDF par trimestre ou par année pour le formulaire 2735
+  (donateur, bénéficiaire, acceptation par le représentant légal, dons avec grammes et valeur au jour du don, total,
+  abattement de 100 000 € sur 15 ans utilisé et restant), trimestres marqués comme déclarés, rappel au début de chaque
+  trimestre ; section « Donations à vos enfants » dans Plus-value et impôts.
 - **Don mensuel à un enfant** (écran du compte enfant, `src/logic/childGiftPlan.ts`) : montant, jour du mois et
   répartition ; le jour prévu, rappel par notification et don en un geste (« Faire le don », ou « Pas ce mois-ci »),
   ou don automatique si vous le choisissez. Le métal est acheté sur le compte du parent puis versé gratuitement.

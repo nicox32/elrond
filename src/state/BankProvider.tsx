@@ -8,6 +8,7 @@ import { notify } from '../notifications';
 import { marketStatus } from '../logic/market';
 import { runGiftPlans } from '../logic/childGiftPlan';
 import { runDipBot } from '../logic/dipBot';
+import { runDeclarationReminders } from '../logic/giftRecap';
 import { isValidTopic, publishNtfy } from '../logic/ntfyClient';
 import { amountPerRun, planNotice, runPlan } from '../logic/plan';
 import { fetchLivePrices, referenceQuote } from '../logic/prices';
@@ -176,6 +177,13 @@ export function BankProvider({ children }: { children: ReactNode }) {
             const g = runGiftPlans(forGifts, prices);
             if (g.account !== forGifts) persist(recordBalance(g.account, prices));
             g.notices.forEach((n) => notify(n.title, n.body));
+          }
+          // Rappel trimestriel : dons du trimestre précédent à déclarer (formulaire 2735).
+          const forDecl = accountRef.current;
+          if (forDecl?.children.length) {
+            const r = runDeclarationReminders(forDecl);
+            if (r.account !== forDecl) persist(r.account);
+            r.notices.forEach((n) => notify(n.title, n.body));
           }
           const last = accountRef.current?.balanceHistory.at(-1);
           if (!periodic || !last || Date.now() - new Date(last.date).getTime() >= PERIODIC_BALANCE_MS) snapshot();

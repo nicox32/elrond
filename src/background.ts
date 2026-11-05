@@ -6,6 +6,7 @@ import { applyDormancy, recordBalance } from './logic/ledger';
 import { marketStatus } from './logic/market';
 import { giftDue, runGiftPlans } from './logic/childGiftPlan';
 import { runDipBot } from './logic/dipBot';
+import { runDeclarationReminders } from './logic/giftRecap';
 import { isValidTopic, publishNtfy } from './logic/ntfyClient';
 import { amountPerRun, dueRuns, planNotice, runPlan } from './logic/plan';
 import { addPricePoint } from './logic/priceHistory';
@@ -50,6 +51,15 @@ TaskManager.defineTask(PRICE_TASK, async () => {
       account = recordBalance(g.account, prices);
       await Promise.all([saveAccount(account), saveQuote(live)]);
       for (const n of g.notices) await notify(n.title, n.body);
+    }
+    // Rappel trimestriel de déclaration des dons (sans réseau).
+    if (account.children.length) {
+      const r = runDeclarationReminders(account);
+      if (r.account !== account) {
+        account = r.account;
+        await saveAccount(account);
+      }
+      for (const n of r.notices) await notify(n.title, n.body);
     }
     const wantsAlerts = !!account.alerts?.some((a) => a.enabled);
     if (!wantsAlerts && !account.dipBot?.active) return BackgroundTask.BackgroundTaskResult.Success;

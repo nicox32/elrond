@@ -159,6 +159,37 @@ export default function TaxScreen() {
           donations.
         </Bullet>
       </Card>
+
+      <SectionTitle>Donations à vos enfants</SectionTitle>
+      <Card style={{ gap: 8 }}>
+        <Text style={styles.para}>
+          Vos versements sur le compte d’un enfant sont des dons manuels : vous les acceptez pour lui en tant que
+          représentant légal, et le métal lui appartient aussitôt.
+        </Text>
+        <Bullet>
+          <Text style={styles.bold}>Aucun droit de donation</Text> jusqu’à 100 000 € par parent et par enfant, sur 15
+          ans. Le compte de l’enfant montre la part déjà utilisée.
+        </Bullet>
+        <Bullet>
+          <Text style={styles.bold}>Déclarez vos dons</Text> (formulaire 2735 ou en ligne sur impots.gouv.fr) : ce n’est
+          pas obligatoire tant que le don n’est pas révélé au fisc, mais cela lui donne une date certaine et évite toute
+          contestation. Le plus simple : regrouper les dons et les déclarer chaque trimestre. Orvia vous le rappelle et
+          prépare le récapitulatif (compte de l’enfant → Déclaration des dons).
+        </Bullet>
+        <Bullet>
+          <Text style={styles.bold}>Le don est irrévocable</Text> : vous ne pouvez plus reprendre ce métal ni l’utiliser
+          pour vous. Les retraits ne sont possibles que dans l’intérêt de l’enfant.
+        </Bullet>
+        <Bullet>
+          <Text style={styles.bold}>Pas d’impôt sur le transfert</Text> : un don n’est pas une vente. L’impôt sur les
+          métaux n’est dû que si l’enfant revend ; la valeur déclarée et la date du don servent alors en principe de
+          prix et de date d’acquisition (à faire confirmer avant une grosse vente).
+        </Bullet>
+        <Bullet>
+          <Text style={styles.bold}>Gardez les preuves</Text> : récapitulatifs de dons, relevés du compte de l’enfant et
+          factures d’achat d’origine (elles fixent le prix et la date d’achat).
+        </Bullet>
+      </Card>
     </Screen>
   );
 }

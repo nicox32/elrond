@@ -170,6 +170,10 @@ export interface ChildAccount extends Wallet {
   gifts2022Imported?: boolean;
   /** Don mensuel du parent : rappel le jour prévu, ou don automatique. */
   giftPlan?: import('./childGiftPlan.ts').ChildGiftPlan;
+  /** Trimestres dont les dons ont été déclarés (« 2026-T4 »). */
+  declaredQuarters?: string[];
+  /** Dernier trimestre pour lequel le rappel de déclaration a été envoyé. */
+  declarationRemindedFor?: string;
 }
 
 /** Carte de paiement Orvia, adossée aux métaux du compte. */

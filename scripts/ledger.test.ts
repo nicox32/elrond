@@ -1183,3 +1183,35 @@ test('boîte ntfy : messages fusionnés sans doublon, classés par type', async 
   );
   assert.equal(mergeInbox(merged, [], 2).length, 2);
 });
+
+test('dons : récapitulatif 2735 par trimestre, abattement 15 ans, rappel une fois par trimestre', async () => {
+  const { childGifts, allowanceUsed, giftRecapHtml, runDeclarationReminders, quarterKey } =
+    await import('../src/logic/giftRecap.ts');
+  const { importGifts2022 } = await import('../src/logic/childGifts.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const now = new Date('2026-11-05T12:00:00');
+  const { account, child } = addChild(createAccount('Nicolas', now), 'Théo', '2016-03-12', now);
+  const a = importGifts2022(account, child.id, now);
+  const c = a.children[0];
+  // Un don de 50 € partagé or + argent = un seul don par jour.
+  assert.equal(childGifts(c).length, 59); // janvier 2022 → 5 novembre 2026
+  assert.equal(childGifts(c, new Date(2026, 6, 1), new Date(2026, 9, 1)).length, 3); // juillet, août, septembre
+  close(allowanceUsed(c, now).used, 2950, 0.01);
+  close(allowanceUsed(c, now).left, 97050, 0.01);
+  const html = giftRecapHtml(a, c, 'lastQuarter', now);
+  assert.match(html, /3e trimestre 2026/);
+  assert.match(html, /3 dons/);
+  assert.match(html, /150,00\s€/);
+  assert.match(html, /représentant légal/);
+  assert.match(html, /formulaire 2735/);
+  // Rappel au début du 4e trimestre pour le 3e, une seule fois ; rien si déjà déclaré.
+  const r = runDeclarationReminders(a, now);
+  assert.equal(r.notices.length, 1);
+  assert.match(r.notices[0].body, /3e trimestre 2026/);
+  assert.equal(runDeclarationReminders(r.account, now).notices.length, 0);
+  const declared = {
+    ...a,
+    children: a.children.map((x) => ({ ...x, declaredQuarters: [quarterKey(new Date(2026, 7, 1))] })),
+  };
+  assert.equal(runDeclarationReminders(declared, now).notices.length, 0);
+});

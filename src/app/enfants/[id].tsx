@@ -5,6 +5,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { AmountInput } from '../../components/AmountInput';
 import { ChildGiftCard } from '../../components/ChildGiftCard';
 import { ChildRules } from '../../components/ChildRules';
+import { GiftRecapCard } from '../../components/GiftRecapCard';
 import { CodeConfirm } from '../../components/CodeConfirm';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { MetalPicker } from '../../components/MetalPicker';
@@ -539,6 +540,7 @@ export default function ChildScreen() {
         </Card>
       )}
       <ChildStatementCard child={child} />
+      <GiftRecapCard child={child} />
       <StatementCard wallet={child} walletName={`Compte de ${name}`} />
       {stage !== 'transferred' && <ShareViewCard child={child} parent={account.holder} prices={quote.prices} />}
 
