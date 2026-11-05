@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { AddressCard } from '../../components/AddressCard';
 import { BackupCard } from '../../components/BackupCard';
 import { ChildGifts2022 } from '../../components/ChildGifts2022';
 import { History2019 } from '../../components/History2019';
@@ -140,6 +141,9 @@ export default function ProfileScreen() {
       <SectionTitle>Historique</SectionTitle>
       <History2019 />
       <ChildGifts2022 />
+
+      <SectionTitle>Relevés</SectionTitle>
+      <AddressCard />
 
       <SectionTitle>Sauvegarde</SectionTitle>
       <BackupCard />

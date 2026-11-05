@@ -695,10 +695,49 @@ test('relevés PDF : opérations de la période, soldes de début et de fin, avi
   assert.doesNotMatch(last, /Crédit du compte d’attente|Compte d’attente</); // le compte d'attente n'y figure plus
   assert.match(last, /Achat d’argent · compte d’attente/);
   assert.doesNotMatch(last, /Vente/); // novembre : hors période
-  assert.match(last, /1 opération\(s\)/);
-  assert.match(last, /Frais d’achat payés<b>6,80/); // 6,8 % de 100 € d'argent
-  // Solde de début (1er octobre) : 2 g d'or
-  assert.match(last, /Solde au 01 octobre 2026<\/div><div>Gold Spot<b>2,000 g/);
+  assert.match(last, /1 opération</);
+  assert.match(last, /Frais d’achat<\/div><div class="v">6,80/); // 6,8 % de 100 € d'argent
+  // Ligne détaillée : grammes, prix au gramme (hors frais), frais d'achat
+  assert.match(last, /\+ 93,200\u00a0g/);
+  assert.match(last, /1,000\u00a0€\/g/);
+  // Soldes : 2 g d'or au 1er octobre, prix moyen payé pour l'argent frais compris (100 € / 93,2 g)
+  assert.match(last, /Au 01 octobre 2026/);
+  assert.match(last, /2,000\u00a0g/);
+  assert.match(last, /1,073\u00a0€\/g/);
+  // Adresse du titulaire sur le relevé, et sur celui d'un compte enfant (représenté par le parent)
+  const withAddr = {
+    ...acc,
+    settings: {
+      ...acc.settings,
+      address: { name: 'M. Jean Exemple', street: '1 rue de l’Exemple', postcode: '75000', city: 'Paris' },
+    },
+  };
+  const addrHtml = statementHtml({
+    account: withAddr,
+    wallet: withAddr,
+    walletName: 'Compte principal',
+    scope: { kind: 'all' },
+    period: 'lastMonth',
+    prices: p,
+    now,
+  });
+  assert.match(addrHtml, /M\. Jean Exemple<\/b><br\/>1 rue de l’Exemple<br\/>75000 Paris/);
+  const { addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const r = addChild(withAddr, 'Théo', '2016-03-12', new Date('2026-10-01'));
+  const fam = fundChild(r.account, p, r.child.id, 'gold', { unit: 'g', value: 0.5 }, new Date('2026-10-06'));
+  const kid = fam.children[0];
+  const kidHtml = statementHtml({
+    account: fam,
+    wallet: kid,
+    walletName: 'Compte de Théo',
+    scope: { kind: 'all' },
+    period: 'lastMonth',
+    prices: p,
+    now,
+  });
+  assert.match(kidHtml, /Relevé du compte de Théo/);
+  assert.match(kidHtml, /Théo<\/b> \(mineur\)<br\/>représenté par M\. Jean Exemple<br\/>1 rue de l’Exemple/);
+  assert.match(kidHtml, /Dons reçus/);
   // Coffre Gold Spot seul : l'achat d'argent n'y figure pas
   const vault = statementHtml({
     account: acc,

@@ -115,6 +115,16 @@ export interface Settings {
   allocation?: Record<SpotMetal, number>;
   /** Tableau de bord Société Orvia : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
   devCodeHash?: string;
+  /** Adresse postale du titulaire, affichée sur les relevés (et ceux des comptes enfants). */
+  address?: PostalAddress;
+}
+
+export interface PostalAddress {
+  /** Civilité et nom tels qu'imprimés (ex. « M. Nicolas Moga ») ; sinon le prénom du compte. */
+  name?: string;
+  street: string;
+  postcode: string;
+  city: string;
 }
 
 /** Ce qu'un compte détient et son historique (compte principal ou compte enfant). */

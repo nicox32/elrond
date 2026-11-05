@@ -1,10 +1,12 @@
 /**
  * Relevés de compte et avis d'opération, en HTML imprimable (transformé en PDF par src/pdf.ts).
  */
-import { formatEur, formatQty, formatWeightDelta } from './format.ts';
+import { formatEur, formatWeightDelta } from './format.ts';
 import { METAL_LABEL } from './ledger.ts';
+import { LOGO_PNG_BASE64 } from './logoData.ts';
 import {
   type Account,
+  type ChildAccount,
   type Metal,
   METALS,
   type Prices,
@@ -76,6 +78,39 @@ function balancesAt(wallet: Wallet, at: Date) {
   return { holdings };
 }
 
+const DOT: Record<Metal, string> = { gold: '#D4AF37', silver: '#AEB4BE', platinum: '#8FB3CC' };
+const grams = (g: number) =>
+  `${g.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}\u00a0g`;
+const perGramText = (n: number, m: Metal) =>
+  `${n.toLocaleString('fr-FR', { minimumFractionDigits: m === 'silver' ? 3 : 2, maximumFractionDigits: m === 'silver' ? 3 : 2 })}\u00a0€/g`;
+
+/** Relevé lisible (modèle A) : en-tête avec adresse, chiffres clés, opérations détaillées, soldes. */
+const STYLE_A = `
+  @page { size: A4; margin: 13mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1d1f24; font-size: 10.5px; line-height: 1.4; margin: 0; }
+  .head { display: flex; align-items: flex-start; gap: 12px; border-bottom: 2px solid #b8902c; padding-bottom: 10px; }
+  .head img { width: 52px; height: 52px; }
+  .brand { font-size: 19px; font-weight: 800; letter-spacing: 1px; }
+  .brand small { display: block; font-size: 9.5px; font-weight: 500; color: #6b7080; letter-spacing: 0; }
+  .addr { margin-left: auto; font-size: 10.5px; line-height: 1.45; border: 1px solid #e6dcc3; border-radius: 6px; padding: 7px 12px; min-width: 190px; }
+  h1 { font-size: 16px; margin: 12px 0 1px; }
+  .sub { color: #6b7080; margin: 0 0 10px; }
+  h2 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #8a6a1c; margin: 14px 0 5px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; background: #1d1f24; color: #f3e7c4; font-weight: 600; font-size: 9px; padding: 5px 6px; }
+  td { padding: 4px 6px; border-bottom: 1px solid #ece7da; vertical-align: top; }
+  td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  tr.tot td { font-weight: 800; border-top: 1.5px solid #1d1f24; border-bottom: none; }
+  .pos { color: #1b7a43; } .neg { color: #b3261e; } .muted { color: #7a7f8c; }
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .kpi { background: #faf6ec; border: 1px solid #e6dcc3; border-radius: 7px; padding: 7px 9px; }
+  .kpi .k { font-size: 8.5px; color: #7a7f8c; text-transform: uppercase; letter-spacing: .5px; }
+  .kpi .v { font-size: 14px; font-weight: 800; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+  .foot { margin-top: 12px; padding-top: 7px; border-top: 1px solid #ddd; color: #8a8f9c; font-size: 8.5px; }
+`;
+
 const STYLE = `
   * { box-sizing: border-box; }
   body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; margin: 32px; font-size: 12px; }
@@ -106,14 +141,6 @@ function header(account: Account, title: string, subtitle: string) {
   <div class="muted">${esc(subtitle)}</div>`;
 }
 
-function holdingsLines(holdings: Record<Metal, number>, prices: Prices, unit: WeightUnit) {
-  const rows = METALS.filter((m) => holdings[m] > 1e-6).map(
-    (m) =>
-      `<div>${METAL_LABEL[m]}<b>${formatQty(m, holdings[m], unit).replace(/ de .*$| d’.*$/, '')}</b><span class="muted">≈ ${formatEur(holdings[m] * prices[m])}</span></div>`,
-  );
-  return rows.join('') || '<div>Aucun avoir</div>';
-}
-
 /** Relevé de compte (compte principal, compte enfant, coffre ou compte d'attente) sur une période. */
 export function statementHtml(input: {
   account: Account;
@@ -125,49 +152,132 @@ export function statementHtml(input: {
   now?: Date;
 }): string {
   const { account, wallet, walletName, scope, period, prices } = input;
-  const unit = account.settings.unit;
-  const { from, to } = periodRange(period, wallet.createdAt, input.now);
+  const now = input.now ?? new Date();
+  const child = account.children.find((c) => c === wallet || c.id === (wallet as ChildAccount).id);
+  const { from, to } = periodRange(period, wallet.createdAt, now);
   const txs = wallet.transactions
     .filter((t) => {
       const time = new Date(t.date).getTime();
       return time >= from.getTime() && time <= to.getTime() && inScope(t, scope);
     })
     .sort((a, b) => a.date.localeCompare(b.date));
-  const opening = balancesAt(wallet, new Date(from.getTime() - 1));
-  const closing = balancesAt(wallet, to);
-  const scopeLabel = scope.kind === 'metal' ? ` · coffre ${METAL_LABEL[scope.metal]}` : '';
-  const buyFees = txs.reduce((s, t) => s + (t.kind === 'buy' ? (t.fees ?? 0) : 0), 0);
-  const otherFees = txs.reduce((s, t) => s + (t.kind !== 'buy' && t.kind !== 'fee_dormancy' ? (t.fees ?? 0) : 0), 0);
-  const dormancy = txs.reduce((s, t) => s + (t.kind === 'fee_dormancy' ? t.eur : 0), 0);
-  const taxes = txs.reduce((s, t) => s + (t.tax ?? 0), 0);
-  const rows = txs
+  const opening = balancesAt(wallet, new Date(from.getTime() - 1)).holdings;
+  const closing = balancesAt(wallet, to).holdings;
+  const metals = scope.kind === 'metal' ? [scope.metal] : METALS;
+
+  // Une ligne par métal déplacé : grammes signés, prix au gramme, frais d'achat, autres frais, impôt, montant.
+  type Line = {
+    t: Transaction;
+    m: Metal;
+    grams: number;
+    perGram: number | null;
+    buyFee: number;
+    otherFee: number;
+    tax: number;
+  };
+  const lines: Line[] = [];
+  for (const t of txs) {
+    const moved = metals.filter((m) => (t.deltas[m] ?? 0) !== 0);
+    for (const m of moved) {
+      const grams = t.deltas[m];
+      const single = moved.length === 1;
+      const fees = single ? (t.fees ?? 0) : 0;
+      const tax = single ? (t.tax ?? 0) : 0;
+      let perGram: number | null = null;
+      if (single && t.kind !== 'convert' && Math.abs(grams) > 1e-9) {
+        // Entrée : montant payé moins les frais ; sortie : montant reçu plus frais et impôt.
+        perGram = grams > 0 ? (t.eur - fees) / grams : (t.eur + fees + tax) / -grams;
+      }
+      const isBuy = t.kind === 'buy' || (grams > 0 && t.kind === 'family_in' && fees > 0);
+      lines.push({ t, m, grams, perGram, buyFee: isBuy ? fees : 0, otherFee: isBuy ? 0 : fees, tax });
+    }
+  }
+  const buyFees = lines.reduce((s, l) => s + l.buyFee, 0);
+  const otherFees = lines.reduce((s, l) => s + l.otherFee, 0);
+  const taxes = lines.reduce((s, l) => s + l.tax, 0);
+  const inflowEur = txs.filter((t) => t.kind === (child ? 'family_in' : 'buy')).reduce((s, t) => s + t.eur, 0);
+
+  // Prix moyen payé au gramme sur la période (achats, ou dons reçus pour un enfant), frais compris.
+  const avgPaid = (m: Metal) => {
+    const rows = lines.filter((l) => l.m === m && l.grams > 0 && (l.t.kind === 'buy' || l.t.kind === 'family_in'));
+    const g = rows.reduce((s, l) => s + l.grams, 0);
+    const e = rows.reduce(
+      (s, l) =>
+        s + (l.t.eur * l.grams) / (Object.values(l.t.deltas).reduce((a, b) => a + Math.max(0, b), 0) || l.grams),
+      0,
+    );
+    return g > 0 ? e / g : null;
+  };
+
+  const addr = account.settings.address;
+  const addrLines = addr ? `${esc(addr.street)}<br/>${esc(addr.postcode)} ${esc(addr.city)}` : '';
+  const holderName = addr?.name?.trim() || account.holder;
+  const holderBlock = child
+    ? `<b>${esc(child.name)}</b> (${child.transferredAt ? 'majeur' : 'mineur'})<br/>représenté par ${esc(holderName)}${addrLines ? `<br/>${addrLines}` : ''}`
+    : `<b>${esc(holderName)}</b>${addrLines ? `<br/>${addrLines}` : ''}<br/><span class="muted">Membre ${esc(account.memberId)}</span>`;
+  const sign = (g: number, t: Transaction) => (t.kind === 'family_out' ? '→' : g > 0 ? '+' : '−');
+  const cls = (g: number, t: Transaction) => (t.kind === 'family_out' ? '' : g > 0 ? 'pos' : 'neg');
+  const rows = lines
     .map(
-      (t) => `<tr>
-        <td>${stamp(t.date)}</td>
-        <td>${esc(t.label)}</td>
-        <td>${movement(t, unit)}</td>
-        <td class="num">${formatEur(t.eur)}</td>
-        <td class="num">${t.kind === 'buy' ? (t.fees ? formatEur(t.fees) : '0,00 €') : ''}</td>
-        <td class="num">${t.kind !== 'buy' && t.fees ? formatEur(t.fees) : ''}${t.tax ? `<br/><span class="muted">impôt ${formatEur(t.tax)}</span>` : ''}</td>
+      (l) => `<tr>
+        <td>${new Date(l.t.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}</td>
+        <td>${esc(l.t.label)}</td>
+        <td><span class="dot" style="background:${DOT[l.m]}"></span>${METAL_LABEL[l.m]}</td>
+        <td class="num ${cls(l.grams, l.t)}">${sign(l.grams, l.t)} ${grams(Math.abs(l.grams))}</td>
+        <td class="num">${l.perGram ? perGramText(l.perGram, l.m) : '—'}</td>
+        <td class="num">${l.buyFee ? formatEur(l.buyFee) : ''}</td>
+        <td class="num">${l.otherFee ? formatEur(l.otherFee) : ''}${l.tax ? `${l.otherFee ? '<br/>' : ''}<span class="muted">impôt</span> ${formatEur(l.tax)}` : ''}</td>
+        <td class="num">${formatEur(l.t.eur)}</td>
       </tr>`,
     )
     .join('');
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Relevé ${esc(walletName)}</title><style>${STYLE}</style></head><body>
-  ${header(account, `Relevé de compte · ${walletName}${scopeLabel}`, `${PERIOD_LABEL[period]} : du ${day(from)} au ${day(to)}`)}
-  <div class="box"><div class="muted">Solde au ${day(from)}</div>${holdingsLines(opening.holdings, prices, unit)}</div>
-  <table>
-    <thead><tr><th>Date</th><th>Opération</th><th>Mouvement</th><th class="num">Montant</th><th class="num">Frais d’achat</th><th class="num">Autres frais / impôt</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="6" class="muted">Aucune opération sur la période.</td></tr>'}</tbody>
-    ${txs.length ? `<tfoot><tr class="tot"><td colspan="4">${txs.length} opération(s)</td><td class="num">${formatEur(buyFees)}</td><td class="num">${formatEur(otherFees)}${taxes ? `<br/>impôt ${formatEur(taxes)}` : ''}</td></tr></tfoot>` : ''}
-  </table>
-  <div class="box">
-    <div>Frais d’achat payés<b>${formatEur(buyFees)}</b></div>
-    <div>Frais de revente, virement et conversion<b>${formatEur(otherFees)}</b></div>
-    ${dormancy ? `<div>Frais d’oxydation<b>${formatEur(dormancy)}</b></div>` : ''}
-    <div>Impôt retenu et reversé pour vous<b>${formatEur(taxes)}</b></div>
+  const scopeLabel = scope.kind === 'metal' ? ` · coffre ${METAL_LABEL[scope.metal]}` : '';
+  const title = child ? `Relevé du compte de ${esc(child.name)}` : `Relevé de compte · ${esc(walletName)}`;
+  const kpis = child
+    ? [
+        ['Dons reçus', formatEur(inflowEur)],
+        ['Frais d’achat', formatEur(buyFees)],
+        ...METALS.filter((m) => metals.includes(m) && lines.some((l) => l.m === m && l.grams > 0))
+          .slice(0, 2)
+          .map((m) => [
+            `${METAL_LABEL[m]} reçu`,
+            grams(lines.filter((l) => l.m === m && l.grams > 0).reduce((s, l) => s + l.grams, 0)),
+          ]),
+      ]
+    : [
+        ['Investi', formatEur(inflowEur)],
+        ['Frais d’achat', formatEur(buyFees)],
+        ['Impôt retenu', formatEur(taxes)],
+        ['Opérations', String(txs.length)],
+      ];
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>${title}</title><style>${STYLE_A}</style></head><body>
+  <div class="head">
+    <img src="data:image/png;base64,${LOGO_PNG_BASE64}" alt="Orvia"/>
+    <div class="brand">ORVIA<small>Épargne en or, argent et platine</small></div>
+    <div class="addr">${holderBlock}</div>
   </div>
-  <div class="box"><div class="muted">Solde au ${day(to)}<br/>(valorisé au cours du jour d’édition)</div>${holdingsLines(closing.holdings, prices, unit)}</div>
-  <div class="foot">Orvia · métaux conservés en coffre-fort en port franc, propriété du titulaire, inscrits à son nom et séparés des biens d’Orvia.</div>
+  <h1>${title}${scopeLabel}</h1>
+  <p class="sub">${PERIOD_LABEL[period]} : du ${day(from)} au ${day(to)}${child ? ' · compte enfant (épargne jusqu’à ses 18 ans)' : ''} · édité le ${day(now)}</p>
+  <div class="kpis">${kpis.map(([k, v]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
+  <h2>${child ? 'Mouvements' : 'Opérations'}</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Opération</th><th>Métal</th><th class="num">Grammes</th><th class="num">Prix au gramme</th><th class="num">Frais d’achat</th><th class="num">Autres frais / impôt</th><th class="num">Montant</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="8" class="muted">Aucune opération sur la période.</td></tr>'}</tbody>
+    ${lines.length ? `<tfoot><tr class="tot"><td colspan="5">${txs.length} opération${txs.length > 1 ? 's' : ''}</td><td class="num">${formatEur(buyFees)}</td><td class="num">${otherFees ? formatEur(otherFees) : ''}${taxes ? `${otherFees ? '<br/>' : ''}impôt ${formatEur(taxes)}` : ''}</td><td class="num"></td></tr></tfoot>` : ''}
+  </table>
+  <h2>Soldes</h2>
+  <table>
+    <tr><th>Métal</th><th class="num">Au ${day(from)}</th><th class="num">Variation</th><th class="num">Au ${day(to)}</th><th class="num">Prix moyen payé</th><th class="num">Valeur au cours du jour</th></tr>
+    ${metals
+      .map((m) => {
+        const dv = closing[m] - opening[m];
+        const avg = avgPaid(m);
+        return `<tr><td><span class="dot" style="background:${DOT[m]}"></span>${METAL_LABEL[m]}</td><td class="num">${grams(opening[m])}</td><td class="num ${dv >= 0 ? 'pos' : 'neg'}">${dv >= 0 ? '+' : '−'} ${grams(Math.abs(dv))}</td><td class="num">${grams(closing[m])}</td><td class="num">${avg ? perGramText(avg, m) : '—'}</td><td class="num">${formatEur(closing[m] * prices[m])}</td></tr>`;
+      })
+      .join('')}
+    <tr class="tot"><td colspan="5">Valeur totale (cours du ${day(now)})</td><td class="num">${formatEur(metals.reduce((s, m) => s + closing[m] * prices[m], 0))}</td></tr>
+  </table>
+  <div class="foot">Relevé de suivi édité par l’application Orvia. Prix au gramme : cours du métal au moment de l’opération (hors frais) ; prix moyen payé : frais d’achat compris. Frais d’achat : 2,8 % (Gold Spot), 6,8 % (argent, platine), compris dans le montant. Métaux conservés en coffre-fort en port franc, inscrits au nom du titulaire et séparés des biens d’Orvia. Ce relevé n’est ni une facture ni une attestation de dépôt.</div>
   </body></html>`;
 }
 
