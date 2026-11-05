@@ -6,9 +6,10 @@
  * - investir : 1 LOU par tranche de 500 € de métal acheté (0,2 %) ;
  * - épargner chaque mois : 1 LOU pour chaque mois civil avec au moins 50 € investis, et 5 LOU de plus à chaque
  *   série de 12 mois consécutifs ;
- * - payer avec la carte Orvia : 1 LOU par tranche de 250 € dépensés (0,4 %) ;
- * - ancienneté : 1 LOU à chaque anniversaire du compte.
- * Rien n'est gagné sur les ventes, conversions, virements, ni sur les euros laissés dans le compte d'attente.
+ * - donner à ses enfants : 1 LOU pour chaque mois civil avec au moins 25 € versés sur un compte enfant ;
+ * - ancienneté : 1 LOU à chaque anniversaire du compte, et 5 LOU de plus tous les 5 ans.
+ * Rien n'est gagné sur les ventes, conversions, virements, paiements par carte (qui vendent du métal), ni sur les
+ * euros laissés dans le compte d'attente : c'est un compte d'épargne.
  *
  * 1 LOU s'échange contre 1 € de métal, sans frais, à partir de 10 LOU. Les points sont recalculés à partir de
  * l'historique : ils ne peuvent ni se perdre ni être comptés deux fois.
@@ -24,8 +25,12 @@ export const LOYALTY = {
   monthLou: 1,
   streakMonths: 12,
   streakLou: 5,
-  cardEurPerLou: 250,
+  giftMonthMinEur: 25,
+  giftMonthLou: 1,
   anniversaryLou: 1,
+  /** Fidélité longue : tous les 5 ans d'ancienneté, en plus du LOU d'anniversaire. */
+  longTermYears: 5,
+  longTermLou: 5,
 } as const;
 
 export interface LoyaltyBreakdown {
@@ -35,10 +40,14 @@ export interface LoyaltyBreakdown {
   fromMonths: number;
   streaks: number;
   fromStreaks: number;
-  cardSpent: number;
-  fromCard: number;
+  /** Mois avec au moins 25 € versés aux enfants. */
+  giftMonths: number;
+  fromGifts: number;
   years: number;
   fromYears: number;
+  /** Paliers de 5 ans d'ancienneté atteints. */
+  longTerms: number;
+  fromLongTerm: number;
   earned: number;
   spent: number;
   balance: number;
@@ -58,17 +67,18 @@ const isEarningBuy = (t: Transaction) => t.kind === 'buy';
 export function loyalty(wallet: Pick<Wallet, 'transactions' | 'createdAt'>, now = new Date()): LoyaltyBreakdown {
   const L = LOYALTY;
   let invested = 0;
-  let cardSpent = 0;
   let spent = 0;
   const perMonth = new Map<number, number>();
+  const giftsPerMonth = new Map<number, number>();
   for (const t of wallet.transactions) {
     const d = new Date(t.date);
     if (d.getTime() > now.getTime()) continue;
     if (isEarningBuy(t)) {
       invested += t.eur;
       perMonth.set(monthKey(d), (perMonth.get(monthKey(d)) ?? 0) + t.eur);
-    } else if (t.kind === 'card_payment') cardSpent += t.eur;
-    else if (t.kind === 'loyalty_redeem') spent += t.loyaltyLou ?? 0;
+    } else if (t.kind === 'family_out' && !t.reversed) {
+      giftsPerMonth.set(monthKey(d), (giftsPerMonth.get(monthKey(d)) ?? 0) + t.eur);
+    } else if (t.kind === 'loyalty_redeem') spent += t.loyaltyLou ?? 0;
   }
   const validMonths = [...perMonth.entries()]
     .filter(([, eur]) => eur >= L.monthMinEur)
@@ -98,9 +108,12 @@ export function loyalty(wallet: Pick<Wallet, 'transactions' | 'createdAt'>, now 
   const fromBuys = Math.floor(invested / L.buyEurPerLou);
   const fromMonths = validMonths.length * L.monthLou;
   const fromStreaks = streaks * L.streakLou;
-  const fromCard = Math.floor(cardSpent / L.cardEurPerLou);
+  const giftMonths = [...giftsPerMonth.values()].filter((eur) => eur >= L.giftMonthMinEur).length;
+  const fromGifts = giftMonths * L.giftMonthLou;
   const fromYears = years * L.anniversaryLou;
-  const earned = fromBuys + fromMonths + fromStreaks + fromCard + fromYears;
+  const longTerms = Math.floor(years / L.longTermYears);
+  const fromLongTerm = longTerms * L.longTermLou;
+  const earned = fromBuys + fromMonths + fromStreaks + fromGifts + fromYears + fromLongTerm;
   return {
     invested,
     fromBuys,
@@ -108,10 +121,12 @@ export function loyalty(wallet: Pick<Wallet, 'transactions' | 'createdAt'>, now 
     fromMonths,
     streaks,
     fromStreaks,
-    cardSpent,
-    fromCard,
+    giftMonths,
+    fromGifts,
     years,
     fromYears,
+    longTerms,
+    fromLongTerm,
     earned,
     spent,
     balance: Math.max(0, earned - spent),

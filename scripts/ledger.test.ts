@@ -655,7 +655,7 @@ test('fidélité : points modestes pour l’épargne régulière, échange contr
   assert.equal(l.streaks, 1);
   assert.equal(l.fromBuys, Math.floor(3840 / 500)); // 7
   assert.equal(l.years, 5);
-  assert.equal(l.earned, 12 + 5 + 7 + 5);
+  assert.equal(l.earned, 12 + 5 + 7 + 5 + 5); // + 5 LOU de fidélité longue (5 ans d'ancienneté)
   // Rien sur les ventes, ni sur un mois sous 50 €
   const sold = sell(acc, p, 'gold', { unit: 'g', value: 1 }, 'deferred', now);
   assert.equal(loyalty(sold, now).earned, l.earned);
@@ -844,7 +844,7 @@ test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais com
   close(acc.holdings.platinum, 80.0, 0.05);
   assert.equal(acc.history2019Prices, 'monthly');
   assert.ok(acc.transactions.every((t) => t.origin === 'history2019'));
-  assert.equal(loyalty(acc, now).earned, 156);
+  assert.equal(loyalty(acc, now).earned, 161); // dont 5 LOU pour 5 ans d'ancienneté
   assert.equal(import2019History(acc, now), acc); // une seule fois
 });
 
@@ -1214,4 +1214,20 @@ test('dons : récapitulatif 2735 par trimestre, abattement 15 ans, rappel une fo
     children: a.children.map((x) => ({ ...x, declaredQuarters: [quarterKey(new Date(2026, 7, 1))] })),
   };
   assert.equal(runDeclarationReminders(declared, now).notices.length, 0);
+});
+
+test('fidélité : plus de LOU sur la carte (elle vend du métal), un LOU par mois de dons aux enfants', async () => {
+  const { loyalty } = await import('../src/logic/loyalty.ts');
+  const { addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const p = { gold: 100, silver: 1, platinum: 30 };
+  const start = new Date('2026-01-10T10:00:00');
+  const r0 = addChild(createAccount('Nicolas', start), 'Théo', '2016-03-12', start);
+  let a = buy(r0.account, p, 'gold', { unit: 'eur', value: 1000 }, start);
+  const before = loyalty(a, new Date('2026-04-01')).earned;
+  a = fundChild(a, p, r0.child.id, 'gold', { unit: 'eur', value: 30 }, new Date('2026-02-05'));
+  a = fundChild(a, p, r0.child.id, 'gold', { unit: 'eur', value: 10 }, new Date('2026-03-05')); // < 25 € : rien
+  const l = loyalty(a, new Date('2026-04-01'));
+  assert.equal(l.giftMonths, 1);
+  assert.equal(l.earned, before + 1);
+  assert.equal((l as unknown as Record<string, unknown>).fromCard, undefined);
 });

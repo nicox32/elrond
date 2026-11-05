@@ -85,7 +85,8 @@ jamais dans Git (dossier `signing/` ignoré).
   retrait vers la banque avec le code. Créditer compte comme une opération (pas de frais d'oxydation).
 - **Fidélité : les louis (LOU)** (`src/logic/loyalty.ts`, `docs/fidelite.png`) : programme modeste qui récompense
   l'épargne régulière — 1 LOU par mois avec au moins 50 € investis (+5 LOU tous les 12 mois consécutifs), 1 LOU par
-  500 € achetés, 1 LOU par 250 € payés avec la carte, 1 LOU par anniversaire du compte ; rien sur les ventes,
+  500 € achetés, 1 LOU par mois avec au moins 25 € versés à un compte enfant, 1 LOU par anniversaire du compte
+  et 5 LOU tous les 5 ans ; rien sur les paiements par carte (qui vendent du métal), les ventes,
   conversions ou virements. 1 LOU s'échange contre 1 € de métal sans frais, dès 10 LOU.
 - **Relevés PDF** (`src/logic/statement.ts`, `docs/exemple-releve.pdf`) : relevé de compte par période (ce mois, mois
   dernier, 12 mois, tout) pour le compte principal (Historique), chaque coffre, chaque compte enfant et le compte

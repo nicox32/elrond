@@ -60,16 +60,16 @@ export default function LoyaltyScreen() {
           lou={l.fromBuys}
         />
         <Rule
-          title="Payer avec la carte Orvia"
-          rule={`1 LOU par tranche de ${formatEur(L.cardEurPerLou)} dépensés`}
-          mine={`${formatEur(l.cardSpent)} dépensés`}
-          lou={l.fromCard}
+          title="Donner à vos enfants"
+          rule={`${L.giftMonthLou} LOU par mois avec au moins ${formatEur(L.giftMonthMinEur)} versés sur un compte enfant`}
+          mine={`${l.giftMonths} mois`}
+          lou={l.fromGifts}
         />
         <Rule
           title="Ancienneté"
-          rule={`${L.anniversaryLou} LOU à chaque anniversaire du compte`}
+          rule={`${L.anniversaryLou} LOU à chaque anniversaire du compte, et ${L.longTermLou} LOU de plus tous les ${L.longTermYears} ans`}
           mine={`${l.years} an${l.years > 1 ? 's' : ''}`}
-          lou={l.fromYears}
+          lou={l.fromYears + l.fromLongTerm}
         />
         <View style={styles.sep} />
         <View style={styles.row}>
@@ -83,8 +83,8 @@ export default function LoyaltyScreen() {
           </View>
         )}
         <Text style={styles.muted}>
-          Aucun louis sur les ventes, conversions, virements ou euros laissés dans le compte d’attente : le programme
-          récompense l’épargne régulière, pas les allers-retours.
+          Aucun louis sur les ventes, conversions, virements, paiements par carte ou euros laissés dans le compte
+          d’attente : Orvia est un compte d’épargne, le programme récompense l’épargne régulière et la durée.
         </Text>
       </Card>
 
