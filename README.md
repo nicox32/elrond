@@ -162,6 +162,13 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Répartition** (« Répartition » sur l'écran du compte, l'écran Opérer ou le Profil) : objectif en % par métal
   (modèles 50/25/25, 60/20/20…), comparaison avec la répartition actuelle, et **achat réparti en euros** en un geste,
   « selon mes % » ou « vers mon objectif » (priorité aux métaux en retard, sans rien vendre) (`docs/repartition.png`).
+- **Export tableur** (Profil › Relevés) : toutes les opérations en CSV (« ; », virgule décimale, UTF-8) et un
+  **modèle de tableur** `docs/modele-orvia.xlsx` (joint à chaque release) : onglet « Opérations » au format de l'export,
+  onglet « Synthèse » (formules par métal et par année : grammes, prix moyen payé, frais, impôts, plus-value,
+  année d'exonération). Régénération : `node scripts/template-sample.ts ex.csv && python3 scripts/make-template.py ex.csv docs/modele-orvia.xlsx`.
+- **Objectif retraite** (Profil), **calendrier d'exonération des 22 ans** et **récapitulatif fiscal annuel** en PDF
+  (écran Plus-value et impôts), **changer son code**, **mode discret** (œil à côté du solde) et **bandeau de mise à
+  jour** sur Android quand une version plus récente est publiée.
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
   achat 2,5 % (or), 6,3 % (argent, platine) ; garde en coffre 0,12 %/an (or), 0,4 %/an (argent, platine),
   prélevée en métal chaque mois (comptes enfants exonérés jusqu’à 18 ans) ; revente par virement 0,8 % (+ 30 € hors de France) ;

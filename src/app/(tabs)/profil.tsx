@@ -6,6 +6,7 @@ import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'reac
 import { AddressCard } from '../../components/AddressCard';
 import { BackupCard } from '../../components/BackupCard';
 import { ChangePinCard } from '../../components/ChangePinCard';
+import { CsvExportCard } from '../../components/CsvExportCard';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate, formatEur as formatEurShort } from '../../logic/format';
@@ -146,6 +147,7 @@ export default function ProfileScreen() {
 
       <SectionTitle>Relevés</SectionTitle>
       <AddressCard />
+      <CsvExportCard />
 
       <SectionTitle>Sauvegarde</SectionTitle>
       <BackupCard />

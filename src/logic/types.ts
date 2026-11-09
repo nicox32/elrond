@@ -78,6 +78,8 @@ export interface Transaction {
   eur: number;
   /** Frais facturés sur l'opération, en euros. */
   fees?: number;
+  /** Valeur de chaque métal quand l'opération en touche plusieurs à la fois (frais de garde, d'oxydation). */
+  eurByMetal?: Partial<Record<Metal, number>>;
   label: string;
   /** Achat repris de l'épargne depuis 2019 (et non passé dans l'appli). */
   origin?: 'history2019' | 'childGifts2022' | 'history900';

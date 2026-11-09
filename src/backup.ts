@@ -14,6 +14,14 @@ export async function shareBackup(text: string, name: string): Promise<void> {
   });
 }
 
+/** Écrit un fichier texte (CSV…) puis ouvre le partage du téléphone. */
+export async function shareTextFile(text: string, name: string, mimeType: string, title: string): Promise<void> {
+  const file = new File(Paths.cache, name);
+  file.create({ overwrite: true });
+  await file.write(text);
+  await Sharing.shareAsync(file.uri, { mimeType, UTI: 'public.comma-separated-values-text', dialogTitle: title });
+}
+
 /** Ouvre le sélecteur de fichiers ; rend le contenu choisi, ou null si vous annulez. */
 export async function pickBackup(): Promise<string | null> {
   const res = await DocumentPicker.getDocumentAsync({ type: ['application/json', '*/*'], copyToCacheDirectory: true });

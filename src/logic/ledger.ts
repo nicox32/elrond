@@ -864,11 +864,13 @@ export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now 
     const days = Math.round((periodEnd.getTime() - periodStart.getTime()) / DAY_MS);
     const share = Math.min(1, FEES.dormancyDaily * days);
     const deltas: Partial<Holdings> = {};
+    const byMetal: Partial<Record<Metal, number>> = {};
     let value = 0;
     for (const m of METALS) {
       const fee = result.holdings[m] * share;
       if (fee > 0) {
         deltas[m] = -fee;
+        byMetal[m] = fee * prices[m];
         value += fee * prices[m];
       }
     }
@@ -878,7 +880,7 @@ export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now 
       const to = periodEnd.toLocaleDateString('fr-FR');
       const label = `Frais d’oxydation · ${days} jours d’inactivité (${from} → ${to})`;
       result = {
-        ...apply(result, 'fee_dormancy', deltas, value, label, periodEnd, value),
+        ...tagByMetal(apply(result, 'fee_dormancy', deltas, value, label, periodEnd, value), byMetal),
         dormancyChargedThrough: through,
       };
     } else {
@@ -886,6 +888,12 @@ export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now 
     }
   }
   return result;
+}
+
+/** Garde sur la dernière opération la valeur de chaque métal (frais prélevés sur plusieurs métaux à la fois). */
+function tagByMetal<W extends Wallet>(w: W, eurByMetal: Partial<Record<Metal, number>>): W {
+  const [last, ...rest] = w.transactions;
+  return { ...w, transactions: [{ ...last, eurByMetal }, ...rest] };
 }
 
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
@@ -913,17 +921,19 @@ export function chargeCustody<W extends Wallet>(wallet: W, prices: Prices, now =
     const next = new Date(m.getFullYear(), m.getMonth() + 1, 1);
     if (!minor && !transferred) {
       const deltas: Partial<Holdings> = {};
+      const byMetal: Partial<Record<Metal, number>> = {};
       let value = 0;
       for (const metal of METALS) {
         const fee = result.holdings[metal] * (FEES.custodyYearly[metal] / 12);
         if (fee > 1e-9) {
           deltas[metal] = -fee;
+          byMetal[metal] = fee * prices[metal];
           value += fee * prices[metal];
         }
       }
       if (value > 0) {
         const label = `Frais de garde en coffre · ${m.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
-        result = apply(result, 'fee_custody', deltas, value, label, next, value);
+        result = tagByMetal(apply(result, 'fee_custody', deltas, value, label, next, value), byMetal);
       }
     }
     result = { ...result, custodyChargedThrough: next.toISOString() };

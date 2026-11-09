@@ -102,6 +102,11 @@ jobs:
     needs: [build, smoke]
     runs-on: ubuntu-latest
     steps:
+      # Pour joindre le modèle de tableur (docs/modele-orvia.xlsx) à la release.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: docs
+
       - uses: actions/download-artifact@v4
         with:
           name: orvia-apk
@@ -120,7 +125,9 @@ jobs:
           files: |
             orvia.apk
             orvia-1.1.${{ github.run_number }}.apk
+            docs/modele-orvia.xlsx
           body: |
             Orvia 1.1.${{ github.run_number }} : votre épargne en Gold Spot, argent et platine.
             Téléchargez **orvia-1.1.${{ github.run_number }}.apk** (ou orvia.apk, identique) depuis votre téléphone Android pour l'installer.
+            Modèle de tableur pour l'export CSV : **modele-orvia.xlsx** (Excel, Google Sheets, LibreOffice).
             Version testée au démarrage sur un téléphone Android virtuel avant publication.
