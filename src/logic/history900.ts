@@ -6,7 +6,7 @@
  * Le versement du mois en cours n'est pas ajouté.
  */
 import { buySplit, DEFAULT_ALLOCATION, splitAmount } from './allocation.ts';
-import { applyDormancy, LedgerError, recordBalance, resetVaults, TROY_OUNCE } from './ledger.ts';
+import { chargeDormancy, LedgerError, recordBalance, resetVaults, TROY_OUNCE } from './ledger.ts';
 import { monthlyEurOz } from './monthlyPrices.ts';
 import type { Account, Prices } from './types.ts';
 
@@ -88,11 +88,13 @@ export function import900History(account: Account, now = new Date()): Account {
     // Les frais d'oxydation s'appliquent depuis l'ouverture, comme pour un vrai compte.
     dormancyNotBefore: start.toISOString(),
     dormancyChargedThrough: undefined,
+    // La garde en coffre démarre aujourd'hui (pas de frais de garde rétroactifs sur ce compte d'essai).
+    custodyChargedThrough: now.toISOString(),
     balanceHistory: [],
   };
   for (const d of paymentDates(now)) {
     const p = pricesOfMonth(d);
-    acc = applyDormancy(acc, p, d); // pause de plus de 6 mois : frais prélevés avant le versement
+    acc = chargeDormancy(acc, p, d); // pause de plus de 6 mois : frais prélevés avant le versement
     const before = acc.transactions.length;
     acc = buySplit(acc, p, splitAmount(HISTORY900.amount, target, 'percent'), d);
     const added = acc.transactions.length - before;
@@ -103,7 +105,7 @@ export function import900History(account: Account, now = new Date()): Account {
     acc = recordBalance(acc, p, d);
   }
   // Pause en cours (depuis le dernier versement) : frais dus jusqu'à aujourd'hui.
-  acc = applyDormancy(acc, pricesOfMonth(now), now);
+  acc = chargeDormancy(acc, pricesOfMonth(now), now); // compte principal seul : les enfants restent intacts
   return { ...acc, history900Imported: true };
 }
 

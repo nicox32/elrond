@@ -22,7 +22,15 @@ export type CompanyPeriod = 'year' | 'all';
 
 export interface CompanyReport {
   years: number;
-  revenue: { buy: number; sale: number; conversion: number; dormancy: number; card: number; total: number };
+  revenue: {
+    buy: number;
+    sale: number;
+    conversion: number;
+    dormancy: number;
+    custody: number;
+    card: number;
+    total: number;
+  };
   costs: { custody: number; kyc: number; loyalty: number; referral: number; total: number };
   margin: number;
   marginPerYear: number;
@@ -57,10 +65,11 @@ export function companyReport(
     sale: sum((t) => (t.kind === 'sell' || t.kind === 'transfer_iban' ? (t.fees ?? 0) : 0)),
     conversion: sum((t) => (t.kind === 'convert' ? (t.fees ?? 0) : 0)),
     dormancy: sum((t) => (t.kind === 'fee_dormancy' ? t.eur : 0)),
+    custody: sum((t) => (t.kind === 'fee_custody' ? t.eur : 0)),
     card: sum((t) => (t.kind === 'card_payment' ? t.eur * COMPANY.interchange : 0)),
     total: 0,
   };
-  revenue.total = revenue.buy + revenue.sale + revenue.conversion + revenue.dormancy + revenue.card;
+  revenue.total = revenue.buy + revenue.sale + revenue.conversion + revenue.dormancy + revenue.custody + revenue.card;
 
   const assets = wallets.reduce((s, w) => s + accountValue(w, prices).total, 0);
   // Louis gagnés sur la période (échangés ou encore dus) : un coût pour la société.

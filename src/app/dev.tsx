@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { CodeConfirm } from '../components/CodeConfirm';
 import { ChildGifts2022 } from '../components/ChildGifts2022';
@@ -98,7 +98,7 @@ export default function DevScreen() {
 
 function CompanyDashboard() {
   const account = useAccount();
-  const { quote, updateAccount } = useBank();
+  const { quote, updateAccount, updateSettings } = useBank();
   const [vaultConfirm, setVaultConfirm] = useState(false);
   const [period, setPeriod] = useState<CompanyPeriod>('year');
   const r = companyReport(account, quote.prices, period);
@@ -129,12 +129,29 @@ function CompanyDashboard() {
         </Text>
       </Card>
 
+      <Card style={{ gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={[styles.bold, { flex: 1 }]}>Frais de garde en coffre</Text>
+          <Switch
+            testID="custody-switch"
+            value={account.settings.custodyFees !== false}
+            onValueChange={(custodyFees) => updateSettings({ custodyFees })}
+            trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
+          />
+        </View>
+        <Text style={styles.muted}>
+          0,12 % par an pour l’or, 0,4 % pour l’argent et le platine, prélevés en métal au début de chaque mois (comptes
+          enfants exonérés jusqu’à 18 ans). Désactivés, rien n’est prélevé et rien n’est rattrapé ensuite.
+        </Text>
+      </Card>
+
       <SectionTitle>Revenus</SectionTitle>
       <Card style={{ gap: 6 }}>
         <Row label="Frais d’achat" value={formatEur(r.revenue.buy)} />
         <Row label="Frais de revente et virements" value={formatEur(r.revenue.sale)} />
         <Row label="Frais de conversion" value={formatEur(r.revenue.conversion)} />
         <Row label="Frais d’oxydation (comptes inactifs)" value={formatEur(r.revenue.dormancy)} />
+        <Row label="Frais de garde en coffre" value={formatEur(r.revenue.custody)} />
         <Row
           label={`Commission sur les paiements par carte (${pct(COMPANY.interchange)})`}
           value={formatEur(r.revenue.card)}

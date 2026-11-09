@@ -163,7 +163,8 @@ jamais dans Git (dossier `signing/` ignoré).
   (modèles 50/25/25, 60/20/20…), comparaison avec la répartition actuelle, et **achat réparti en euros** en un geste,
   « selon mes % » ou « vers mon objectif » (priorité aux métaux en retard, sans rien vendre) (`docs/repartition.png`).
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
-  achat 2,8 % (or), 6,8 % (argent, platine) ; revente par virement 0,8 % (+ 30 € hors de France) ;
+  achat 2,5 % (or), 6,3 % (argent, platine) ; garde en coffre 0,12 %/an (or), 0,4 %/an (argent, platine),
+  prélevée en métal chaque mois (comptes enfants exonérés jusqu’à 18 ans) ; revente par virement 0,8 % (+ 30 € hors de France) ;
   écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
   envois et réceptions entre membres gratuits.
 - **Comptes enfants gratuits**, aux règles inspirées du droit français (à faire valider par un juriste) :

@@ -16,6 +16,7 @@ const ICON: Record<TransactionKind, string> = {
   family_out: '↘',
   family_in: '↙',
   fee_dormancy: '!',
+  fee_custody: '⌂',
   card_payment: '▭',
   card_withdrawal: '€',
   referral_bonus: '★',
@@ -51,7 +52,7 @@ export function TransactionRow({
     tx.kind === 'cash_in' ||
     tx.kind === 'loyalty_redeem';
   const neutral = tx.kind === 'convert';
-  const fee = tx.kind === 'fee_dormancy';
+  const fee = tx.kind === 'fee_dormancy' || tx.kind === 'fee_custody';
 
   return (
     <Pressable

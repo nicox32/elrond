@@ -50,6 +50,8 @@ export type TransactionKind =
   | 'family_in'
   /** Frais d'oxydation prélevés sur un compte inactif. */
   | 'fee_dormancy'
+  /** Frais de garde en coffre, prélevés en métal chaque mois. */
+  | 'fee_custody'
   /** Paiement chez un commerçant avec la carte Orvia. */
   | 'card_payment'
   /** Retrait au distributeur avec la carte Orvia. */
@@ -115,6 +117,8 @@ export interface Settings {
   allocation?: Record<SpotMetal, number>;
   /** Tableau de bord Société Orvia : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
   devCodeHash?: string;
+  /** Frais de garde en coffre appliqués (réglage de la société ; absent = oui). */
+  custodyFees?: boolean;
   /** Adresse postale du titulaire, affichée sur les relevés (et ceux des comptes enfants). */
   address?: PostalAddress;
 }
@@ -142,6 +146,8 @@ export interface Wallet {
   createdAt: string;
   /** Les frais d'oxydation ont été prélevés jusqu'à cette date (ISO). */
   dormancyChargedThrough?: string;
+  /** Frais de garde prélevés jusqu'à ce début de mois (ISO). Absent : la garde commence au prochain mois. */
+  custodyChargedThrough?: string;
   /** Aucun frais d'oxydation pour la période d'avant cette date : les 6 mois comptent à partir d'ici (ISO). */
   dormancyNotBefore?: string;
 }

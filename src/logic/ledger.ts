@@ -589,6 +589,7 @@ export function netInvested(account: Pick<Wallet, 'transactions'>): number {
     else if (
       tx.kind !== 'convert' &&
       tx.kind !== 'fee_dormancy' &&
+      tx.kind !== 'fee_custody' &&
       tx.kind !== 'referral_bonus' &&
       tx.kind !== 'loyalty_redeem'
     )
@@ -887,10 +888,55 @@ export function chargeDormancy<W extends Wallet>(wallet: W, prices: Prices, now 
   return result;
 }
 
-/** Applique les frais d'oxydation au compte principal et à chaque compte enfant. */
+const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+
+/**
+ * Frais de garde en coffre : au début de chaque mois, 1/12 du taux annuel de chaque métal détenu, prélevé en
+ * métal. Jamais rétroactif : la première fois, la garde démarre au mois suivant. Comptes enfants exonérés
+ * jusqu'à 18 ans ; aucun frais si la société a désactivé la garde payante.
+ */
+export function chargeCustody<W extends Wallet>(wallet: W, prices: Prices, now = new Date(), enabled = true): W {
+  const thisMonth = monthStart(now);
+  if (!wallet.custodyChargedThrough)
+    return enabled ? { ...wallet, custodyChargedThrough: thisMonth.toISOString() } : wallet;
+  if (!enabled) {
+    // Garde désactivée : rien n'est dû ; le compteur suit pour ne rien rattraper à la réactivation.
+    return new Date(wallet.custodyChargedThrough) < thisMonth
+      ? { ...wallet, custodyChargedThrough: thisMonth.toISOString() }
+      : wallet;
+  }
+  const exemptUntil = feesExemptUntil(wallet);
+  const minor = exemptUntil && now < exemptUntil;
+  const transferred = (wallet as Partial<ChildAccount>).transferredAt;
+  let result = wallet;
+  for (let m = new Date(wallet.custodyChargedThrough); m < thisMonth; ) {
+    const next = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+    if (!minor && !transferred) {
+      const deltas: Partial<Holdings> = {};
+      let value = 0;
+      for (const metal of METALS) {
+        const fee = result.holdings[metal] * (FEES.custodyYearly[metal] / 12);
+        if (fee > 1e-9) {
+          deltas[metal] = -fee;
+          value += fee * prices[metal];
+        }
+      }
+      if (value > 0) {
+        const label = `Frais de garde en coffre · ${m.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+        result = apply(result, 'fee_custody', deltas, value, label, next, value);
+      }
+    }
+    result = { ...result, custodyChargedThrough: next.toISOString() };
+    m = next;
+  }
+  return result;
+}
+
+/** Applique les frais d'oxydation et de garde au compte principal et à chaque compte enfant. */
 export function applyDormancy(account: Account, prices: Prices, now = new Date()): Account {
-  const parent = chargeDormancy(account, prices, now);
-  const children = account.children.map((c) => chargeDormancy(c, prices, now));
+  const custody = account.settings.custodyFees !== false;
+  const parent = chargeCustody(chargeDormancy(account, prices, now), prices, now, custody);
+  const children = account.children.map((c) => chargeCustody(chargeDormancy(c, prices, now), prices, now, custody));
   const changed = parent !== account || children.some((c, i) => c !== account.children[i]);
   return changed ? { ...parent, children } : account;
 }

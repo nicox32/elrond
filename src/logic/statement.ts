@@ -279,7 +279,7 @@ export function statementHtml(input: {
       .join('')}
     <tr class="tot"><td colspan="5">Valeur totale (cours du ${day(now)})</td><td class="num">${formatEur(metals.reduce((s, m) => s + closing[m] * prices[m], 0))}</td></tr>
   </table>
-  <div class="foot">Relevé de suivi édité par l’application Orvia. Prix au gramme : cours du métal au moment de l’opération (hors frais) ; prix moyen payé : frais d’achat compris. Frais d’achat : 2,8 % (Gold Spot), 6,8 % (argent, platine), compris dans le montant. Métaux conservés en coffre-fort en port franc, inscrits au nom du titulaire et séparés des biens d’Orvia. Ce relevé n’est ni une facture ni une attestation de dépôt.</div>
+  <div class="foot">Relevé de suivi édité par l’application Orvia. Prix au gramme : cours du métal au moment de l’opération (hors frais) ; prix moyen payé : frais d’achat compris. Frais d’achat : 2,5 % (Gold Spot), 6,3 % (argent, platine), compris dans le montant. Garde en coffre : 0,12 % par an (or), 0,4 % (argent, platine), prélevée en métal chaque mois. Métaux conservés en coffre-fort en port franc, inscrits au nom du titulaire et séparés des biens d’Orvia. Ce relevé n’est ni une facture ni une attestation de dépôt.</div>
   </body></html>`;
 }
 

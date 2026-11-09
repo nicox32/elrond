@@ -27,13 +27,13 @@ const VALID_IBAN = 'FR76 3000 6000 0112 3456 7890 189';
 
 test('achat en euros, en grammes et en onces : frais en part du montant payé', () => {
   let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'eur', value: 1000 });
-  close(acc.holdings.gold, (1000 * (1 - FEES.buy.gold)) / 100); // 2,8 % → 9,72 g
+  close(acc.holdings.gold, (1000 * (1 - FEES.buy.gold)) / 100); // 2,5 % → 9,75 g
   close(acc.transactions[0].eur, 1000, 0.01);
-  close(acc.transactions[0].fees ?? 0, 28, 0.01);
+  close(acc.transactions[0].fees ?? 0, 25, 0.01);
 
   acc = buy(createAccount('Test'), prices, 'silver', { unit: 'g', value: 50 });
   close(acc.holdings.silver, 50);
-  close(acc.transactions[0].eur, 50 / (1 - FEES.buy.silver), 0.01); // 6,8 %
+  close(acc.transactions[0].eur, 50 / (1 - FEES.buy.silver), 0.01); // 6,3 %
 
   acc = buy(createAccount('Test'), prices, 'platinum', { unit: 'oz', value: 1 });
   close(acc.holdings.platinum, TROY_OUNCE);
@@ -72,8 +72,8 @@ test('conversion or → platine : 0,8 % + frais d’achat du métal reçu', () =
   let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
   acc = convert(acc, prices, 'gold', 'platinum', { unit: 'g', value: 3 });
   close(acc.holdings.gold, 7);
-  // 0,8 % de frais de conversion puis 6,8 % de frais d'achat du platine
-  close(acc.holdings.platinum, (300 * (1 - 0.008) * (1 - 0.068)) / 30);
+  // 0,8 % de frais de conversion puis 6,3 % de frais d'achat du platine
+  close(acc.holdings.platinum, (300 * (1 - 0.008) * (1 - 0.063)) / 30);
   assert.throws(() => convert(acc, prices, 'gold', 'gold', { unit: 'g', value: 1 }), LedgerError);
 });
 
@@ -242,6 +242,7 @@ test('frais d’oxydation : 0,02 %/jour facturés pour chaque période de 6 mois
   const t0 = new Date('2026-01-10T12:00:00Z');
   const day = 86_400_000;
   let acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
+  acc = { ...acc, settings: { ...acc.settings, custodyFees: false } }; // garde testée à part
   // Léa est majeure depuis le 1er janvier 2026 : versement fait avant de renseigner sa date de naissance
   const r = addChild(acc, 'Léa', undefined, t0);
   acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 50 }, t0);
@@ -284,6 +285,7 @@ test('compte enfant : aucun frais d’oxydation avant 18 ans, compteur lancé à
 
   const t0 = new Date('2026-01-10T12:00:00Z');
   let acc = buy(createAccount('Parent', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
+  acc = { ...acc, settings: { ...acc.settings, custodyFees: false } }; // garde testée à part
   // Enfant né le 1er juin 2010 : majeur le 1er juin 2028
   const r = addChild(acc, 'Tom', '2010-06-01', t0);
   acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 10 }, t0);
@@ -696,14 +698,14 @@ test('relevés PDF : opérations de la période, soldes de début et de fin, avi
   assert.match(last, /Achat d’argent · compte d’attente/);
   assert.doesNotMatch(last, /Vente/); // novembre : hors période
   assert.match(last, /1 opération</);
-  assert.match(last, /Frais d’achat<\/div><div class="v">6,80/); // 6,8 % de 100 € d'argent
+  assert.match(last, /Frais d’achat<\/div><div class="v">6,30/); // 6,3 % de 100 € d'argent
   // Ligne détaillée : grammes, prix au gramme (hors frais), frais d'achat
-  assert.match(last, /\+ 93,200\u00a0g/);
+  assert.match(last, /\+ 93,700\u00a0g/);
   assert.match(last, /1,000\u00a0€\/g/);
-  // Soldes : 2 g d'or au 1er octobre, prix moyen payé pour l'argent frais compris (100 € / 93,2 g)
+  // Soldes : 2 g d'or au 1er octobre, prix moyen payé pour l'argent frais compris (100 € / 93,7 g)
   assert.match(last, /Au 01 octobre 2026/);
   assert.match(last, /2,000\u00a0g/);
-  assert.match(last, /1,073\u00a0€\/g/);
+  assert.match(last, /1,067\u00a0€\/g/);
   // Adresse du titulaire sur le relevé, et sur celui d'un compte enfant (représenté par le parent)
   const withAddr = {
     ...acc,
@@ -812,7 +814,7 @@ test('tableau de bord Société Orvia : revenus des frais, coûts estimés, seui
   acc = buy(acc, p, 'gold', { unit: 'eur', value: 500 }, new Date('2026-02-10'));
   acc = sell(acc, p, 'gold', { unit: 'g', value: 1 }, 'deferred', new Date('2026-03-10'));
   const r = companyReport(acc, p, 'year', new Date('2026-11-01'));
-  close(r.revenue.buy, 1000 * 0.068 + 500 * 0.028, 0.02);
+  close(r.revenue.buy, 1000 * 0.063 + 500 * 0.025, 0.02);
   close(r.revenue.sale, 100 * FEES.sale, 0.02);
   assert.ok(r.costs.custody > 0 && r.costs.kyc === COMPANY.kycPerAccount);
   close(r.margin, r.revenue.total - r.costs.total, 0.02);
@@ -875,12 +877,12 @@ test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais com
   );
   close(
     acc.transactions.reduce((s, t) => s + (t.fees ?? 0), 0),
-    490.5,
+    449.5,
     1,
   );
-  close(acc.holdings.gold, 83.68, 0.05);
-  close(acc.holdings.silver, 3316.7, 1);
-  close(acc.holdings.platinum, 80.0, 0.05);
+  close(acc.holdings.gold, 83.94, 0.05);
+  close(acc.holdings.silver, 3334.7, 1);
+  close(acc.holdings.platinum, 80.44, 0.05);
   assert.equal(acc.history2019Prices, 'monthly');
   assert.ok(acc.transactions.every((t) => t.origin === 'history2019'));
   assert.equal(loyalty(acc, now).earned, 161); // dont 5 LOU pour 5 ans d'ancienneté
@@ -1119,8 +1121,8 @@ test('don mensuel à l’enfant : rappel une fois, don en un geste, automatique,
   // Don en un geste : 50 € achetés sur le compte du parent, tout versé à l'enfant.
   a = giveMonthlyGift(r.account, p, r0.child.id, day);
   const c = a.children[0];
-  close(c.holdings.gold, (40 * (1 - 0.028)) / 110, 1e-6);
-  close(c.holdings.silver, (10 * (1 - 0.068)) / 1.4, 1e-6);
+  close(c.holdings.gold, (40 * (1 - 0.025)) / 110, 1e-6);
+  close(c.holdings.silver, (10 * (1 - 0.063)) / 1.4, 1e-6);
   close(a.holdings.gold, 0, 1e-9);
   assert.equal(giftDue(c.giftPlan, day), false);
   assert.ok(a.transactions.some((t) => t.label.includes('don à Théo')));
@@ -1335,4 +1337,29 @@ test('dons : trimestres à signer, signature reprise dans le récapitulatif PDF'
   assert.equal((html.match(/M10 10 L50 40 L90 20/g) ?? []).length, 2); // donateur + représentant légal
   assert.match(html, /Signé dans l’application le 5 novembre 2026/);
   assert.doesNotMatch(giftRecapHtml(a, c, 'lastQuarter', now), /Signé dans l’application/);
+});
+
+test('garde en coffre : 0,12 %/an or, 0,4 %/an argent et platine, en métal chaque mois, jamais rétroactive', async () => {
+  const { applyDormancy, addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const t0 = new Date('2026-03-15T12:00:00');
+  let acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
+  acc = buy(acc, prices, 'silver', { unit: 'g', value: 1000 }, t0);
+  const r = addChild(acc, 'Tom', '2016-06-01', t0);
+  acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 10 }, t0);
+  // Première fois : le compteur démarre, rien n'est prélevé pour le passé.
+  acc = applyDormancy(acc, prices, t0);
+  close(acc.holdings.gold, 90);
+  assert.equal(applyDormancy(acc, prices, t0), acc);
+  // 3 mois plus tard (avril, mai, juin) : 3/12 du taux annuel, en métal.
+  const later = applyDormancy(acc, prices, new Date('2026-06-02T12:00:00'));
+  close(later.holdings.gold, 90 * (1 - 0.0012 / 12) ** 3, 1e-5);
+  close(later.holdings.silver, 1000 * (1 - 0.004 / 12) ** 3, 1e-5);
+  assert.equal(later.transactions.filter((t) => t.kind === 'fee_custody').length, 3);
+  close(later.children[0].holdings.gold, 10); // enfant mineur : exonéré
+  // Désactivée par la société : rien, et rien de rattrapé à la réactivation.
+  const off = { ...acc, settings: { ...acc.settings, custodyFees: false } };
+  const offLater = applyDormancy(off, prices, new Date('2026-06-02T12:00:00'));
+  close(offLater.holdings.gold, 90);
+  const on = { ...offLater, settings: { ...offLater.settings, custodyFees: true } };
+  close(applyDormancy(on, prices, new Date('2026-06-20T12:00:00')).holdings.gold, 90);
 });

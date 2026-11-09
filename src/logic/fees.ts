@@ -1,12 +1,14 @@
 import type { Metal } from './types.ts';
 
 /**
- * Grille tarifaire d'Orvia : celle de Veracash, avec 0,2 point de moins sur chaque frais en pourcentage.
- * (Veracash n'a pas de platine : il suit le tarif de l'argent.)
+ * Grille tarifaire d'Orvia : frais d'achat modérés et garde en coffre transparente (0,12 % par an pour l'or,
+ * 0,4 % pour l'argent et le platine, plus encombrants), prélevée en métal chaque mois.
  */
 export const FEES = {
   /** Frais de gestion à l'achat, en part du montant payé. */
-  buy: { gold: 0.028, silver: 0.068, platinum: 0.068 } as Record<Metal, number>,
+  buy: { gold: 0.025, silver: 0.063, platinum: 0.063 } as Record<Metal, number>,
+  /** Garde en coffre, par an, en part du métal détenu ; prélevée en métal chaque mois (1/12). */
+  custodyYearly: { gold: 0.0012, silver: 0.004, platinum: 0.004 } as Record<Metal, number>,
   /** Frais de gestion sur revente par virement vers un compte bancaire. */
   sale: 0.008,
   /** Supplément fixe pour un virement vers un compte bancaire hors de France. */
@@ -41,6 +43,16 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Gold Spot : conversion d’euros en grammes d’or', orvia: pct(FEES.buy.gold) },
       { label: 'Argent : conversion d’euros en grammes d’argent', orvia: pct(FEES.buy.silver) },
       { label: 'Platine : conversion d’euros en grammes de platine', orvia: pct(FEES.buy.platinum) },
+    ],
+  },
+  {
+    title: 'Garde en coffre',
+    rows: [
+      { label: 'Gold Spot : garde, assurance et audit du coffre', orvia: `${pct(FEES.custodyYearly.gold)} par an` },
+      { label: 'Argent : garde, assurance et audit du coffre', orvia: `${pct(FEES.custodyYearly.silver)} par an` },
+      { label: 'Platine : garde, assurance et audit du coffre', orvia: `${pct(FEES.custodyYearly.platinum)} par an` },
+      { label: 'Prélèvement', orvia: 'En métal, 1/12 au début de chaque mois' },
+      { label: 'Compte enfant avant les 18 ans', orvia: 'Aucun' },
     ],
   },
   {
