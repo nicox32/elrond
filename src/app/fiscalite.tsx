@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PriceStatus } from '../components/PriceStatus';
+import { ExemptionCalendar, TaxYearCard } from '../components/TaxYearCard';
 import { Card, Hint, Label, Screen, SectionTitle } from '../components/ui';
 import { formatEur, formatPercent, formatWeight } from '../logic/format';
 import { METAL_LABEL } from '../logic/ledger';
@@ -108,6 +109,21 @@ export default function TaxScreen() {
           </Hint>
         </>
       )}
+
+      {est.metals.length > 0 && (
+        <>
+          <SectionTitle>Calendrier d’exonération (22 ans)</SectionTitle>
+          <Hint>
+            Votre métal regroupé par année d’achat : l’abattement augmente de 5 % par an à partir de la 3e année, et
+            tout est exonéré d’impôt sur la plus-value après 22 ans de détention (la taxe forfaitaire de 11,5 %, elle,
+            reste due si vous la choisissez).
+          </Hint>
+          <ExemptionCalendar />
+        </>
+      )}
+
+      <SectionTitle>Récapitulatif fiscal annuel</SectionTitle>
+      <TaxYearCard />
 
       <SectionTitle>Selon l’opération</SectionTitle>
       <Card style={{ paddingVertical: 4 }}>

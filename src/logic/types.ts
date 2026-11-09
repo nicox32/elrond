@@ -133,6 +133,15 @@ export interface QuarterSignature {
   h: number;
 }
 
+export interface RetirementGoal {
+  target: number;
+  date: string;
+  /** Hausse annuelle supposée des métaux pour la projection (0 = prudente). */
+  growth?: number;
+  /** Ce qui compte pour l'objectif : tout le compte principal, ou l'or seul. */
+  scope?: 'all' | 'gold';
+}
+
 export interface PostalAddress {
   /** Civilité et nom tels qu'imprimés (ex. « M. Nicolas Moga ») ; sinon le prénom du compte. */
   name?: string;
@@ -248,6 +257,8 @@ export interface Account extends Wallet {
   history900Imported?: boolean;
   /** Cours utilisés pour cette reprise : moyennes mensuelles réelles (sinon, anciennes moyennes annuelles). */
   history2019Prices?: 'monthly';
+  /** Objectif retraite : montant visé et date (ISO, jour). */
+  retirement?: RetirementGoal;
   /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
   ntfyTopic?: string;
   /** Compte d'attente : euros disponibles pour acheter des métaux. */

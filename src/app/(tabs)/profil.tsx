@@ -67,6 +67,16 @@ export default function ProfileScreen() {
           to="/repartition"
           border
         />
+        <LinkRow
+          label="Objectif retraite"
+          hint={
+            account.retirement
+              ? `${formatEurShort(account.retirement.target)} pour le ${formatDate(account.retirement.date)}`
+              : 'Montant visé, versement mensuel nécessaire'
+          }
+          to="/retraite"
+          border
+        />
         <LinkRow label="Parrainage" hint={account.referral.code} to="/parrainage" border />
         <LinkRow
           label="Alertes de prix"
@@ -206,6 +216,7 @@ function LinkRow({
     | '/alertes'
     | '/repartition'
     | '/fiscalite'
+    | '/retraite'
     | '/or-fractionne'
     | '/dev'
     | '/attente'

@@ -46,7 +46,7 @@ const inScope = (t: Transaction, scope: StatementScope) =>
   // Les mouvements du seul compte d'attente (crédit, retrait en euros) n'apparaissent pas sur les relevés de métal.
   t.kind !== 'cash_in' && t.kind !== 'cash_out' && (scope.kind === 'all' || (t.deltas[scope.metal] ?? 0) !== 0);
 
-function esc(s: string): string {
+export function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
@@ -78,14 +78,14 @@ function balancesAt(wallet: Wallet, at: Date) {
   return { holdings };
 }
 
-const DOT: Record<Metal, string> = { gold: '#D4AF37', silver: '#AEB4BE', platinum: '#8FB3CC' };
+export const DOT: Record<Metal, string> = { gold: '#D4AF37', silver: '#AEB4BE', platinum: '#8FB3CC' };
 const grams = (g: number) =>
   `${g.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}\u00a0g`;
 const perGramText = (n: number, m: Metal) =>
   `${n.toLocaleString('fr-FR', { minimumFractionDigits: m === 'silver' ? 3 : 2, maximumFractionDigits: m === 'silver' ? 3 : 2 })}\u00a0€/g`;
 
 /** Relevé lisible (modèle A) : en-tête avec adresse, chiffres clés, opérations détaillées, soldes. */
-const STYLE_A = `
+export const STYLE_A = `
   @page { size: A4; margin: 13mm 14mm; }
   * { box-sizing: border-box; }
   body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1d1f24; font-size: 10.5px; line-height: 1.4; margin: 0; }
@@ -128,6 +128,18 @@ const STYLE = `
   .tot td { font-weight: 700; border-top: 2px solid #1a1a1a; }
   .foot { margin-top: 28px; font-size: 10px; color: #888; border-top: 1px solid #ddd; padding-top: 8px; }
 `;
+
+/** En-tête du modèle A (logo, marque, bloc titulaire avec adresse) pour les autres documents. */
+export function docHead(account: Account): string {
+  const addr = account.settings.address;
+  const name = addr?.name?.trim() || account.holder;
+  const lines = addr ? `<br/>${esc(addr.street)}<br/>${esc(addr.postcode)} ${esc(addr.city)}` : '';
+  return `<div class="head">
+    <img src="data:image/png;base64,${LOGO_PNG_BASE64}" alt="Orvia"/>
+    <div class="brand">ORVIA<small>Épargne en or, argent et platine</small></div>
+    <div class="addr"><b>${esc(name)}</b>${lines}<br/><span class="muted">Membre ${esc(account.memberId)}</span></div>
+  </div>`;
+}
 
 function header(account: Account, title: string, subtitle: string) {
   return `
