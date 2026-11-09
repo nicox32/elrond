@@ -117,6 +117,8 @@ export interface Settings {
   allocation?: Record<SpotMetal, number>;
   /** Tableau de bord Société Orvia : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
   devCodeHash?: string;
+  /** Mode discret : montants masqués sur l'accueil (œil à côté du solde). */
+  discreet?: boolean;
   /** Frais de garde en coffre appliqués (réglage de la société ; absent = oui). */
   custodyFees?: boolean;
   /** Adresse postale du titulaire, affichée sur les relevés (et ceux des comptes enfants). */

@@ -5,6 +5,7 @@ import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'reac
 
 import { AddressCard } from '../../components/AddressCard';
 import { BackupCard } from '../../components/BackupCard';
+import { ChangePinCard } from '../../components/ChangePinCard';
 import { Segmented } from '../../components/Segmented';
 import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate, formatEur as formatEurShort } from '../../logic/format';
@@ -162,6 +163,18 @@ export default function ProfileScreen() {
           value={account.settings.biometrics}
           onValueChange={toggleBiometrics}
           disabled={!bioAvailable}
+          trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
+        />
+      </Card>
+      <ChangePinCard />
+      <Card style={styles.switchRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.switchLabel}>Mode discret</Text>
+          <Hint>Masque le solde et les montants sur l’accueil (aussi avec l’œil à côté du solde).</Hint>
+        </View>
+        <Switch
+          value={!!account.settings.discreet}
+          onValueChange={(discreet) => updateSettings({ discreet })}
           trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
         />
       </Card>

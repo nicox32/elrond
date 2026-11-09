@@ -29,11 +29,14 @@ export function TransactionRow({
   tx,
   unit,
   walletName = 'Compte principal',
+  discreet = false,
 }: {
   tx: Transaction;
   unit: WeightUnit;
   /** Compte concerné, repris dans l'avis d'opération. */
   walletName?: string;
+  /** Mode discret : montants et grammes masqués. */
+  discreet?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const parts = METALS.filter((m) => tx.deltas[m]).map(
@@ -68,9 +71,9 @@ export function TransactionRow({
         <Text style={styles.label} numberOfLines={1}>
           {tx.label}
         </Text>
-        <Text style={styles.detail}>{parts.join(' · ')}</Text>
-        {tx.fees && !fee ? <Text style={styles.fees}>dont {formatEur(tx.fees)} de frais</Text> : null}
-        {tx.tax ? (
+        <Text style={styles.detail}>{discreet ? '•••' : parts.join(' · ')}</Text>
+        {discreet ? null : tx.fees && !fee ? <Text style={styles.fees}>dont {formatEur(tx.fees)} de frais</Text> : null}
+        {tx.tax && !discreet ? (
           <Text style={styles.fees}>
             impôt retenu : {formatEur(tx.tax)} ({tx.taxRegime === 'gain' ? 'plus-values' : 'taxe forfaitaire'})
           </Text>
@@ -78,8 +81,7 @@ export function TransactionRow({
       </View>
       <View style={styles.right}>
         <Text style={[styles.amount, incoming && { color: colors.up }, fee && { color: colors.down }]}>
-          {neutral ? '' : incoming ? '+' : '−'}
-          {formatEur(tx.eur)}
+          {discreet ? '•••• €' : `${neutral ? '' : incoming ? '+' : '−'}${formatEur(tx.eur)}`}
         </Text>
         <Text style={styles.date}>{formatDate(tx.date)}</Text>
       </View>

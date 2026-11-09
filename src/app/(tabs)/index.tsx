@@ -10,6 +10,7 @@ import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
 import { HomeNews } from '../../components/HomeNews';
 import { HomeNtfyBanner } from '../../components/HomeNtfyBanner';
+import { UpdateBanner } from '../../components/UpdateBanner';
 import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
 import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
@@ -40,8 +41,11 @@ const QUICK = [
 
 export default function AccountScreen() {
   const account = useAccount();
-  const { quote } = useBank();
+  const { quote, updateSettings } = useBank();
   const unit = account.settings.unit;
+  const discreet = !!account.settings.discreet;
+  /** Montant affiché, ou masqué en mode discret. */
+  const eur = (n: number) => (discreet ? '•••• €' : formatEur(n));
   const value = accountValue(account, quote.prices);
   const total = value.total;
   const tax = estimateTax(account, quote.prices);
@@ -49,12 +53,24 @@ export default function AccountScreen() {
   return (
     <Screen testID="screen-compte">
       <Text style={styles.hello}>Bonjour {account.holder}</Text>
+      <UpdateBanner />
       <PriceStatus />
       <DormancyNotice wallet={account} />
 
       <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Solde total</Text>
-        <Text style={styles.balance}>{formatEur(total)}</Text>
+        <View style={styles.balanceHead}>
+          <Text style={styles.balanceLabel}>Solde total</Text>
+          <Pressable
+            testID="discreet-toggle"
+            onPress={() => updateSettings({ discreet: !discreet })}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={discreet ? 'Afficher les montants' : 'Masquer les montants'}
+          >
+            <Text style={styles.eye}>{discreet ? '◡ Afficher' : '◉ Masquer'}</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.balance}>{eur(total)}</Text>
         <Text style={styles.sub}>Valeur de revente au cours actuel</Text>
         <Pressable onPress={() => router.push('/fidelite')} accessibilityRole="link">
           <Text style={styles.loyalty}>★ {formatLou(loyalty(account).balance)} de fidélité ›</Text>
@@ -62,14 +78,14 @@ export default function AccountScreen() {
         {tax.cost > 0 && (
           <Text style={[styles.gain, { color: tax.gain >= 0 ? colors.up : colors.down }]}>
             {tax.gain >= 0 ? 'Plus-value latente' : 'Moins-value latente'} : {tax.gain >= 0 ? '+' : '−'}
-            {formatEur(Math.abs(tax.gain))} ({formatPercent(tax.gainPercent)})
+            {eur(Math.abs(tax.gain))} ({formatPercent(tax.gainPercent)})
           </Text>
         )}
         {tax.cost > 0 && (
           <Pressable onPress={() => router.push('/fiscalite')} accessibilityRole="button" style={styles.taxRow}>
             <Text style={styles.taxText}>
               Après impôt : {tax.netGain >= 0 ? '+' : '−'}
-              {formatEur(Math.abs(tax.netGain))} ({formatPercent(tax.netGainPercent)})
+              {eur(Math.abs(tax.netGain))} ({formatPercent(tax.netGainPercent)})
             </Text>
             <Text style={styles.taxLink}>Détail ›</Text>
           </Pressable>
@@ -116,7 +132,11 @@ export default function AccountScreen() {
 
       <SectionTitle>Évolution du solde</SectionTitle>
       <Card>
-        <BalanceChart points={account.balanceHistory} />
+        {discreet ? (
+          <Text style={styles.empty}>Masqué en mode discret.</Text>
+        ) : (
+          <BalanceChart points={account.balanceHistory} />
+        )}
       </Card>
 
       <HomeNews />
@@ -162,7 +182,7 @@ export default function AccountScreen() {
             : account.children
                 .map(
                   (c) =>
-                    `${c.name} · ${c.transferredAt ? 'compte transféré' : formatEur(accountValue(c, quote.prices).total)}`,
+                    `${c.name} · ${c.transferredAt ? 'compte transféré' : eur(accountValue(c, quote.prices).total)}`,
                 )
                 .join('\n')}
         </Text>
@@ -194,8 +214,8 @@ export default function AccountScreen() {
               <Text style={styles.vaultPrice}>{formatUnitPrice(quote.prices[m], unit, m)}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.vaultWeight}>{formatWeight(account.holdings[m], unit, m)}</Text>
-              <Text style={styles.vaultValue}>{formatEur(value.byMetal[m])}</Text>
+              <Text style={styles.vaultWeight}>{discreet ? '•••' : formatWeight(account.holdings[m], unit, m)}</Text>
+              <Text style={styles.vaultValue}>{eur(value.byMetal[m])}</Text>
             </View>
             <Text style={styles.chevron}>›</Text>
           </Pressable>
@@ -217,7 +237,9 @@ export default function AccountScreen() {
       {account.transactions.length === 0 ? (
         <Text style={styles.empty}>Aucune opération. Commence par acheter un peu d’or, d’argent ou de platine.</Text>
       ) : (
-        account.transactions.slice(0, 3).map((tx) => <TransactionRow key={tx.id} tx={tx} unit={unit} />)
+        account.transactions
+          .slice(0, 3)
+          .map((tx) => <TransactionRow key={tx.id} tx={tx} unit={unit} discreet={discreet} />)
       )}
     </Screen>
   );
@@ -238,6 +260,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   balanceLabel: { color: colors.textMuted, fontSize: 13 },
+  balanceHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  eye: { color: colors.gold, fontSize: 12.5, fontWeight: '700' },
   balance: { color: colors.text, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'] },
   sub: { color: colors.textMuted, fontSize: 11 },
   gain: { fontSize: 13, fontWeight: '700', marginTop: 6, fontVariant: ['tabular-nums'] },
