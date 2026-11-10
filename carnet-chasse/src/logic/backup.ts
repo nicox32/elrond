@@ -2,6 +2,8 @@ import type {
   CarnetState,
   Hunt,
   HuntMode,
+  NeedType,
+  NeedZone,
   ReserveId,
   ShotZone,
   TrophyType,
@@ -16,6 +18,7 @@ const RESERVE_IDS: ReserveId[] = ['new-laurentia', 'kilimaya', 'headquarters'];
 const SHOT_ZONES: ShotZone[] = ['coeur', 'poumons', 'foie', 'tete', 'cou', 'colonne', 'autre'];
 const TROPHY_TYPES: TrophyType[] = ['normal', 'non-typique'];
 const MODES: HuntMode[] = ['solo', 'coop'];
+const NEED_TYPES: NeedType[] = ['boire', 'manger', 'dormir'];
 const WEAPON_TYPES: WeaponType[] = ['carabine', 'fusil', 'arc', 'arbalete'];
 
 type Obj = Record<string, unknown>;
@@ -63,6 +66,23 @@ function parseWeapon(v: unknown): Weapon | null {
   return { id, name, caliber, type, custom: true };
 }
 
+const minuteOfDay = (v: unknown): number | undefined => {
+  const n = num(v);
+  return n !== undefined && Number.isInteger(n) && n >= 0 && n < 24 * 60 ? n : undefined;
+};
+
+function parseZone(v: unknown): NeedZone | null {
+  if (!isObj(v)) return null;
+  const id = str(v.id);
+  const speciesId = str(v.speciesId);
+  const reserveId = oneOf(v.reserveId, RESERVE_IDS);
+  const need = oneOf(v.need, NEED_TYPES);
+  const startMin = minuteOfDay(v.startMin);
+  const endMin = minuteOfDay(v.endMin);
+  if (!id || !speciesId || !reserveId || !need || startMin === undefined || endMin === undefined) return null;
+  return { id, speciesId, reserveId, need, startMin, endMin, place: str(v.place) };
+}
+
 /** Valide des données lues (stockage ou sauvegarde importée). Les entrées illisibles sont ignorées. */
 export function parseState(raw: unknown): CarnetState | null {
   if (!isObj(raw)) return null;
@@ -73,9 +93,13 @@ export function parseState(raw: unknown): CarnetState | null {
   const ownedWeaponIds = Array.isArray(raw.ownedWeaponIds)
     ? [...new Set(raw.ownedWeaponIds.filter((id): id is string => typeof id === 'string'))]
     : [];
+  const needZones = Array.isArray(raw.needZones)
+    ? raw.needZones.map(parseZone).filter((z): z is NeedZone => z !== null)
+    : [];
   return {
     hunts,
     customWeapons,
+    needZones,
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),

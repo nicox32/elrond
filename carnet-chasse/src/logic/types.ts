@@ -60,12 +60,27 @@ export interface Hunt {
   notes?: string;
 }
 
+export type NeedType = 'boire' | 'manger' | 'dormir';
+
+/** Zone de besoin repérée en jeu, avec l'horaire affiché sur la carte. */
+export interface NeedZone {
+  id: string;
+  speciesId: string;
+  reserveId: ReserveId;
+  need: NeedType;
+  /** Minutes depuis minuit. */
+  startMin: number;
+  endMin: number;
+  place?: string;
+}
+
 export interface CarnetState {
   hunts: Hunt[];
   ownedWeaponIds: string[];
   customWeapons: Weapon[];
+  needZones: NeedZone[];
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
 
-export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [] };
+export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [] };

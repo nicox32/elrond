@@ -42,7 +42,7 @@ export default function SauvegardeScreen() {
       <Card style={{ gap: 8 }}>
         <Text style={styles.strong}>Exporter</Text>
         <Text style={styles.muted}>
-          Vos {state.hunts.length} chasses, vos armes et vos réglages sont enregistrés uniquement sur ce téléphone.
+          Vos {state.hunts.length} chasses, vos armes, vos zones de besoin et vos réglages sont enregistrés uniquement sur ce téléphone.
           Exportez-les régulièrement (dans vos notes, un e-mail, Drive…) pour ne rien perdre. Les photos ne sont pas
           incluses.
         </Text>
@@ -77,7 +77,8 @@ export default function SauvegardeScreen() {
         {pending ? (
           <View style={{ gap: 8 }}>
             <Text style={styles.text}>
-              Sauvegarde valide : {pending.hunts.length} chasses, {pending.customWeapons.length} armes ajoutées. Elle
+              Sauvegarde valide : {pending.hunts.length} chasses, {pending.customWeapons.length} armes ajoutées,{' '}
+              {pending.needZones.length} zones de besoin. Elle
               remplacera toutes les données actuelles ({state.hunts.length} chasses).
             </Text>
             <Button

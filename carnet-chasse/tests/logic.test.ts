@@ -95,6 +95,9 @@ test('sauvegarde : export puis import redonne les mêmes données', () => {
     hunts: [hunt({ trophyScore: 42, notes: 'vent de face' })],
     ownedWeaponIds: ['christensen-evoke', 'perso-1'],
     customWeapons: [{ id: 'perso-1', name: 'Steyr SM12', caliber: '.300 Win Mag', type: 'carabine' as const, custom: true }],
+    needZones: [
+      { id: 'z1', speciesId: 'cerf-mulet', reserveId: 'new-laurentia' as const, need: 'boire' as const, startMin: 540, endMin: 690, place: 'lac' },
+    ],
     lastReserveId: 'kilimaya' as const,
     lastWeaponId: 'christensen-evoke',
   };
@@ -135,4 +138,39 @@ test('gestion du troupeau : tirer ou épargner', async () => {
   assert.equal(advise({ sex: 'male', age: 'mur', stars: 5 }).verdict, 'trophee');
   assert.equal(advise({ sex: 'male', age: 'mur', stars: 2 }).verdict, 'eliminer');
   assert.equal(advise({ sex: 'male', age: 'mur', stars: 1 }).verdict, 'eliminer');
+});
+
+test('horaires : lecture, routine, zones en cours et réveil', async () => {
+  const { parseTime, formatTime, routineAt, isActive, minutesUntil, wakeUpTime, sortByNext } = await import(
+    '../src/logic/schedule.ts'
+  );
+  assert.equal(parseTime('09:00'), 540);
+  assert.equal(parseTime('9h30'), 570);
+  assert.equal(parseTime('2345'), 23 * 60 + 45);
+  assert.equal(parseTime('7'), 420);
+  assert.equal(parseTime('24:00'), undefined);
+  assert.equal(parseTime('abc'), undefined);
+  assert.equal(formatTime(-15), '23:45');
+  assert.equal(routineAt(9 * 60).need, 'boire');
+  assert.equal(routineAt(13 * 60).need, 'dormir');
+  assert.equal(routineAt(17 * 60).need, 'manger');
+  assert.equal(routineAt(2 * 60).need, 'nuit');
+  assert.equal(routineAt(21 * 60).need, 'nuit');
+  const z = { id: 'a', speciesId: 'cerf-mulet', reserveId: 'new-laurentia' as const, need: 'boire' as const, startMin: 540, endMin: 690 };
+  const night = { ...z, id: 'b', need: 'dormir' as const, startMin: 22 * 60, endMin: 5 * 60 };
+  assert.equal(isActive(z, 600), true);
+  assert.equal(isActive(z, 690), false);
+  assert.equal(isActive(night, 60), true);
+  assert.equal(isActive(night, 6 * 60), false);
+  assert.equal(minutesUntil(z, 480), 60);
+  assert.equal(minutesUntil(z, 700), 24 * 60 - 160);
+  assert.equal(formatTime(wakeUpTime(z)), '08:45');
+  assert.equal(formatTime(wakeUpTime({ ...z, startMin: 5 })), '23:50');
+  assert.deepEqual(sortByNext([z, night], 23 * 60).map((x) => x.id), ['b', 'a']);
+  assert.deepEqual(sortByNext([z, night], 8 * 60).map((x) => x.id), ['a', 'b']);
+});
+
+test('sauvegarde : zones de besoin abîmées ignorées', () => {
+  const s = parseState({ needZones: [{ id: 'x', speciesId: 'bison', reserveId: 'new-laurentia', need: 'boire', startMin: 9999, endMin: 10 }] });
+  assert.equal(s?.needZones.length, 0);
 });

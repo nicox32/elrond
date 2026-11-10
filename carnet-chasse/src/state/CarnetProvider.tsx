@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { newId } from '../logic/stats';
-import { type CarnetState, EMPTY_STATE, type Hunt, type Weapon } from '../logic/types';
+import { type CarnetState, EMPTY_STATE, type Hunt, type NeedZone, type Weapon } from '../logic/types';
 import { deleteTrophyPhoto } from '../photos';
 import { loadState, saveState } from '../storage';
 
@@ -18,6 +18,8 @@ interface CarnetContextValue {
   addCustomWeapon: (w: Omit<Weapon, 'id' | 'custom'>) => void;
   removeCustomWeapon: (id: string) => void;
   replaceAll: (state: CarnetState) => void;
+  addZone: (z: Omit<NeedZone, 'id'>) => void;
+  removeZone: (id: string) => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -99,6 +101,14 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
 
   const replaceAll = useCallback((next: CarnetState) => setState(next), []);
 
+  const addZone = useCallback((z: Omit<NeedZone, 'id'>) => {
+    setState((s) => ({ ...s, needZones: [...s.needZones, { ...z, id: newId() }] }));
+  }, []);
+
+  const removeZone = useCallback((id: string) => {
+    setState((s) => ({ ...s, needZones: s.needZones.filter((z) => z.id !== id) }));
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -111,8 +121,23 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       addCustomWeapon,
       removeCustomWeapon,
       replaceAll,
+      addZone,
+      removeZone,
     }),
-    [state, loading, addHunt, updateHunt, deleteHunt, setPlaced, toggleOwned, addCustomWeapon, removeCustomWeapon, replaceAll],
+    [
+      state,
+      loading,
+      addHunt,
+      updateHunt,
+      deleteHunt,
+      setPlaced,
+      toggleOwned,
+      addCustomWeapon,
+      removeCustomWeapon,
+      replaceAll,
+      addZone,
+      removeZone,
+    ],
   );
 
   return <CarnetContext.Provider value={value}>{children}</CarnetContext.Provider>;

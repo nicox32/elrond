@@ -19,14 +19,15 @@ export default function TabsLayout() {
           borderTopColor: colors.border,
           ...(Platform.OS === 'web' ? { height: 58, paddingBottom: 6 } : null),
         },
-        tabBarLabelStyle: { fontSize: 11, lineHeight: 14, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, lineHeight: 13, fontWeight: '600' },
         sceneStyle: { backgroundColor: colors.background },
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Journal', tabBarIcon: ({ color }) => <TabIcon glyph="◎" color={color} /> }} />
       <Tabs.Screen name="trophees" options={{ title: 'Trophées', tabBarIcon: ({ color }) => <TabIcon glyph="♛" color={color} /> }} />
-      <Tabs.Screen name="armurerie" options={{ title: 'Armurerie', tabBarIcon: ({ color }) => <TabIcon glyph="⌖" color={color} /> }} />
+      <Tabs.Screen name="armurerie" options={{ title: 'Armes', tabBarIcon: ({ color }) => <TabIcon glyph="⌖" color={color} /> }} />
       <Tabs.Screen name="gestion" options={{ title: 'Gestion', tabBarIcon: ({ color }) => <TabIcon glyph="⚖" color={color} /> }} />
+      <Tabs.Screen name="horaires" options={{ title: 'Horaires', tabBarIcon: ({ color }) => <TabIcon glyph="◷" color={color} /> }} />
       <Tabs.Screen name="especes" options={{ title: 'Espèces', tabBarIcon: ({ color }) => <TabIcon glyph="❦" color={color} /> }} />
     </Tabs>
   );
