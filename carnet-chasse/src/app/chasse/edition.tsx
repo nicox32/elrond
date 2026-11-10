@@ -12,6 +12,7 @@ import {
   SPECIES,
   speciesOfReserve,
   SUGGESTED_CALIBERS,
+  SUGGESTED_DISTANCE,
   TROPHY_TYPE_LABELS,
 } from '../../data/game';
 import { formatDate, formatNumber, formatScore, parseNumber } from '../../logic/stats';
@@ -137,6 +138,7 @@ export default function EditionScreen() {
       {species ? (
         <Text style={[styles.muted, { marginTop: 6 }]}>
           {CATEGORY_LABELS[species.category]} · calibres indicatifs : {suggested.join(', ')}
+          {` · distance conseillée : ${SUGGESTED_DISTANCE[species.category]}`}
           {species.dangerous ? ' · peut charger !' : ''}
         </Text>
       ) : null}

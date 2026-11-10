@@ -133,5 +133,6 @@ test('gestion du troupeau : tirer ou épargner', async () => {
   assert.equal(advise({ sex: 'male', age: 'adulte', stars: 3 }).verdict, 'epargner');
   assert.equal(advise({ sex: 'male', age: 'mur', stars: 3 }).verdict, 'trophee');
   assert.equal(advise({ sex: 'male', age: 'mur', stars: 5 }).verdict, 'trophee');
-  assert.equal(advise({ sex: 'male', age: 'mur', stars: 2 }).verdict, 'libre');
+  assert.equal(advise({ sex: 'male', age: 'mur', stars: 2 }).verdict, 'eliminer');
+  assert.equal(advise({ sex: 'male', age: 'mur', stars: 1 }).verdict, 'eliminer');
 });

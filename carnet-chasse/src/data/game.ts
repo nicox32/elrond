@@ -101,6 +101,15 @@ export const SUGGESTED_CALIBERS: Record<SpeciesCategory, string[]> = {
   dangereux: ['.375 H&H Magnum'],
 };
 
+/** Distance de tir conseillée par type de gibier (guide du joueur, à vérifier en jeu). */
+export const SUGGESTED_DISTANCE: Record<SpeciesCategory, string> = {
+  petit: '50 à 100 m (au sol)',
+  oiseau: '25 à 50 m au fusil (50 à 100 m posé, à la .22)',
+  moyen: '150 à 200 m',
+  grand: '150 à 200 m',
+  dangereux: '150 à 200 m',
+};
+
 export const WEAPON_TYPE_LABELS: Record<WeaponType, string> = {
   carabine: 'Carabines',
   fusil: 'Fusils',

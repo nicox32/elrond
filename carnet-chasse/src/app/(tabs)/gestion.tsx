@@ -3,7 +3,16 @@ import { Text, View } from 'react-native';
 
 import { Card, Chip, ChipRow, Field, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { parseNumber } from '../../logic/stats';
-import { type AgeClass, advise, GOLDEN_RULES, type Sex, type Verdict } from '../../logic/management';
+import {
+  type AgeClass,
+  advise,
+  DISTANCE_GOLDEN_RULE,
+  DISTANCE_RULES,
+  GOLDEN_RULES,
+  OBJECTIVE,
+  type Sex,
+  type Verdict,
+} from '../../logic/management';
 import { colors } from '../../theme';
 
 const VERDICT_STYLE: Record<Verdict, { color: string; bg: string; icon: string }> = {
@@ -47,7 +56,7 @@ export default function GestionScreen() {
 
   return (
     <Screen>
-      <Title subtitle="Votre guide du garde-chasse : quoi prélever, quoi épargner.">Gestion du troupeau</Title>
+      <Title subtitle="Votre guide du garde-chasse : quoi prélever, quoi épargner, à quelle distance.">Gestion du troupeau</Title>
 
       <SectionTitle>Tirer ou épargner ?</SectionTitle>
       <Card>
@@ -92,13 +101,18 @@ export default function GestionScreen() {
         </View>
       </Card>
 
-      <SectionTitle>Le guide</SectionTitle>
+      <SectionTitle>🦌 Le guide</SectionTitle>
+      <Card style={{ gap: 4 }}>
+        <Text style={styles.strong}>L&apos;objectif</Text>
+        <Text style={styles.text}>{OBJECTIVE}</Text>
+      </Card>
       <GuideBlock
         icon="🟢"
-        title="À éliminer (nettoyer le sang du troupeau)"
+        title="Les cibles prioritaires (à tuer)"
         color={colors.olive}
         items={[
-          'Mâles adultes à 1 étoile avec une très basse condition physique (moins de 30-40 %) : à éliminer dès le stade adulte.',
+          "Mâles mûrs (vieux) à 1 ou 2 étoiles : cibles n°1. Mauvaise génétique : tuez-les pour qu'ils ne se reproduisent plus et pour récupérer l'argent avant qu'ils meurent de vieillesse.",
+          'Mâles adultes à 1 étoile avec une très basse condition physique (moins de 30-40 %) : éliminez-les pour stopper la transmission de leurs mauvais gènes dès le stade adulte.',
         ]}
       />
       <GuideBlock
@@ -129,6 +143,24 @@ export default function GestionScreen() {
           <Text style={styles.text}>{r.text}</Text>
         </Card>
       ))}
+
+      <SectionTitle>🎯 Distances de tir</SectionTitle>
+      {DISTANCE_RULES.map((r) => (
+        <Card key={r.title} style={{ gap: 4 }}>
+          <Text style={styles.strong}>
+            {r.icon} {r.title}
+          </Text>
+          <Text style={{ color: colors.accent, fontSize: 18, fontWeight: '800' }}>{r.range}</Text>
+          <Text style={styles.text}>{r.why}</Text>
+          <Text style={styles.muted}>{r.weapons}</Text>
+        </Card>
+      ))}
+      <Card style={{ borderColor: colors.accent }}>
+        <Text style={styles.text}>🚀 {DISTANCE_GOLDEN_RULE}</Text>
+      </Card>
+      <Text style={[styles.muted, { marginTop: 8 }]}>
+        Conseils de joueurs, non vérifiés dans les notes officielles du jeu.
+      </Text>
     </Screen>
   );
 }

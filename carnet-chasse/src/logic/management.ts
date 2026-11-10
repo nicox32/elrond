@@ -1,8 +1,11 @@
 /**
- * Règles de gestion du troupeau (guide du garde-chasse fourni par le joueur) :
- * prélever les mâles adultes 1 étoile en mauvaise condition, laisser mûrir les bons mâles et les prélever
- * en fin de vie, épargner les jeunes, les adultes prometteurs et les femelles.
+ * Règles de gestion du troupeau (guide du garde-chasse fourni par le joueur) : éliminer les mâles à faible
+ * potentiel pour améliorer la génétique du troupeau. Mûrs 1-2 étoiles et adultes 1 étoile en mauvaise condition
+ * à prélever, mûrs 3-5 étoiles à prélever en fin de vie, jeunes, adultes prometteurs et femelles à épargner.
  */
+
+export const OBJECTIVE =
+  'Éliminer les mâles à faible potentiel pour améliorer la génétique du troupeau, laisser les meilleurs gènes se reproduire et faire apparaître des trophées 5 étoiles.';
 
 export type Sex = 'male' | 'femelle';
 export type AgeClass = 'jeune' | 'adulte' | 'mur';
@@ -62,9 +65,9 @@ export function advise(a: AnimalInput): Advice {
       };
     }
     return {
-      verdict: 'libre',
-      title: 'Non couvert par votre guide',
-      reason: `Mûr à ${stars} étoile${stars > 1 ? 's' : ''} : vos règles ne disent rien de ce cas. À vous de décider.`,
+      verdict: 'eliminer',
+      title: 'Cible n°1 : à prélever',
+      reason: `Mûr à ${stars} étoile${stars > 1 ? 's' : ''} : mauvaise génétique, il ne progressera plus. Prélevez-le pour l'empêcher de se reproduire et récupérer l'argent avant qu'il meure de vieillesse.`,
     };
   }
 
@@ -78,7 +81,7 @@ export function advise(a: AnimalInput): Advice {
       return {
         verdict: 'eliminer',
         title: 'À éliminer',
-        reason: `Adulte 1 étoile en très mauvaise condition (${c} %) : le prélever nettoie le sang du troupeau dès le stade adulte.`,
+        reason: `Adulte 1 étoile en très mauvaise condition (${c} %) : le prélever stoppe la transmission de ses mauvais gènes dès le stade adulte.`,
       };
     }
     if (c < PROMISING_FROM_PCT) {
@@ -115,3 +118,39 @@ export const GOLDEN_RULES: { title: string; text: string }[] = [
     text: "Dormez dans un chalet pour faire avancer les jours : c'est ce qui fait grandir, vieillir et évoluer les animaux.",
   },
 ];
+
+export interface DistanceRule {
+  icon: string;
+  title: string;
+  range: string;
+  why: string;
+  weapons: string;
+}
+
+/** Distances de tir conseillées (guide du joueur, à vérifier en jeu). */
+export const DISTANCE_RULES: DistanceRule[] = [
+  {
+    icon: '🦌',
+    title: 'Gros et moyens gibiers (cerfs, élans, loups, ours…)',
+    range: '150 à 200 m',
+    why: "Équilibre idéal : la balle garde assez d'énergie pour les organes vitaux sans abîmer la viande, et vous restez assez loin pour ne pas être repéré.",
+    weapons: 'Carabines à verrou de gros calibre.',
+  },
+  {
+    icon: '🐇',
+    title: 'Petits gibiers au sol (lièvres, canards posés)',
+    range: '50 à 100 m maximum',
+    why: 'Organes minuscules et balles légères : au-delà de 100 m, le vent et la gravité font dévier la trajectoire.',
+    weapons: 'Petite carabine (.22 LR).',
+  },
+  {
+    icon: '🪶',
+    title: 'Petits gibiers au vol ou en mouvement',
+    range: '25 à 50 m maximum',
+    why: 'Sous 25 m, la viande est abîmée ; au-delà de 50 m, les plombs se dispersent trop et risquent de seulement blesser.',
+    weapons: 'Fusil à canon lisse (calibre 12, plombs).',
+  },
+];
+
+export const DISTANCE_GOLDEN_RULE =
+  'Mesurez toujours la distance aux jumelles, puis réglez le zéro de la lunette (50, 100, 200 ou 300 m) avant de tirer.';
