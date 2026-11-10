@@ -1,0 +1,125 @@
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+import { newId } from '../logic/stats';
+import { type CarnetState, EMPTY_STATE, type Hunt, type Weapon } from '../logic/types';
+import { deleteTrophyPhoto } from '../photos';
+import { loadState, saveState } from '../storage';
+
+export type HuntInput = Omit<Hunt, 'id'>;
+
+interface CarnetContextValue {
+  state: CarnetState;
+  loading: boolean;
+  addHunt: (input: HuntInput) => string;
+  updateHunt: (id: string, input: HuntInput) => void;
+  deleteHunt: (id: string) => void;
+  setPlaced: (id: string) => void;
+  toggleOwned: (weaponId: string) => void;
+  addCustomWeapon: (w: Omit<Weapon, 'id' | 'custom'>) => void;
+  removeCustomWeapon: (id: string) => void;
+  replaceAll: (state: CarnetState) => void;
+}
+
+const CarnetContext = createContext<CarnetContextValue | null>(null);
+
+export function CarnetProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<CarnetState>(EMPTY_STATE);
+  const [loading, setLoading] = useState(true);
+  const loaded = useRef(false);
+  // Dernier état connu, pour les effets de bord (suppression de photos) hors des mises à jour d'état.
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    loadState().then((s) => {
+      loaded.current = true;
+      setState(s);
+      setLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (loaded.current) saveState(state);
+  }, [state]);
+
+  const addHunt = useCallback((input: HuntInput) => {
+    const id = newId();
+    setState((s) => ({
+      ...s,
+      hunts: [{ ...input, id }, ...s.hunts],
+      lastReserveId: input.reserveId,
+      lastWeaponId: input.weaponId,
+    }));
+    return id;
+  }, []);
+
+  const updateHunt = useCallback((id: string, input: HuntInput) => {
+    const old = stateRef.current.hunts.find((h) => h.id === id);
+    if (old?.photoUri && old.photoUri !== input.photoUri) deleteTrophyPhoto(old.photoUri);
+    setState((s) => ({ ...s, hunts: s.hunts.map((h) => (h.id === id ? { ...input, id } : h)) }));
+  }, []);
+
+  const deleteHunt = useCallback((id: string) => {
+    deleteTrophyPhoto(stateRef.current.hunts.find((h) => h.id === id)?.photoUri);
+    setState((s) => ({ ...s, hunts: s.hunts.filter((h) => h.id !== id) }));
+  }, []);
+
+  const setPlaced = useCallback((id: string) => {
+    setState((s) => ({ ...s, hunts: s.hunts.map((h) => (h.id === id ? { ...h, toPlace: false } : h)) }));
+  }, []);
+
+  const toggleOwned = useCallback((weaponId: string) => {
+    setState((s) => ({
+      ...s,
+      ownedWeaponIds: s.ownedWeaponIds.includes(weaponId)
+        ? s.ownedWeaponIds.filter((id) => id !== weaponId)
+        : [...s.ownedWeaponIds, weaponId],
+    }));
+  }, []);
+
+  const addCustomWeapon = useCallback((w: Omit<Weapon, 'id' | 'custom'>) => {
+    const id = `perso-${newId()}`;
+    setState((s) => ({
+      ...s,
+      customWeapons: [...s.customWeapons, { ...w, id, custom: true }],
+      ownedWeaponIds: [...s.ownedWeaponIds, id],
+    }));
+  }, []);
+
+  const removeCustomWeapon = useCallback((id: string) => {
+    setState((s) => ({
+      ...s,
+      customWeapons: s.customWeapons.filter((w) => w.id !== id),
+      ownedWeaponIds: s.ownedWeaponIds.filter((w) => w !== id),
+    }));
+  }, []);
+
+  const replaceAll = useCallback((next: CarnetState) => setState(next), []);
+
+  const value = useMemo(
+    () => ({
+      state,
+      loading,
+      addHunt,
+      updateHunt,
+      deleteHunt,
+      setPlaced,
+      toggleOwned,
+      addCustomWeapon,
+      removeCustomWeapon,
+      replaceAll,
+    }),
+    [state, loading, addHunt, updateHunt, deleteHunt, setPlaced, toggleOwned, addCustomWeapon, removeCustomWeapon, replaceAll],
+  );
+
+  return <CarnetContext.Provider value={value}>{children}</CarnetContext.Provider>;
+}
+
+export function useCarnet(): CarnetContextValue {
+  const ctx = useContext(CarnetContext);
+  if (!ctx) throw new Error('useCarnet doit être utilisé dans CarnetProvider');
+  return ctx;
+}

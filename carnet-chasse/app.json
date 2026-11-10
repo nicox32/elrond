@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Carnet de chasse",
+    "slug": "carnet-chasse",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "carnetchasse",
+    "android": {
+      "package": "com.nicox32.carnetchasse",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F130F",
+        "foregroundImage": "./assets/adaptive-icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "ios": {
+      "bundleIdentifier": "com.nicox32.carnetchasse"
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    },
+    "splash": {
+      "image": "./assets/adaptive-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F130F"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Le carnet de chasse ouvre vos photos pour joindre une capture d'écran à un trophée."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

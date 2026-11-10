@@ -1,0 +1,92 @@
+# Construit l'APK Android du Carnet de chasse (Way of the Hunter 2), dossier carnet-chasse/,
+# et le publie dans une « Release » GitHub dédiée (tag carnet-chasse-v1.0.<numéro>).
+# La release n'est pas marquée « latest » : le lien de téléchargement d'Orvia ne change pas.
+name: APK Carnet de chasse
+
+on:
+  push:
+    branches: [ccr-47f17aad-4xuceg, main]
+    paths:
+      - 'carnet-chasse/**'
+      - '.github/workflows/carnet-chasse-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carnet-chasse-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: carnet-chasse
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: carnet-chasse/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Tests, typage et lint
+        run: |
+          npm test
+          npm run typecheck
+          npm run lint
+
+      - name: Numéro de version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const c = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            c.expo.version = '1.0.${{ github.run_number }}';
+            c.expo.android = { ...c.expo.android, versionCode: ${{ github.run_number }} };
+            fs.writeFileSync('app.json', JSON.stringify(c, null, 2));
+          "
+
+      - name: Générer le projet Android
+        run: npx expo prebuild --platform android --no-install
+
+      # Signé avec la clé de test d'Android fournie par Expo (identique d'une construction à l'autre) :
+      # suffisant pour installer l'APK et le mettre à jour sur son propre téléphone.
+      - name: Compiler l'APK
+        working-directory: carnet-chasse/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Renommer l'APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk "carnet-chasse-1.0.${{ github.run_number }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carnet-chasse-apk
+          path: carnet-chasse/carnet-chasse-1.0.${{ github.run_number }}.apk
+
+      - name: Publier la release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: carnet-chasse-v1.0.${{ github.run_number }}
+          name: Carnet de chasse v1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: false
+          files: carnet-chasse/carnet-chasse-1.0.${{ github.run_number }}.apk
+          body: |
+            Carnet de chasse pour Way of the Hunter 2 (données du jeu : version 1.4).
+            Téléchargez **carnet-chasse-1.0.${{ github.run_number }}.apk** depuis votre téléphone Android pour l'installer
+            (autorisez l'installation d'applications inconnues si Android le demande).
