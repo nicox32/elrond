@@ -8,8 +8,11 @@ import {
   advise,
   DISTANCE_GOLDEN_RULE,
   DISTANCE_RULES,
+  GAME_RULES,
   GOLDEN_RULES,
   OBJECTIVE,
+  POPULATION_PATIENCE,
+  POPULATION_STATUSES,
   type Sex,
   type Verdict,
 } from '../../logic/management';
@@ -19,9 +22,12 @@ const VERDICT_STYLE: Record<Verdict, { color: string; bg: string; icon: string }
   eliminer: { color: colors.olive, bg: colors.oliveSoft, icon: '🟢' },
   trophee: { color: colors.accent, bg: colors.accentSoft, icon: '🟡' },
   surveiller: { color: colors.accent, bg: colors.accentSoft, icon: '🟠' },
+  possible: { color: colors.olive, bg: colors.oliveSoft, icon: '🟢' },
   epargner: { color: colors.danger, bg: colors.dangerSoft, icon: '🔴' },
   libre: { color: colors.textMuted, bg: colors.surfaceAlt, icon: '⚪' },
 };
+
+const STATUS_COLORS = [colors.danger, colors.accent, colors.olive, colors.olive];
 
 function GuideBlock({ icon, title, color, items }: { icon: string; title: string; color: string; items: string[] }) {
   return (
@@ -45,7 +51,7 @@ export default function GestionScreen() {
   const [condition, setCondition] = useState('');
 
   const needsStars = sex === 'male' && age !== 'jeune';
-  const needsCondition = needsStars && age === 'adulte' && stars === 1;
+  const needsCondition = sex === 'femelle' || age === 'jeune' || (age === 'adulte' && stars === 1);
   const advice = advise({
     sex,
     age,
@@ -101,7 +107,27 @@ export default function GestionScreen() {
         </View>
       </Card>
 
-      <SectionTitle>🦌 Le guide</SectionTitle>
+      <SectionTitle>📖 Ce que dit le jeu</SectionTitle>
+      <Text style={styles.muted}>Encyclopédie du jeu : « Gestion de la faune et abattage ». Prioritaire sur les conseils de joueurs.</Text>
+      <Card style={{ gap: 6, borderColor: colors.accent }}>
+        {GAME_RULES.map((t) => (
+          <Text key={t} style={styles.text}>
+            • {t}
+          </Text>
+        ))}
+      </Card>
+      <Card style={{ gap: 6 }}>
+        <Text style={styles.strong}>Statut des populations</Text>
+        {POPULATION_STATUSES.map((p, i) => (
+          <View key={p.name} style={[styles.row, { alignItems: 'flex-start' }]}>
+            <Text style={{ color: STATUS_COLORS[i], fontWeight: '800', width: 92 }}>{p.name}</Text>
+            <Text style={[styles.text, { flex: 1 }]}>{p.text}</Text>
+          </View>
+        ))}
+        <Text style={styles.muted}>{POPULATION_PATIENCE}</Text>
+      </Card>
+
+      <SectionTitle>🦌 Le guide du garde-chasse</SectionTitle>
       <Card style={{ gap: 4 }}>
         <Text style={styles.strong}>L&apos;objectif</Text>
         <Text style={styles.text}>{OBJECTIVE}</Text>
@@ -113,6 +139,8 @@ export default function GestionScreen() {
         items={[
           "Mâles mûrs (vieux) à 1 ou 2 étoiles : cibles n°1. Mauvaise génétique : tuez-les pour qu'ils ne se reproduisent plus et pour récupérer l'argent avant qu'ils meurent de vieillesse.",
           'Mâles adultes à 1 étoile avec une très basse condition physique (moins de 30-40 %) : éliminez-les pour stopper la transmission de leurs mauvais gènes dès le stade adulte.',
+          'Jeunes mâles en condition basse : la cible recommandée par le jeu lui-même.',
+          'Femelles en condition basse (surtout jeunes) : possible, mais effet moindre sur la population.',
         ]}
       />
       <GuideBlock
@@ -120,7 +148,7 @@ export default function GestionScreen() {
         title="Trophées de luxe (à tuer en fin de vie)"
         color={colors.accent}
         items={[
-          "Mâles mûrs à 3, 4 ou 5 étoiles : laissez-les vivre le plus longtemps possible pour qu'ils transmettent leurs gènes, puis prélevez-les juste avant qu'ils meurent de vieillesse pour le score maximal.",
+          "Mâles mûrs à 3, 4 ou 5 étoiles : laissez-les transmettre leurs gènes, puis prélevez-les pendant leur dernière année de vie (les 3 derniers jours en jeu) pour le meilleur trophée.",
         ]}
       />
       <GuideBlock
@@ -128,9 +156,8 @@ export default function GestionScreen() {
         title="Ne jamais toucher (à épargner)"
         color={colors.danger}
         items={[
-          'Tous les jeunes : on ne connaît pas encore leur potentiel génétique final.',
-          'Les adultes prometteurs (ex. 1 étoile à 50 % ou plus) : ils deviendront de beaux mûrs à 3 ou 4 étoiles.',
-          "Les femelles (sauf mission) : pas de gènes visibles, peu d'argent, et les tuer réduit la taille du troupeau.",
+          'Les jeunes et adultes prometteurs (condition 50 % ou plus) : laissez-les grandir, ils deviendront de beaux mûrs.',
+          "Les femelles en bonne condition (sauf mission) : peu d'argent, et les tuer réduit la taille du troupeau.",
         ]}
       />
 

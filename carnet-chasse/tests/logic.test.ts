@@ -127,7 +127,12 @@ test('affichage des scores', async () => {
 test('gestion du troupeau : tirer ou épargner', async () => {
   const { advise } = await import('../src/logic/management.ts');
   assert.equal(advise({ sex: 'femelle', age: 'mur', stars: 5 }).verdict, 'epargner');
-  assert.equal(advise({ sex: 'male', age: 'jeune', stars: 1, conditionPct: 10 }).verdict, 'epargner');
+  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 10 }).verdict, 'eliminer');
+  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 45 }).verdict, 'surveiller');
+  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 70 }).verdict, 'epargner');
+  assert.equal(advise({ sex: 'male', age: 'jeune' }).verdict, 'libre');
+  assert.equal(advise({ sex: 'femelle', age: 'jeune', conditionPct: 20 }).verdict, 'possible');
+  assert.equal(advise({ sex: 'femelle', age: 'adulte', conditionPct: 60 }).verdict, 'epargner');
   assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 25 }).verdict, 'eliminer');
   assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 39 }).verdict, 'eliminer');
   assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 45 }).verdict, 'surveiller');

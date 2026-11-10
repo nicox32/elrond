@@ -10,7 +10,7 @@ export const OBJECTIVE =
 export type Sex = 'male' | 'femelle';
 export type AgeClass = 'jeune' | 'adulte' | 'mur';
 
-export type Verdict = 'eliminer' | 'trophee' | 'surveiller' | 'epargner' | 'libre';
+export type Verdict = 'eliminer' | 'trophee' | 'surveiller' | 'possible' | 'epargner' | 'libre';
 
 export interface AnimalInput {
   sex: Sex;
@@ -27,27 +27,58 @@ export interface Advice {
   reason: string;
 }
 
-/** Sous ce seuil, un mâle adulte 1 étoile est à éliminer. */
+/** Sous ce seuil, la condition est « basse » (le jeu ne donne pas de chiffre : seuil du guide du joueur). */
 export const CULL_BELOW_PCT = 40;
-/** À partir de ce seuil, un mâle adulte 1 étoile est prometteur. */
+/** À partir de ce seuil, l'animal est prometteur. */
 export const PROMISING_FROM_PCT = 50;
 /** Nombre d'étoiles à partir duquel un mâle mûr est un trophée de luxe. */
 export const TROPHY_MIN_STARS = 3;
 
 export function advise(a: AnimalInput): Advice {
+  const c = a.conditionPct;
   if (a.sex === 'femelle') {
+    const jeune = a.age === 'jeune';
+    if (c !== undefined && c < CULL_BELOW_PCT) {
+      return {
+        verdict: 'possible',
+        title: 'Abattage possible (effet moindre)',
+        reason: `${jeune ? 'Jeune femelle' : 'Femelle'} en condition basse (${c} %) : le jeu autorise l'abattage des femelles, ${
+          jeune ? 'surtout les jeunes en condition basse' : 'en particulier les jeunes'
+        }, mais l'effet sur la population est moindre qu'avec un mâle.`,
+      };
+    }
     return {
       verdict: 'epargner',
-      title: 'Ne pas tirer',
+      title: 'Épargner',
       reason:
-        "Femelle : ne la tuez jamais, sauf si une mission l'exige. Pas de gènes visibles, peu d'argent, et le troupeau rétrécit.",
+        c === undefined
+          ? "Femelle : épargnez-la, sauf mission. Seules les femelles en condition basse (surtout jeunes) peuvent être abattues, avec un effet moindre."
+          : `Femelle à ${c} % : pas en condition basse, épargnez-la (sauf mission).`,
     };
   }
+
   if (a.age === 'jeune') {
+    if (c === undefined) {
+      return { verdict: 'libre', title: 'Indiquez la condition', reason: 'Jeune mâle : la condition physique décide.' };
+    }
+    if (c < CULL_BELOW_PCT) {
+      return {
+        verdict: 'eliminer',
+        title: 'Cible prioritaire selon le jeu',
+        reason: `Jeune mâle en condition basse (${c} %) : c'est la cible que l'encyclopédie du jeu recommande pour l'abattage.`,
+      };
+    }
+    if (c < PROMISING_FROM_PCT) {
+      return {
+        verdict: 'surveiller',
+        title: 'À surveiller',
+        reason: `Jeune mâle à ${c} % : entre les deux seuils (${CULL_BELOW_PCT} et ${PROMISING_FROM_PCT} %).`,
+      };
+    }
     return {
       verdict: 'epargner',
-      title: 'Ne pas tirer',
-      reason: 'Jeune : on ne connaît pas encore son potentiel génétique final.',
+      title: 'Ne pas tirer : jeune prometteur',
+      reason: `Jeune mâle à ${c} % : bonne condition, laissez-le grandir.`,
     };
   }
 
@@ -61,7 +92,7 @@ export function advise(a: AnimalInput): Advice {
       return {
         verdict: 'trophee',
         title: 'Trophée de luxe : à prélever en fin de vie',
-        reason: `Mûr à ${stars} étoiles : laissez-le transmettre ses gènes le plus longtemps possible, puis prélevez-le juste avant qu'il meure de vieillesse pour le score maximal.`,
+        reason: `Mûr à ${stars} étoiles : laissez-le transmettre ses gènes, puis prélevez-le pendant sa dernière année de vie (les 3 derniers jours en jeu) pour le meilleur trophée et le moins d'impact sur la population.`,
       };
     }
     return {
@@ -154,3 +185,31 @@ export const DISTANCE_RULES: DistanceRule[] = [
 
 export const DISTANCE_GOLDEN_RULE =
   'Mesurez toujours la distance aux jumelles, puis réglez le zéro de la lunette (50, 100, 200 ou 300 m) avant de tirer.';
+
+/** Encyclopédie du jeu, « Gestion de la faune et abattage ». */
+export const GAME_RULES: string[] = [
+  "Plus la condition physique d'un animal est élevée, plus son trophée sera grand : gestion de l'environnement et amélioration des habitats valent le coup.",
+  "L'abattage est le prélèvement sélectif d'animaux aux caractéristiques indésirables, selon la condition physique, le sexe et l'âge. Ciblez les animaux jeunes à la condition physique basse, de préférence les mâles.",
+  "Les femelles peuvent aussi être abattues, en particulier les jeunes en condition basse, mais l'effet sur la population est moindre.",
+  "Une année de vie d'un animal = 3 jours en jeu. En fin d'espérance de vie, il disparaît et d'autres prennent sa place : prélevez-le pendant sa dernière année pour le meilleur trophée et le moins d'impact.",
+  "L'abattage ne compte que pour le territoire où vivait l'animal : gérer les élans d'une région n'affecte que les élans de cette région.",
+  'Espèces solitaires (comme les élans) : explorez tout le territoire pour repérer les individus les plus faibles.',
+];
+
+export interface PopulationStatus {
+  name: string;
+  text: string;
+}
+
+export const POPULATION_STATUSES: PopulationStatus[] = [
+  { name: 'Vulnérable', text: 'Aucun spécimen en bonne condition physique.' },
+  { name: 'Stable', text: 'Part moyenne de spécimens en bonne condition.' },
+  { name: 'Saine', text: 'Produit régulièrement des animaux aux meilleurs trophées.' },
+  { name: 'Prospère', text: 'Produit régulièrement des animaux aux meilleurs trophées.' },
+];
+
+export const POPULATION_PATIENCE =
+  "Passer de Vulnérable à Stable, puis de Stable à Saine, prend beaucoup de temps. Continuez d'abattre les spécimens faibles dans votre territoire : la condition physique finira par monter.";
+
+/** Une année de vie d'un animal = 3 jours en jeu. */
+export const GAME_DAYS_PER_YEAR = 3;
