@@ -120,3 +120,18 @@ test('affichage des scores', async () => {
   assert.equal(formatScore(40), '40');
   assert.equal(formatScore(10.123), '10,12');
 });
+
+test('gestion du troupeau : tirer ou épargner', async () => {
+  const { advise } = await import('../src/logic/management.ts');
+  assert.equal(advise({ sex: 'femelle', age: 'mur', stars: 5 }).verdict, 'epargner');
+  assert.equal(advise({ sex: 'male', age: 'jeune', stars: 1, conditionPct: 10 }).verdict, 'epargner');
+  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 25 }).verdict, 'eliminer');
+  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 39 }).verdict, 'eliminer');
+  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 45 }).verdict, 'surveiller');
+  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 50 }).verdict, 'epargner');
+  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1 }).verdict, 'libre');
+  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 3 }).verdict, 'epargner');
+  assert.equal(advise({ sex: 'male', age: 'mur', stars: 3 }).verdict, 'trophee');
+  assert.equal(advise({ sex: 'male', age: 'mur', stars: 5 }).verdict, 'trophee');
+  assert.equal(advise({ sex: 'male', age: 'mur', stars: 2 }).verdict, 'libre');
+});

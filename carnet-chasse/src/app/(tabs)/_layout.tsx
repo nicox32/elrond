@@ -26,6 +26,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Journal', tabBarIcon: ({ color }) => <TabIcon glyph="◎" color={color} /> }} />
       <Tabs.Screen name="trophees" options={{ title: 'Trophées', tabBarIcon: ({ color }) => <TabIcon glyph="♛" color={color} /> }} />
       <Tabs.Screen name="armurerie" options={{ title: 'Armurerie', tabBarIcon: ({ color }) => <TabIcon glyph="⌖" color={color} /> }} />
+      <Tabs.Screen name="gestion" options={{ title: 'Gestion', tabBarIcon: ({ color }) => <TabIcon glyph="⚖" color={color} /> }} />
       <Tabs.Screen name="especes" options={{ title: 'Espèces', tabBarIcon: ({ color }) => <TabIcon glyph="❦" color={color} /> }} />
     </Tabs>
   );
