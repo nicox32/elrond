@@ -6,7 +6,7 @@ import { Button, Card, Empty, Screen, styles } from '../../components/ui';
 import { findWeapon, getReserve, getSpecies, SHOT_ZONE_LABELS, TROPHY_TYPE_LABELS } from '../../data/game';
 import { formatDateTime, formatNumber, formatScore } from '../../logic/stats';
 import { useCarnet } from '../../state/CarnetProvider';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 function Line({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
@@ -46,7 +46,7 @@ export default function HuntScreen() {
         <Text style={styles.title}>{species?.name ?? hunt.speciesId}</Text>
         {species ? <Text style={styles.muted}>{species.gameName}</Text> : null}
         {hunt.trophyScore !== undefined ? (
-          <Text style={{ color: colors.accent, fontSize: 30, fontWeight: '800', marginTop: 8 }}>
+          <Text style={{ color: colors.gold, fontSize: 40, fontFamily: fonts.display, marginTop: 8 }}>
             {formatScore(hunt.trophyScore)} pts
           </Text>
         ) : null}

@@ -6,7 +6,7 @@ import { allWeapons, CATEGORY_LABELS, GAME_VERSION, RESERVES, SPECIES, SUGGESTED
 import { summarizeSpecies } from '../../logic/stats';
 import type { ReserveId, SpeciesCategory } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as SpeciesCategory[];
 
@@ -64,14 +64,14 @@ export default function EspecesScreen() {
                 <Card key={s.id} style={{ gap: 2, borderColor: s.dangerous ? colors.danger : colors.border }}>
                   <View style={[styles.row, { justifyContent: 'space-between' }]}>
                     <Text style={[styles.strong, { flex: 1 }]}>{s.name}</Text>
-                    {count > 0 ? <Text style={{ color: colors.accent, fontWeight: '700' }}>×{count}</Text> : null}
+                    {count > 0 ? <Text style={{ color: colors.accent, fontFamily: fonts.semibold }}>×{count}</Text> : null}
                   </View>
                   <Text style={styles.muted}>
                     {s.gameName}
                     {s.addedIn ? ` · ajouté en ${s.addedIn}` : ''}
                   </Text>
                   {s.dangerous ? (
-                    <Text style={{ color: colors.danger, fontSize: 13, fontWeight: '700' }}>⚠ Peut charger le chasseur</Text>
+                    <Text style={{ color: colors.danger, fontSize: 13, fontFamily: fonts.semibold }}>⚠ Peut charger le chasseur</Text>
                   ) : null}
                 </Card>
               );

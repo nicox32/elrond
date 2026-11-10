@@ -5,7 +5,7 @@ import { Button, Card, Label, Screen, styles } from '../components/ui';
 import { exportBackup, importBackup } from '../logic/backup';
 import type { CarnetState } from '../logic/types';
 import { useCarnet } from '../state/CarnetProvider';
-import { colors } from '../theme';
+import { colors, fonts } from '../theme';
 
 export default function SauvegardeScreen() {
   const { state, replaceAll } = useCarnet();
@@ -94,7 +94,7 @@ export default function SauvegardeScreen() {
           </View>
         ) : null}
         {message ? (
-          <Text style={{ color: message.ok ? colors.olive : colors.danger, fontWeight: '700' }}>{message.text}</Text>
+          <Text style={{ color: message.ok ? colors.olive : colors.danger, fontFamily: fonts.semibold }}>{message.text}</Text>
         ) : null}
       </Card>
     </Screen>

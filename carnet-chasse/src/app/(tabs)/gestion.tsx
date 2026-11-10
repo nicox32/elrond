@@ -16,7 +16,7 @@ import {
   type Sex,
   type Verdict,
 } from '../../logic/management';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 const VERDICT_STYLE: Record<Verdict, { color: string; bg: string; icon: string }> = {
   eliminer: { color: colors.olive, bg: colors.oliveSoft, icon: '🟢' },
@@ -100,7 +100,7 @@ export default function GestionScreen() {
         ) : null}
 
         <View style={{ marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: v.bg, gap: 4 }}>
-          <Text style={{ color: v.color, fontSize: 18, fontWeight: '800' }}>
+          <Text style={{ color: v.color, fontSize: 18, fontFamily: fonts.heading }}>
             {v.icon} {advice.title}
           </Text>
           <Text style={styles.text}>{advice.reason}</Text>
@@ -120,7 +120,7 @@ export default function GestionScreen() {
         <Text style={styles.strong}>Statut des populations</Text>
         {POPULATION_STATUSES.map((p, i) => (
           <View key={p.name} style={[styles.row, { alignItems: 'flex-start' }]}>
-            <Text style={{ color: STATUS_COLORS[i], fontWeight: '800', width: 92 }}>{p.name}</Text>
+            <Text style={{ color: STATUS_COLORS[i], fontFamily: fonts.heading, width: 92 }}>{p.name}</Text>
             <Text style={[styles.text, { flex: 1 }]}>{p.text}</Text>
           </View>
         ))}
@@ -193,7 +193,7 @@ export default function GestionScreen() {
           <Text style={styles.strong}>
             {r.icon} {r.title}
           </Text>
-          <Text style={{ color: colors.accent, fontSize: 18, fontWeight: '800' }}>{r.range}</Text>
+          <Text style={{ color: colors.accent, fontSize: 18, fontFamily: fonts.heading }}>{r.range}</Text>
           <Text style={styles.text}>{r.why}</Text>
           <Text style={styles.muted}>{r.weapons}</Text>
         </Card>

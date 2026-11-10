@@ -3,12 +3,25 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { HuntRow } from '../../components/HuntRow';
-import { Button, Card, Chip, ChipRow, Empty, Screen, SectionTitle, Stat, Title, styles } from '../../components/ui';
-import { GAME_VERSION, RESERVES, SPECIES } from '../../data/game';
-import { formatNumber, overview, sortByDateDesc } from '../../logic/stats';
+import {
+  Button,
+  Chip,
+  ChipRow,
+  Empty,
+  Eyebrow,
+  Reticle,
+  Screen,
+  SectionTitle,
+  Stat,
+  StatRow,
+  TrophyFrame,
+  styles,
+} from '../../components/ui';
+import { findWeapon, GAME_VERSION, getReserve, getSpecies, RESERVES, SPECIES } from '../../data/game';
+import { formatNumber, formatScore, overview, sortByDateDesc } from '../../logic/stats';
 import type { ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 
@@ -21,30 +34,68 @@ export default function JournalScreen() {
     () => sortByDateDesc(reserve ? state.hunts.filter((h) => h.reserveId === reserve) : state.hunts),
     [state.hunts, reserve],
   );
+  const best = useMemo(
+    () =>
+      hunts.reduce<(typeof hunts)[number] | undefined>(
+        (b, h) => (h.trophyScore !== undefined && (b?.trophyScore === undefined || h.trophyScore > b.trophyScore) ? h : b),
+        undefined,
+      ),
+    [hunts],
+  );
+  const bestWeapon = best ? findWeapon(best.weaponId, state.customWeapons) : undefined;
 
   return (
     <Screen>
-      <Title subtitle={`Way of the Hunter 2 · données du jeu v${GAME_VERSION}`}>Carnet de chasse</Title>
-
-      <Button label="+  Nouvelle chasse" onPress={() => router.push('/chasse/edition')} />
-
-      <Card style={{ marginTop: 8 }}>
-        <View style={styles.row}>
-          <Stat value={String(stats.total)} label="prélèvements" />
-          <Stat value={`${stats.speciesHunted}/${stats.speciesTotal}`} label="espèces" />
-          <Stat value={stats.maxDistanceM !== undefined ? `${formatNumber(stats.maxDistanceM)} m` : '—'} label="plus long tir" />
+      <View style={[styles.row, { justifyContent: 'space-between' }]}>
+        <View style={{ gap: 2 }}>
+          <Eyebrow>Way of the Hunter 2</Eyebrow>
+          <Text style={styles.display}>AFFÛT</Text>
         </View>
-      </Card>
+        <Reticle size={50} />
+      </View>
 
-      {stats.toPlace > 0 ? (
-        <Pressable onPress={() => router.push('/trophees')}>
-          <Text style={{ color: colors.olive, fontWeight: '700', marginTop: 4 }}>
-            {stats.toPlace} trophée{stats.toPlace > 1 ? 's' : ''} à exposer au pavillon →
-          </Text>
-        </Pressable>
+      {best && best.trophyScore !== undefined ? (
+        <TrophyFrame onPress={() => router.push({ pathname: '/chasse/[id]', params: { id: best.id } })}>
+          <View style={styles.row}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Eyebrow color={colors.gold}>Meilleur trophée</Eyebrow>
+              <Text style={{ color: colors.text, fontFamily: fonts.heading, fontSize: 22 }} numberOfLines={1}>
+                {getSpecies(best.speciesId)?.name ?? best.speciesId}
+              </Text>
+              <Text style={styles.muted} numberOfLines={1}>
+                {[
+                  getReserve(best.reserveId)?.name,
+                  bestWeapon ? `${bestWeapon.name} ${bestWeapon.caliber}` : null,
+                  best.distanceM !== undefined ? `${formatNumber(best.distanceM)} m` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+            </View>
+            <Text style={{ color: colors.gold, fontFamily: fonts.display, fontSize: 40 }}>{formatScore(best.trophyScore)}</Text>
+          </View>
+        </TrophyFrame>
       ) : null}
 
-      <SectionTitle>Mes chasses</SectionTitle>
+      <StatRow>
+        <Stat value={String(stats.total)} label="Prélèv." />
+        <Stat value={`${stats.speciesHunted}/${stats.speciesTotal}`} label="Espèces" divider />
+        <Stat value={stats.maxDistanceM !== undefined ? `${formatNumber(stats.maxDistanceM)} m` : '—'} label="Dist. max" divider />
+      </StatRow>
+
+      <Button label="+ Nouvelle chasse" onPress={() => router.push('/chasse/edition')} />
+
+      <SectionTitle
+        right={
+          stats.toPlace > 0 ? (
+            <Pressable onPress={() => router.push('/trophees')} hitSlop={8}>
+              <Text style={{ color: colors.olive, fontFamily: fonts.semibold, fontSize: 13 }}>{stats.toPlace} à exposer →</Text>
+            </Pressable>
+          ) : null
+        }
+      >
+        Mes chasses
+      </SectionTitle>
       <ChipRow>
         <Chip label="Toutes" selected={!reserve} onPress={() => setReserve(undefined)} />
         {HUNTING_RESERVES.map((r) => (
@@ -61,8 +112,9 @@ export default function JournalScreen() {
         hunts.map((h) => <HuntRow key={h.id} hunt={h} customWeapons={state.customWeapons} />)
       )}
 
-      <View style={{ marginTop: 24 }}>
+      <View style={{ marginTop: 24, gap: 6 }}>
         <Button label="Sauvegarder / restaurer mes données" kind="secondary" onPress={() => router.push('/sauvegarde')} />
+        <Text style={[styles.muted, { textAlign: 'center', fontSize: 12 }]}>Données du jeu : version {GAME_VERSION}</Text>
       </View>
     </Screen>
   );

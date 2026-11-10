@@ -19,7 +19,7 @@ import { formatDate, formatNumber, formatScore, parseNumber } from '../../logic/
 import type { HuntMode, ReserveId, ShotZone, TrophyType } from '../../logic/types';
 import { pickTrophyPhoto } from '../../photos';
 import { useCarnet } from '../../state/CarnetProvider';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 
@@ -146,7 +146,7 @@ export default function EditionScreen() {
       <View style={[styles.row, { justifyContent: 'space-between' }]}>
         <Label>Arme</Label>
         <Pressable onPress={() => setShowAllWeapons((v) => !v)} hitSlop={8}>
-          <Text style={{ color: colors.accent, fontSize: 13, fontWeight: '600', marginTop: 12 }}>
+          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: fonts.semibold, marginTop: 12 }}>
             {showAllWeapons ? 'Mes armes seulement' : 'Toutes les armes'}
           </Text>
         </Pressable>
@@ -210,7 +210,7 @@ export default function EditionScreen() {
         <Button label="Ajouter une photo" kind="secondary" onPress={choosePhoto} />
       )}
 
-      {error ? <Text style={{ color: colors.danger, fontWeight: '700', marginTop: 12 }}>{error}</Text> : null}
+      {error ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold, marginTop: 12 }}>{error}</Text> : null}
       <View style={{ marginTop: 16 }}>
         <Button label={existing ? 'Enregistrer les modifications' : 'Enregistrer la chasse'} onPress={save} />
       </View>

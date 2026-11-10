@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router/js-tabs';
 import { type ColorValue, Platform, Text } from 'react-native';
 
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 function TabIcon({ glyph, color }: { glyph: string; color: ColorValue }) {
   return <Text style={{ color, fontSize: 17, lineHeight: 20 }}>{glyph}</Text>;
@@ -15,11 +15,11 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
           ...(Platform.OS === 'web' ? { height: 58, paddingBottom: 6 } : null),
         },
-        tabBarLabelStyle: { fontSize: 10, lineHeight: 13, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 11, lineHeight: 14, fontFamily: fonts.semibold },
         sceneStyle: { backgroundColor: colors.background },
       }}
     >

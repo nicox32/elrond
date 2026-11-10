@@ -8,7 +8,7 @@ import { RESERVES, SPECIES } from '../../data/game';
 import { formatDate, formatScore, sortByDateDesc, summarizeSpecies } from '../../logic/stats';
 import type { ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 
@@ -63,7 +63,7 @@ export default function TropheesScreen() {
               </Text>
               {sum ? (
                 <>
-                  <Text style={{ color: colors.accent, fontSize: 20, fontWeight: '800' }}>
+                  <Text style={{ color: colors.gold, fontSize: 24, fontFamily: fonts.heading }}>
                     {sum.bestScore !== undefined ? `${formatScore(sum.bestScore)} pts` : '—'}
                   </Text>
                   <Text style={styles.muted}>

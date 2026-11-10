@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Carnet de chasse",
+    "name": "Affût",
     "slug": "carnet-chasse",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "android": {
       "package": "com.nicox32.carnetchasse",
       "adaptiveIcon": {
-        "backgroundColor": "#0F130F",
+        "backgroundColor": "#0E120E",
         "foregroundImage": "./assets/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false
@@ -24,7 +24,7 @@
     "splash": {
       "image": "./assets/adaptive-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F130F"
+      "backgroundColor": "#0E120E"
     },
     "plugins": [
       "expo-router",

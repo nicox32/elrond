@@ -16,7 +16,7 @@ import {
 } from '../../logic/schedule';
 import type { NeedType, NeedZone, ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
-import { colors } from '../../theme';
+import { colors, fonts } from '../../theme';
 
 const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 const NEEDS = Object.keys(NEED_LABELS) as NeedType[];
@@ -40,7 +40,7 @@ function ZoneCard({ zone, now }: { zone: NeedZone; now: number }) {
         <Text style={[styles.strong, { flex: 1 }]}>
           {NEED_ICONS[zone.need]} {species?.name ?? zone.speciesId} · {NEED_LABELS[zone.need]}
         </Text>
-        <Text style={{ color: wait === 0 ? colors.olive : colors.accent, fontWeight: '700' }}>{waitLabel(wait)}</Text>
+        <Text style={{ color: wait === 0 ? colors.olive : colors.accent, fontFamily: fonts.semibold }}>{waitLabel(wait)}</Text>
       </View>
       <Text style={styles.text}>
         {formatTime(zone.startMin)} – {formatTime(zone.endMin)} · {getReserve(zone.reserveId)?.name}
@@ -125,7 +125,7 @@ function AddZone({ defaultReserve }: { defaultReserve: ReserveId }) {
         <Field label="Fin" value={end} onChangeText={setEnd} placeholder="11:30" keyboardType="numbers-and-punctuation" />
       </View>
       <Field label="Lieu (facultatif)" value={place} onChangeText={setPlace} placeholder="ex. lac au nord du chalet" />
-      {error ? <Text style={{ color: colors.danger, fontWeight: '700', marginTop: 8 }}>{error}</Text> : null}
+      {error ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold, marginTop: 8 }}>{error}</Text> : null}
       <View style={[styles.row, { marginTop: 12 }]}>
         <View style={{ flex: 1 }}>
           <Button label="Annuler" kind="secondary" onPress={() => setOpen(false)} />
@@ -153,7 +153,7 @@ export default function HorairesScreen() {
         <Text style={styles.muted}>Heure en jeu</Text>
         <View style={[styles.row, { justifyContent: 'space-between' }]}>
           <Chip label="− 1 h" onPress={() => shift(-60)} />
-          <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800' }}>{formatTime(now)}</Text>
+          <Text style={{ color: colors.text, fontSize: 34, fontFamily: fonts.heading }}>{formatTime(now)}</Text>
           <Chip label="+ 1 h" onPress={() => shift(60)} />
         </View>
         <ChipRow>
@@ -162,7 +162,7 @@ export default function HorairesScreen() {
           ))}
         </ChipRow>
         <View style={{ padding: 12, borderRadius: 12, backgroundColor: colors.accentSoft, gap: 4 }}>
-          <Text style={{ color: colors.accent, fontSize: 17, fontWeight: '800' }}>
+          <Text style={{ color: colors.accent, fontSize: 17, fontFamily: fonts.heading }}>
             {period.icon} {period.label} : {period.title}
           </Text>
           <Text style={styles.text}>{period.text}</Text>
