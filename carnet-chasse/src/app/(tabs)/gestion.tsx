@@ -134,6 +134,22 @@ export default function GestionScreen() {
         ]}
       />
 
+      <SectionTitle>🤷 Rien à tirer dans ce troupeau ?</SectionTitle>
+      <Card style={{ gap: 6 }}>
+        <Text style={styles.text}>
+          • Changez de troupeau : une même espèce forme plusieurs groupes distincts sur la carte. Suivez les lisières de
+          forêts ou les clairières pour en trouver un autre qui aura, lui, des mâles mûrs à faible potentiel (1 ou 2
+          étoiles) à prélever.
+        </Text>
+        <Text style={styles.text}>
+          • Faites passer le temps : pour gérer ce troupeau précis, dormez quelques jours au chalet. Les jeunes grandissent,
+          de nouveaux individus apparaissent, et vous pourrez revenir voir si des mâles mûrs intéressants se sont installés.
+        </Text>
+        <Text style={[styles.strong, { color: colors.olive }]}>
+          Un bon garde-chasse sait rentrer bredouille d&apos;une zone pour préserver l&apos;avenir de son territoire.
+        </Text>
+      </Card>
+
       <SectionTitle>⏱️ Les règles d&apos;or</SectionTitle>
       {GOLDEN_RULES.map((r, i) => (
         <Card key={r.title} style={{ gap: 4 }}>
