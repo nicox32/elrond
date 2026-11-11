@@ -31,6 +31,8 @@ export interface Species {
   dangerous?: boolean;
   /** Mise à jour qui a ajouté l'espèce, si elle n'était pas là au départ. */
   addedIn?: string;
+  /** Courte description (habitat, comportement). */
+  blurb?: string;
 }
 
 export interface Weapon {

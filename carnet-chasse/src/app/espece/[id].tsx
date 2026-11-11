@@ -58,6 +58,7 @@ export default function EspeceScreen() {
           <Text style={styles.muted}>{CATEGORY_LABELS[species.category]}</Text>
           {species.dangerous ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold }}>⚠ Peut charger</Text> : null}
         </View>
+        {species.blurb ? <Text style={[styles.text, { marginTop: 6 }]}>{species.blurb}</Text> : null}
         {summary ? (
           <Text style={[styles.text, { marginTop: 6 }]}>
             {summary.count} prélèvement{summary.count > 1 ? 's' : ''}

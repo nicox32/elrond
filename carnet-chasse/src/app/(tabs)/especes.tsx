@@ -83,6 +83,7 @@ export default function EspecesScreen() {
                         ? ' · fiche à recopier'
                         : ''}
                   </Text>
+                  {s.blurb ? <Text style={[styles.text, { fontSize: 14 }]}>{s.blurb}</Text> : null}
                   {s.dangerous ? (
                     <Text style={{ color: colors.danger, fontSize: 13, fontFamily: fonts.semibold }}>⚠ Peut charger le chasseur</Text>
                   ) : null}
