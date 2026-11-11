@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { getReserve, getSpecies, RESERVES, SPECIES, speciesOfReserve } from '../../data/game';
+import { getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
 import {
   formatTime,
   minutesUntil,
@@ -114,6 +115,14 @@ function AddZone({ defaultReserve }: { defaultReserve: ReserveId }) {
           <Chip key={s.id} label={s.name} selected={speciesId === s.id} onPress={() => setSpeciesId(s.id)} />
         ))}
       </ChipRow>
+      {speciesId && getSpeciesInfo(speciesId)?.routine ? (
+        <Text style={{ color: colors.olive, fontSize: 13, marginTop: 6 }}>
+          Routine du jeu :{' '}
+          {routineSlots(getSpeciesInfo(speciesId)!)
+            .map((r) => `${NEED_LABELS[r.need].toLowerCase()} ${String(r.from).padStart(2, '0')}–${String(r.to).padStart(2, '0')} h`)
+            .join(', ')}
+        </Text>
+      ) : null}
       <Label>Besoin</Label>
       <ChipRow>
         {NEEDS.map((n) => (
@@ -190,7 +199,8 @@ export default function HorairesScreen() {
         </Card>
       ))}
       <Text style={styles.muted}>
-        Chaque espèce a ses variations : l&apos;horaire exact d&apos;un troupeau est celui affiché sur la carte.
+        Chaque espèce a sa propre routine (le cerf mulet, par exemple, boit à 00 h et 12 h, dort à 02 h et 16 h, mange à 07 h
+        et 20 h) : voyez sa fiche dans l&apos;onglet Espèces. L&apos;horaire exact d&apos;un troupeau est celui affiché sur la carte.
       </Text>
 
       <SectionTitle>💡 L&apos;astuce du garde-chasse</SectionTitle>

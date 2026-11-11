@@ -29,6 +29,7 @@ import {
   SHOT_FIELDS,
   WEATHER_CHOICES,
 } from '../../logic/details';
+import { checkEnergy, energyKindFor, formatRange, getSpeciesInfo } from '../../data/speciesInfo';
 import { formatTime, parseTime } from '../../logic/schedule';
 import { formatDate, formatNumber, formatScore, parseNumber } from '../../logic/stats';
 import {
@@ -73,14 +74,29 @@ function SmallNum({ label, value, onChange, placeholder }: { label: string; valu
 }
 
 export default function EditionScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{
+    id?: string;
+    speciesId?: string;
+    reserveId?: string;
+    sex?: string;
+    conditionPct?: string;
+    stars?: string;
+  }>();
+  const id = params.id;
   const { state, addHunt, updateHunt } = useCarnet();
   const existing = id ? state.hunts.find((h) => h.id === id) : undefined;
 
   const [baseDate] = useState(() => (existing ? new Date(existing.date) : new Date()));
   const [dateText, setDateText] = useState(() => formatDate(baseDate.toISOString()));
-  const [reserveId, setReserveId] = useState<ReserveId>(existing?.reserveId ?? state.lastReserveId ?? HUNTING_RESERVES[0].id);
-  const [speciesId, setSpeciesId] = useState<string | undefined>(existing?.speciesId);
+  const [reserveId, setReserveId] = useState<ReserveId>(
+    existing?.reserveId ??
+      HUNTING_RESERVES.find((r) => r.id === params.reserveId)?.id ??
+      state.lastReserveId ??
+      HUNTING_RESERVES[0].id,
+  );
+  const [speciesId, setSpeciesId] = useState<string | undefined>(
+    existing?.speciesId ?? SPECIES.find((x) => x.id === params.speciesId)?.id,
+  );
   const [weaponId, setWeaponId] = useState<string | undefined>(existing?.weaponId ?? state.lastWeaponId);
   const [showAllWeapons, setShowAllWeapons] = useState(state.ownedWeaponIds.length === 0);
   const [ammo, setAmmo] = useState(existing?.ammo ?? '');
@@ -96,10 +112,18 @@ export default function EditionScreen() {
 
   // Rapport de chasse du jeu
   const [nums, setNums] = useState<Record<NumKey, string>>(
-    () => Object.fromEntries(ALL_NUM_FIELDS.map((f) => [f.key, fmt(existing?.[f.key])])) as Record<NumKey, string>,
+    () =>
+      Object.fromEntries(
+        ALL_NUM_FIELDS.map((f) => [
+          f.key,
+          f.key === 'conditionPct' && !existing && params.conditionPct ? params.conditionPct.replace('.', ',') : fmt(existing?.[f.key]),
+        ]),
+      ) as Record<NumKey, string>,
   );
   const setNum = (k: NumKey) => (t: string) => setNums((n) => ({ ...n, [k]: t }));
-  const [sex, setSex] = useState<AnimalSex | undefined>(existing?.sex);
+  const [sex, setSex] = useState<AnimalSex | undefined>(
+    existing?.sex ?? (params.sex === 'male' || params.sex === 'femelle' ? params.sex : undefined),
+  );
   const [coat, setCoat] = useState(existing?.coat ?? '');
   const [rarity, setRarity] = useState(existing?.rarity ?? '');
   const [ammoType, setAmmoType] = useState(existing?.ammoType ?? '');
@@ -118,7 +142,9 @@ export default function EditionScreen() {
     () => existing?.measurements?.map((m) => ({ label: m.label, value: fmt(m.value) })) ?? [],
   );
   const [huntRating, setHuntRating] = useState(existing?.huntRating ?? '');
-  const [trophyStars, setTrophyStars] = useState<number | undefined>(existing?.trophyStars);
+  const [trophyStars, setTrophyStars] = useState<number | undefined>(
+    existing?.trophyStars ?? (params.stars ? Number(params.stars) || undefined : undefined),
+  );
   const [outcome, setOutcome] = useState<Outcome | undefined>(existing?.outcome);
 
   const [open, setOpen] = useState<Record<FoldId, boolean>>({ animal: false, tir: false, organes: false, prix: false, trophee: false });
@@ -150,6 +176,10 @@ export default function EditionScreen() {
   }, [nums]);
   const netHint = parsedNums.netWeightKg === undefined ? computeNetWeight(parsedNums) : undefined;
   const priceHint = parsedNums.salePrice === undefined ? estimateMeatPrice(parsedNums) : undefined;
+  const info = getSpeciesInfo(speciesId);
+  const energyKind = energyKindFor(weapon?.type);
+  const energyRange = info && energyKind ? info.energy[energyKind] : undefined;
+  const energyStatus = checkEnergy(info, energyKind, parsedNums.impactEnergyJ);
 
   function changeReserve(r: ReserveId) {
     setReserveId(r);
@@ -346,6 +376,23 @@ export default function EditionScreen() {
             <SmallNum key={f.key} label={f.label} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
           ))}
         </View>
+        {energyRange !== undefined && energyKind ? (
+          <Text
+            style={{
+              fontSize: 13,
+              marginTop: 6,
+              fontFamily: fonts.semibold,
+              color: energyStatus === 'ok' ? colors.olive : energyStatus ? colors.danger : colors.textMuted,
+            }}
+          >
+            Énergie recommandée par le jeu ({energyKind === 'balle' ? 'balle' : energyKind === 'slug' ? 'slug' : 'flèche'}) :{' '}
+            {formatRange(energyRange, 'J')}
+            {energyStatus === 'ok' ? ' · impact optimal ✓' : ''}
+            {energyStatus === 'faible' ? ' · trop faible : risque de blesser' : ''}
+            {energyStatus === 'forte' ? ' · trop forte : viande abîmée' : ''}
+            {energyStatus === 'inadapte' ? ' · munition inadaptée' : ''}
+          </Text>
+        ) : null}
         <Label>Météo</Label>
         <ChipRow>
           {WEATHER_CHOICES.map((w) => (

@@ -1,8 +1,10 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Card, Chip, ChipRow, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { allWeapons, CATEGORY_LABELS, GAME_VERSION, RESERVES, SPECIES, SUGGESTED_CALIBERS } from '../../data/game';
+import { getSpeciesInfo } from '../../data/speciesInfo';
 import { summarizeSpecies } from '../../logic/stats';
 import type { ReserveId, SpeciesCategory } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -61,7 +63,11 @@ export default function EspecesScreen() {
             {group.map((s) => {
               const count = summary.get(s.id)?.count ?? 0;
               return (
-                <Card key={s.id} style={{ gap: 2, borderColor: s.dangerous ? colors.danger : colors.border }}>
+                <Card
+                  key={s.id}
+                  onPress={() => router.push({ pathname: '/espece/[id]', params: { id: s.id } })}
+                  style={{ gap: 2, borderColor: s.dangerous ? colors.danger : colors.border }}
+                >
                   <View style={[styles.row, { justifyContent: 'space-between' }]}>
                     <Text style={[styles.strong, { flex: 1 }]}>{s.name}</Text>
                     {count > 0 ? <Text style={{ color: colors.accent, fontFamily: fonts.semibold }}>×{count}</Text> : null}
@@ -69,6 +75,7 @@ export default function EspecesScreen() {
                   <Text style={styles.muted}>
                     {s.gameName}
                     {s.addedIn ? ` · ajouté en ${s.addedIn}` : ''}
+                    {getSpeciesInfo(s.id) ? ` · fiche du jeu (classe ${getSpeciesInfo(s.id)?.animalClass})` : ''}
                   </Text>
                   {s.dangerous ? (
                     <Text style={{ color: colors.danger, fontSize: 13, fontFamily: fonts.semibold }}>⚠ Peut charger le chasseur</Text>

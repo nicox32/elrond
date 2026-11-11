@@ -41,6 +41,9 @@ function AppStack() {
       <Stack.Screen name="chasse/edition" options={{ title: 'Nouvelle chasse', presentation: 'modal' }} />
       <Stack.Screen name="chasse/[id]" options={{ title: 'Chasse' }} />
       <Stack.Screen name="sauvegarde" options={{ title: 'Sauvegarde' }} />
+      <Stack.Screen name="troupeaux" options={{ title: 'Suivi de troupeaux' }} />
+      <Stack.Screen name="troupeau/[id]" options={{ title: 'Troupeau' }} />
+      <Stack.Screen name="espece/[id]" options={{ title: 'Espèce' }} />
     </Stack>
   );
 }

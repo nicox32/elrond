@@ -228,3 +228,73 @@ test('sauvegarde : champs du rapport conservés, valeurs abîmées ignorées', (
   assert.equal(b.weightKg, undefined);
   assert.equal(b.organs, undefined);
 });
+
+test('fiche du cerf mulet : routine, énergie recommandée', async () => {
+  const { getSpeciesInfo, routineSlots, checkEnergy, energyKindFor, formatRange } = await import('../src/data/speciesInfo.ts');
+  const info = getSpeciesInfo('cerf-mulet');
+  assert.ok(info);
+  assert.deepEqual(routineSlots(info!).map((r) => `${r.need} ${r.from}-${r.to}`), [
+    'boire 0-2', 'dormir 2-7', 'manger 7-12', 'boire 12-16', 'dormir 16-20', 'manger 20-0',
+  ]);
+  assert.equal(energyKindFor('carabine'), 'balle');
+  assert.equal(checkEnergy(info, 'balle', 2138), 'ok');
+  assert.equal(checkEnergy(info, 'balle', 1200), 'faible');
+  assert.equal(checkEnergy(info, 'balle', 4500), 'forte');
+  assert.equal(checkEnergy(info, 'fleche', 150), 'ok');
+  assert.equal(checkEnergy(undefined, 'balle', 2000), undefined);
+  assert.equal(formatRange(info!.energy.grenaille, 'J'), 'Inadapté');
+  assert.equal(getSpeciesInfo('lion'), undefined);
+});
+
+test('troupeau : verdicts, résumé, un seul mâle par session', async () => {
+  const { summarizeHerd, malesTakenToday, sortAnimals, adviceFor, daysSince } = await import('../src/logic/herds.ts');
+  const now = new Date('2026-11-11T20:00:00');
+  const A = (o: object) => ({ id: Math.random().toString(36), label: '', status: 'vivant', lastSeen: now.toISOString(), ...o });
+  const herd = {
+    id: 'h', name: 'Lac', speciesId: 'cerf-mulet', reserveId: 'new-laurentia' as const, createdAt: '2026-11-01T00:00:00Z', lastVisit: '2026-11-09T12:00:00',
+    animals: [
+      A({ id: 'vieux', sex: 'male', age: 'mur', stars: 1, conditionPct: 31.7 }),
+      A({ id: 'beau', sex: 'male', age: 'mur', stars: 4 }),
+      A({ id: 'jeune', sex: 'male', age: 'jeune', conditionPct: 70 }),
+      A({ id: 'biche', sex: 'femelle', age: 'adulte', conditionPct: 60 }),
+      A({ id: 'pris', sex: 'male', age: 'adulte', stars: 1, conditionPct: 20, status: 'preleve', takenAt: '2026-11-11T09:00:00' }),
+    ],
+  };
+  const s = summarizeHerd(herd as never);
+  assert.equal(s.alive, 4);
+  assert.equal(s.males, 3);
+  assert.equal(s.females, 1);
+  assert.equal(s.taken, 1);
+  assert.equal(s.byVerdict.eliminer, 1);
+  assert.equal(s.byVerdict.trophee, 1);
+  assert.equal(s.byVerdict.epargner, 2);
+  assert.equal(adviceFor(herd.animals[0] as never).verdict, 'eliminer');
+  assert.equal(malesTakenToday(herd as never, now), 1);
+  assert.equal(malesTakenToday(herd as never, new Date('2026-11-12T08:00:00')), 0);
+  const order = sortAnimals(herd.animals as never).map((a: { id: string }) => a.id);
+  assert.deepEqual(order.slice(0, 2), ['vieux', 'beau']);
+  assert.equal(order[4], 'pris');
+  assert.equal(daysSince(herd.lastVisit, now), 2);
+});
+
+test('sauvegarde : troupeaux conservés, animaux abîmés ignorés', () => {
+  const s = parseState({
+    herds: [
+      { id: 'h', name: 'Lac', speciesId: 'cerf-mulet', reserveId: 'new-laurentia', createdAt: '2026-11-01', population: 'stable',
+        animals: [
+          { id: 'a', sex: 'male', age: 'mur', stars: 1, conditionPct: 31.7, status: 'vivant', lastSeen: '2026-11-11' },
+          { id: 'b', sex: 'x', age: 'mur', lastSeen: '2026-11-11' },
+          { id: 'c', sex: 'femelle', age: 'jeune', stars: 9, conditionPct: 150, lastSeen: '2026-11-11' },
+        ] },
+      { id: 'sans-nom', speciesId: 'cerf-mulet', reserveId: 'new-laurentia', createdAt: '2026-11-01' },
+    ],
+  });
+  assert.equal(s?.herds.length, 1);
+  const h = s!.herds[0];
+  assert.equal(h.population, 'stable');
+  assert.equal(h.lastVisit, '2026-11-01');
+  assert.deepEqual(h.animals.map((a) => a.id), ['a', 'c']);
+  assert.equal(h.animals[1].stars, undefined);
+  assert.equal(h.animals[1].conditionPct, undefined);
+  assert.equal(h.animals[1].status, 'vivant');
+});

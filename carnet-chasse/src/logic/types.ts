@@ -135,13 +135,51 @@ export interface NeedZone {
   place?: string;
 }
 
+export type AgeStage = 'jeune' | 'adulte' | 'mur';
+
+export type AnimalStatus = 'vivant' | 'preleve' | 'disparu';
+
+/** Animal observé dans un troupeau suivi. */
+export interface HerdAnimal {
+  id: string;
+  /** Repère libre : « Grand mâle », « Mâle bois cassé »… */
+  label: string;
+  sex: AnimalSex;
+  age: AgeStage;
+  stars?: number;
+  conditionPct?: number;
+  status: AnimalStatus;
+  /** Date ISO de la dernière observation. */
+  lastSeen: string;
+  /** Date ISO du prélèvement, si prélevé. */
+  takenAt?: string;
+  notes?: string;
+}
+
+export type PopulationStatus = 'vulnerable' | 'stable' | 'saine' | 'prospere';
+
+/** Troupeau suivi d'une session à l'autre. */
+export interface Herd {
+  id: string;
+  name: string;
+  speciesId: string;
+  reserveId: ReserveId;
+  place?: string;
+  population?: PopulationStatus;
+  animals: HerdAnimal[];
+  createdAt: string;
+  lastVisit: string;
+  notes?: string;
+}
+
 export interface CarnetState {
   hunts: Hunt[];
   ownedWeaponIds: string[];
   customWeapons: Weapon[];
   needZones: NeedZone[];
+  herds: Herd[];
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
 
-export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [] };
+export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [], herds: [] };

@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { newId } from '../logic/stats';
-import { type CarnetState, EMPTY_STATE, type Hunt, type NeedZone, type Weapon } from '../logic/types';
+import { type CarnetState, EMPTY_STATE, type Herd, type HerdAnimal, type Hunt, type NeedZone, type Weapon } from '../logic/types';
 import { deleteTrophyPhoto } from '../photos';
 import { loadState, saveState } from '../storage';
 
@@ -20,6 +20,12 @@ interface CarnetContextValue {
   replaceAll: (state: CarnetState) => void;
   addZone: (z: Omit<NeedZone, 'id'>) => void;
   removeZone: (id: string) => void;
+  addHerd: (h: Pick<Herd, 'name' | 'speciesId' | 'reserveId' | 'place'>) => string;
+  updateHerd: (id: string, patch: Partial<Omit<Herd, 'id' | 'animals'>>) => void;
+  deleteHerd: (id: string) => void;
+  addAnimal: (herdId: string, a: Omit<HerdAnimal, 'id' | 'lastSeen' | 'status'>) => void;
+  updateAnimal: (herdId: string, animalId: string, patch: Partial<Omit<HerdAnimal, 'id'>>) => void;
+  removeAnimal: (herdId: string, animalId: string) => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -109,6 +115,47 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, needZones: s.needZones.filter((z) => z.id !== id) }));
   }, []);
 
+  const addHerd = useCallback((h: Pick<Herd, 'name' | 'speciesId' | 'reserveId' | 'place'>) => {
+    const id = newId();
+    const now = new Date().toISOString();
+    setState((s) => ({ ...s, herds: [{ ...h, id, animals: [], createdAt: now, lastVisit: now }, ...s.herds] }));
+    return id;
+  }, []);
+
+  const updateHerd = useCallback((id: string, patch: Partial<Omit<Herd, 'id' | 'animals'>>) => {
+    setState((s) => ({ ...s, herds: s.herds.map((h) => (h.id === id ? { ...h, ...patch } : h)) }));
+  }, []);
+
+  const deleteHerd = useCallback((id: string) => {
+    setState((s) => ({ ...s, herds: s.herds.filter((h) => h.id !== id) }));
+  }, []);
+
+  const addAnimal = useCallback((herdId: string, a: Omit<HerdAnimal, 'id' | 'lastSeen' | 'status'>) => {
+    const now = new Date().toISOString();
+    setState((s) => ({
+      ...s,
+      herds: s.herds.map((h) =>
+        h.id === herdId ? { ...h, lastVisit: now, animals: [...h.animals, { ...a, id: newId(), status: 'vivant', lastSeen: now }] } : h,
+      ),
+    }));
+  }, []);
+
+  const updateAnimal = useCallback((herdId: string, animalId: string, patch: Partial<Omit<HerdAnimal, 'id'>>) => {
+    setState((s) => ({
+      ...s,
+      herds: s.herds.map((h) =>
+        h.id === herdId ? { ...h, animals: h.animals.map((a) => (a.id === animalId ? { ...a, ...patch } : a)) } : h,
+      ),
+    }));
+  }, []);
+
+  const removeAnimal = useCallback((herdId: string, animalId: string) => {
+    setState((s) => ({
+      ...s,
+      herds: s.herds.map((h) => (h.id === herdId ? { ...h, animals: h.animals.filter((a) => a.id !== animalId) } : h)),
+    }));
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -123,6 +170,12 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       replaceAll,
       addZone,
       removeZone,
+      addHerd,
+      updateHerd,
+      deleteHerd,
+      addAnimal,
+      updateAnimal,
+      removeAnimal,
     }),
     [
       state,
@@ -137,6 +190,12 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       replaceAll,
       addZone,
       removeZone,
+      addHerd,
+      updateHerd,
+      deleteHerd,
+      addAnimal,
+      updateAnimal,
+      removeAnimal,
     ],
   );
 

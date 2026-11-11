@@ -1,6 +1,11 @@
 import { ALL_NUM_FIELDS } from './details.ts';
 import { ORGAN_IDS } from './types.ts';
 import type {
+  AgeStage,
+  AnimalStatus,
+  Herd,
+  HerdAnimal,
+  PopulationStatus,
   AnimalSex,
   CarnetState,
   Measurement,
@@ -138,6 +143,55 @@ function parseZone(v: unknown): NeedZone | null {
   return { id, speciesId, reserveId, need, startMin, endMin, place: str(v.place) };
 }
 
+const AGES: AgeStage[] = ['jeune', 'adulte', 'mur'];
+const STATUSES: AnimalStatus[] = ['vivant', 'preleve', 'disparu'];
+const POPULATIONS: PopulationStatus[] = ['vulnerable', 'stable', 'saine', 'prospere'];
+
+function parseAnimal(v: unknown): HerdAnimal | null {
+  if (!isObj(v)) return null;
+  const id = str(v.id);
+  const sex = oneOf(v.sex, SEXES);
+  const age = oneOf(v.age, AGES);
+  const lastSeen = str(v.lastSeen);
+  if (!id || !sex || !age || !lastSeen) return null;
+  const stars = num(v.stars);
+  const cond = num(v.conditionPct);
+  return {
+    id,
+    label: str(v.label) ?? '',
+    sex,
+    age,
+    stars: stars !== undefined && Number.isInteger(stars) && stars >= 1 && stars <= 5 ? stars : undefined,
+    conditionPct: cond !== undefined && cond >= 0 && cond <= 100 ? cond : undefined,
+    status: oneOf(v.status, STATUSES) ?? 'vivant',
+    lastSeen,
+    takenAt: str(v.takenAt),
+    notes: str(v.notes),
+  };
+}
+
+function parseHerd(v: unknown): Herd | null {
+  if (!isObj(v)) return null;
+  const id = str(v.id);
+  const name = str(v.name);
+  const speciesId = str(v.speciesId);
+  const reserveId = oneOf(v.reserveId, RESERVE_IDS);
+  const createdAt = str(v.createdAt);
+  if (!id || !name || !speciesId || !reserveId || !createdAt) return null;
+  return {
+    id,
+    name,
+    speciesId,
+    reserveId,
+    place: str(v.place),
+    population: oneOf(v.population, POPULATIONS),
+    animals: Array.isArray(v.animals) ? v.animals.map(parseAnimal).filter((a): a is HerdAnimal => a !== null) : [],
+    createdAt,
+    lastVisit: str(v.lastVisit) ?? createdAt,
+    notes: str(v.notes),
+  };
+}
+
 /** Valide des données lues (stockage ou sauvegarde importée). Les entrées illisibles sont ignorées. */
 export function parseState(raw: unknown): CarnetState | null {
   if (!isObj(raw)) return null;
@@ -151,10 +205,12 @@ export function parseState(raw: unknown): CarnetState | null {
   const needZones = Array.isArray(raw.needZones)
     ? raw.needZones.map(parseZone).filter((z): z is NeedZone => z !== null)
     : [];
+  const herds = Array.isArray(raw.herds) ? raw.herds.map(parseHerd).filter((h): h is Herd => h !== null) : [];
   return {
     hunts,
     customWeapons,
     needZones,
+    herds,
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),

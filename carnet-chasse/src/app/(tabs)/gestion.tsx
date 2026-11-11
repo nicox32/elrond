@@ -1,8 +1,10 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Card, Chip, ChipRow, Field, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { parseNumber } from '../../logic/stats';
+import { useCarnet } from '../../state/CarnetProvider';
 import {
   type AgeClass,
   advise,
@@ -45,6 +47,7 @@ function GuideBlock({ icon, title, color, items }: { icon: string; title: string
 }
 
 export default function GestionScreen() {
+  const { state } = useCarnet();
   const [sex, setSex] = useState<Sex>('male');
   const [age, setAge] = useState<AgeClass>('adulte');
   const [stars, setStars] = useState<number | undefined>(1);
@@ -63,6 +66,14 @@ export default function GestionScreen() {
   return (
     <Screen>
       <Title subtitle="Votre guide du garde-chasse : quoi prélever, quoi épargner, à quelle distance.">Gestion du troupeau</Title>
+
+      <Card onPress={() => router.push('/troupeaux')} style={{ borderColor: colors.accent, gap: 2 }}>
+        <View style={[styles.row, { justifyContent: 'space-between' }]}>
+          <Text style={[styles.section, { fontSize: 20 }]}>Mes troupeaux</Text>
+          <Text style={{ color: colors.accent, fontFamily: fonts.heading, fontSize: 20 }}>{state.herds.length} →</Text>
+        </View>
+        <Text style={styles.muted}>Suivez chaque animal observé : l&apos;appli dit qui prélever et qui épargner.</Text>
+      </Card>
 
       <SectionTitle>Tirer ou épargner ?</SectionTitle>
       <Card>
