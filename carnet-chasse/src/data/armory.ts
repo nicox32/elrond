@@ -44,12 +44,14 @@ export const AMMO: Ammo[] = [
     cavity: 'Faible',
   },
   {
-    // Vue dans un rapport de chasse : seuls le type et la classe sont connus.
+    // Vue dans un rapport de chasse (tuto) ; description d'après le joueur.
     id: 'lewellings-grande-swift-308',
     name: 'Lewellings Grande Swift',
     brand: 'Lewellings',
     caliber: '.308 Winchester',
     classRange: [3, 5],
+    description:
+      'Munition standard, plus légère que les Firefly Shock et Nucleus Break : polyvalente pour la chasse multi-espèces de classe 3 à 5.',
     projectile: 'Têtes creuses à pointe polymère',
   },
 ];
