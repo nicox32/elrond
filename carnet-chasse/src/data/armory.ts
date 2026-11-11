@@ -110,3 +110,11 @@ export function classFits(animalClass: number | undefined, range: [number, numbe
   if (animalClass === undefined || !range) return undefined;
   return animalClass >= range[0] && animalClass <= range[1];
 }
+
+/** Munitions dont la classe couvre celle de l'animal : celles en stock d'abord. */
+export function ammoForAnimalClass(animalClass: number | undefined, sheets: Record<string, Ammo>, owned: string[]): Ammo[] {
+  if (animalClass === undefined) return [];
+  return allAmmo(sheets)
+    .filter((a) => classFits(animalClass, a.classRange))
+    .sort((a, b) => Number(owned.includes(b.id)) - Number(owned.includes(a.id)) || a.name.localeCompare(b.name));
+}

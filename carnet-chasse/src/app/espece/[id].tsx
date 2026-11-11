@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 import { HuntRow } from '../../components/HuntRow';
 import { Button, Card, Empty, Screen, SectionTitle, styles } from '../../components/ui';
 import { CATEGORY_LABELS, getReserve, getSpecies, SUGGESTED_CALIBERS, SUGGESTED_DISTANCE } from '../../data/game';
+import { ammoForAnimalClass, formatClassRange } from '../../data/armory';
 import { ENERGY_LABELS, formatRange, getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
 import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
 import { formatScore, sortByDateDesc, summarizeSpecies } from '../../logic/stats';
@@ -38,6 +39,7 @@ export default function EspeceScreen() {
   const summary = summarizeSpecies(state.hunts).get(species.id);
   const hunts = sortByDateDesc(state.hunts.filter((h) => h.speciesId === species.id)).slice(0, 5);
   const herds = state.herds.filter((h) => h.speciesId === species.id);
+  const goodAmmo = ammoForAnimalClass(info?.animalClass, state.ammoSheets, state.ownedAmmoIds);
 
   return (
     <Screen top={false}>
@@ -143,6 +145,35 @@ export default function EspeceScreen() {
           />
         </>
       )}
+
+      {info?.animalClass ? (
+        <>
+          <SectionTitle right={<Text style={styles.muted}>classe {info.animalClass}</Text>}>Munitions à prendre</SectionTitle>
+          {goodAmmo.length === 0 ? (
+            <Text style={styles.muted}>Aucune munition connue de classe {info.animalClass} : ajoutez-en dans l&apos;Armurerie.</Text>
+          ) : (
+            goodAmmo.map((a) => {
+              const owned = state.ownedAmmoIds.includes(a.id);
+              return (
+                <Card key={a.id} onPress={() => router.push({ pathname: '/munition/[id]', params: { id: a.id } })}>
+                  <View style={styles.row}>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={styles.strong}>{a.name}</Text>
+                      <Text style={styles.muted}>
+                        {a.caliber} · classe {formatClassRange(a.classRange)}
+                        {a.projectile ? ` · ${a.projectile}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={{ color: owned ? colors.olive : colors.accent, fontFamily: fonts.semibold, fontSize: 13 }}>
+                      {owned ? '✓ en stock' : 'à acheter'}
+                    </Text>
+                  </View>
+                </Card>
+              );
+            })
+          )}
+        </>
+      ) : null}
 
       <SectionTitle right={<Text style={styles.muted}>{herds.length}</Text>}>Troupeaux suivis</SectionTitle>
       {herds.map((h) => (

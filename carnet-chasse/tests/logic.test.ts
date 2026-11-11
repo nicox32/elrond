@@ -436,3 +436,11 @@ test('sauvegarde : fiches d’armes, munitions et stock', () => {
   assert.equal('vide' in s!.ammoSheets, false);
   assert.deepEqual(s?.ownedAmmoIds, ['perso-1']);
 });
+
+test('munitions à prendre selon la classe de l’animal', async () => {
+  const { ammoForAnimalClass } = await import('../src/data/armory.ts');
+  const six = ammoForAnimalClass(6, {}, ['lewellings-nucleus-break-308']);
+  assert.deepEqual(six.map((a) => a.name), ['Lewellings Nucleus Break', 'Lewellings Firefly Shock']);
+  assert.deepEqual(ammoForAnimalClass(3, {}, []).map((a) => a.name), ['Lewellings Grande Swift']);
+  assert.deepEqual(ammoForAnimalClass(undefined, {}, []), []);
+});

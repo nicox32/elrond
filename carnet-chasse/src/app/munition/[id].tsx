@@ -5,8 +5,9 @@ import { Image, Text, View } from 'react-native';
 import { ClassBadge, StatLine, Thumb } from '../../components/armory';
 import { HuntRow } from '../../components/HuntRow';
 import { Button, Card, Chip, ChipRow, Empty, Screen, SectionTitle, styles } from '../../components/ui';
-import { AMMO, allAmmo, formatClassRange, sameCaliber } from '../../data/armory';
-import { allWeapons } from '../../data/game';
+import { AMMO, allAmmo, classFits, formatClassRange, sameCaliber } from '../../data/armory';
+import { allWeapons, SPECIES } from '../../data/game';
+import { getSpeciesInfo } from '../../data/speciesInfo';
 import { sortByDateDesc } from '../../logic/stats';
 import { pickTrophyPhoto } from '../../photos';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -26,6 +27,7 @@ export default function MunitionScreen() {
   }
 
   const builtIn = AMMO.some((a) => a.id === ammo.id);
+  const fitting = SPECIES.filter((sp) => classFits(getSpeciesInfo(sp.id, state.speciesSheets)?.animalClass, ammo.classRange));
   const owned = state.ownedAmmoIds.includes(ammo.id);
   const weapons = allWeapons(state.customWeapons).filter((w) => sameCaliber(w.caliber, ammo.caliber));
   const hunts = sortByDateDesc(state.hunts.filter((h) => h.ammo && h.ammo.toLowerCase() === ammo.name.toLowerCase())).slice(0, 5);
@@ -75,6 +77,24 @@ export default function MunitionScreen() {
         <StatLine label="Taille de cavité" value={ammo.cavity} />
       </Card>
       <Button label="Modifier la fiche" kind="secondary" onPress={() => router.push({ pathname: '/munition/edition', params: { id: ammo.id } })} />
+
+      {ammo.classRange ? (
+        <>
+          <SectionTitle right={<Text style={styles.muted}>classe {formatClassRange(ammo.classRange)}</Text>}>Pour quels animaux</SectionTitle>
+          {fitting.length ? (
+            <ChipRow>
+              {fitting.map((sp) => (
+                <Chip key={sp.id} label={sp.name} onPress={() => router.push({ pathname: '/espece/[id]', params: { id: sp.id } })} />
+              ))}
+            </ChipRow>
+          ) : null}
+          <Text style={styles.muted}>
+            {fitting.length
+              ? `Espèces dont la fiche du jeu donne une classe entre ${formatClassRange(ammo.classRange)}.`
+              : 'Remplissez la classe des espèces (fiche du jeu) pour savoir lesquelles conviennent.'}
+          </Text>
+        </>
+      ) : null}
 
       <SectionTitle right={<Text style={styles.muted}>{weapons.length}</Text>}>Armes compatibles</SectionTitle>
       {weapons.length === 0 ? <Text style={styles.muted}>Aucune arme de ce calibre dans la liste.</Text> : null}

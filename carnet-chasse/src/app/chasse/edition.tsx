@@ -196,6 +196,7 @@ export default function EditionScreen() {
   // C'est surtout le niveau de l'arme qui compte ; la classe de la munition est donnée pour info.
   const weaponFit = classFits(animalCls, weaponRange);
   const ammoFit = classFits(animalCls, ammoRange);
+  const betterAmmo = caliberAmmo.filter((m) => classFits(animalCls, m.classRange));
 
   function changeReserve(r: ReserveId) {
     setReserveId(r);
@@ -415,8 +416,14 @@ export default function EditionScreen() {
           </Text>
         ) : null}
         {ammoFit === false ? (
-          <Text style={[styles.muted, { marginTop: 2 }]}>
-            Pour info : munition classe {formatClassRange(ammoRange)} (l&apos;arme compte surtout).
+          <Text style={{ color: colors.accent, fontSize: 13, marginTop: 2, fontFamily: fonts.semibold }}>
+            Munition classe {formatClassRange(ammoRange)} : pas faite pour un animal de classe {animalCls}.
+            {betterAmmo.length
+              ? ` À prendre : ${betterAmmo
+                  .slice(0, 3)
+                  .map((m) => `${m.name.replace(/^Lewellings\s+/i, '')} (${formatClassRange(m.classRange)}${state.ownedAmmoIds.includes(m.id) ? ', en stock' : ''})`)
+                  .join(', ')}.`
+              : ''}
           </Text>
         ) : null}
         <Field label="Type de munitions" value={ammoType} onChangeText={setAmmoType} placeholder="Têtes creuses à pointe polymère" />
