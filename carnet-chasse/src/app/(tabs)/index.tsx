@@ -91,6 +91,7 @@ export default function JournalScreen() {
       ) : null}
 
       <Button label="+ Nouvelle chasse" onPress={() => router.push('/chasse/edition')} />
+      <Button label="🗺  Carte interactive des réserves" kind="secondary" onPress={() => router.push('/carte')} />
 
       {state.herds.some((h) => isVisitDue(h)) ? (
         <Pressable onPress={() => router.push('/troupeaux')} style={{ borderWidth: 1, borderColor: colors.accent, borderRadius: 14, padding: 12, backgroundColor: colors.accentSoft }}>

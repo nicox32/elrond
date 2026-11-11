@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -177,6 +178,8 @@ export default function HorairesScreen() {
           <Text style={styles.text}>{period.text}</Text>
         </View>
       </Card>
+
+      <Button label="🗺  Voir les zones de besoin sur la carte" kind="secondary" onPress={() => router.push('/carte')} />
 
       <SectionTitle right={<Text style={styles.muted}>{zones.length}</Text>}>Mes zones de besoin</SectionTitle>
       {zones.length === 0 ? (

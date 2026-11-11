@@ -201,8 +201,10 @@ export interface CarnetState {
   herds: Herd[];
   /** Fiches espèces recopiées depuis l'encyclopédie du jeu, par identifiant d'espèce. */
   speciesSheets: Record<string, SpeciesSheet>;
+  /** Lien de la carte interactive (Shackmaps) choisi pour chaque réserve. */
+  mapUrls: Partial<Record<ReserveId, string>>;
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
 
-export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [], herds: [], speciesSheets: {} };
+export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [], herds: [], speciesSheets: {}, mapUrls: {} };

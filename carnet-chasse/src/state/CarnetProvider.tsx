@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { newId } from '../logic/stats';
-import { type CarnetState, EMPTY_STATE, type Herd, type HerdAnimal, type Hunt, type NeedZone, type SpeciesSheet, type Weapon } from '../logic/types';
+import { type CarnetState, EMPTY_STATE, type Herd, type HerdAnimal, type Hunt, type NeedZone, type ReserveId, type SpeciesSheet, type Weapon } from '../logic/types';
 import { deleteTrophyPhoto } from '../photos';
 import { loadState, saveState } from '../storage';
 
@@ -27,6 +27,7 @@ interface CarnetContextValue {
   updateAnimal: (herdId: string, animalId: string, patch: Partial<Omit<HerdAnimal, 'id'>>) => void;
   removeAnimal: (herdId: string, animalId: string) => void;
   saveSheet: (speciesId: string, sheet: SpeciesSheet | null) => void;
+  setMapUrl: (reserveId: ReserveId, url: string | undefined) => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -166,6 +167,15 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setMapUrl = useCallback((reserveId: ReserveId, url: string | undefined) => {
+    setState((s) => {
+      const next = { ...s.mapUrls };
+      if (url) next[reserveId] = url;
+      else delete next[reserveId];
+      return { ...s, mapUrls: next };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -187,6 +197,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       updateAnimal,
       removeAnimal,
       saveSheet,
+      setMapUrl,
     }),
     [
       state,
@@ -208,6 +219,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       updateAnimal,
       removeAnimal,
       saveSheet,
+      setMapUrl,
     ],
   );
 

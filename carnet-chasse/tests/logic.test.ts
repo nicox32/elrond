@@ -345,3 +345,21 @@ test('troupeau : tente la plus proche conservée dans la sauvegarde', () => {
   const s = parseState({ herds: [{ id: 'h', name: 'Lac', speciesId: 'cerf-mulet', reserveId: 'new-laurentia', createdAt: '2026-11-01', camp: 'Tente de la crête', animals: [] }] });
   assert.equal(s?.herds[0].camp, 'Tente de la crête');
 });
+
+test('carte interactive : liens Shackmaps par réserve', async () => {
+  const { mapUrlFor, isMapUrl, isAllowedHost, isHubOnly, DEFAULT_MAP_URLS } = await import('../src/logic/maps.ts');
+  assert.equal(mapUrlFor('new-laurentia', {}), 'https://www.shackmaps.com/way-of-the-hunter-2/new-laurentia');
+  assert.equal(isHubOnly('kilimaya', {}), true);
+  const saved = { kilimaya: 'https://www.shackmaps.com/way-of-the-hunter-2/kilimaya-reserve' };
+  assert.equal(mapUrlFor('kilimaya', saved), saved.kilimaya);
+  assert.equal(isHubOnly('kilimaya', saved), false);
+  assert.equal(isMapUrl('https://www.shackmaps.com/x'), true);
+  assert.equal(isMapUrl('http://www.shackmaps.com/x'), false);
+  assert.equal(isMapUrl('https://evil.com/shackmaps.com'), false);
+  assert.equal(isMapUrl('https://shackmaps.com.evil.com/'), false);
+  assert.equal(isAllowedHost('https://www.shacknews.com/article/1'), true);
+  assert.equal(isAllowedHost('https://ads.example.com/'), false);
+  assert.equal(DEFAULT_MAP_URLS.headquarters.startsWith('https://www.shackmaps.com/'), true);
+  const s = parseState({ mapUrls: { kilimaya: saved.kilimaya, headquarters: 'https://evil.com', inconnu: 'https://www.shackmaps.com/a' } });
+  assert.deepEqual(s?.mapUrls, { kilimaya: saved.kilimaya });
+});

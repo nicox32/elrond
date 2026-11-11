@@ -1,4 +1,5 @@
 import { ALL_NUM_FIELDS } from './details.ts';
+import { isMapUrl } from './maps.ts';
 import { ORGAN_IDS } from './types.ts';
 import type {
   EnergyRange,
@@ -264,6 +265,13 @@ export function parseState(raw: unknown): CarnetState | null {
       if (sheet) speciesSheets[id] = sheet;
     }
   }
+  const mapUrls: Partial<Record<ReserveId, string>> = {};
+  if (isObj(raw.mapUrls)) {
+    for (const r of RESERVE_IDS) {
+      const u = str(raw.mapUrls[r]);
+      if (u && isMapUrl(u)) mapUrls[r] = u;
+    }
+  }
   const herds = Array.isArray(raw.herds) ? raw.herds.map(parseHerd).filter((h): h is Herd => h !== null) : [];
   return {
     hunts,
@@ -271,6 +279,7 @@ export function parseState(raw: unknown): CarnetState | null {
     needZones,
     herds,
     speciesSheets,
+    mapUrls,
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),
