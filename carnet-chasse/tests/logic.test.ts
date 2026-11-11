@@ -179,3 +179,52 @@ test('sauvegarde : zones de besoin abîmées ignorées', () => {
   const s = parseState({ needZones: [{ id: 'x', speciesId: 'bison', reserveId: 'new-laurentia', need: 'boire', startMin: 9999, endMin: 10 }] });
   assert.equal(s?.needZones.length, 0);
 });
+
+test('rapport de chasse : durées, poids après découpe, prix et organes', async () => {
+  const { parseDuration, formatDuration, computeNetWeight, estimateMeatPrice, totalEarnings, damagedOrgans } = await import(
+    '../src/logic/details.ts'
+  );
+  assert.equal(parseDuration('9m49s'), 589);
+  assert.equal(parseDuration('9 min 49 s'), 589);
+  assert.equal(parseDuration('9:49'), 589);
+  assert.equal(parseDuration('49s'), 49);
+  assert.equal(parseDuration('12m'), 720);
+  assert.equal(parseDuration('9:75'), undefined);
+  assert.equal(parseDuration('abc'), undefined);
+  assert.equal(formatDuration(589), '9 min 49 s');
+  // Valeurs de l'écran « Poids et prix » du cerf mulet : 99,78 − 0 − 3,35 − 39,91 = 56,52 kg ; × 2,6 = 146
+  const deer = { weightKg: 99.78, timeDegradationKg: 0, shotDegradationKg: 3.35, butcherWasteKg: 39.91, pricePerKg: 2.6 };
+  assert.equal(computeNetWeight(deer), 56.52);
+  assert.equal(estimateMeatPrice(deer), 146);
+  assert.equal(computeNetWeight({ weightKg: 50 }), undefined);
+  assert.equal(totalEarnings([hunt({ salePrice: 146 }), hunt({ id: 'x' }), hunt({ id: 'y', salePrice: 54 })]), 200);
+  const organs = damagedOrgans(hunt({ organs: { chair: 67.2, 'poumon-droit': 100, 'poumon-gauche': 7.9, os: 1.4, coeur: 0 } }));
+  assert.deepEqual(organs.map((o) => o.id), ['poumon-droit', 'chair', 'poumon-gauche', 'os']);
+});
+
+test('sauvegarde : champs du rapport conservés, valeurs abîmées ignorées', () => {
+  const s = parseState({
+    hunts: [
+      hunt({
+        sex: 'male', conditionPct: 31.7, ageYears: 12, weightKg: 99.78, killTimeMin: 839, trackingTimeSec: 589,
+        hunterDetected: false, dogUsed: false, weather: 'Partiellement nuageux', huntRating: 'S++', trophyStars: 1,
+        salePrice: 146, outcome: 'vendu', organs: { 'poumon-droit': 100, chair: 67.2 },
+        measurements: [{ label: 'Longueur du merrain', value: 134 }],
+      }),
+      hunt({ id: 'bad', sex: 'x' as never, trophyStars: 9, killTimeMin: 5000, weightKg: -3, organs: { chair: 'a' } as never }),
+    ],
+  });
+  const [a, b] = s!.hunts;
+  assert.equal(a.sex, 'male');
+  assert.equal(a.conditionPct, 31.7);
+  assert.equal(a.killTimeMin, 839);
+  assert.equal(a.hunterDetected, false);
+  assert.equal(a.huntRating, 'S++');
+  assert.equal(a.organs?.['poumon-droit'], 100);
+  assert.deepEqual(a.measurements, [{ label: 'Longueur du merrain', value: 134 }]);
+  assert.equal(b.sex, undefined);
+  assert.equal(b.trophyStars, undefined);
+  assert.equal(b.killTimeMin, undefined);
+  assert.equal(b.weightKg, undefined);
+  assert.equal(b.organs, undefined);
+});

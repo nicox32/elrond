@@ -1,5 +1,11 @@
+import { ALL_NUM_FIELDS } from './details.ts';
+import { ORGAN_IDS } from './types.ts';
 import type {
+  AnimalSex,
   CarnetState,
+  Measurement,
+  OrganId,
+  Outcome,
   Hunt,
   HuntMode,
   NeedType,
@@ -29,6 +35,31 @@ const num = (v: unknown): number | undefined => (typeof v === 'number' && Number
 const oneOf = <T extends string>(v: unknown, list: T[]): T | undefined =>
   typeof v === 'string' && (list as string[]).includes(v) ? (v as T) : undefined;
 
+const SEXES: AnimalSex[] = ['male', 'femelle'];
+const OUTCOMES: Outcome[] = ['vendu', 'empaille'];
+const bool = (v: unknown): boolean | undefined => (typeof v === 'boolean' ? v : undefined);
+
+function parseOrgans(v: unknown): Partial<Record<OrganId, number>> | undefined {
+  if (!isObj(v)) return undefined;
+  const out: Partial<Record<OrganId, number>> = {};
+  for (const id of ORGAN_IDS) {
+    const n = num(v[id]);
+    if (n !== undefined && n >= 0) out[id] = n;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function parseMeasurements(v: unknown): Measurement[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out = v.flatMap((m) => {
+    if (!isObj(m)) return [];
+    const label = str(m.label);
+    const value = num(m.value);
+    return label && value !== undefined ? [{ label, value }] : [];
+  });
+  return out.length ? out : undefined;
+}
+
 function parseHunt(v: unknown): Hunt | null {
   if (!isObj(v)) return null;
   const id = str(v.id);
@@ -53,6 +84,30 @@ function parseHunt(v: unknown): Hunt | null {
     toPlace: v.toPlace === true,
     photoUri: str(v.photoUri),
     notes: str(v.notes),
+    ...Object.fromEntries(
+      ALL_NUM_FIELDS.map((f) => [f.key, num(v[f.key])]).filter((e) => e[1] !== undefined && (e[1] as number) >= 0),
+    ),
+    sex: oneOf(v.sex, SEXES),
+    coat: str(v.coat),
+    rarity: str(v.rarity),
+    ammoType: str(v.ammoType),
+    ammoClass: str(v.ammoClass),
+    killTimeMin: (() => {
+      const n = num(v.killTimeMin);
+      return n !== undefined && Number.isInteger(n) && n >= 0 && n < 1440 ? n : undefined;
+    })(),
+    trackingTimeSec: num(v.trackingTimeSec),
+    hunterDetected: bool(v.hunterDetected),
+    dogUsed: bool(v.dogUsed),
+    weather: str(v.weather),
+    organs: parseOrgans(v.organs),
+    measurements: parseMeasurements(v.measurements),
+    huntRating: str(v.huntRating),
+    trophyStars: (() => {
+      const n = num(v.trophyStars);
+      return n !== undefined && Number.isInteger(n) && n >= 1 && n <= 5 ? n : undefined;
+    })(),
+    outcome: oneOf(v.outcome, OUTCOMES),
   };
 }
 

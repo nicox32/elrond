@@ -102,6 +102,43 @@ export function TrophyFrame({ children, onPress }: { children: ReactNode; onPres
   );
 }
 
+/** Section repliable du formulaire : titre, résumé de ce qui est rempli, contenu. */
+export function Fold({
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[styles.card, { padding: 0, marginTop: space.sm }]}>
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.md, minHeight: 52 }}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.section, { fontSize: 19 }]}>{title}</Text>
+          {summary ? (
+            <Text style={styles.muted} numberOfLines={1}>
+              {summary}
+            </Text>
+          ) : null}
+        </View>
+        <Text style={{ color: colors.accent, fontFamily: fonts.heading, fontSize: 22 }}>{open ? '−' : '+'}</Text>
+      </Pressable>
+      {open ? <View style={{ paddingHorizontal: space.md, paddingBottom: space.md }}>{children}</View> : null}
+    </View>
+  );
+}
+
 export function Chip({
   label,
   selected,

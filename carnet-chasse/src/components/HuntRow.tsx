@@ -19,6 +19,8 @@ export function HuntRow({ hunt, customWeapons }: { hunt: Hunt; customWeapons: We
   ].filter(Boolean);
   const extra = [
     formatDateTime(hunt.date),
+    hunt.huntRating ? `Chasse ${hunt.huntRating}` : null,
+    hunt.trophyStars ? '★'.repeat(hunt.trophyStars) : null,
     hunt.trophyType !== 'normal' ? TROPHY_TYPE_LABELS[hunt.trophyType] : null,
     hunt.mode === 'coop' ? 'coop' : null,
   ].filter(Boolean);

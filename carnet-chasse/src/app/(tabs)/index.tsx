@@ -18,6 +18,7 @@ import {
   styles,
 } from '../../components/ui';
 import { findWeapon, GAME_VERSION, getReserve, getSpecies, RESERVES, SPECIES } from '../../data/game';
+import { totalEarnings } from '../../logic/details';
 import { formatNumber, formatScore, overview, sortByDateDesc } from '../../logic/stats';
 import type { ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -82,6 +83,11 @@ export default function JournalScreen() {
         <Stat value={`${stats.speciesHunted}/${stats.speciesTotal}`} label="Espèces" divider />
         <Stat value={stats.maxDistanceM !== undefined ? `${formatNumber(stats.maxDistanceM)} m` : '—'} label="Dist. max" divider />
       </StatRow>
+      {totalEarnings(hunts) > 0 ? (
+        <Text style={[styles.muted, { textAlign: 'right' }]}>
+          Gains notés : <Text style={{ color: colors.gold, fontFamily: fonts.semibold }}>{formatNumber(totalEarnings(hunts))}</Text>
+        </Text>
+      ) : null}
 
       <Button label="+ Nouvelle chasse" onPress={() => router.push('/chasse/edition')} />
 
