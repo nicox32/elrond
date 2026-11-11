@@ -1,6 +1,7 @@
 /**
- * Fiches espèces de l'encyclopédie du jeu (onglet Animaux), recopiées depuis les captures du joueur.
- * Une espèce absente ici n'a pas encore de fiche : on n'invente rien.
+ * Fiches espèces de l'encyclopédie du jeu (onglet Animaux). Le jeu ne montre une fiche qu'après le premier
+ * prélèvement de l'espèce : le joueur la recopie alors dans l'appli (fiches « perso », dans l'état).
+ * Les fiches fournies ici viennent de captures du joueur ; on n'invente rien.
  */
 import type { NeedType } from '../logic/types.ts';
 
@@ -10,8 +11,8 @@ export type EnergyKind = 'balle' | 'slug' | 'fleche';
 export type Range = [number, number] | null;
 
 export interface SpeciesInfo {
-  animalClass: number;
-  trophyType: string;
+  animalClass?: number;
+  trophyType?: string;
   /** Rangs de trophée estimés (score). */
   trophyRange?: [number, number];
   energy: {
@@ -22,7 +23,7 @@ export interface SpeciesInfo {
     slug?: Range;
     fleche?: Range;
   };
-  activity: string;
+  activity?: string;
   activityNote?: string;
   /** Début de chaque phase de la journée, dans l'ordre (la dernière court jusqu'à la première). */
   routine?: { hour: number; need: NeedType }[];
@@ -56,8 +57,28 @@ export const SPECIES_INFO: Record<string, SpeciesInfo> = {
   },
 };
 
-export function getSpeciesInfo(id: string | undefined): SpeciesInfo | undefined {
-  return id ? SPECIES_INFO[id] : undefined;
+/**
+ * Fiche d'une espèce : celle recopiée par le joueur (`sheets`) complète ou remplace celle fournie avec l'appli.
+ */
+export function getSpeciesInfo(id: string | undefined, sheets?: Record<string, SpeciesInfo>): SpeciesInfo | undefined {
+  if (!id) return undefined;
+  const base = SPECIES_INFO[id];
+  const mine = sheets?.[id];
+  if (!mine) return base;
+  if (!base) return mine;
+  const defined = <T extends object>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
+  return { ...base, ...defined(mine), energy: { ...base.energy, ...defined(mine.energy) } };
+}
+
+/** Une fiche a-t-elle au moins une information utile ? */
+export function isSheetEmpty(info: SpeciesInfo): boolean {
+  const { energy, routine, senses, ...rest } = info;
+  return (
+    Object.values(rest).every((v) => v === undefined || v === '') &&
+    Object.values(energy).every((v) => v === undefined) &&
+    !routine?.length &&
+    !senses
+  );
 }
 
 /** Phases de la routine sous forme de créneaux [début, fin[ en heures. */

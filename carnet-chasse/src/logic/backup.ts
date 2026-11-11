@@ -1,6 +1,8 @@
 import { ALL_NUM_FIELDS } from './details.ts';
 import { ORGAN_IDS } from './types.ts';
 import type {
+  EnergyRange,
+  SpeciesSheet,
   AgeStage,
   AnimalStatus,
   Herd,
@@ -192,6 +194,54 @@ function parseHerd(v: unknown): Herd | null {
   };
 }
 
+const pair = (v: unknown): [number, number] | undefined => {
+  if (!Array.isArray(v) || v.length !== 2) return undefined;
+  const a = num(v[0]);
+  const b = num(v[1]);
+  return a !== undefined && b !== undefined && a >= 0 && b >= a ? [a, b] : undefined;
+};
+const energyRange = (v: unknown): EnergyRange | undefined => (v === null ? null : pair(v));
+const ENERGY_KEYS = ['balle', 'grenaille', 'chevrotineM', 'slug', 'fleche'] as const;
+
+function parseSheet(v: unknown): SpeciesSheet | null {
+  if (!isObj(v)) return null;
+  const energy: SpeciesSheet['energy'] = {};
+  if (isObj(v.energy)) {
+    for (const k of ENERGY_KEYS) {
+      const r = energyRange(v.energy[k]);
+      if (r !== undefined) energy[k] = r;
+    }
+  }
+  const cls = num(v.animalClass);
+  const routine = Array.isArray(v.routine)
+    ? v.routine
+        .flatMap((p) => {
+          if (!isObj(p)) return [];
+          const hour = num(p.hour);
+          const need = oneOf(p.need, NEED_TYPES);
+          return hour !== undefined && Number.isInteger(hour) && hour >= 0 && hour < 24 && need ? [{ hour, need }] : [];
+        })
+        .sort((a, b) => a.hour - b.hour)
+    : undefined;
+  const senses =
+    isObj(v.senses) && (str(v.senses.vue) || str(v.senses.odorat) || str(v.senses.ouie))
+      ? { vue: str(v.senses.vue) ?? '', odorat: str(v.senses.odorat) ?? '', ouie: str(v.senses.ouie) ?? '' }
+      : undefined;
+  return {
+    animalClass: cls !== undefined && Number.isInteger(cls) && cls >= 1 && cls <= 10 ? cls : undefined,
+    trophyType: str(v.trophyType),
+    trophyRange: pair(v.trophyRange),
+    energy,
+    activity: str(v.activity),
+    activityNote: str(v.activityNote),
+    routine: routine?.length ? routine : undefined,
+    senses,
+    biomes: str(v.biomes),
+    description: str(v.description),
+    anecdote: str(v.anecdote),
+  };
+}
+
 /** Valide des données lues (stockage ou sauvegarde importée). Les entrées illisibles sont ignorées. */
 export function parseState(raw: unknown): CarnetState | null {
   if (!isObj(raw)) return null;
@@ -205,12 +255,20 @@ export function parseState(raw: unknown): CarnetState | null {
   const needZones = Array.isArray(raw.needZones)
     ? raw.needZones.map(parseZone).filter((z): z is NeedZone => z !== null)
     : [];
+  const speciesSheets: Record<string, SpeciesSheet> = {};
+  if (isObj(raw.speciesSheets)) {
+    for (const [id, v] of Object.entries(raw.speciesSheets)) {
+      const sheet = parseSheet(v);
+      if (sheet) speciesSheets[id] = sheet;
+    }
+  }
   const herds = Array.isArray(raw.herds) ? raw.herds.map(parseHerd).filter((h): h is Herd => h !== null) : [];
   return {
     hunts,
     customWeapons,
     needZones,
     herds,
+    speciesSheets,
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),

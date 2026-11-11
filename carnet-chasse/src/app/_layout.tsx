@@ -44,6 +44,7 @@ function AppStack() {
       <Stack.Screen name="troupeaux" options={{ title: 'Suivi de troupeaux' }} />
       <Stack.Screen name="troupeau/[id]" options={{ title: 'Troupeau' }} />
       <Stack.Screen name="espece/[id]" options={{ title: 'Espèce' }} />
+      <Stack.Screen name="espece/fiche" options={{ title: 'Fiche du jeu' }} />
     </Stack>
   );
 }

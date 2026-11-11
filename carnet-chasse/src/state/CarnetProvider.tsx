@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { newId } from '../logic/stats';
-import { type CarnetState, EMPTY_STATE, type Herd, type HerdAnimal, type Hunt, type NeedZone, type Weapon } from '../logic/types';
+import { type CarnetState, EMPTY_STATE, type Herd, type HerdAnimal, type Hunt, type NeedZone, type SpeciesSheet, type Weapon } from '../logic/types';
 import { deleteTrophyPhoto } from '../photos';
 import { loadState, saveState } from '../storage';
 
@@ -26,6 +26,7 @@ interface CarnetContextValue {
   addAnimal: (herdId: string, a: Omit<HerdAnimal, 'id' | 'lastSeen' | 'status'>) => void;
   updateAnimal: (herdId: string, animalId: string, patch: Partial<Omit<HerdAnimal, 'id'>>) => void;
   removeAnimal: (herdId: string, animalId: string) => void;
+  saveSheet: (speciesId: string, sheet: SpeciesSheet | null) => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -156,6 +157,15 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const saveSheet = useCallback((speciesId: string, sheet: SpeciesSheet | null) => {
+    setState((s) => {
+      const next = { ...s.speciesSheets };
+      if (sheet) next[speciesId] = sheet;
+      else delete next[speciesId];
+      return { ...s, speciesSheets: next };
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -176,6 +186,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       addAnimal,
       updateAnimal,
       removeAnimal,
+      saveSheet,
     }),
     [
       state,
@@ -196,6 +207,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       addAnimal,
       updateAnimal,
       removeAnimal,
+      saveSheet,
     ],
   );
 

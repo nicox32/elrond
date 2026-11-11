@@ -298,3 +298,36 @@ test('sauvegarde : troupeaux conservés, animaux abîmés ignorés', () => {
   assert.equal(h.animals[1].conditionPct, undefined);
   assert.equal(h.animals[1].status, 'vivant');
 });
+
+test('fiches perso : lecture de la sauvegarde et fusion avec les fiches fournies', async () => {
+  const { getSpeciesInfo, checkEnergy, routineSlots } = await import('../src/data/speciesInfo.ts');
+  const s = parseState({
+    speciesSheets: {
+      wapiti: {
+        animalClass: 7, trophyType: 'Bois', trophyRange: [200, 100],
+        energy: { balle: [2000, 5000], grenaille: null, slug: [3, 'x'] },
+        routine: [{ hour: 12, need: 'dormir' }, { hour: 5, need: 'boire' }, { hour: 30, need: 'manger' }],
+        senses: { vue: 'Bon(ne)' },
+      },
+      'cerf-mulet': { energy: { balle: [1400, 3900] }, animalClass: undefined },
+      cassée: 'pas un objet',
+    },
+  });
+  const w = s!.speciesSheets.wapiti;
+  assert.equal(w.animalClass, 7);
+  assert.equal(w.trophyRange, undefined); // min > max refusé
+  assert.deepEqual(w.energy, { balle: [2000, 5000], grenaille: null });
+  assert.deepEqual(w.routine, [{ hour: 5, need: 'boire' }, { hour: 12, need: 'dormir' }]);
+  assert.deepEqual(w.senses, { vue: 'Bon(ne)', odorat: '', ouie: '' });
+  assert.equal('cassée' in s!.speciesSheets, false);
+
+  const wapiti = getSpeciesInfo('wapiti', s!.speciesSheets);
+  assert.equal(checkEnergy(wapiti, 'balle', 2500), 'ok');
+  assert.deepEqual(routineSlots(wapiti!).map((r) => `${r.from}-${r.to}`), ['5-12', '12-5']);
+  // La fiche perso du cerf mulet corrige la balle, garde le reste de la fiche fournie.
+  const mulet = getSpeciesInfo('cerf-mulet', s!.speciesSheets);
+  assert.deepEqual(mulet!.energy.balle, [1400, 3900]);
+  assert.deepEqual(mulet!.energy.slug, [700, 3000]);
+  assert.equal(mulet!.animalClass, 6);
+  assert.equal(getSpeciesInfo('lion', s!.speciesSheets), undefined);
+});

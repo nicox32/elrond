@@ -172,14 +172,33 @@ export interface Herd {
   notes?: string;
 }
 
+export type EnergyRange = [number, number] | null;
+
+/** Fiche espèce recopiée par le joueur (même forme que les fiches fournies, tout facultatif). */
+export interface SpeciesSheet {
+  animalClass?: number;
+  trophyType?: string;
+  trophyRange?: [number, number];
+  energy: { balle?: EnergyRange; grenaille?: EnergyRange; chevrotineM?: EnergyRange; slug?: EnergyRange; fleche?: EnergyRange };
+  activity?: string;
+  activityNote?: string;
+  routine?: { hour: number; need: NeedType }[];
+  senses?: { vue: string; odorat: string; ouie: string };
+  biomes?: string;
+  description?: string;
+  anecdote?: string;
+}
+
 export interface CarnetState {
   hunts: Hunt[];
   ownedWeaponIds: string[];
   customWeapons: Weapon[];
   needZones: NeedZone[];
   herds: Herd[];
+  /** Fiches espèces recopiées depuis l'encyclopédie du jeu, par identifiant d'espèce. */
+  speciesSheets: Record<string, SpeciesSheet>;
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
 
-export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [], herds: [] };
+export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [], herds: [], speciesSheets: {} };

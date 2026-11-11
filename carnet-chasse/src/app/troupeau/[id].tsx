@@ -185,7 +185,7 @@ export default function HerdScreen() {
   }
 
   const species = getSpecies(herd.speciesId);
-  const info = getSpeciesInfo(herd.speciesId);
+  const info = getSpeciesInfo(herd.speciesId, state.speciesSheets);
   const s = summarizeHerd(herd);
   const takenToday = malesTakenToday(herd);
   const days = daysSince(herd.lastVisit);

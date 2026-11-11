@@ -34,7 +34,7 @@ export default function EspeceScreen() {
       </Screen>
     );
   }
-  const info = getSpeciesInfo(species.id);
+  const info = getSpeciesInfo(species.id, state.speciesSheets);
   const summary = summarizeSpecies(state.hunts).get(species.id);
   const hunts = sortByDateDesc(state.hunts.filter((h) => h.speciesId === species.id)).slice(0, 5);
   const herds = state.herds.filter((h) => h.speciesId === species.id);
@@ -48,7 +48,7 @@ export default function EspeceScreen() {
           {species.gameName} · {getReserve(species.reserveId)?.name}
         </Text>
         <View style={[styles.row, { marginTop: 6, flexWrap: 'wrap' }]}>
-          {info ? (
+          {info?.animalClass ? (
             <View style={{ borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
               <Text style={{ color: colors.gold, fontFamily: fonts.heading, fontSize: 16 }}>Classe {info.animalClass}</Text>
             </View>
@@ -73,9 +73,10 @@ export default function EspeceScreen() {
             </Card>
           ) : null}
 
+          {info.activity || info.routine ? (
           <Card style={{ gap: 8 }}>
             <Text style={styles.strong}>
-              Routine : {info.activity}
+              Routine{info.activity ? ` : ${info.activity}` : ''}
               {info.activityNote ? <Text style={styles.muted}> · {info.activityNote}</Text> : null}
             </Text>
             {info.routine ? (
@@ -97,13 +98,16 @@ export default function EspeceScreen() {
               </>
             ) : null}
           </Card>
+          ) : null}
 
-          <Card>
-            <Text style={[styles.strong, { marginBottom: 4 }]}>Énergie cinétique recommandée</Text>
-            {ENERGY_LABELS.map((e) => (
-              <Line key={e.key} label={e.label} value={formatRange(info.energy[e.key], e.unit)} />
-            ))}
-          </Card>
+          {ENERGY_LABELS.some((e) => info.energy[e.key] !== undefined) ? (
+            <Card>
+              <Text style={[styles.strong, { marginBottom: 4 }]}>Énergie cinétique recommandée</Text>
+              {ENERGY_LABELS.map((e) => (
+                <Line key={e.key} label={e.label} value={formatRange(info.energy[e.key], e.unit)} />
+              ))}
+            </Card>
+          ) : null}
 
           <Card>
             <Line label="Type de trophée" value={info.trophyType} />
@@ -114,6 +118,11 @@ export default function EspeceScreen() {
             {info.biomes ? <Text style={[styles.muted, { marginTop: 6 }]}>Biomes : {info.biomes}</Text> : null}
           </Card>
           {info.anecdote ? <Text style={[styles.muted, { fontStyle: 'italic' }]}>Anecdote : {info.anecdote}</Text> : null}
+          <Button
+            label="Modifier la fiche"
+            kind="secondary"
+            onPress={() => router.push({ pathname: '/espece/fiche', params: { id: species.id } })}
+          />
         </>
       ) : (
         <>
@@ -122,10 +131,16 @@ export default function EspeceScreen() {
             <Line label="Calibres indicatifs" value={SUGGESTED_CALIBERS[species.category].join(', ')} />
             <Line label="Distance conseillée" value={SUGGESTED_DISTANCE[species.category]} />
             <Text style={[styles.muted, { marginTop: 6 }]}>
-              Pas encore de fiche du jeu pour cette espèce : envoyez une photo de sa page dans l&apos;encyclopédie (Animaux) pour
-              l&apos;ajouter.
+              {summary
+                ? 'Vous avez prélevé cette espèce : sa fiche est débloquée dans l’encyclopédie du jeu (Animaux). Recopiez-la ici.'
+                : 'La fiche du jeu se débloque après le premier prélèvement de l’espèce.'}
             </Text>
           </Card>
+          <Button
+            label="Remplir la fiche du jeu"
+            kind={summary ? 'primary' : 'secondary'}
+            onPress={() => router.push({ pathname: '/espece/fiche', params: { id: species.id } })}
+          />
         </>
       )}
 

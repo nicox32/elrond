@@ -64,7 +64,7 @@ function ZoneCard({ zone, now }: { zone: NeedZone; now: number }) {
 }
 
 function AddZone({ defaultReserve }: { defaultReserve: ReserveId }) {
-  const { addZone } = useCarnet();
+  const { state, addZone } = useCarnet();
   const [open, setOpen] = useState(false);
   const [reserveId, setReserveId] = useState<ReserveId>(defaultReserve);
   const [speciesId, setSpeciesId] = useState<string | undefined>();
@@ -115,10 +115,10 @@ function AddZone({ defaultReserve }: { defaultReserve: ReserveId }) {
           <Chip key={s.id} label={s.name} selected={speciesId === s.id} onPress={() => setSpeciesId(s.id)} />
         ))}
       </ChipRow>
-      {speciesId && getSpeciesInfo(speciesId)?.routine ? (
+      {speciesId && getSpeciesInfo(speciesId, state.speciesSheets)?.routine ? (
         <Text style={{ color: colors.olive, fontSize: 13, marginTop: 6 }}>
           Routine du jeu :{' '}
-          {routineSlots(getSpeciesInfo(speciesId)!)
+          {routineSlots(getSpeciesInfo(speciesId, state.speciesSheets)!)
             .map((r) => `${NEED_LABELS[r.need].toLowerCase()} ${String(r.from).padStart(2, '0')}–${String(r.to).padStart(2, '0')} h`)
             .join(', ')}
         </Text>

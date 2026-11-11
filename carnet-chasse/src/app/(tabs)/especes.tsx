@@ -75,7 +75,11 @@ export default function EspecesScreen() {
                   <Text style={styles.muted}>
                     {s.gameName}
                     {s.addedIn ? ` · ajouté en ${s.addedIn}` : ''}
-                    {getSpeciesInfo(s.id) ? ` · fiche du jeu (classe ${getSpeciesInfo(s.id)?.animalClass})` : ''}
+                    {getSpeciesInfo(s.id, state.speciesSheets)
+                      ? ` · fiche du jeu${getSpeciesInfo(s.id, state.speciesSheets)?.animalClass ? ` (classe ${getSpeciesInfo(s.id, state.speciesSheets)?.animalClass})` : ''}`
+                      : count > 0
+                        ? ' · fiche à recopier'
+                        : ''}
                   </Text>
                   {s.dangerous ? (
                     <Text style={{ color: colors.danger, fontSize: 13, fontFamily: fonts.semibold }}>⚠ Peut charger le chasseur</Text>

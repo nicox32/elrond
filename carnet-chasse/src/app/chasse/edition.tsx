@@ -176,7 +176,7 @@ export default function EditionScreen() {
   }, [nums]);
   const netHint = parsedNums.netWeightKg === undefined ? computeNetWeight(parsedNums) : undefined;
   const priceHint = parsedNums.salePrice === undefined ? estimateMeatPrice(parsedNums) : undefined;
-  const info = getSpeciesInfo(speciesId);
+  const info = getSpeciesInfo(speciesId, state.speciesSheets);
   const energyKind = energyKindFor(weapon?.type);
   const energyRange = info && energyKind ? info.energy[energyKind] : undefined;
   const energyStatus = checkEnergy(info, energyKind, parsedNums.impactEnergyJ);

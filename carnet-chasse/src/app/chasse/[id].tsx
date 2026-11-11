@@ -4,6 +4,7 @@ import { Image, Text, View } from 'react-native';
 
 import { Button, Card, Empty, Screen, SectionTitle, styles } from '../../components/ui';
 import { findWeapon, getReserve, getSpecies, SHOT_ZONE_LABELS, TROPHY_TYPE_LABELS } from '../../data/game';
+import { getSpeciesInfo } from '../../data/speciesInfo';
 import { computeNetWeight, damagedOrgans, estimateMeatPrice, formatDuration } from '../../logic/details';
 import { formatTime } from '../../logic/schedule';
 import { formatDateTime, formatNumber, formatScore } from '../../logic/stats';
@@ -109,6 +110,15 @@ export default function HuntScreen() {
           ) : null}
         </View>
       </Card>
+
+      {!getSpeciesInfo(hunt.speciesId, state.speciesSheets) ? (
+        <Card onPress={() => router.push({ pathname: '/espece/fiche', params: { id: hunt.speciesId } })} style={{ borderColor: colors.gold, gap: 2 }}>
+          <Text style={[styles.strong, { color: colors.gold }]}>Fiche de l&apos;espèce débloquée en jeu</Text>
+          <Text style={styles.muted}>
+            Recopiez la page de l&apos;encyclopédie (routine, énergie recommandée…) pour en profiter partout dans l&apos;appli →
+          </Text>
+        </Card>
+      ) : null}
 
       <Card>
         <Line label="Date" value={formatDateTime(hunt.date)} />
