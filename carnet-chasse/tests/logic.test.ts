@@ -444,3 +444,21 @@ test('munitions à prendre selon la classe de l’animal', async () => {
   assert.deepEqual(ammoForAnimalClass(3, {}, []).map((a) => a.name), ['Lewellings Grande Swift']);
   assert.deepEqual(ammoForAnimalClass(undefined, {}, []), []);
 });
+
+test('classes des espèces de New Laurentia et munitions adaptées', async () => {
+  const { speciesClass } = await import('../src/data/speciesInfo.ts');
+  const { SPECIES } = await import('../src/data/game.ts');
+  const { ammoForAnimalClass } = await import('../src/data/armory.ts');
+  const nl = SPECIES.filter((s) => s.reserveId === 'new-laurentia');
+  assert.ok(nl.every((s) => typeof s.animalClass === 'number'));
+  assert.equal(speciesClass('colvert'), 1);
+  assert.equal(speciesClass('cerf-mulet'), 6);
+  assert.equal(speciesClass('bison'), 8);
+  assert.equal(speciesClass('wapiti', { wapiti: { energy: {}, animalClass: 6 } }), 6); // la fiche recopiée prime
+  assert.equal(speciesClass('lion'), undefined);
+  // Grande Swift (3-5) convient au glouton, au loup, au sanglier… mais pas au cerf mulet (6).
+  const swift = (cls: number) => ammoForAnimalClass(cls, {}, []).some((a) => a.name === 'Lewellings Grande Swift');
+  assert.equal(swift(speciesClass('carcajou')!), true);
+  assert.equal(swift(speciesClass('sanglier')!), true);
+  assert.equal(swift(speciesClass('cerf-mulet')!), false);
+});

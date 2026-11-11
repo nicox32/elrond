@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 
 import { Card, Chip, ChipRow, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { allWeapons, CATEGORY_LABELS, GAME_VERSION, RESERVES, SPECIES, SUGGESTED_CALIBERS } from '../../data/game';
-import { getSpeciesInfo } from '../../data/speciesInfo';
+import { getSpeciesInfo, speciesClass } from '../../data/speciesInfo';
 import { summarizeSpecies } from '../../logic/stats';
 import type { ReserveId, SpeciesCategory } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -77,8 +77,9 @@ export default function EspecesScreen() {
                   <Text style={styles.muted}>
                     {s.gameName}
                     {s.addedIn ? ` · ajouté en ${s.addedIn}` : ''}
+                    {speciesClass(s.id, state.speciesSheets) ? ` · classe ${speciesClass(s.id, state.speciesSheets)}` : ''}
                     {getSpeciesInfo(s.id, state.speciesSheets)
-                      ? ` · fiche du jeu${getSpeciesInfo(s.id, state.speciesSheets)?.animalClass ? ` (classe ${getSpeciesInfo(s.id, state.speciesSheets)?.animalClass})` : ''}`
+                      ? ' · fiche du jeu'
                       : count > 0
                         ? ' · fiche à recopier'
                         : ''}

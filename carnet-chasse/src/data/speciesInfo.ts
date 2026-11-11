@@ -4,6 +4,7 @@
  * Les fiches fournies ici viennent de captures du joueur ; on n'invente rien.
  */
 import type { NeedType } from '../logic/types.ts';
+import { getSpecies } from './game.ts';
 
 export type EnergyKind = 'balle' | 'slug' | 'fleche';
 
@@ -119,4 +120,10 @@ export function formatRange(r: Range | undefined, unit: string): string | undefi
   if (r === undefined) return undefined;
   if (r === null) return 'Inadapté';
   return `${r[0]} – ${r[1]} ${unit}`;
+}
+
+/** Classe de l'animal : celle de la fiche du jeu recopiée, sinon celle de la liste des espèces. */
+export function speciesClass(id: string | undefined, sheets?: Record<string, SpeciesInfo>): number | undefined {
+  if (!id) return undefined;
+  return getSpeciesInfo(id, sheets)?.animalClass ?? getSpecies(id)?.animalClass;
 }

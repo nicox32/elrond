@@ -7,7 +7,7 @@ import { HuntRow } from '../../components/HuntRow';
 import { Button, Card, Chip, ChipRow, Empty, Screen, SectionTitle, styles } from '../../components/ui';
 import { AMMO, allAmmo, classFits, formatClassRange, sameCaliber } from '../../data/armory';
 import { allWeapons, SPECIES } from '../../data/game';
-import { getSpeciesInfo } from '../../data/speciesInfo';
+import { speciesClass } from '../../data/speciesInfo';
 import { sortByDateDesc } from '../../logic/stats';
 import { pickTrophyPhoto } from '../../photos';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -27,7 +27,7 @@ export default function MunitionScreen() {
   }
 
   const builtIn = AMMO.some((a) => a.id === ammo.id);
-  const fitting = SPECIES.filter((sp) => classFits(getSpeciesInfo(sp.id, state.speciesSheets)?.animalClass, ammo.classRange));
+  const fitting = SPECIES.filter((sp) => classFits(speciesClass(sp.id, state.speciesSheets), ammo.classRange));
   const owned = state.ownedAmmoIds.includes(ammo.id);
   const weapons = allWeapons(state.customWeapons).filter((w) => sameCaliber(w.caliber, ammo.caliber));
   const hunts = sortByDateDesc(state.hunts.filter((h) => h.ammo && h.ammo.toLowerCase() === ammo.name.toLowerCase())).slice(0, 5);
@@ -90,7 +90,7 @@ export default function MunitionScreen() {
           ) : null}
           <Text style={styles.muted}>
             {fitting.length
-              ? `Espèces dont la fiche du jeu donne une classe entre ${formatClassRange(ammo.classRange)}.`
+              ? `Espèces de classe ${formatClassRange(ammo.classRange)}.`
               : 'Remplissez la classe des espèces (fiche du jeu) pour savoir lesquelles conviennent.'}
           </Text>
         </>

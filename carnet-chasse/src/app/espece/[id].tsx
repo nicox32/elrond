@@ -5,7 +5,7 @@ import { HuntRow } from '../../components/HuntRow';
 import { Button, Card, Empty, Screen, SectionTitle, styles } from '../../components/ui';
 import { CATEGORY_LABELS, getReserve, getSpecies, SUGGESTED_CALIBERS, SUGGESTED_DISTANCE } from '../../data/game';
 import { ammoForAnimalClass, formatClassRange } from '../../data/armory';
-import { ENERGY_LABELS, formatRange, getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
+import { ENERGY_LABELS, formatRange, getSpeciesInfo, routineSlots, speciesClass } from '../../data/speciesInfo';
 import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
 import { formatScore, sortByDateDesc, summarizeSpecies } from '../../logic/stats';
 import type { NeedType } from '../../logic/types';
@@ -39,7 +39,8 @@ export default function EspeceScreen() {
   const summary = summarizeSpecies(state.hunts).get(species.id);
   const hunts = sortByDateDesc(state.hunts.filter((h) => h.speciesId === species.id)).slice(0, 5);
   const herds = state.herds.filter((h) => h.speciesId === species.id);
-  const goodAmmo = ammoForAnimalClass(info?.animalClass, state.ammoSheets, state.ownedAmmoIds);
+  const cls = speciesClass(species.id, state.speciesSheets);
+  const goodAmmo = ammoForAnimalClass(cls, state.ammoSheets, state.ownedAmmoIds);
 
   return (
     <Screen top={false}>
@@ -50,9 +51,9 @@ export default function EspeceScreen() {
           {species.gameName} · {getReserve(species.reserveId)?.name}
         </Text>
         <View style={[styles.row, { marginTop: 6, flexWrap: 'wrap' }]}>
-          {info?.animalClass ? (
+          {cls ? (
             <View style={{ borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
-              <Text style={{ color: colors.gold, fontFamily: fonts.heading, fontSize: 16 }}>Classe {info.animalClass}</Text>
+              <Text style={{ color: colors.gold, fontFamily: fonts.heading, fontSize: 16 }}>Classe {cls}</Text>
             </View>
           ) : null}
           <Text style={styles.muted}>{CATEGORY_LABELS[species.category]}</Text>
@@ -147,11 +148,11 @@ export default function EspeceScreen() {
         </>
       )}
 
-      {info?.animalClass ? (
+      {cls ? (
         <>
-          <SectionTitle right={<Text style={styles.muted}>classe {info.animalClass}</Text>}>Munitions à prendre</SectionTitle>
+          <SectionTitle right={<Text style={styles.muted}>classe {cls}</Text>}>Munitions à prendre</SectionTitle>
           {goodAmmo.length === 0 ? (
-            <Text style={styles.muted}>Aucune munition connue de classe {info.animalClass} : ajoutez-en dans l&apos;Armurerie.</Text>
+            <Text style={styles.muted}>Aucune munition connue de classe {cls} : ajoutez-en dans l&apos;Armurerie.</Text>
           ) : (
             goodAmmo.map((a) => {
               const owned = state.ownedAmmoIds.includes(a.id);

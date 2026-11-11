@@ -32,7 +32,7 @@ import {
   WEATHER_CHOICES,
 } from '../../logic/details';
 import { ammoForCaliber, classFits, formatClassRange, getWeaponSheet, parseClassRange } from '../../data/armory';
-import { checkEnergy, energyKindFor, formatRange, getSpeciesInfo } from '../../data/speciesInfo';
+import { checkEnergy, energyKindFor, formatRange, getSpeciesInfo, speciesClass } from '../../data/speciesInfo';
 import { formatTime, parseTime } from '../../logic/schedule';
 import { formatDate, formatNumber, formatScore, parseNumber } from '../../logic/stats';
 import {
@@ -190,7 +190,7 @@ export default function EditionScreen() {
         (a, b) => Number(state.ownedAmmoIds.includes(b.id)) - Number(state.ownedAmmoIds.includes(a.id)),
       )
     : [];
-  const animalCls = parsedNums.animalClass ?? info?.animalClass;
+  const animalCls = parsedNums.animalClass ?? speciesClass(speciesId, state.speciesSheets);
   const weaponRange = weapon ? getWeaponSheet(weapon.id, state.weaponSheets)?.classRange : undefined;
   const ammoRange = parseClassRange(ammoClass);
   // C'est surtout le niveau de l'arme qui compte ; la classe de la munition est donnée pour info.

@@ -1,4 +1,7 @@
 /**
+ * Classes (niveaux) de New Laurentia : liste du joueur d'après le wiki du jeu ; le cerf mulet (6) est confirmé
+ * par sa fiche en jeu.
+ *
  * Données du jeu Way of the Hunter 2, à jour de la version 1.4 (28 octobre 2026).
  * Sources : patch notes de Nine Rocks Games et wikis de joueurs. Les calibres conseillés sont indicatifs :
  * le jeu change à chaque mise à jour, vérifiez en jeu.
@@ -45,21 +48,21 @@ export const RESERVES: Reserve[] = [
 
 export const SPECIES: Species[] = [
   // New Laurentia
-  { id: 'carcajou', name: 'Carcajou', gameName: 'American Wolverine', reserveId: 'new-laurentia', category: 'moyen' },
-  { id: 'grizzly', name: 'Grizzly', gameName: 'Grizzly Bear', reserveId: 'new-laurentia', category: 'grand' },
-  { id: 'mouflon-dall', name: 'Mouflon de Dall', gameName: 'Dall Sheep', reserveId: 'new-laurentia', category: 'moyen' },
-  { id: 'dindon', name: "Dindon sauvage de l'Est", gameName: 'Eastern Wild Turkey', reserveId: 'new-laurentia', category: 'oiseau' },
-  { id: 'loup', name: 'Loup gris du Nord-Ouest', gameName: 'Northwestern Grey Wolf', reserveId: 'new-laurentia', category: 'moyen' },
-  { id: 'colvert', name: 'Canard colvert', gameName: 'Mallard', reserveId: 'new-laurentia', category: 'oiseau' },
-  { id: 'orignal', name: "Orignal de l'Ouest", gameName: 'Western Moose', reserveId: 'new-laurentia', category: 'grand' },
-  { id: 'lagopede', name: 'Lagopède à queue blanche', gameName: 'White-tailed Ptarmigan', reserveId: 'new-laurentia', category: 'oiseau' },
-  { id: 'wapiti', name: 'Wapiti des Rocheuses', gameName: 'Rocky Mountain Elk', reserveId: 'new-laurentia', category: 'grand' },
-  { id: 'cerf-mulet', name: 'Cerf mulet des Rocheuses', gameName: 'Rocky Mountain Mule Deer', reserveId: 'new-laurentia', category: 'moyen' },
-  { id: 'lievre', name: "Lièvre d'Amérique", gameName: 'Snowshoe Hare', reserveId: 'new-laurentia', category: 'petit' },
-  { id: 'cerf-virginie', name: 'Cerf de Virginie du Nord', gameName: 'Northern White-tailed Deer', reserveId: 'new-laurentia', category: 'moyen' },
-  { id: 'bison', name: 'Bison des bois', gameName: 'Wood Bison', reserveId: 'new-laurentia', category: 'grand' },
-  { id: 'pronghorn', name: "Antilope d'Amérique", gameName: 'Rocky Mountain Pronghorn', reserveId: 'new-laurentia', category: 'moyen', addedIn: '0.3.0' },
-  { id: 'sanglier', name: "Sanglier d'Europe centrale", gameName: 'Central European Boar', reserveId: 'new-laurentia', category: 'moyen', addedIn: '0.3.0' },
+  { id: 'carcajou', name: "Glouton d'Amérique", gameName: 'American Wolverine', reserveId: 'new-laurentia', category: 'moyen', animalClass: 3 },
+  { id: 'grizzly', name: 'Grizzli', gameName: 'Grizzly Bear', reserveId: 'new-laurentia', category: 'grand', animalClass: 7 },
+  { id: 'mouflon-dall', name: 'Mouflon de Dall', gameName: 'Dall Sheep', reserveId: 'new-laurentia', category: 'moyen', animalClass: 5 },
+  { id: 'dindon', name: "Dindon sauvage de l'Est", gameName: 'Eastern Wild Turkey', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 2 },
+  { id: 'loup', name: 'Loup gris du Nord-Ouest', gameName: 'Northwestern Grey Wolf', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
+  { id: 'colvert', name: 'Canard colvert', gameName: 'Mallard', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 1 },
+  { id: 'orignal', name: "Élan de l'Ouest", gameName: 'Western Moose', reserveId: 'new-laurentia', category: 'grand', animalClass: 8 },
+  { id: 'lagopede', name: 'Lagopède à queue blanche', gameName: 'White-tailed Ptarmigan', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 1 },
+  { id: 'wapiti', name: 'Wapiti des Rocheuses', gameName: 'Rocky Mountain Elk', reserveId: 'new-laurentia', category: 'grand', animalClass: 7 },
+  { id: 'cerf-mulet', name: 'Cerf mulet des Rocheuses', gameName: 'Rocky Mountain Mule Deer', reserveId: 'new-laurentia', category: 'moyen', animalClass: 6 },
+  { id: 'lievre', name: "Lièvre d'Amérique", gameName: 'Snowshoe Hare', reserveId: 'new-laurentia', category: 'petit', animalClass: 1 },
+  { id: 'cerf-virginie', name: 'Cerf de Virginie du Nord-Ouest', gameName: 'Northern White-tailed Deer', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
+  { id: 'bison', name: 'Bison des bois', gameName: 'Wood Bison', reserveId: 'new-laurentia', category: 'grand', animalClass: 8 },
+  { id: 'pronghorn', name: "Antilope d'Amérique", gameName: 'Rocky Mountain Pronghorn', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4, addedIn: '0.3.0' },
+  { id: 'sanglier', name: "Sanglier d'Europe centrale", gameName: 'Central European Boar', reserveId: 'new-laurentia', category: 'moyen', animalClass: 5, addedIn: '0.3.0' },
   // Kilimaya Reserve
   { id: 'koudou', name: 'Grand koudou', gameName: 'Greater Kudu', reserveId: 'kilimaya', category: 'grand', blurb: 'Grande antilope aux cornes torsadées.' },
   { id: 'gnou', name: 'Gnou bleu', gameName: 'Blue Wildebeest', reserveId: 'kilimaya', category: 'grand', blurb: 'Herbivore migrateur des prairies ouvertes.' },

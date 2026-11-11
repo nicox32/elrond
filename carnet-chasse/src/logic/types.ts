@@ -33,6 +33,8 @@ export interface Species {
   addedIn?: string;
   /** Courte description (habitat, comportement). */
   blurb?: string;
+  /** Classe (niveau) de l'animal, de 1 à 9 : sert à choisir arme et munition. */
+  animalClass?: number;
 }
 
 export interface Weapon {
