@@ -101,7 +101,8 @@ export default function GestionScreen() {
         {needsCondition ? (
           <View style={{ maxWidth: 220 }}>
             <Field
-              label="Condition physique (%)"
+              label="Condition physique"
+              unit="%"
               value={condition}
               onChangeText={setCondition}
               keyboardType="decimal-pad"

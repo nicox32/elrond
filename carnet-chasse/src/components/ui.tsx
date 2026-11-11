@@ -200,11 +200,24 @@ export function Button({
   );
 }
 
-export function Field({ label, ...props }: TextInputProps & { label: string }) {
+/** Champ de saisie ; `unit` affiche l'unité dans la case (« 60 m »). */
+export function Field({ label, unit, ...props }: TextInputProps & { label: string; unit?: string }) {
   return (
     <View style={{ flex: 1 }}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput placeholderTextColor={colors.textMuted} {...props} style={[styles.input, props.style]} />
+      {unit ? (
+        <View style={[styles.input, { flexDirection: 'row', alignItems: 'center', paddingVertical: 0 }]}>
+          <TextInput
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel={`${label} (${unit})`}
+            {...props}
+            style={[{ flex: 1, minWidth: 0, width: '100%', color: colors.text, fontSize: 16, fontFamily: fonts.body, paddingVertical: 10 }, props.style]}
+          />
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.semibold, fontSize: 15, marginLeft: 6, flexShrink: 0 }}>{unit}</Text>
+        </View>
+      ) : (
+        <TextInput placeholderTextColor={colors.textMuted} {...props} style={[styles.input, props.style]} />
+      )}
     </View>
   );
 }

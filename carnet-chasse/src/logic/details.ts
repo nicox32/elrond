@@ -10,27 +10,29 @@ export interface NumField {
   key: NumKey;
   label: string;
   placeholder: string;
+  /** Unité affichée dans la case (m, kg, J…). */
+  unit?: string;
 }
 
 export const ANIMAL_FIELDS: NumField[] = [
-  { key: 'ageYears', label: 'Âge (ans)', placeholder: '12' },
+  { key: 'ageYears', label: 'Âge', placeholder: '12', unit: 'ans' },
   { key: 'animalClass', label: 'Classe', placeholder: '6' },
-  { key: 'conditionPct', label: 'Condition physique (%)', placeholder: '31,7' },
-  { key: 'weightKg', label: 'Poids (kg)', placeholder: '99,78' },
+  { key: 'conditionPct', label: 'Condition physique', placeholder: '31,7', unit: '%' },
+  { key: 'weightKg', label: 'Poids', placeholder: '99,78', unit: 'kg' },
 ];
 
 export const SHOT_FIELDS: NumField[] = [
-  { key: 'trackingDistanceM', label: 'Distance de traque (m)', placeholder: '60' },
-  { key: 'impactEnergyJ', label: "Énergie à l'impact (J)", placeholder: '2138' },
-  { key: 'windMs', label: 'Vent (m/s)', placeholder: '3,8' },
+  { key: 'trackingDistanceM', label: 'Distance de traque', placeholder: '60', unit: 'm' },
+  { key: 'impactEnergyJ', label: "Énergie à l'impact", placeholder: '2138', unit: 'J' },
+  { key: 'windMs', label: 'Vent', placeholder: '3,8', unit: 'm/s' },
 ];
 
 export const PRICE_FIELDS: NumField[] = [
-  { key: 'timeDegradationKg', label: 'Dégradation temps (kg)', placeholder: '0' },
-  { key: 'shotDegradationKg', label: 'Dégradation tir (kg)', placeholder: '3,35' },
-  { key: 'butcherWasteKg', label: 'Déchets de découpe (kg)', placeholder: '39,91' },
-  { key: 'netWeightKg', label: 'Poids après découpe (kg)', placeholder: '56,52' },
-  { key: 'pricePerKg', label: "Prix à l'unité (/kg)", placeholder: '2,6' },
+  { key: 'timeDegradationKg', label: 'Dégradation temps', placeholder: '0', unit: 'kg' },
+  { key: 'shotDegradationKg', label: 'Dégradation tir', placeholder: '3,35', unit: 'kg' },
+  { key: 'butcherWasteKg', label: 'Déchets de découpe', placeholder: '39,91', unit: 'kg' },
+  { key: 'netWeightKg', label: 'Poids après découpe', placeholder: '56,52', unit: 'kg' },
+  { key: 'pricePerKg', label: "Prix à l'unité", placeholder: '2,6', unit: '/kg' },
   { key: 'salePrice', label: 'Prix de vente', placeholder: '146' },
 ];
 

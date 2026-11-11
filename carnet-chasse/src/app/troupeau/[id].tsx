@@ -83,7 +83,7 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
         </>
       ) : null}
       <Grid2>
-        <Field label="Condition (%)" value={condition} onChangeText={setCondition} keyboardType="decimal-pad" placeholder="ex. 31,7" />
+        <Field label="Condition" unit="%" value={condition} onChangeText={setCondition} keyboardType="decimal-pad" placeholder="ex. 31,7" />
         <Select
           label="Robe"
           value={coat}

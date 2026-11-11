@@ -57,10 +57,22 @@ const fmt = (n: number | undefined) => (n === undefined ? '' : String(Math.round
 const filled = (...xs: (string | undefined | boolean)[]) => xs.filter((x) => x !== undefined && x !== '' && x !== false).length;
 
 /** Champ numérique compact pour les grilles du rapport. */
-function SmallNum({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (t: string) => void; placeholder?: string }) {
-  return (
-    <Field label={label} value={value} onChangeText={onChange} keyboardType="decimal-pad" placeholder={placeholder} />
-  );
+function SmallNum({
+  label,
+  value,
+  onChange,
+  placeholder,
+  unit,
+  keyboard = 'decimal-pad',
+}: {
+  label: string;
+  value: string;
+  onChange: (t: string) => void;
+  placeholder?: string;
+  unit?: string;
+  keyboard?: 'decimal-pad' | 'numbers-and-punctuation' | 'default';
+}) {
+  return <Field label={label} unit={unit} value={value} onChangeText={onChange} keyboardType={keyboard} placeholder={placeholder} />;
 }
 
 export default function EditionScreen() {
@@ -325,7 +337,7 @@ export default function EditionScreen() {
       {caliberHint ? <Text style={{ color: colors.olive, fontSize: 13, marginTop: 6 }}>{caliberHint}</Text> : null}
 
       <FieldRow>
-        <Field label="Distance de tir (m)" value={distance} onChangeText={setDistance} keyboardType="decimal-pad" placeholder="100" />
+        <Field label="Distance de tir" unit="m" value={distance} onChangeText={setDistance} keyboardType="decimal-pad" placeholder="100" />
         <Field label="Score du trophée" value={score} onChangeText={setScore} keyboardType="decimal-pad" placeholder="152,4" />
       </FieldRow>
 
@@ -360,7 +372,7 @@ export default function EditionScreen() {
         </ChipRow>
         <Grid2>
           {ANIMAL_FIELDS.map((f) => (
-            <SmallNum key={f.key} label={f.label} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
+            <SmallNum key={f.key} label={f.label} unit={f.unit} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
           ))}
         </Grid2>
         <Grid2>
@@ -440,10 +452,10 @@ export default function EditionScreen() {
           options={PROJECTILE_TYPES}
         />
         <Grid2>
-          <SmallNum label="Heure de la mort" value={killTime} onChange={setKillTime} placeholder="13:59" />
-          <SmallNum label="Temps de traque" value={trackingTime} onChange={setTrackingTime} placeholder="9m49s" />
+          <SmallNum label="Heure de la mort" value={killTime} onChange={setKillTime} placeholder="13:59" keyboard="numbers-and-punctuation" />
+          <SmallNum label="Temps de traque" value={trackingTime} onChange={setTrackingTime} placeholder="9m49s" keyboard="default" />
           {SHOT_FIELDS.map((f) => (
-            <SmallNum key={f.key} label={f.label} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
+            <SmallNum key={f.key} label={f.label} unit={f.unit} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
           ))}
         </Grid2>
         {energyRange !== undefined && energyKind ? (
@@ -470,10 +482,10 @@ export default function EditionScreen() {
         <ChipRow>{yesNo(dogUsed, setDogUsed)}</ChipRow>
       </Fold>
 
-      <Fold title="Dégâts aux organes (%)" summary={`${organCount} organe(s) noté(s)`} open={open.organes} onToggle={toggle('organes')}>
+      <Fold title="Dégâts aux organes" summary={`${organCount} organe(s) noté(s)`} open={open.organes} onToggle={toggle('organes')}>
         <Grid2>
           {ORGAN_IDS.map((o) => (
-            <SmallNum key={o} label={ORGAN_LABELS[o]} value={organs[o]} onChange={(t) => setOrgans((s) => ({ ...s, [o]: t }))} placeholder="0" />
+            <SmallNum key={o} label={ORGAN_LABELS[o]} value={organs[o]} onChange={(t) => setOrgans((s) => ({ ...s, [o]: t }))} placeholder="0" unit="%" />
           ))}
         </Grid2>
       </Fold>
@@ -490,6 +502,7 @@ export default function EditionScreen() {
             <SmallNum
               key={f.key}
               label={f.label}
+              unit={f.unit}
               value={nums[f.key]}
               onChange={setNum(f.key)}
               placeholder={
