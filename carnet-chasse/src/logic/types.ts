@@ -170,6 +170,8 @@ export interface Herd {
   createdAt: string;
   lastVisit: string;
   notes?: string;
+  /** Identifiant du rappel « toutes les 24 h » programmé sur ce téléphone. */
+  reminderId?: string;
 }
 
 export type EnergyRange = [number, number] | null;

@@ -19,6 +19,7 @@ import {
 } from '../../components/ui';
 import { findWeapon, GAME_VERSION, getReserve, getSpecies, RESERVES, SPECIES } from '../../data/game';
 import { totalEarnings } from '../../logic/details';
+import { isVisitDue } from '../../logic/herds';
 import { formatNumber, formatScore, overview, sortByDateDesc } from '../../logic/stats';
 import type { ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -90,6 +91,14 @@ export default function JournalScreen() {
       ) : null}
 
       <Button label="+ Nouvelle chasse" onPress={() => router.push('/chasse/edition')} />
+
+      {state.herds.some((h) => isVisitDue(h)) ? (
+        <Pressable onPress={() => router.push('/troupeaux')} style={{ borderWidth: 1, borderColor: colors.accent, borderRadius: 14, padding: 12, backgroundColor: colors.accentSoft }}>
+          <Text style={{ color: colors.accent, fontFamily: fonts.semibold, fontSize: 15 }}>
+            {state.herds.filter((h) => isVisitDue(h)).length} troupeau(x) à revoir (dernière visite il y a plus de 24 h) →
+          </Text>
+        </Pressable>
+      ) : null}
 
       <SectionTitle
         right={

@@ -6,10 +6,21 @@ import { VerdictBadge } from '../../components/Verdict';
 import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, styles } from '../../components/ui';
 import { getReserve, getSpecies } from '../../data/game';
 import { getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
-import { adviceFor, AGE_LABELS, daysSince, malesTakenToday, POPULATION_LABELS, sortAnimals, summarizeHerd } from '../../logic/herds';
+import {
+  adviceFor,
+  AGE_LABELS,
+  AGING_NOTE,
+  daysSince,
+  isVisitDue,
+  malesTakenToday,
+  POPULATION_LABELS,
+  sortAnimals,
+  summarizeHerd,
+} from '../../logic/herds';
 import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
 import { formatDate, parseNumber } from '../../logic/stats';
 import type { AgeStage, AnimalSex, HerdAnimal, PopulationStatus } from '../../logic/types';
+import { cancelHerdReminder, REMINDERS_SUPPORTED, scheduleHerdReminder } from '../../reminders';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
@@ -172,6 +183,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
 export default function HerdScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state, updateHerd, deleteHerd, addAnimal } = useCarnet();
+  const [reminderMsg, setReminderMsg] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const herd = state.herds.find((h) => h.id === id);
@@ -190,6 +202,34 @@ export default function HerdScreen() {
   const takenToday = malesTakenToday(herd);
   const days = daysSince(herd.lastVisit);
   const animals = sortAnimals(herd.animals);
+  const due = isVisitDue(herd);
+  const h = herd;
+
+  /** Visite notée : le compte à rebours de 24 h du rappel repart de maintenant. */
+  async function visitToday() {
+    const patch: { lastVisit: string; reminderId?: string } = { lastVisit: new Date().toISOString() };
+    if (h.reminderId) {
+      await cancelHerdReminder(h.reminderId);
+      patch.reminderId = await scheduleHerdReminder(h.name);
+    }
+    updateHerd(h.id, patch);
+  }
+
+  async function toggleReminder() {
+    if (h.reminderId) {
+      await cancelHerdReminder(h.reminderId);
+      updateHerd(h.id, { reminderId: undefined });
+      setReminderMsg('Rappel arrêté.');
+      return;
+    }
+    const rid = await scheduleHerdReminder(h.name);
+    if (rid) {
+      updateHerd(h.id, { reminderId: rid });
+      setReminderMsg('Rappel programmé : une notification toutes les 24 h.');
+    } else {
+      setReminderMsg('Notifications refusées : autorisez-les pour Affût dans les réglages du téléphone.');
+    }
+  }
 
   return (
     <Screen top={false}>
@@ -204,8 +244,27 @@ export default function HerdScreen() {
           Dernière visite : {days === 0 ? "aujourd'hui" : `il y a ${days} jour${days > 1 ? 's' : ''}`}
         </Text>
         <View style={{ marginTop: 6 }}>
-          <Button label="Visite aujourd'hui" kind="secondary" onPress={() => updateHerd(herd.id, { lastVisit: new Date().toISOString() })} />
+          <Button label="Visite aujourd'hui" kind="secondary" onPress={visitToday} />
         </View>
+      </Card>
+
+      <Card style={{ gap: 6, borderColor: due ? colors.accent : colors.border }}>
+        <View style={[styles.row, { justifyContent: 'space-between' }]}>
+          <Text style={styles.strong}>Surveillance toutes les 24 h</Text>
+          {due ? <Text style={{ color: colors.accent, fontFamily: fonts.semibold }}>À revoir</Text> : null}
+        </View>
+        <Text style={styles.muted}>{AGING_NOTE}</Text>
+        {REMINDERS_SUPPORTED ? (
+          <Button
+            label={herd.reminderId ? 'Arrêter le rappel' : 'Me rappeler toutes les 24 h'}
+            kind={herd.reminderId ? 'secondary' : 'primary'}
+            onPress={toggleReminder}
+          />
+        ) : (
+          <Text style={styles.muted}>Les notifications de rappel fonctionnent dans l&apos;appli Android.</Text>
+        )}
+        {herd.reminderId ? <Text style={{ color: colors.olive, fontSize: 13 }}>Rappel actif sur ce téléphone.</Text> : null}
+        {reminderMsg ? <Text style={styles.muted}>{reminderMsg}</Text> : null}
       </Card>
 
       {takenToday >= 1 ? (
@@ -290,6 +349,7 @@ export default function HerdScreen() {
                   label="Supprimer"
                   kind="danger"
                   onPress={() => {
+                    cancelHerdReminder(herd.reminderId);
                     deleteHerd(herd.id);
                     router.back();
                   }}

@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 
 import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, styles } from '../components/ui';
 import { getReserve, getSpecies, RESERVES, SPECIES, speciesOfReserve } from '../data/game';
-import { daysSince, POPULATION_LABELS, summarizeHerd } from '../logic/herds';
+import { AGING_NOTE, daysSince, isVisitDue, POPULATION_LABELS, summarizeHerd } from '../logic/herds';
 import type { ReserveId } from '../logic/types';
 import { useCarnet } from '../state/CarnetProvider';
 import { colors, fonts } from '../theme';
@@ -84,6 +84,7 @@ export default function TroupeauxScreen() {
         Notez les animaux d&apos;un troupeau à chaque passage : l&apos;appli applique votre guide pour dire lesquels prélever et
         lesquels épargner.
       </Text>
+      <Text style={[styles.muted, { color: colors.olive }]}>Revenez voir chaque troupeau toutes les 24 h. {AGING_NOTE}</Text>
       <AddHerd />
 
       <SectionTitle right={<Text style={styles.muted}>{state.herds.length}</Text>}>Mes troupeaux</SectionTitle>
@@ -112,6 +113,8 @@ export default function TroupeauxScreen() {
               </Text>
               <Text style={[styles.muted, { fontSize: 12 }]}>
                 Dernière visite : {days === 0 ? "aujourd'hui" : `il y a ${days} jour${days > 1 ? 's' : ''}`}
+                {isVisitDue(h) ? <Text style={{ color: colors.accent, fontFamily: fonts.semibold }}> · à revoir</Text> : null}
+                {h.reminderId ? ' · rappel 24 h' : ''}
               </Text>
             </Card>
           );

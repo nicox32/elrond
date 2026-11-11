@@ -33,7 +33,8 @@
         {
           "photosPermission": "Le carnet de chasse ouvre vos photos pour joindre une capture d'écran à un trophée."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

@@ -331,3 +331,12 @@ test('fiches perso : lecture de la sauvegarde et fusion avec les fiches fournies
   assert.equal(mulet!.animalClass, 6);
   assert.equal(getSpeciesInfo('lion', s!.speciesSheets), undefined);
 });
+
+test('troupeau à revoir toutes les 24 h', async () => {
+  const { isVisitDue } = await import('../src/logic/herds.ts');
+  const herd = (lastVisit: string) => ({ lastVisit }) as never;
+  const now = new Date('2026-11-12T10:00:00Z');
+  assert.equal(isVisitDue(herd('2026-11-11T10:00:01Z'), now), false);
+  assert.equal(isVisitDue(herd('2026-11-11T10:00:00Z'), now), true);
+  assert.equal(isVisitDue(herd('2026-11-09T08:00:00Z'), now), true);
+});

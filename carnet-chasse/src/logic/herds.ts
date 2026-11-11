@@ -66,3 +66,14 @@ export function sortAnimals(animals: HerdAnimal[]): HerdAnimal[] {
 export function daysSince(iso: string, now = new Date()): number {
   return Math.max(0, Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000));
 }
+
+/** Intervalle conseillé entre deux visites d'un troupeau suivi. */
+export const VISIT_EVERY_HOURS = 24;
+
+/** Le troupeau n'a pas été revu depuis 24 h (ou plus) : à surveiller. */
+export function isVisitDue(herd: Herd, now = new Date()): boolean {
+  return now.getTime() - new Date(herd.lastVisit).getTime() >= VISIT_EVERY_HOURS * 3_600_000;
+}
+
+/** Rappel affiché avec le suivi : d'après l'encyclopédie du jeu, une année de vie = 3 jours en jeu. */
+export const AGING_NOTE = "1 an de vie d'un animal = 3 jours en jeu : dormez au chalet pour faire avancer le temps, puis revenez voir le troupeau.";

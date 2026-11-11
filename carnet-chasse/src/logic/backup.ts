@@ -191,6 +191,7 @@ function parseHerd(v: unknown): Herd | null {
     createdAt,
     lastVisit: str(v.lastVisit) ?? createdAt,
     notes: str(v.notes),
+    reminderId: str(v.reminderId),
   };
 }
 
