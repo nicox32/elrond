@@ -20,7 +20,7 @@ interface CarnetContextValue {
   replaceAll: (state: CarnetState) => void;
   addZone: (z: Omit<NeedZone, 'id'>) => void;
   removeZone: (id: string) => void;
-  addHerd: (h: Pick<Herd, 'name' | 'speciesId' | 'reserveId' | 'place'>) => string;
+  addHerd: (h: Pick<Herd, 'name' | 'speciesId' | 'reserveId' | 'place' | 'camp'>) => string;
   updateHerd: (id: string, patch: Partial<Omit<Herd, 'id' | 'animals'>>) => void;
   deleteHerd: (id: string) => void;
   addAnimal: (herdId: string, a: Omit<HerdAnimal, 'id' | 'lastSeen' | 'status'>) => void;
@@ -116,7 +116,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, needZones: s.needZones.filter((z) => z.id !== id) }));
   }, []);
 
-  const addHerd = useCallback((h: Pick<Herd, 'name' | 'speciesId' | 'reserveId' | 'place'>) => {
+  const addHerd = useCallback((h: Pick<Herd, 'name' | 'speciesId' | 'reserveId' | 'place' | 'camp'>) => {
     const id = newId();
     const now = new Date().toISOString();
     setState((s) => ({ ...s, herds: [{ ...h, id, animals: [], createdAt: now, lastVisit: now }, ...s.herds] }));

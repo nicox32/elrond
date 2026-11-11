@@ -47,7 +47,7 @@ function ZoneCard({ zone, now }: { zone: NeedZone; now: number }) {
         {formatTime(zone.startMin)} – {formatTime(zone.endMin)} · {getReserve(zone.reserveId)?.name}
       </Text>
       {zone.place ? <Text style={styles.muted}>📍 {zone.place}</Text> : null}
-      <Text style={{ color: colors.olive, fontSize: 13 }}>⏰ Réveil conseillé au chalet : {formatTime(wakeUpTime(zone))}</Text>
+      <Text style={{ color: colors.olive, fontSize: 13 }}>⏰ Réveil conseillé (chalet ou tente) : {formatTime(wakeUpTime(zone))}</Text>
       {confirm ? (
         <View style={styles.row}>
           <Text style={[styles.muted, { flex: 1 }]}>Supprimer cette zone ?</Text>
@@ -182,7 +182,7 @@ export default function HorairesScreen() {
       {zones.length === 0 ? (
         <Empty>
           Aucune zone enregistrée.{'\n'}Quand vous examinez une zone de besoin en jeu, notez ici son horaire : l&apos;appli
-          vous dira quand vous réveiller au chalet.
+          vous dira quand vous réveiller au chalet ou sous la tente.
         </Empty>
       ) : (
         zones.map((z) => <ZoneCard key={z.id} zone={z} now={now} />)
@@ -207,7 +207,7 @@ export default function HorairesScreen() {
       <Card style={{ gap: 6 }}>
         {[
           'Repérez une zone de besoin (ex. abreuvement cerf mulet 09:00 – 11:30) et notez-la ci-dessus.',
-          'Allez dans un chalet ou un camping.',
+          'Allez dans un chalet, un camping ou une tente proche du point de chasse (plus rapide pour surveiller).',
           "Dormez jusqu'un peu avant l'horaire (ex. réveil à 08:45).",
           'Rendez-vous sur place en avance, installez-vous à 150 m sous le vent et attendez le troupeau.',
         ].map((t, i) => (

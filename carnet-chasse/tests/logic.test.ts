@@ -340,3 +340,8 @@ test('troupeau à revoir toutes les 24 h', async () => {
   assert.equal(isVisitDue(herd('2026-11-11T10:00:00Z'), now), true);
   assert.equal(isVisitDue(herd('2026-11-09T08:00:00Z'), now), true);
 });
+
+test('troupeau : tente la plus proche conservée dans la sauvegarde', () => {
+  const s = parseState({ herds: [{ id: 'h', name: 'Lac', speciesId: 'cerf-mulet', reserveId: 'new-laurentia', createdAt: '2026-11-01', camp: 'Tente de la crête', animals: [] }] });
+  assert.equal(s?.herds[0].camp, 'Tente de la crête');
+});

@@ -186,6 +186,7 @@ function parseHerd(v: unknown): Herd | null {
     speciesId,
     reserveId,
     place: str(v.place),
+    camp: str(v.camp),
     population: oneOf(v.population, POPULATIONS),
     animals: Array.isArray(v.animals) ? v.animals.map(parseAnimal).filter((a): a is HerdAnimal => a !== null) : [],
     createdAt,

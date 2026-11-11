@@ -18,6 +18,7 @@ function AddHerd() {
   const [speciesId, setSpeciesId] = useState<string | undefined>();
   const [name, setName] = useState('');
   const [place, setPlace] = useState('');
+  const [camp, setCamp] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return <Button label="+ Suivre un nouveau troupeau" onPress={() => setOpen(true)} />;
@@ -30,6 +31,7 @@ function AddHerd() {
       speciesId,
       reserveId,
       place: place.trim() || undefined,
+      camp: camp.trim() || undefined,
     });
     setOpen(false);
     router.push({ pathname: '/troupeau/[id]', params: { id } });
@@ -59,6 +61,7 @@ function AddHerd() {
         ))}
       </ChipRow>
       <Field label="Lieu (facultatif)" value={place} onChangeText={setPlace} placeholder="ex. clairière au nord du lac" />
+      <Field label="Tente la plus proche (facultatif)" value={camp} onChangeText={setCamp} placeholder="ex. tente de la crête, 400 m au sud" />
       <Field label="Nom (facultatif)" value={name} onChangeText={setName} placeholder="ex. Les cerfs du lac" />
       {error ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold, marginTop: 8 }}>{error}</Text> : null}
       <View style={[styles.row, { marginTop: 12 }]}>
@@ -105,6 +108,7 @@ export default function TroupeauxScreen() {
               <Text style={styles.muted} numberOfLines={1}>
                 {getSpecies(h.speciesId)?.name} · {getReserve(h.reserveId)?.name}
                 {h.place ? ` · ${h.place}` : ''}
+                {h.camp ? ` · ⛺ ${h.camp}` : ''}
               </Text>
               <Text style={styles.text}>
                 {s.alive} vivant{s.alive > 1 ? 's' : ''} ({s.males} ♂, {s.females} ♀) ·{' '}

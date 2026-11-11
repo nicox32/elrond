@@ -243,6 +243,12 @@ export default function HerdScreen() {
         <Text style={styles.text}>
           Dernière visite : {days === 0 ? "aujourd'hui" : `il y a ${days} jour${days > 1 ? 's' : ''}`}
         </Text>
+        <Field
+          label="⛺ Tente la plus proche"
+          value={herd.camp ?? ''}
+          onChangeText={(t) => updateHerd(herd.id, { camp: t || undefined })}
+          placeholder="ex. tente de la crête, 400 m au sud"
+        />
         <View style={{ marginTop: 6 }}>
           <Button label="Visite aujourd'hui" kind="secondary" onPress={visitToday} />
         </View>

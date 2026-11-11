@@ -146,7 +146,7 @@ export const GOLDEN_RULES: { title: string; text: string }[] = [
   },
   {
     title: 'Faites passer le temps',
-    text: "Dormez dans un chalet pour faire avancer les jours : c'est ce qui fait grandir, vieillir et évoluer les animaux.",
+    text: "Dormez dans un chalet, ou sous une tente près des points de chasse pour surveiller plus vite, afin de faire avancer les jours : c'est ce qui fait grandir, vieillir et évoluer les animaux.",
   },
 ];
 

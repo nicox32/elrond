@@ -76,4 +76,4 @@ export function isVisitDue(herd: Herd, now = new Date()): boolean {
 }
 
 /** Rappel affiché avec le suivi : d'après l'encyclopédie du jeu, une année de vie = 3 jours en jeu. */
-export const AGING_NOTE = "1 an de vie d'un animal = 3 jours en jeu : dormez au chalet pour faire avancer le temps, puis revenez voir le troupeau.";
+export const AGING_NOTE = "1 an de vie d'un animal = 3 jours en jeu : dormez au chalet ou sous une tente près du troupeau pour faire avancer le temps, puis revenez le voir.";

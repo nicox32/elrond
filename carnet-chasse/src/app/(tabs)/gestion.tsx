@@ -180,7 +180,7 @@ export default function GestionScreen() {
           étoiles) à prélever.
         </Text>
         <Text style={styles.text}>
-          • Faites passer le temps : pour gérer ce troupeau précis, dormez quelques jours au chalet. Les jeunes grandissent,
+          • Faites passer le temps : pour gérer ce troupeau précis, dormez quelques jours au chalet, ou sous une tente près du troupeau pour revenir plus vite. Les jeunes grandissent,
           de nouveaux individus apparaissent, et vous pourrez revenir voir si des mâles mûrs intéressants se sont installés.
         </Text>
         <Text style={[styles.strong, { color: colors.olive }]}>

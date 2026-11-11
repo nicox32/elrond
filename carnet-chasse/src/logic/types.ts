@@ -165,6 +165,8 @@ export interface Herd {
   speciesId: string;
   reserveId: ReserveId;
   place?: string;
+  /** Tente (ou chalet) la plus proche pour dormir et revenir vite. */
+  camp?: string;
   population?: PopulationStatus;
   animals: HerdAnimal[];
   createdAt: string;
