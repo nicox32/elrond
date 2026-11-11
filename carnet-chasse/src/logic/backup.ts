@@ -2,6 +2,8 @@ import { ALL_NUM_FIELDS } from './details.ts';
 import { isMapUrl } from './maps.ts';
 import { ORGAN_IDS } from './types.ts';
 import type {
+  Ammo,
+  WeaponSheet,
   EnergyRange,
   SpeciesSheet,
   AgeStage,
@@ -246,6 +248,48 @@ function parseSheet(v: unknown): SpeciesSheet | null {
   };
 }
 
+const classRange = (v: unknown): [number, number] | undefined => {
+  const r = pair(v);
+  return r && Number.isInteger(r[0]) && Number.isInteger(r[1]) && r[0] >= 1 && r[1] <= 10 ? r : undefined;
+};
+
+function parseWeaponSheet(v: unknown): WeaponSheet | null {
+  if (!isObj(v)) return null;
+  const mag = num(v.magazine);
+  return {
+    action: str(v.action),
+    description: str(v.description),
+    classRange: classRange(v.classRange),
+    magazine: mag !== undefined && Number.isInteger(mag) && mag > 0 && mag < 100 ? mag : undefined,
+    precision: str(v.precision),
+    recoil: str(v.recoil),
+    noise: str(v.noise),
+    photoUri: str(v.photoUri),
+  };
+}
+
+function parseAmmo(id: string, v: unknown): Ammo | null {
+  if (!isObj(v)) return null;
+  const name = str(v.name);
+  const caliber = str(v.caliber);
+  if (!name || !caliber) return null;
+  return {
+    id,
+    name,
+    brand: str(v.brand),
+    caliber,
+    classRange: classRange(v.classRange),
+    description: str(v.description),
+    projectile: str(v.projectile),
+    penetration: str(v.penetration),
+    recoilReduced: str(v.recoilReduced),
+    precision: str(v.precision),
+    cavity: str(v.cavity),
+    photoUri: str(v.photoUri),
+    custom: v.custom === true,
+  };
+}
+
 /** Valide des données lues (stockage ou sauvegarde importée). Les entrées illisibles sont ignorées. */
 export function parseState(raw: unknown): CarnetState | null {
   if (!isObj(raw)) return null;
@@ -273,6 +317,23 @@ export function parseState(raw: unknown): CarnetState | null {
       if (u && isMapUrl(u)) mapUrls[r] = u;
     }
   }
+  const weaponSheets: Record<string, WeaponSheet> = {};
+  if (isObj(raw.weaponSheets)) {
+    for (const [id, v] of Object.entries(raw.weaponSheets)) {
+      const w = parseWeaponSheet(v);
+      if (w) weaponSheets[id] = w;
+    }
+  }
+  const ammoSheets: Record<string, Ammo> = {};
+  if (isObj(raw.ammoSheets)) {
+    for (const [id, v] of Object.entries(raw.ammoSheets)) {
+      const a = parseAmmo(id, v);
+      if (a) ammoSheets[id] = a;
+    }
+  }
+  const ownedAmmoIds = Array.isArray(raw.ownedAmmoIds)
+    ? [...new Set(raw.ownedAmmoIds.filter((x): x is string => typeof x === 'string'))]
+    : [];
   const herds = Array.isArray(raw.herds) ? raw.herds.map(parseHerd).filter((h): h is Herd => h !== null) : [];
   return {
     hunts,
@@ -281,6 +342,9 @@ export function parseState(raw: unknown): CarnetState | null {
     herds,
     speciesSheets,
     mapUrls,
+    weaponSheets,
+    ammoSheets,
+    ownedAmmoIds,
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),

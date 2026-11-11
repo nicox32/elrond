@@ -31,6 +31,7 @@ import {
   SHOT_FIELDS,
   WEATHER_CHOICES,
 } from '../../logic/details';
+import { ammoForCaliber, classFits, formatClassRange, getWeaponSheet, parseClassRange } from '../../data/armory';
 import { checkEnergy, energyKindFor, formatRange, getSpeciesInfo } from '../../data/speciesInfo';
 import { formatTime, parseTime } from '../../logic/schedule';
 import { formatDate, formatNumber, formatScore, parseNumber } from '../../logic/stats';
@@ -182,6 +183,20 @@ export default function EditionScreen() {
   const energyKind = energyKindFor(weapon?.type);
   const energyRange = info && energyKind ? info.energy[energyKind] : undefined;
   const energyStatus = checkEnergy(info, energyKind, parsedNums.impactEnergyJ);
+
+  // Armurerie : munitions du calibre de l'arme (en stock d'abord) et contrôle des classes affichées en jeu.
+  const caliberAmmo = weapon
+    ? [...ammoForCaliber(weapon.caliber, state.ammoSheets)].sort(
+        (a, b) => Number(state.ownedAmmoIds.includes(b.id)) - Number(state.ownedAmmoIds.includes(a.id)),
+      )
+    : [];
+  const animalCls = parsedNums.animalClass ?? info?.animalClass;
+  const weaponRange = weapon ? getWeaponSheet(weapon.id, state.weaponSheets)?.classRange : undefined;
+  const ammoRange = parseClassRange(ammoClass);
+  const classChecks = [
+    { label: 'arme', range: formatClassRange(weaponRange), ok: classFits(animalCls, weaponRange) },
+    { label: 'munition', range: formatClassRange(ammoRange), ok: classFits(animalCls, ammoRange) },
+  ].filter((c) => c.ok !== undefined);
 
   function changeReserve(r: ReserveId) {
     setReserveId(r);
@@ -375,6 +390,30 @@ export default function EditionScreen() {
         open={open.tir}
         onToggle={toggle('tir')}
       >
+        {weapon && caliberAmmo.length ? (
+          <>
+            <Label>Munitions {weapon.caliber}</Label>
+            <ChipRow>
+              {caliberAmmo.map((m) => (
+                <Chip
+                  key={m.id}
+                  label={`${m.name.replace(/^Lewellings\s+/i, '')}${m.classRange ? ` · ${formatClassRange(m.classRange)}` : ''}`}
+                  selected={ammo.trim().toLowerCase() === m.name.toLowerCase()}
+                  onPress={() => {
+                    setAmmo(m.name);
+                    if (m.projectile) setAmmoType(m.projectile);
+                    setAmmoClass(formatClassRange(m.classRange) ?? '');
+                  }}
+                />
+              ))}
+            </ChipRow>
+          </>
+        ) : null}
+        {classChecks.length ? (
+          <Text style={{ fontSize: 13, marginTop: 6, fontFamily: fonts.semibold, color: classChecks.some((c) => c.ok === false) ? colors.accent : colors.olive }}>
+            Classe de l&apos;animal {animalCls} · {classChecks.map((c) => `${c.label} ${c.range} ${c.ok ? '✓' : '✗ hors plage'}`).join(' · ')}
+          </Text>
+        ) : null}
         <Field label="Type de munitions" value={ammoType} onChangeText={setAmmoType} placeholder="Têtes creuses à pointe polymère" />
         <View style={[styles.row, { flexWrap: 'wrap' }]}>
           <Field label="Munition" value={ammo} onChangeText={setAmmo} placeholder="Lewellings Grande Swift" />

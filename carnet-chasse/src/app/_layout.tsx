@@ -46,6 +46,10 @@ function AppStack() {
       <Stack.Screen name="espece/[id]" options={{ title: 'Espèce' }} />
       <Stack.Screen name="espece/fiche" options={{ title: 'Fiche du jeu' }} />
       <Stack.Screen name="carte" options={{ title: 'Carte interactive' }} />
+      <Stack.Screen name="arme/[id]" options={{ title: 'Arme' }} />
+      <Stack.Screen name="arme/fiche" options={{ title: 'Fiche de l’arme' }} />
+      <Stack.Screen name="munition/[id]" options={{ title: 'Munition' }} />
+      <Stack.Screen name="munition/edition" options={{ title: 'Munition' }} />
     </Stack>
   );
 }

@@ -386,3 +386,53 @@ test('troupeau : robe de l’animal conservée dans la sauvegarde', () => {
     animals: [{ id: 'a', sex: 'male', age: 'mur', coat: 'Mélanique', lastSeen: '2026-11-11' }] }] });
   assert.equal(s?.herds[0].animals[0].coat, 'Mélanique');
 });
+
+test('armurerie : calibres, munitions compatibles, classes', async () => {
+  const { caliberKey, sameCaliber, ammoForCaliber, allAmmo, getWeaponSheet, parseClassRange, classFits, formatClassRange } = await import(
+    '../src/data/armory.ts'
+  );
+  assert.equal(caliberKey('.308 Win'), caliberKey('.308 Winchester'));
+  assert.equal(sameCaliber('.375 H&H Magnum', '.375 H&H'), true);
+  assert.equal(sameCaliber('6,5x55 Swedish', '6.5x55'), true);
+  assert.equal(sameCaliber('.30-06 Springfield', '.308 Winchester'), false);
+  assert.equal(sameCaliber('.22 LR', '.22 lr'), true);
+  assert.deepEqual(ammoForCaliber('.308 Win', {}).map((a) => a.name), [
+    'Lewellings Firefly Shock', 'Lewellings Nucleus Break', 'Lewellings Grande Swift',
+  ]);
+  assert.equal(ammoForCaliber('.243 Win', {}).length, 0);
+  const sheets = {
+    'lewellings-grande-swift-308': { id: 'lewellings-grande-swift-308', name: 'Lewellings Grande Swift', caliber: '.308 Winchester', precision: 'Standard', photoUri: 'file:///photos/m.jpg' },
+    'perso-1': { id: 'perso-1', name: 'Ma balle', caliber: '.243 Win', classRange: [2, 4] as [number, number], custom: true },
+  };
+  const all = allAmmo(sheets);
+  assert.equal(all.length, 4);
+  const swift = all.find((a) => a.id === 'lewellings-grande-swift-308')!;
+  assert.equal(swift.precision, 'Standard');
+  assert.deepEqual(swift.classRange, [3, 5]); // la correction garde les données fournies
+  assert.equal(ammoForCaliber('.243 Win', sheets)[0].name, 'Ma balle');
+  const mk2 = getWeaponSheet('primacy-classic-hunter-mk2', { 'primacy-classic-hunter-mk2': { photoUri: 'x' } });
+  assert.equal(mk2?.magazine, 4);
+  assert.equal(mk2?.photoUri, 'x');
+  assert.deepEqual(parseClassRange('3-6'), [3, 6]);
+  assert.deepEqual(parseClassRange('4'), [4, 4]);
+  assert.equal(parseClassRange('6-3'), undefined);
+  assert.equal(classFits(6, [3, 6]), true);
+  assert.equal(classFits(6, [3, 5]), false);
+  assert.equal(classFits(undefined, [3, 5]), undefined);
+  assert.equal(formatClassRange([4, 6]), '4-6');
+});
+
+test('sauvegarde : fiches d’armes, munitions et stock', () => {
+  const s = parseState({
+    weaponSheets: { mk2: { magazine: 4, classRange: [3, 6], precision: 'Supérieur(e)', photoUri: 'file:///p.jpg' }, bad: 'x' },
+    ammoSheets: { 'perso-1': { name: 'Ma balle', caliber: '.243 Win', classRange: [5, 2], custom: true }, vide: { name: 'Sans calibre' } },
+    ownedAmmoIds: ['perso-1', 'perso-1', 7],
+  });
+  assert.equal(s?.weaponSheets.mk2.magazine, 4);
+  assert.deepEqual(s?.weaponSheets.mk2.classRange, [3, 6]);
+  assert.equal('bad' in s!.weaponSheets, false);
+  assert.equal(s?.ammoSheets['perso-1'].classRange, undefined);
+  assert.equal(s?.ammoSheets['perso-1'].custom, true);
+  assert.equal('vide' in s!.ammoSheets, false);
+  assert.deepEqual(s?.ownedAmmoIds, ['perso-1']);
+});

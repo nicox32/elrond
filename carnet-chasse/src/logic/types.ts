@@ -195,6 +195,36 @@ export interface SpeciesSheet {
   anecdote?: string;
 }
 
+/** Fiche d'arme recopiée depuis l'armurerie du jeu (tout facultatif), avec la photo du joueur. */
+export interface WeaponSheet {
+  action?: string;
+  description?: string;
+  /** « Niveau » affiché en jeu : classes d'animaux visées. */
+  classRange?: [number, number];
+  magazine?: number;
+  precision?: string;
+  recoil?: string;
+  noise?: string;
+  photoUri?: string;
+}
+
+/** Munition du jeu (fournie ou ajoutée par le joueur). */
+export interface Ammo {
+  id: string;
+  name: string;
+  brand?: string;
+  caliber: string;
+  classRange?: [number, number];
+  description?: string;
+  projectile?: string;
+  penetration?: string;
+  recoilReduced?: string;
+  precision?: string;
+  cavity?: string;
+  photoUri?: string;
+  custom?: boolean;
+}
+
 export interface CarnetState {
   hunts: Hunt[];
   ownedWeaponIds: string[];
@@ -205,8 +235,24 @@ export interface CarnetState {
   speciesSheets: Record<string, SpeciesSheet>;
   /** Lien de la carte interactive (Shackmaps) choisi pour chaque réserve. */
   mapUrls: Partial<Record<ReserveId, string>>;
+  /** Fiches d'armes du joueur (corrections, photos), par identifiant d'arme. */
+  weaponSheets: Record<string, WeaponSheet>;
+  /** Munitions corrigées ou ajoutées par le joueur, par identifiant. */
+  ammoSheets: Record<string, Ammo>;
+  ownedAmmoIds: string[];
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
 
-export const EMPTY_STATE: CarnetState = { hunts: [], ownedWeaponIds: [], customWeapons: [], needZones: [], herds: [], speciesSheets: {}, mapUrls: {} };
+export const EMPTY_STATE: CarnetState = {
+  hunts: [],
+  ownedWeaponIds: [],
+  customWeapons: [],
+  needZones: [],
+  herds: [],
+  speciesSheets: {},
+  mapUrls: {},
+  weaponSheets: {},
+  ammoSheets: {},
+  ownedAmmoIds: [],
+};

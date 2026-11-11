@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { newId } from '../logic/stats';
-import { type CarnetState, EMPTY_STATE, type Herd, type HerdAnimal, type Hunt, type NeedZone, type ReserveId, type SpeciesSheet, type Weapon } from '../logic/types';
+import { type CarnetState, EMPTY_STATE, type Herd, type HerdAnimal, type Hunt, type NeedZone, type ReserveId, type SpeciesSheet, type Weapon, type WeaponSheet, type Ammo } from '../logic/types';
 import { deleteTrophyPhoto } from '../photos';
 import { loadState, saveState } from '../storage';
 
@@ -28,6 +28,10 @@ interface CarnetContextValue {
   removeAnimal: (herdId: string, animalId: string) => void;
   saveSheet: (speciesId: string, sheet: SpeciesSheet | null) => void;
   setMapUrl: (reserveId: ReserveId, url: string | undefined) => void;
+  saveWeaponSheet: (weaponId: string, sheet: WeaponSheet | null) => void;
+  saveAmmo: (ammo: Ammo) => void;
+  removeAmmoSheet: (ammoId: string) => void;
+  toggleOwnedAmmo: (ammoId: string) => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -176,6 +180,39 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const saveWeaponSheet = useCallback((weaponId: string, sheet: WeaponSheet | null) => {
+    const old = stateRef.current.weaponSheets[weaponId]?.photoUri;
+    if (old && old !== sheet?.photoUri) deleteTrophyPhoto(old);
+    setState((s) => {
+      const next = { ...s.weaponSheets };
+      if (sheet) next[weaponId] = sheet;
+      else delete next[weaponId];
+      return { ...s, weaponSheets: next };
+    });
+  }, []);
+
+  const saveAmmo = useCallback((ammo: Ammo) => {
+    const old = stateRef.current.ammoSheets[ammo.id]?.photoUri;
+    if (old && old !== ammo.photoUri) deleteTrophyPhoto(old);
+    setState((s) => ({ ...s, ammoSheets: { ...s.ammoSheets, [ammo.id]: ammo } }));
+  }, []);
+
+  const removeAmmoSheet = useCallback((ammoId: string) => {
+    deleteTrophyPhoto(stateRef.current.ammoSheets[ammoId]?.photoUri);
+    setState((s) => {
+      const next = { ...s.ammoSheets };
+      delete next[ammoId];
+      return { ...s, ammoSheets: next, ownedAmmoIds: s.ownedAmmoIds.filter((x) => x !== ammoId || !s.ammoSheets[ammoId]?.custom) };
+    });
+  }, []);
+
+  const toggleOwnedAmmo = useCallback((ammoId: string) => {
+    setState((s) => ({
+      ...s,
+      ownedAmmoIds: s.ownedAmmoIds.includes(ammoId) ? s.ownedAmmoIds.filter((x) => x !== ammoId) : [...s.ownedAmmoIds, ammoId],
+    }));
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -198,6 +235,10 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       removeAnimal,
       saveSheet,
       setMapUrl,
+      saveWeaponSheet,
+      saveAmmo,
+      removeAmmoSheet,
+      toggleOwnedAmmo,
     }),
     [
       state,
@@ -220,6 +261,10 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       removeAnimal,
       saveSheet,
       setMapUrl,
+      saveWeaponSheet,
+      saveAmmo,
+      removeAmmoSheet,
+      toggleOwnedAmmo,
     ],
   );
 
