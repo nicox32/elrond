@@ -17,7 +17,7 @@ import {
   TrophyFrame,
   styles,
 } from '../../components/ui';
-import { findWeapon, GAME_VERSION, getReserve, getSpecies, HUNTING_RESERVES, SPECIES } from '../../data/game';
+import { findWeapon, getReserve, getSpecies, HUNTING_RESERVES, SPECIES } from '../../data/game';
 import { totalEarnings } from '../../logic/details';
 import { isVisitDue } from '../../logic/herds';
 import { formatNumber, formatScore, overview, sortByDateDesc } from '../../logic/stats';
@@ -129,7 +129,6 @@ export default function JournalScreen() {
 
       <View style={{ marginTop: 24, gap: 6 }}>
         <Button label="Sauvegarder / restaurer mes données" kind="secondary" onPress={() => router.push('/sauvegarde')} />
-        <Text style={[styles.muted, { textAlign: 'center', fontSize: 12 }]}>Données du jeu : version {GAME_VERSION}</Text>
       </View>
     </Screen>
   );

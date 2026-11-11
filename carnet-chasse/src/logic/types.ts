@@ -29,8 +29,6 @@ export interface Species {
   category: SpeciesCategory;
   /** Animal capable de charger le chasseur. */
   dangerous?: boolean;
-  /** Mise à jour qui a ajouté l'espèce, si elle n'était pas là au départ. */
-  addedIn?: string;
   /** Courte description (habitat, comportement). */
   blurb?: string;
   /** Classe (niveau) de l'animal, de 1 à 9 : sert à choisir arme et munition. */

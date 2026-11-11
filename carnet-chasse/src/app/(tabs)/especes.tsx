@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Card, Chip, ChipRow, Screen, SectionTitle, Title, styles } from '../../components/ui';
-import { allWeapons, CATEGORY_LABELS, GAME_VERSION, RESERVES, SPECIES, speciesOfReserve, SUGGESTED_CALIBERS } from '../../data/game';
+import { allWeapons, CATEGORY_LABELS, RESERVES, SPECIES, speciesOfReserve, SUGGESTED_CALIBERS } from '../../data/game';
 import { getSpeciesInfo, speciesClass } from '../../data/speciesInfo';
 import { summarizeSpecies } from '../../logic/stats';
 import type { ReserveId, SpeciesCategory } from '../../logic/types';
@@ -22,7 +22,7 @@ export default function EspecesScreen() {
 
   return (
     <Screen>
-      <Title subtitle={`${SPECIES.length} espèces dans la version ${GAME_VERSION}`}>Espèces et réserves</Title>
+      <Title subtitle={`${SPECIES.length} espèces chassables`}>Espèces et réserves</Title>
       <ChipRow>
         {RESERVES.map((r) => (
           <Chip key={r.id} label={r.name} selected={reserve === r.id} onPress={() => setReserve(r.id)} />
@@ -76,7 +76,6 @@ export default function EspecesScreen() {
                   </View>
                   <Text style={styles.muted}>
                     {s.gameName}
-                    {s.addedIn ? ` · ajouté en ${s.addedIn}` : ''}
                     {speciesClass(s.id, state.speciesSheets) ? ` · classe ${speciesClass(s.id, state.speciesSheets)}` : ''}
                     {getSpeciesInfo(s.id, state.speciesSheets)
                       ? ' · fiche du jeu'
@@ -96,8 +95,7 @@ export default function EspecesScreen() {
       })}
 
       <Text style={[styles.muted, { marginTop: 16 }]}>
-        Calibres conseillés à titre indicatif : le jeu change à chaque mise à jour (la 1.4 a par exemple renforcé le
-        .375 H&amp;H et resserré la gerbe des fusils). Vérifiez en jeu.
+        Calibres conseillés à titre indicatif : vérifiez en jeu.
       </Text>
     </Screen>
   );

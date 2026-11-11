@@ -87,6 +87,6 @@ jobs:
           make_latest: false
           files: carnet-chasse/carnet-chasse-1.0.${{ github.run_number }}.apk
           body: |
-            Affût, le carnet de chasse pour Way of the Hunter 2 (données du jeu : version 1.4).
+            Affût, le carnet de chasse pour Way of the Hunter 2.
             Téléchargez **carnet-chasse-1.0.${{ github.run_number }}.apk** depuis votre téléphone Android pour l'installer
             (autorisez l'installation d'applications inconnues si Android le demande).

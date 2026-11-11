@@ -8,11 +8,10 @@ choisir son arme. Tout reste sur le téléphone, hors ligne.
   liste filtrable par réserve, statistiques (prélèvements, espèces chassées, plus long tir).
 - **Trophées** : meilleur score par espèce, progression sur les 29 espèces, liste des trophées à exposer au pavillon.
 - **Armurerie** : armes du jeu avec leur calibre, armes possédées, statistiques par arme, ajout d'armes manquantes.
-- **Espèces** : réserves et animaux (v1.4), gibier dangereux, calibres indicatifs et armes adaptées parmi les vôtres.
+- **Espèces** : réserves et animaux avec leur classe, gibier dangereux, fiches du jeu, munitions à prendre.
 - **Sauvegarde** : export / import des données en texte JSON.
 
-Données du jeu dans `src/data/game.ts` (patch notes Nine Rocks Games et wikis de joueurs) : à mettre à jour après
-chaque patch.
+Données du jeu dans `src/data/` (espèces, armes, munitions, fiches), d'après les informations du joueur.
 
 ## Commandes
 ```bash

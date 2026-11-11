@@ -1,10 +1,6 @@
 /**
- * Classes (niveaux) de New Laurentia : liste du joueur d'après le wiki du jeu ; le cerf mulet (6) est confirmé
- * par sa fiche en jeu.
- *
- * Données du jeu Way of the Hunter 2, à jour de la version 1.4 (28 octobre 2026).
- * Sources : patch notes de Nine Rocks Games et wikis de joueurs. Les calibres conseillés sont indicatifs :
- * le jeu change à chaque mise à jour, vérifiez en jeu.
+ * Données du jeu Way of the Hunter 2 : réserves, espèces (avec leur classe) et armes, d'après les infos du joueur.
+ * Les calibres conseillés sont indicatifs : vérifiez en jeu.
  */
 import type {
   Reserve,
@@ -18,7 +14,6 @@ import type {
 } from '../logic/types.ts';
 import { inReserve } from '../logic/stats.ts';
 
-export const GAME_VERSION = '1.4';
 
 export const RESERVES: Reserve[] = [
   {
@@ -63,8 +58,8 @@ export const SPECIES: Species[] = [
   { id: 'lievre', name: "Lièvre d'Amérique", gameName: 'Snowshoe Hare', reserveId: 'new-laurentia', category: 'petit', animalClass: 1, alsoIn: ['headquarters'] },
   { id: 'cerf-virginie', name: 'Cerf de Virginie du Nord-Ouest', gameName: 'Northern White-tailed Deer', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
   { id: 'bison', name: 'Bison des bois', gameName: 'Wood Bison', reserveId: 'new-laurentia', category: 'grand', animalClass: 8 },
-  { id: 'pronghorn', name: "Antilope d'Amérique", gameName: 'Rocky Mountain Pronghorn', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4, addedIn: '0.3.0' },
-  { id: 'sanglier', name: "Sanglier d'Europe centrale", gameName: 'Central European Boar', reserveId: 'new-laurentia', category: 'moyen', animalClass: 5, addedIn: '0.3.0' },
+  { id: 'pronghorn', name: "Antilope d'Amérique", gameName: 'Rocky Mountain Pronghorn', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
+  { id: 'sanglier', name: "Sanglier d'Europe centrale", gameName: 'Central European Boar', reserveId: 'new-laurentia', category: 'moyen', animalClass: 5 },
   // Kilimaya Reserve
   { id: 'koudou', name: 'Grand koudou', gameName: 'Greater Kudu', reserveId: 'kilimaya', category: 'grand', blurb: 'Grande antilope aux cornes torsadées.' },
   { id: 'gnou', name: 'Gnou bleu', gameName: 'Blue Wildebeest', reserveId: 'kilimaya', category: 'grand', blurb: 'Herbivore migrateur des prairies ouvertes.' },
@@ -78,8 +73,8 @@ export const SPECIES: Species[] = [
   { id: 'autruche', name: "Autruche d'Afrique du Sud", gameName: 'South African Ostrich', reserveId: 'kilimaya', category: 'moyen', blurb: 'Le plus grand oiseau terrestre de la carte.' },
   { id: 'buffle', name: 'Buffle africain du Cap', gameName: 'Cape Buffalo', reserveId: 'kilimaya', category: 'dangereux', dangerous: true, blurb: 'Bovidé robuste qui se déplace souvent en troupeau.' },
   { id: 'canard-bec-jaune', name: 'Canard à bec jaune du sud', gameName: 'Southern Yellow-billed Duck', reserveId: 'kilimaya', category: 'oiseau', blurb: 'Gibier d\'eau des marécages et des lacs.' },
-  { id: 'phacochere', name: 'Phacochère commun du sud', gameName: 'Southern Common Warthog', reserveId: 'kilimaya', category: 'moyen', addedIn: '0.3.0', blurb: 'Suidé ajouté avec la mise à jour #03 de la réserve.' },
-  { id: 'impala', name: 'Impala commun', gameName: 'Common Impala', reserveId: 'kilimaya', category: 'moyen', addedIn: '1.4' },
+  { id: 'phacochere', name: 'Phacochère commun du sud', gameName: 'Southern Common Warthog', reserveId: 'kilimaya', category: 'moyen', blurb: 'Suidé de la réserve.' },
+  { id: 'impala', name: 'Impala commun', gameName: 'Common Impala', reserveId: 'kilimaya', category: 'moyen' },
 ];
 
 export const WEAPONS: Weapon[] = [
