@@ -193,10 +193,9 @@ export default function EditionScreen() {
   const animalCls = parsedNums.animalClass ?? info?.animalClass;
   const weaponRange = weapon ? getWeaponSheet(weapon.id, state.weaponSheets)?.classRange : undefined;
   const ammoRange = parseClassRange(ammoClass);
-  const classChecks = [
-    { label: 'arme', range: formatClassRange(weaponRange), ok: classFits(animalCls, weaponRange) },
-    { label: 'munition', range: formatClassRange(ammoRange), ok: classFits(animalCls, ammoRange) },
-  ].filter((c) => c.ok !== undefined);
+  // C'est surtout le niveau de l'arme qui compte ; la classe de la munition est donnée pour info.
+  const weaponFit = classFits(animalCls, weaponRange);
+  const ammoFit = classFits(animalCls, ammoRange);
 
   function changeReserve(r: ReserveId) {
     setReserveId(r);
@@ -409,9 +408,15 @@ export default function EditionScreen() {
             </ChipRow>
           </>
         ) : null}
-        {classChecks.length ? (
-          <Text style={{ fontSize: 13, marginTop: 6, fontFamily: fonts.semibold, color: classChecks.some((c) => c.ok === false) ? colors.accent : colors.olive }}>
-            Classe de l&apos;animal {animalCls} · {classChecks.map((c) => `${c.label} ${c.range} ${c.ok ? '✓' : '✗ hors plage'}`).join(' · ')}
+        {weaponFit !== undefined ? (
+          <Text style={{ fontSize: 13, marginTop: 6, fontFamily: fonts.semibold, color: weaponFit ? colors.olive : colors.accent }}>
+            Classe de l&apos;animal {animalCls} · niveau de l&apos;arme {formatClassRange(weaponRange)}{' '}
+            {weaponFit ? '✓ adaptée' : '✗ hors niveau : choisissez une arme plus adaptée'}
+          </Text>
+        ) : null}
+        {ammoFit === false ? (
+          <Text style={[styles.muted, { marginTop: 2 }]}>
+            Pour info : munition classe {formatClassRange(ammoRange)} (l&apos;arme compte surtout).
           </Text>
         ) : null}
         <Field label="Type de munitions" value={ammoType} onChangeText={setAmmoType} placeholder="Têtes creuses à pointe polymère" />
