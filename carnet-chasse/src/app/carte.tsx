@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MapFrame } from '../components/MapFrame';
 import { Chip, ChipRow, styles } from '../components/ui';
-import { RESERVES } from '../data/game';
+import { RESERVES, SPECIES } from '../data/game';
 import { DEFAULT_MAP_URLS, isHubOnly, isMapUrl, mapUrlFor } from '../logic/maps';
 import type { ReserveId } from '../logic/types';
 import { useCarnet } from '../state/CarnetProvider';
@@ -31,9 +31,14 @@ function SmallButton({ label, onPress, primary }: { label: string; onPress: () =
   );
 }
 
+/** Seules les deux réserves de chasse ont une carte : New Laurentia et Kilimaya Reserve. */
+const MAP_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
+
 export default function CarteScreen() {
   const { state, setMapUrl } = useCarnet();
-  const [reserve, setReserve] = useState<ReserveId>(state.lastReserveId ?? 'new-laurentia');
+  const [reserve, setReserve] = useState<ReserveId>(
+    MAP_RESERVES.find((r) => r.id === state.lastReserveId)?.id ?? 'new-laurentia',
+  );
   const url = mapUrlFor(reserve, state.mapUrls);
   const [current, setCurrent] = useState(url);
   const [paste, setPaste] = useState<string | null>(null);
@@ -65,8 +70,8 @@ export default function CarteScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <View style={{ padding: 12, gap: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <ChipRow>
-          {RESERVES.map((r) => (
-            <Chip key={r.id} label={r.name} selected={reserve === r.id} onPress={() => choose(r.id)} />
+          {MAP_RESERVES.map((r) => (
+            <Chip key={r.id} label={`${r.name} · ${r.region}`} selected={reserve === r.id} onPress={() => choose(r.id)} />
           ))}
         </ChipRow>
         {hub ? (

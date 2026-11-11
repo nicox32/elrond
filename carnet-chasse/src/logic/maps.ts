@@ -3,7 +3,10 @@ import type { ReserveId } from './types.ts';
 
 export const SHACKMAPS_HUB = 'https://www.shackmaps.com/way-of-the-hunter-2';
 
-/** Liens par défaut : New Laurentia donné par le joueur ; les autres pointent vers l'accueil des cartes du jeu. */
+/**
+ * Liens par défaut : New Laurentia donné par le joueur ; Kilimaya pointe vers l'accueil des cartes du jeu.
+ * Seules New Laurentia et Kilimaya ont une carte (le QG n'est pas proposé à l'écran).
+ */
 export const DEFAULT_MAP_URLS: Record<ReserveId, string> = {
   'new-laurentia': `${SHACKMAPS_HUB}/new-laurentia`,
   kilimaya: SHACKMAPS_HUB,
