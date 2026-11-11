@@ -19,6 +19,8 @@ export interface AnimalInput {
   stars?: number;
   /** Condition physique en %. */
   conditionPct?: number;
+  /** Mûr arrivé en fin de vie (vieux), d'après l'analyse en jeu. */
+  endOfLife?: boolean;
 }
 
 export interface Advice {
@@ -65,20 +67,32 @@ export function advise(a: AnimalInput): Advice {
       return {
         verdict: 'eliminer',
         title: 'Cible prioritaire selon le jeu',
-        reason: `Jeune mâle en condition basse (${c} %) : c'est la cible que l'encyclopédie du jeu recommande pour l'abattage.`,
+        reason: `Jeune mâle en condition très basse (${c} %) : éliminez-le vite, il laissera la place à un animal de meilleur potentiel génétique (c'est aussi la cible recommandée par l'encyclopédie du jeu).`,
       };
     }
     if (c < PROMISING_FROM_PCT) {
       return {
-        verdict: 'surveiller',
-        title: 'À surveiller',
-        reason: `Jeune mâle à ${c} % : entre les deux seuils (${CULL_BELOW_PCT} et ${PROMISING_FROM_PCT} %).`,
+        verdict: 'epargner',
+        title: 'Ne pas tirer : laissez-le grandir',
+        reason: `Jeune mâle à condition moyenne (${c} %) : ses stats peuvent s'améliorer avec le temps, laissez-le grandir.`,
       };
     }
     return {
       verdict: 'epargner',
       title: 'Ne pas tirer : jeune prometteur',
       reason: `Jeune mâle à ${c} % : bonne condition, laissez-le grandir.`,
+    };
+  }
+
+  if (a.age === 'mur' && a.endOfLife) {
+    const s = a.stars;
+    return {
+      verdict: 'eliminer',
+      title: 'À prélever maintenant : fin de vie',
+      reason:
+        s !== undefined && s >= TROPHY_MIN_STARS
+          ? `Vieux mâle à ${s} étoiles en fin de vie : c'est le moment, trophée au maximum et place libérée pour les jeunes.`
+          : 'Vieux mâle en fin de vie : abattez-le, peu importe sa condition, pour faire de la place aux jeunes de meilleure qualité.',
     };
   }
 

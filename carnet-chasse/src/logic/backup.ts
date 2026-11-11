@@ -172,6 +172,7 @@ function parseAnimal(v: unknown): HerdAnimal | null {
     lastSeen,
     takenAt: str(v.takenAt),
     coat: str(v.coat),
+    endOfLife: v.endOfLife === true ? true : undefined,
     notes: str(v.notes),
   };
 }

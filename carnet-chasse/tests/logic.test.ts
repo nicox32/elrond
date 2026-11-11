@@ -128,7 +128,10 @@ test('gestion du troupeau : tirer ou épargner', async () => {
   const { advise } = await import('../src/logic/management.ts');
   assert.equal(advise({ sex: 'femelle', age: 'mur', stars: 5 }).verdict, 'epargner');
   assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 10 }).verdict, 'eliminer');
-  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 45 }).verdict, 'surveiller');
+  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 45 }).verdict, 'epargner');
+  assert.equal(advise({ sex: 'male', age: 'mur', stars: 4, endOfLife: true }).verdict, 'eliminer');
+  assert.equal(advise({ sex: 'male', age: 'mur', endOfLife: true }).verdict, 'eliminer');
+  assert.equal(advise({ sex: 'male', age: 'mur', stars: 4 }).verdict, 'trophee');
   assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 70 }).verdict, 'epargner');
   assert.equal(advise({ sex: 'male', age: 'jeune' }).verdict, 'libre');
   assert.equal(advise({ sex: 'femelle', age: 'jeune', conditionPct: 20 }).verdict, 'possible');

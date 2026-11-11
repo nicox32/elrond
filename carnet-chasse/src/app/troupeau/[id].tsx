@@ -26,7 +26,7 @@ import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 import { Select } from '../../components/Select';
 
-type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'notes'>;
+type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'endOfLife' | 'notes'>;
 
 function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
   initial?: AnimalDraft;
@@ -41,6 +41,7 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
   const [condition, setCondition] = useState(initial?.conditionPct !== undefined ? String(initial.conditionPct).replace('.', ',') : '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [coat, setCoat] = useState(initial?.coat ?? '');
+  const [endOfLife, setEndOfLife] = useState(initial?.endOfLife ?? false);
   const [error, setError] = useState<string | null>(null);
   const needsStars = sex === 'male' && age !== 'jeune';
 
@@ -54,6 +55,7 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
       stars: needsStars ? stars : undefined,
       conditionPct: c,
       coat: coat || undefined,
+      endOfLife: sex === 'male' && age === 'mur' && endOfLife ? true : undefined,
       notes: notes.trim() || undefined,
     });
   }
@@ -72,6 +74,11 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
           <Chip key={a} label={AGE_LABELS[a]} selected={age === a} onPress={() => setAge(a)} />
         ))}
       </ChipRow>
+      {sex === 'male' && age === 'mur' ? (
+        <ChipRow>
+          <Chip label="Fin de vie (vieux)" tone="olive" selected={endOfLife} onPress={() => setEndOfLife((v) => !v)} />
+        </ChipRow>
+      ) : null}
       {needsStars ? (
         <>
           <Label>Étoiles</Label>
@@ -141,6 +148,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
     AGE_LABELS[animal.age],
     animal.stars ? '★'.repeat(animal.stars) : null,
     animal.conditionPct !== undefined ? `${String(animal.conditionPct).replace('.', ',')} %` : null,
+    animal.endOfLife ? 'fin de vie' : null,
   ].filter(Boolean);
 
   return (

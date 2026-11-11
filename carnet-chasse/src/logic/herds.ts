@@ -12,7 +12,7 @@ export const POPULATION_LABELS: Record<PopulationStatus, string> = {
 export const AGE_LABELS = { jeune: 'Jeune', adulte: 'Adulte', mur: 'Mûr' } as const;
 
 export function adviceFor(a: HerdAnimal): Advice {
-  return advise({ sex: a.sex, age: a.age, stars: a.stars, conditionPct: a.conditionPct });
+  return advise({ sex: a.sex, age: a.age, stars: a.stars, conditionPct: a.conditionPct, endOfLife: a.endOfLife });
 }
 
 export interface HerdSummary {

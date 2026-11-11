@@ -162,6 +162,8 @@ export interface HerdAnimal {
   takenAt?: string;
   /** Robe observée (Standard, Albinos, Leucique, Mélanique, Érythrique). */
   coat?: string;
+  /** Mûr arrivé en fin de vie. */
+  endOfLife?: boolean;
   notes?: string;
 }
 

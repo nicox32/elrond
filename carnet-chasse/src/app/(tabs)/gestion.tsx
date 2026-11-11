@@ -52,6 +52,7 @@ export default function GestionScreen() {
   const [age, setAge] = useState<AgeClass>('adulte');
   const [stars, setStars] = useState<number | undefined>(1);
   const [condition, setCondition] = useState('');
+  const [endOfLife, setEndOfLife] = useState(false);
 
   const needsStars = sex === 'male' && age !== 'jeune';
   const needsCondition = sex === 'femelle' || age === 'jeune' || (age === 'adulte' && stars === 1);
@@ -60,6 +61,7 @@ export default function GestionScreen() {
     age,
     stars: needsStars ? stars : undefined,
     conditionPct: needsCondition ? parseNumber(condition) : undefined,
+    endOfLife: sex === 'male' && age === 'mur' && endOfLife,
   });
   const v = VERDICT_STYLE[advice.verdict];
 
@@ -87,6 +89,9 @@ export default function GestionScreen() {
           <Chip label="Jeune" selected={age === 'jeune'} onPress={() => setAge('jeune')} />
           <Chip label="Adulte" selected={age === 'adulte'} onPress={() => setAge('adulte')} />
           <Chip label="Mûr" selected={age === 'mur'} onPress={() => setAge('mur')} />
+          {sex === 'male' && age === 'mur' ? (
+            <Chip label="Fin de vie (vieux)" tone="olive" selected={endOfLife} onPress={() => setEndOfLife((v) => !v)} />
+          ) : null}
         </ChipRow>
         {needsStars ? (
           <>
@@ -151,7 +156,8 @@ export default function GestionScreen() {
         items={[
           "Mâles mûrs (vieux) à 1 ou 2 étoiles : cibles n°1. Mauvaise génétique : tuez-les pour qu'ils ne se reproduisent plus et pour récupérer l'argent avant qu'ils meurent de vieillesse.",
           'Mâles adultes à 1 étoile avec une très basse condition physique (moins de 30-40 %) : éliminez-les pour stopper la transmission de leurs mauvais gènes dès le stade adulte.',
-          'Jeunes mâles en condition basse : la cible recommandée par le jeu lui-même.',
+          'Vieux mâles mûrs en fin de vie : abattez-les, peu importe leur condition, pour faire de la place et laisser les jeunes de meilleure qualité se développer.',
+          'Jeunes en condition très basse (moins de 40 %) : éliminez-les vite pour qu’ils laissent la place à des animaux de meilleur potentiel génétique (c’est aussi la cible recommandée par le jeu).',
           'Femelles en condition basse (surtout jeunes) : possible, mais effet moindre sur la population.',
         ]}
       />
@@ -168,7 +174,8 @@ export default function GestionScreen() {
         title="Ne jamais toucher (à épargner)"
         color={colors.danger}
         items={[
-          'Les jeunes et adultes prometteurs (condition 50 % ou plus) : laissez-les grandir, ils deviendront de beaux mûrs.',
+          'Les jeunes à condition moyenne : laissez-les grandir, leurs stats peuvent s’améliorer avec le temps.',
+          'Les adultes prometteurs (condition 50 % ou plus) : laissez-les grandir, ils deviendront de beaux mûrs.',
           "Les femelles en bonne condition (sauf mission) : peu d'argent, et les tuer réduit la taille du troupeau.",
         ]}
       />
