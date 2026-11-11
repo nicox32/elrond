@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
+import { Button, Card, Chip, ChipRow, Empty, Field, FieldRow, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { getReserve, getSpecies, HUNTING_RESERVES, speciesOfReserve } from '../../data/game';
 import { getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
 import {
@@ -19,6 +19,7 @@ import {
 import type { NeedType, NeedZone, ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
+import { Select } from '../../components/Select';
 
 const NEEDS = Object.keys(NEED_LABELS) as NeedType[];
 const QUICK_HOURS = [6, 8, 12, 16, 20];
@@ -109,12 +110,15 @@ function AddZone({ defaultReserve }: { defaultReserve: ReserveId }) {
           />
         ))}
       </ChipRow>
-      <Label>Espèce</Label>
-      <ChipRow>
-        {speciesOfReserve(reserveId).map((s) => (
-          <Chip key={s.id} label={s.name} selected={speciesId === s.id} onPress={() => setSpeciesId(s.id)} />
-        ))}
-      </ChipRow>
+      <Select
+        label="Espèce"
+        value={speciesId}
+        onChange={(v) => setSpeciesId(v || undefined)}
+        placeholder="Choisir l'espèce…"
+        allowCustom={false}
+        searchable
+        options={speciesOfReserve(reserveId).map((s) => ({ value: s.id, label: s.name }))}
+      />
       {speciesId && getSpeciesInfo(speciesId, state.speciesSheets)?.routine ? (
         <Text style={{ color: colors.olive, fontSize: 13, marginTop: 6 }}>
           Routine du jeu :{' '}
@@ -129,10 +133,10 @@ function AddZone({ defaultReserve }: { defaultReserve: ReserveId }) {
           <Chip key={n} label={`${NEED_ICONS[n]} ${NEED_LABELS[n]}`} selected={need === n} onPress={() => setNeed(n)} />
         ))}
       </ChipRow>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <FieldRow>
         <Field label="Début" value={start} onChangeText={setStart} placeholder="09:00" keyboardType="numbers-and-punctuation" />
         <Field label="Fin" value={end} onChangeText={setEnd} placeholder="11:30" keyboardType="numbers-and-punctuation" />
-      </View>
+      </FieldRow>
       <Field label="Lieu (facultatif)" value={place} onChangeText={setPlace} placeholder="ex. lac au nord du chalet" />
       {error ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold, marginTop: 8 }}>{error}</Text> : null}
       <View style={[styles.row, { marginTop: 12 }]}>

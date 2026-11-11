@@ -8,6 +8,7 @@ import { AGING_NOTE, daysSince, isVisitDue, POPULATION_LABELS, summarizeHerd } f
 import type { ReserveId } from '../logic/types';
 import { useCarnet } from '../state/CarnetProvider';
 import { colors, fonts } from '../theme';
+import { Select } from '../components/Select';
 
 
 function AddHerd() {
@@ -53,12 +54,15 @@ function AddHerd() {
           />
         ))}
       </ChipRow>
-      <Label>Espèce</Label>
-      <ChipRow>
-        {speciesOfReserve(reserveId).map((s) => (
-          <Chip key={s.id} label={s.name} selected={speciesId === s.id} onPress={() => setSpeciesId(s.id)} />
-        ))}
-      </ChipRow>
+      <Select
+        label="Espèce"
+        value={speciesId}
+        onChange={(v) => setSpeciesId(v || undefined)}
+        placeholder="Choisir l'espèce…"
+        allowCustom={false}
+        searchable
+        options={speciesOfReserve(reserveId).map((s) => ({ value: s.id, label: s.name }))}
+      />
       <Field label="Lieu (facultatif)" value={place} onChangeText={setPlace} placeholder="ex. clairière au nord du lac" />
       <Field label="Tente la plus proche (facultatif)" value={camp} onChangeText={setCamp} placeholder="ex. tente de la crête, 400 m au sud" />
       <Field label="Nom (facultatif)" value={name} onChangeText={setName} placeholder="ex. Les cerfs du lac" />

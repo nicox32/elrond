@@ -247,6 +247,8 @@ export interface CarnetState {
   /** Munitions corrigées ou ajoutées par le joueur, par identifiant. */
   ammoSheets: Record<string, Ammo>;
   ownedAmmoIds: string[];
+  /** Valeurs perso ajoutées dans les menus de sélection, par menu (robe, météo…). */
+  customChoices: Record<string, string[]>;
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
@@ -262,4 +264,5 @@ export const EMPTY_STATE: CarnetState = {
   weaponSheets: {},
   ammoSheets: {},
   ownedAmmoIds: [],
+  customChoices: {},
 };

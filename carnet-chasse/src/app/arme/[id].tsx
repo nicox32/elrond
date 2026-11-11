@@ -42,7 +42,7 @@ export default function ArmeScreen() {
       {sheet?.photoUri ? (
         <Image source={{ uri: sheet.photoUri }} style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 14 }} resizeMode="cover" />
       ) : null}
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <View style={styles.row}>
         <View style={{ flex: 1 }}>
           <Button label={sheet?.photoUri ? 'Changer la photo' : 'Ajouter une photo'} kind="secondary" onPress={choosePhoto} />
         </View>

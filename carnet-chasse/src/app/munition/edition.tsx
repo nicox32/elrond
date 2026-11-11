@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { LevelPicker } from '../../components/armory';
-import { Button, Chip, ChipRow, Field, Label, Screen, styles } from '../../components/ui';
+import { Select } from '../../components/Select';
+import { Button, Field, FieldRow, Screen, styles } from '../../components/ui';
 import { AMMO, allAmmo, formatClassRange, parseClassRange, PROJECTILE_TYPES } from '../../data/armory';
 import { allWeapons } from '../../data/game';
 import { newId } from '../../logic/stats';
@@ -59,16 +60,11 @@ export default function MunitionEditionScreen() {
       <Stack.Screen options={{ title: existing ? `Fiche · ${existing.name}` : 'Nouvelle munition' }} />
       <Text style={styles.muted}>En jeu : Armurerie › Munitions. Recopiez la fiche affichée ; tout sauf le nom et le calibre est facultatif.</Text>
       <Field label="Nom" value={name} onChangeText={setName} placeholder="Lewellings Nucleus Break" />
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <FieldRow>
         <Field label="Marque" value={brand} onChangeText={setBrand} placeholder="Lewellings" />
         <Field label="Classe" value={level} onChangeText={setLevel} placeholder="4-6" />
-      </View>
-      <Field label="Calibre" value={caliber} onChangeText={setCaliber} placeholder=".308 Winchester" />
-      <ChipRow>
-        {calibers.map((c) => (
-          <Chip key={c} label={c} selected={caliber === c} onPress={() => setCaliber(c)} />
-        ))}
-      </ChipRow>
+      </FieldRow>
+      <Select label="Calibre" value={caliber} onChange={setCaliber} options={calibers} customKey="caliber" placeholder=".308 Winchester" allowClear={false} searchable />
       <Field
         label="Description"
         value={description}
@@ -77,12 +73,7 @@ export default function MunitionEditionScreen() {
         placeholder="Cartouche de haute puissance, idéale pour…"
         style={{ minHeight: 60, textAlignVertical: 'top' }}
       />
-      <Label>Type de projectile</Label>
-      <ChipRow>
-        {PROJECTILE_TYPES.map((p) => (
-          <Chip key={p} label={p} selected={projectile === p} onPress={() => setProjectile(projectile === p ? '' : p)} />
-        ))}
-      </ChipRow>
+      <Select label="Type de projectile" value={projectile} onChange={setProjectile} options={PROJECTILE_TYPES} customKey="ammoType" placeholder="Têtes creuses" />
       <LevelPicker label="Pénétration" value={penetration} onChange={setPenetration} />
       <LevelPicker label="Recul réduit" value={recoilReduced} onChange={setRecoilReduced} />
       <LevelPicker label="Précision" value={precision} onChange={setPrecision} />

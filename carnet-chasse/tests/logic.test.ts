@@ -473,3 +473,8 @@ test('le QG partage 5 espèces avec New Laurentia sans les compter deux fois', a
   assert.equal(hq.speciesTotal, 5);
   assert.equal(hq.speciesHunted, 1);
 });
+
+test('sauvegarde : valeurs perso des menus', () => {
+  const s = parseState({ customChoices: { coat: ['Pie', ' Pie ', '', 4, 'Tachetée'], vide: [], pasliste: 'x' } });
+  assert.deepEqual(s?.customChoices, { coat: ['Pie', 'Tachetée'] });
+});

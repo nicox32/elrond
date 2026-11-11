@@ -2,7 +2,8 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
-import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, styles } from '../../components/ui';
+import { Select } from '../../components/Select';
+import { Button, Card, Chip, Empty, Field, FieldRow, Label, Screen, SectionTitle, styles } from '../../components/ui';
 import { getSpecies } from '../../data/game';
 import { ENERGY_LABELS, getSpeciesInfo, SPECIES_INFO } from '../../data/speciesInfo';
 import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
@@ -22,16 +23,7 @@ const NEEDS: NeedType[] = ['boire', 'manger', 'dormir'];
 const txt = (n: number | undefined) => (n === undefined ? '' : String(n).replace('.', ','));
 
 function SenseRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <>
-      <Label>{label}</Label>
-      <ChipRow>
-        {SENSE_LEVELS.map((l) => (
-          <Chip key={l} label={l} selected={value === l} onPress={() => onChange(value === l ? '' : l)} />
-        ))}
-      </ChipRow>
-    </>
-  );
+  return <Select label={label} value={value} onChange={onChange} options={SENSE_LEVELS} customKey="sense" placeholder="Bon(ne)" />;
 }
 
 export default function FicheScreen() {
@@ -137,26 +129,17 @@ export default function FicheScreen() {
       </Card>
 
       <SectionTitle>Identité</SectionTitle>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
-        <View style={{ width: 120 }}>
+      <FieldRow>
+        <View style={{ width: 90 }}>
           <Field label="Classe" value={animalClass} onChangeText={setAnimalClass} keyboardType="number-pad" placeholder="6" />
         </View>
         <Field label="Rang min" value={trophyMin} onChangeText={setTrophyMin} keyboardType="decimal-pad" placeholder="115" />
         <Field label="Rang max" value={trophyMax} onChangeText={setTrophyMax} keyboardType="decimal-pad" placeholder="610" />
-      </View>
-      <Label>Type de trophée</Label>
-      <ChipRow>
-        {TROPHY_TYPES.map((t) => (
-          <Chip key={t} label={t} selected={trophyType === t} onPress={() => setTrophyType(trophyType === t ? '' : t)} />
-        ))}
-      </ChipRow>
+      </FieldRow>
+      <Select label="Type de trophée" value={trophyType} onChange={setTrophyType} options={TROPHY_TYPES} customKey="trophyType" placeholder="Bois" />
 
       <SectionTitle>Routine quotidienne</SectionTitle>
-      <ChipRow>
-        {ACTIVITIES.map((a) => (
-          <Chip key={a} label={a} selected={activity === a} onPress={() => setActivity(activity === a ? '' : a)} />
-        ))}
-      </ChipRow>
+      <Select label="Activité" value={activity} onChange={setActivity} options={ACTIVITIES} customKey="activity" placeholder="Crépusculaire" />
       <Field label="Précision" value={activityNote} onChangeText={setActivityNote} placeholder="Actif le soir et le matin" />
       <Text style={[styles.muted, { marginTop: 10 }]}>
         Recopiez la frise : chaque icône marque le début d&apos;une phase (ex. 💧 à 00 h, 💤 à 02 h, 🌿 à 07 h…).

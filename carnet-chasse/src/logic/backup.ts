@@ -334,6 +334,14 @@ export function parseState(raw: unknown): CarnetState | null {
   const ownedAmmoIds = Array.isArray(raw.ownedAmmoIds)
     ? [...new Set(raw.ownedAmmoIds.filter((x): x is string => typeof x === 'string'))]
     : [];
+  const customChoices: Record<string, string[]> = {};
+  if (isObj(raw.customChoices)) {
+    for (const [k, v] of Object.entries(raw.customChoices)) {
+      if (!Array.isArray(v)) continue;
+      const list = [...new Set(v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map((x) => x.trim()))];
+      if (list.length) customChoices[k] = list.slice(0, 50);
+    }
+  }
   const herds = Array.isArray(raw.herds) ? raw.herds.map(parseHerd).filter((h): h is Herd => h !== null) : [];
   return {
     hunts,
@@ -345,6 +353,7 @@ export function parseState(raw: unknown): CarnetState | null {
     weaponSheets,
     ammoSheets,
     ownedAmmoIds,
+    customChoices,
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),

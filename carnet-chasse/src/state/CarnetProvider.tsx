@@ -32,6 +32,8 @@ interface CarnetContextValue {
   saveAmmo: (ammo: Ammo) => void;
   removeAmmoSheet: (ammoId: string) => void;
   toggleOwnedAmmo: (ammoId: string) => void;
+  addChoice: (key: string, value: string) => void;
+  removeChoice: (key: string, value: string) => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -213,6 +215,20 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const addChoice = useCallback((key: string, value: string) => {
+    const v = value.trim();
+    if (!v) return;
+    setState((s) => {
+      const list = s.customChoices[key] ?? [];
+      if (list.includes(v)) return s;
+      return { ...s, customChoices: { ...s.customChoices, [key]: [...list, v] } };
+    });
+  }, []);
+
+  const removeChoice = useCallback((key: string, value: string) => {
+    setState((s) => ({ ...s, customChoices: { ...s.customChoices, [key]: (s.customChoices[key] ?? []).filter((x) => x !== value) } }));
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -239,6 +255,8 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       saveAmmo,
       removeAmmoSheet,
       toggleOwnedAmmo,
+      addChoice,
+      removeChoice,
     }),
     [
       state,
@@ -265,6 +283,8 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       saveAmmo,
       removeAmmoSheet,
       toggleOwnedAmmo,
+      addChoice,
+      removeChoice,
     ],
   );
 

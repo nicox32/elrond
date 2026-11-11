@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { VerdictBadge } from '../../components/Verdict';
-import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, styles } from '../../components/ui';
+import { Button, Card, Chip, ChipRow, Empty, Field, Grid2, Label, Screen, SectionTitle, styles } from '../../components/ui';
 import { getReserve, getSpecies } from '../../data/game';
 import { getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
 import {
@@ -24,6 +24,7 @@ import type { AgeStage, AnimalSex, HerdAnimal, PopulationStatus } from '../../lo
 import { cancelHerdReminder, REMINDERS_SUPPORTED, scheduleHerdReminder } from '../../reminders';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
+import { Select } from '../../components/Select';
 
 type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'notes'>;
 
@@ -81,15 +82,17 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
           </ChipRow>
         </>
       ) : null}
-      <View style={{ maxWidth: 220 }}>
-        <Field label="Condition physique (%)" value={condition} onChangeText={setCondition} keyboardType="decimal-pad" placeholder="ex. 31,7" />
-      </View>
-      <Label>Robe</Label>
-      <ChipRow>
-        {COAT_CHOICES.map((c) => (
-          <Chip key={c.label} label={c.rare ? `✦ ${c.label}` : c.label} selected={coat === c.label} onPress={() => setCoat(coat === c.label ? '' : c.label)} />
-        ))}
-      </ChipRow>
+      <Grid2>
+        <Field label="Condition (%)" value={condition} onChangeText={setCondition} keyboardType="decimal-pad" placeholder="ex. 31,7" />
+        <Select
+          label="Robe"
+          value={coat}
+          onChange={setCoat}
+          customKey="coat"
+          placeholder="Standard"
+          options={COAT_CHOICES.map((c) => ({ value: c.label, label: c.rare ? `✦ ${c.label}` : c.label, hint: c.hint }))}
+        />
+      </Grid2>
       <Field label="Notes" value={notes} onChangeText={setNotes} placeholder="ex. boite de la patte avant" />
       {error ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold, marginTop: 8 }}>{error}</Text> : null}
       <View style={[styles.row, { marginTop: 12 }]}>

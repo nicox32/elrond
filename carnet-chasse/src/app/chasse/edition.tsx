@@ -2,7 +2,8 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Image, Pressable, Text, TextInput, View } from 'react-native';
 
-import { Button, Card, Chip, ChipRow, Field, Fold, Label, Screen, styles } from '../../components/ui';
+import { Select } from '../../components/Select';
+import { Button, Card, Chip, ChipRow, Field, FieldRow, Fold, Grid2, Label, Screen, styles } from '../../components/ui';
 import { allWeapons, CATEGORY_LABELS, findWeapon, HUNTING_RESERVES, SHOT_ZONE_LABELS, SPECIES, speciesOfReserve, SUGGESTED_CALIBERS, SUGGESTED_DISTANCE, TROPHY_TYPE_LABELS } from '../../data/game';
 import {
   ALL_NUM_FIELDS,
@@ -20,7 +21,7 @@ import {
   SHOT_FIELDS,
   WEATHER_CHOICES,
 } from '../../logic/details';
-import { ammoForCaliber, classFits, formatClassRange, getWeaponSheet, parseClassRange } from '../../data/armory';
+import { ammoForCaliber, classFits, formatClassRange, getWeaponSheet, parseClassRange, PROJECTILE_TYPES } from '../../data/armory';
 import { checkEnergy, energyKindFor, formatRange, getSpeciesInfo, speciesClass } from '../../data/speciesInfo';
 import { formatTime, parseTime } from '../../logic/schedule';
 import { formatDate, formatNumber, formatScore, inReserve, parseNumber } from '../../logic/stats';
@@ -58,9 +59,7 @@ const filled = (...xs: (string | undefined | boolean)[]) => xs.filter((x) => x !
 /** Champ numérique compact pour les grilles du rapport. */
 function SmallNum({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (t: string) => void; placeholder?: string }) {
   return (
-    <View style={{ flexBasis: '47%', flexGrow: 1 }}>
-      <Field label={label} value={value} onChangeText={onChange} keyboardType="decimal-pad" placeholder={placeholder} />
-    </View>
+    <Field label={label} value={value} onChangeText={onChange} keyboardType="decimal-pad" placeholder={placeholder} />
   );
 }
 
@@ -89,7 +88,6 @@ export default function EditionScreen() {
     existing?.speciesId ?? SPECIES.find((x) => x.id === params.speciesId)?.id,
   );
   const [weaponId, setWeaponId] = useState<string | undefined>(existing?.weaponId ?? state.lastWeaponId);
-  const [showAllWeapons, setShowAllWeapons] = useState(state.ownedWeaponIds.length === 0);
   const [ammo, setAmmo] = useState(existing?.ammo ?? '');
   const [distance, setDistance] = useState(existing?.distanceM !== undefined ? formatNumber(existing.distanceM) : '');
   const [shotZone, setShotZone] = useState<ShotZone | undefined>(existing?.shotZone);
@@ -144,11 +142,14 @@ export default function EditionScreen() {
 
   const speciesList = speciesOfReserve(reserveId);
   const species = SPECIES.find((s) => s.id === speciesId);
-  const weapons = useMemo(() => {
-    const all = allWeapons(state.customWeapons);
-    if (showAllWeapons) return all;
-    return all.filter((w) => state.ownedWeaponIds.includes(w.id) || w.id === weaponId);
-  }, [state.customWeapons, state.ownedWeaponIds, showAllWeapons, weaponId]);
+  // Toutes les armes, celles que l'on possède en premier.
+  const weapons = useMemo(
+    () =>
+      [...allWeapons(state.customWeapons)].sort(
+        (a, b) => Number(state.ownedWeaponIds.includes(b.id)) - Number(state.ownedWeaponIds.includes(a.id)),
+      ),
+    [state.customWeapons, state.ownedWeaponIds],
+  );
   const weapon = weaponId ? findWeapon(weaponId, state.customWeapons) : undefined;
 
   const suggested = species ? SUGGESTED_CALIBERS[species.category] : [];
@@ -283,12 +284,21 @@ export default function EditionScreen() {
         ))}
       </ChipRow>
 
-      <Label>Espèce</Label>
-      <ChipRow>
-        {speciesList.map((s) => (
-          <Chip key={s.id} label={s.dangerous ? `${s.name} ⚠` : s.name} selected={speciesId === s.id} onPress={() => setSpeciesId(s.id)} />
-        ))}
-      </ChipRow>
+      <Select
+        label="Espèce"
+        value={speciesId}
+        onChange={(v) => setSpeciesId(v || undefined)}
+        placeholder="Choisir l'espèce…"
+        allowCustom={false}
+        searchable
+        options={speciesList.map((s) => ({
+          value: s.id,
+          label: s.dangerous ? `${s.name} ⚠` : s.name,
+          hint: [speciesClass(s.id, state.speciesSheets) ? `classe ${speciesClass(s.id, state.speciesSheets)}` : null, CATEGORY_LABELS[s.category]]
+            .filter(Boolean)
+            .join(' · '),
+        }))}
+      />
       {species ? (
         <Text style={[styles.muted, { marginTop: 6 }]}>
           {CATEGORY_LABELS[species.category]} · calibres indicatifs : {suggested.join(', ')}
@@ -297,29 +307,27 @@ export default function EditionScreen() {
         </Text>
       ) : null}
 
-      <View style={[styles.row, { justifyContent: 'space-between' }]}>
-        <Label>Arme</Label>
-        <Pressable onPress={() => setShowAllWeapons((v) => !v)} hitSlop={8}>
-          <Text style={{ color: colors.accent, fontSize: 13, fontFamily: fonts.semibold, marginTop: 12 }}>
-            {showAllWeapons ? 'Mes armes seulement' : 'Toutes les armes'}
-          </Text>
-        </Pressable>
-      </View>
-      {weapons.length === 0 ? (
-        <Text style={styles.muted}>Aucune arme cochée dans l&apos;Armurerie : touchez « Toutes les armes ».</Text>
-      ) : (
-        <ChipRow>
-          {weapons.map((w) => (
-            <Chip key={w.id} label={`${w.name} · ${w.caliber}`} selected={weaponId === w.id} onPress={() => setWeaponId(w.id)} />
-          ))}
-        </ChipRow>
-      )}
+      <Select
+        label="Arme"
+        value={weaponId}
+        onChange={(v) => setWeaponId(v || undefined)}
+        placeholder="Choisir l'arme…"
+        allowCustom={false}
+        searchable
+        options={weapons.map((w) => ({
+          value: w.id,
+          label: w.name,
+          hint: `${w.caliber}${state.ownedWeaponIds.includes(w.id) ? ' · possédée' : ''}${
+            getWeaponSheet(w.id, state.weaponSheets)?.classRange ? ` · niveau ${formatClassRange(getWeaponSheet(w.id, state.weaponSheets)?.classRange)}` : ''
+          }`,
+        }))}
+      />
       {caliberHint ? <Text style={{ color: colors.olive, fontSize: 13, marginTop: 6 }}>{caliberHint}</Text> : null}
 
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <FieldRow>
         <Field label="Distance de tir (m)" value={distance} onChangeText={setDistance} keyboardType="decimal-pad" placeholder="100" />
         <Field label="Score du trophée" value={score} onChangeText={setScore} keyboardType="decimal-pad" placeholder="152,4" />
-      </View>
+      </FieldRow>
 
       <Label>Zone touchée</Label>
       <ChipRow>
@@ -350,26 +358,27 @@ export default function EditionScreen() {
           <Chip label="Mâle" selected={sex === 'male'} onPress={() => setSex(sex === 'male' ? undefined : 'male')} />
           <Chip label="Femelle" selected={sex === 'femelle'} onPress={() => setSex(sex === 'femelle' ? undefined : 'femelle')} />
         </ChipRow>
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        <Grid2>
           {ANIMAL_FIELDS.map((f) => (
             <SmallNum key={f.key} label={f.label} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
           ))}
-        </View>
-        <Label>Robe</Label>
-        <ChipRow>
-          {COAT_CHOICES.map((c) => (
-            <Chip key={c.label} label={c.rare ? `✦ ${c.label}` : c.label} selected={coat === c.label} onPress={() => setCoat(coat === c.label ? '' : c.label)} />
-          ))}
-        </ChipRow>
+        </Grid2>
+        <Grid2>
+          <Select
+            label="Robe"
+            value={coat}
+            onChange={setCoat}
+            customKey="coat"
+            placeholder="Standard"
+            options={COAT_CHOICES.map((c) => ({ value: c.label, label: c.rare ? `✦ ${c.label}` : c.label, hint: c.hint }))}
+          />
+          <Select label="Rareté" value={rarity} onChange={setRarity} customKey="rarity" placeholder="Ordinaire" options={['Ordinaire']} />
+        </Grid2>
         {isRareCoat(coat) ? (
           <Text style={{ color: colors.gold, fontSize: 13, marginTop: 6, fontFamily: fonts.semibold }}>
             ✦ Fourrure rare : trophée « Ultime » potentiel. Le jeu conseille de l&apos;empailler.
           </Text>
         ) : null}
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
-          <Field label="Robe (autre)" value={coat} onChangeText={setCoat} placeholder="Standard" />
-          <Field label="Rareté" value={rarity} onChangeText={setRarity} placeholder="Ordinaire" />
-        </View>
       </Fold>
 
       <Fold
@@ -378,25 +387,33 @@ export default function EditionScreen() {
         open={open.tir}
         onToggle={toggle('tir')}
       >
-        {weapon && caliberAmmo.length ? (
-          <>
-            <Label>Munitions {weapon.caliber}</Label>
-            <ChipRow>
-              {caliberAmmo.map((m) => (
-                <Chip
-                  key={m.id}
-                  label={`${m.name.replace(/^Lewellings\s+/i, '')}${m.classRange ? ` · ${formatClassRange(m.classRange)}` : ''}`}
-                  selected={ammo.trim().toLowerCase() === m.name.toLowerCase()}
-                  onPress={() => {
-                    setAmmo(m.name);
-                    if (m.projectile) setAmmoType(m.projectile);
-                    setAmmoClass(formatClassRange(m.classRange) ?? '');
-                  }}
-                />
-              ))}
-            </ChipRow>
-          </>
-        ) : null}
+        <FieldRow>
+          <View style={{ flex: 1 }}>
+            <Select
+              label={weapon ? `Munition ${weapon.caliber}` : 'Munition'}
+              value={ammo}
+              onChange={(v, o) => {
+                setAmmo(v);
+                const m = caliberAmmo.find((x) => x.name === v || x.id === o?.value);
+                if (m) {
+                  if (m.projectile) setAmmoType(m.projectile);
+                  setAmmoClass(formatClassRange(m.classRange) ?? '');
+                }
+              }}
+              customKey="ammo"
+              placeholder="Choisir la munition…"
+              options={caliberAmmo.map((m) => ({
+                value: m.name,
+                hint: [m.classRange ? `classe ${formatClassRange(m.classRange)}` : null, m.projectile, state.ownedAmmoIds.includes(m.id) ? 'en stock' : null]
+                  .filter(Boolean)
+                  .join(' · '),
+              }))}
+            />
+          </View>
+          <View style={{ width: 96 }}>
+            <Field label="Classe" value={ammoClass} onChangeText={setAmmoClass} placeholder="3-5" />
+          </View>
+        </FieldRow>
         {weaponFit !== undefined ? (
           <Text style={{ fontSize: 13, marginTop: 6, fontFamily: fonts.semibold, color: weaponFit ? colors.olive : colors.accent }}>
             Classe de l&apos;animal {animalCls} · niveau de l&apos;arme {formatClassRange(weaponRange)}{' '}
@@ -414,20 +431,21 @@ export default function EditionScreen() {
               : ''}
           </Text>
         ) : null}
-        <Field label="Type de munitions" value={ammoType} onChangeText={setAmmoType} placeholder="Têtes creuses à pointe polymère" />
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
-          <Field label="Munition" value={ammo} onChangeText={setAmmo} placeholder="Lewellings Grande Swift" />
-          <View style={{ width: 110 }}>
-            <Field label="Classe" value={ammoClass} onChangeText={setAmmoClass} placeholder="3-5" />
-          </View>
-        </View>
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        <Select
+          label="Type de munitions"
+          value={ammoType}
+          onChange={setAmmoType}
+          customKey="ammoType"
+          placeholder="Têtes creuses à pointe polymère"
+          options={PROJECTILE_TYPES}
+        />
+        <Grid2>
           <SmallNum label="Heure de la mort" value={killTime} onChange={setKillTime} placeholder="13:59" />
           <SmallNum label="Temps de traque" value={trackingTime} onChange={setTrackingTime} placeholder="9m49s" />
           {SHOT_FIELDS.map((f) => (
             <SmallNum key={f.key} label={f.label} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
           ))}
-        </View>
+        </Grid2>
         {energyRange !== undefined && energyKind ? (
           <Text
             style={{
@@ -445,12 +463,7 @@ export default function EditionScreen() {
             {energyStatus === 'inadapte' ? ' · munition inadaptée' : ''}
           </Text>
         ) : null}
-        <Label>Météo</Label>
-        <ChipRow>
-          {WEATHER_CHOICES.map((w) => (
-            <Chip key={w} label={w} selected={weather === w} onPress={() => setWeather(weather === w ? '' : w)} />
-          ))}
-        </ChipRow>
+        <Select label="Météo" value={weather} onChange={setWeather} customKey="weather" placeholder="Partiellement nuageux" options={WEATHER_CHOICES} />
         <Label>Chasseur détecté</Label>
         <ChipRow>{yesNo(hunterDetected, setHunterDetected)}</ChipRow>
         <Label>Chien utilisé</Label>
@@ -458,11 +471,11 @@ export default function EditionScreen() {
       </Fold>
 
       <Fold title="Dégâts aux organes (%)" summary={`${organCount} organe(s) noté(s)`} open={open.organes} onToggle={toggle('organes')}>
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        <Grid2>
           {ORGAN_IDS.map((o) => (
             <SmallNum key={o} label={ORGAN_LABELS[o]} value={organs[o]} onChange={(t) => setOrgans((s) => ({ ...s, [o]: t }))} placeholder="0" />
           ))}
-        </View>
+        </Grid2>
       </Fold>
 
       <Fold
@@ -472,7 +485,7 @@ export default function EditionScreen() {
         onToggle={toggle('prix')}
       >
         <Text style={styles.muted}>Le poids brut est celui de la section Animal.</Text>
-        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        <Grid2>
           {PRICE_FIELDS.map((f) => (
             <SmallNum
               key={f.key}
@@ -488,7 +501,7 @@ export default function EditionScreen() {
               }
             />
           ))}
-        </View>
+        </Grid2>
         {netHint !== undefined || priceHint !== undefined ? (
           <Text style={{ color: colors.olive, fontSize: 13, marginTop: 6 }}>
             Calculé :{netHint !== undefined ? ` poids après découpe ≈ ${fmt(netHint)} kg` : ''}
@@ -503,12 +516,7 @@ export default function EditionScreen() {
         open={open.trophee}
         onToggle={toggle('trophee')}
       >
-        <Label>Classement de chasse</Label>
-        <ChipRow>
-          {RATING_CHOICES.map((r) => (
-            <Chip key={r} label={r} selected={huntRating === r} onPress={() => setHuntRating(huntRating === r ? '' : r)} />
-          ))}
-        </ChipRow>
+        <Select label="Classement de chasse" value={huntRating} onChange={setHuntRating} customKey="rating" placeholder="S++" options={RATING_CHOICES} />
         <Label>Classement de trophée (étoiles)</Label>
         <ChipRow>
           {[1, 2, 3, 4, 5].map((n) => (

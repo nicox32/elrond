@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { LevelPicker } from '../../components/armory';
-import { Button, Chip, ChipRow, Empty, Field, Label, Screen, styles } from '../../components/ui';
+import { Select } from '../../components/Select';
+import { Button, Empty, Field, FieldRow, Screen, styles } from '../../components/ui';
 import { ACTION_TYPES, formatClassRange, getWeaponSheet, parseClassRange, WEAPON_SHEETS } from '../../data/armory';
 import { findWeapon } from '../../data/game';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -56,16 +57,11 @@ export default function ArmeFicheScreen() {
       <Text style={styles.muted}>
         En jeu : Armurerie › {weapon.name}. Recopiez les informations affichées sous l&apos;arme ; tout est facultatif.
       </Text>
-      <Label>Type d&apos;arme</Label>
-      <ChipRow>
-        {ACTION_TYPES.map((a) => (
-          <Chip key={a} label={a} selected={action === a} onPress={() => setAction(action === a ? '' : a)} />
-        ))}
-      </ChipRow>
-      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+      <Select label="Type d'arme" value={action} onChange={setAction} options={ACTION_TYPES} customKey="action" placeholder="Carabine à verrou" />
+      <FieldRow>
         <Field label="Niveau (classes)" value={level} onChangeText={setLevel} placeholder="3-6" />
         <Field label="Taille du chargeur" value={magazine} onChangeText={setMagazine} keyboardType="number-pad" placeholder="4" />
-      </View>
+      </FieldRow>
       <Field
         label="Description"
         value={description}

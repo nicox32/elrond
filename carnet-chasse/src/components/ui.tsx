@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, type TextInputProps, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -202,9 +202,38 @@ export function Button({
 
 export function Field({ label, ...props }: TextInputProps & { label: string }) {
   return (
-    <View style={{ flex: 1, minWidth: 120 }}>
+    <View style={{ flex: 1 }}>
       <Text style={styles.label}>{label}</Text>
       <TextInput placeholderTextColor={colors.textMuted} {...props} style={[styles.input, props.style]} />
+    </View>
+  );
+}
+
+/**
+ * Champs côte à côte, sans retour à la ligne (le retour à la ligne automatique faisait se chevaucher
+ * les champs sur Android). Les champs s'alignent par le bas même si un libellé tient sur deux lignes.
+ */
+export function FieldRow({ children }: { children: ReactNode }) {
+  return <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'flex-end' }}>{children}</View>;
+}
+
+/** Grille de champs sur 2 colonnes, ligne par ligne. */
+export function Grid2({ children }: { children: ReactNode }) {
+  const items = Children.toArray(children);
+  const rows: ReactNode[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return (
+    <View>
+      {rows.map((r, i) => (
+        <FieldRow key={i}>
+          {r.map((c, j) => (
+            <View key={j} style={{ flex: 1 }}>
+              {c}
+            </View>
+          ))}
+          {r.length === 1 ? <View style={{ flex: 1 }} /> : null}
+        </FieldRow>
+      ))}
     </View>
   );
 }

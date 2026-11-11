@@ -2,7 +2,7 @@ import { Image, Text, View } from 'react-native';
 
 import { formatClassRange, STAT_LEVELS } from '../data/armory';
 import { colors, fonts } from '../theme';
-import { Chip, ChipRow, Label } from './ui';
+import { Select } from './Select';
 
 /** Photo de l'arme ou de la munition, ou une vignette avec les initiales. */
 export function Thumb({ uri, label, size = 56 }: { uri?: string; label: string; size?: number }) {
@@ -50,16 +50,7 @@ export function StatLine({ label, value }: { label: string; value?: string | num
   );
 }
 
-/** Choix rapides d'un niveau (« Supérieur(e) »…), comme sous les jauges du jeu. */
+/** Menu des niveaux affichés sous les jauges du jeu (« Supérieur(e) »…), valeurs perso possibles. */
 export function LevelPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <>
-      <Label>{label}</Label>
-      <ChipRow>
-        {STAT_LEVELS.map((l) => (
-          <Chip key={l} label={l} selected={value === l} onPress={() => onChange(value === l ? '' : l)} />
-        ))}
-      </ChipRow>
-    </>
-  );
+  return <Select label={label} value={value} onChange={onChange} options={STAT_LEVELS} customKey="level" placeholder="Choisir…" />;
 }
