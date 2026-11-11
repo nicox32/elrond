@@ -194,6 +194,9 @@ export const GAME_RULES: string[] = [
   "Une année de vie d'un animal = 3 jours en jeu. En fin d'espérance de vie, il disparaît et d'autres prennent sa place : prélevez-le pendant sa dernière année pour le meilleur trophée et le moins d'impact.",
   "L'abattage ne compte que pour le territoire où vivait l'animal : gérer les élans d'une région n'affecte que les élans de cette région.",
   'Espèces solitaires (comme les élans) : explorez tout le territoire pour repérer les individus les plus faibles.',
+  "Trophée « Ultime » : pas seulement grand, il vient d'un animal à condition rare : albinisme (fourrure blanche, yeux rouges), leucisme (fourrure blanche, yeux normaux), mélanisme (fourrure noire ou foncée) ou érythrisme (fourrure rose ou rougeâtre). Il faut de la chance !",
+  "Empaillez ces trophées ultimes : ils coûtent une petite fortune, mais c'est le meilleur moyen de créer une collection dont vous serez fier.",
+  "Tout est dans le journal : vos prélèvements permettent de corréler qualité des trophées et condition physique. Ce ne sont que des probabilités : rien n'est garanti.",
 ];
 
 export interface PopulationStatus {

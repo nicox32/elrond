@@ -169,6 +169,7 @@ function parseAnimal(v: unknown): HerdAnimal | null {
     status: oneOf(v.status, STATUSES) ?? 'vivant',
     lastSeen,
     takenAt: str(v.takenAt),
+    coat: str(v.coat),
     notes: str(v.notes),
   };
 }

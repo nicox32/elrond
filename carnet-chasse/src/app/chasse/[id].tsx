@@ -5,7 +5,7 @@ import { Image, Text, View } from 'react-native';
 import { Button, Card, Empty, Screen, SectionTitle, styles } from '../../components/ui';
 import { findWeapon, getReserve, getSpecies, SHOT_ZONE_LABELS, TROPHY_TYPE_LABELS } from '../../data/game';
 import { getSpeciesInfo } from '../../data/speciesInfo';
-import { computeNetWeight, damagedOrgans, estimateMeatPrice, formatDuration } from '../../logic/details';
+import { computeNetWeight, damagedOrgans, estimateMeatPrice, formatDuration, isRareCoat } from '../../logic/details';
 import { formatTime } from '../../logic/schedule';
 import { formatDateTime, formatNumber, formatScore } from '../../logic/stats';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -110,6 +110,17 @@ export default function HuntScreen() {
           ) : null}
         </View>
       </Card>
+
+      {isRareCoat(hunt.coat) ? (
+        <Card style={{ borderColor: colors.gold, backgroundColor: colors.goldSoft, gap: 2 }}>
+          <Text style={[styles.strong, { color: colors.gold }]}>✦ Trophée Ultime · fourrure {hunt.coat?.toLowerCase()}</Text>
+          <Text style={styles.text}>
+            {hunt.outcome === 'empaille'
+              ? 'Empaillé : une pièce maîtresse pour votre collection.'
+              : 'Condition rare : le jeu conseille de l’empailler, même si cela coûte cher.'}
+          </Text>
+        </Card>
+      ) : null}
 
       {!getSpeciesInfo(hunt.speciesId, state.speciesSheets) ? (
         <Card onPress={() => router.push({ pathname: '/espece/fiche', params: { id: hunt.speciesId } })} style={{ borderColor: colors.gold, gap: 2 }}>

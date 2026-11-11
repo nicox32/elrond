@@ -18,8 +18,10 @@ import {
 import {
   ALL_NUM_FIELDS,
   ANIMAL_FIELDS,
+  COAT_CHOICES,
   computeNetWeight,
   estimateMeatPrice,
+  isRareCoat,
   MEASUREMENT_PRESETS,
   type NumKey,
   ORGAN_LABELS,
@@ -350,8 +352,19 @@ export default function EditionScreen() {
             <SmallNum key={f.key} label={f.label} value={nums[f.key]} onChange={setNum(f.key)} placeholder={f.placeholder} />
           ))}
         </View>
+        <Label>Robe</Label>
+        <ChipRow>
+          {COAT_CHOICES.map((c) => (
+            <Chip key={c.label} label={c.rare ? `✦ ${c.label}` : c.label} selected={coat === c.label} onPress={() => setCoat(coat === c.label ? '' : c.label)} />
+          ))}
+        </ChipRow>
+        {isRareCoat(coat) ? (
+          <Text style={{ color: colors.gold, fontSize: 13, marginTop: 6, fontFamily: fonts.semibold }}>
+            ✦ Fourrure rare : trophée « Ultime » potentiel. Le jeu conseille de l&apos;empailler.
+          </Text>
+        ) : null}
         <View style={[styles.row, { flexWrap: 'wrap' }]}>
-          <Field label="Robe" value={coat} onChangeText={setCoat} placeholder="Standard" />
+          <Field label="Robe (autre)" value={coat} onChangeText={setCoat} placeholder="Standard" />
           <Field label="Rareté" value={rarity} onChangeText={setRarity} placeholder="Ordinaire" />
         </View>
       </Fold>

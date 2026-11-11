@@ -5,6 +5,7 @@ import { Text, View } from 'react-native';
 import { HuntRow } from '../../components/HuntRow';
 import { Card, Chip, ChipRow, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { RESERVES, SPECIES } from '../../data/game';
+import { conditionVsTrophy, isRareCoat } from '../../logic/details';
 import { formatDate, formatScore, sortByDateDesc, summarizeSpecies } from '../../logic/stats';
 import type { ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -18,6 +19,8 @@ export default function TropheesScreen() {
 
   const summary = useMemo(() => summarizeSpecies(state.hunts), [state.hunts]);
   const toPlace = useMemo(() => sortByDateDesc(state.hunts.filter((h) => h.toPlace)), [state.hunts]);
+  const ultimes = useMemo(() => sortByDateDesc(state.hunts.filter((h) => isRareCoat(h.coat))), [state.hunts]);
+  const bands = useMemo(() => conditionVsTrophy(state.hunts), [state.hunts]);
   const huntedTotal = SPECIES.filter((s) => summary.has(s.id)).length;
   const list = SPECIES.filter((s) => s.reserveId === reserve);
   const huntedHere = list.filter((s) => summary.has(s.id)).length;
@@ -38,6 +41,38 @@ export default function TropheesScreen() {
           {toPlace.map((h) => (
             <HuntRow key={h.id} hunt={h} customWeapons={state.customWeapons} />
           ))}
+        </>
+      ) : null}
+
+      {ultimes.length > 0 ? (
+        <>
+          <SectionTitle right={<Text style={[styles.muted, { color: colors.gold }]}>{ultimes.length}</Text>}>✦ Trophées ultimes</SectionTitle>
+          <Text style={styles.muted}>Fourrures rares (albinos, leucique, mélanique, érythrique) : à empailler pour la collection.</Text>
+          {ultimes.map((h) => (
+            <HuntRow key={h.id} hunt={h} customWeapons={state.customWeapons} />
+          ))}
+        </>
+      ) : null}
+
+      {bands.some((b) => b.count > 0) ? (
+        <>
+          <SectionTitle>Condition et qualité</SectionTitle>
+          <Card style={{ gap: 6 }}>
+            {bands.map((b) => (
+              <View key={b.label} style={[styles.row, { justifyContent: 'space-between' }]}>
+                <Text style={[styles.text, { width: 110 }]}>{b.label}</Text>
+                <Text style={styles.muted}>{b.count} prélèv.</Text>
+                <Text style={[styles.text, { color: colors.gold, fontFamily: fonts.semibold, minWidth: 90, textAlign: 'right' }]}>
+                  {b.avgScore !== undefined ? `${formatScore(Math.round(b.avgScore * 10) / 10)} pts` : '—'}
+                  {b.avgStars !== undefined ? ` · ${b.avgStars.toFixed(1).replace('.', ',')}★` : ''}
+                </Text>
+              </View>
+            ))}
+            <Text style={styles.muted}>
+              Moyennes de vos prélèvements où la condition physique est notée. Ce ne sont que des probabilités : rien n&apos;est
+              garanti dans la nature.
+            </Text>
+          </Card>
         </>
       ) : null}
 

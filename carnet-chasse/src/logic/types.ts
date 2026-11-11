@@ -153,6 +153,8 @@ export interface HerdAnimal {
   lastSeen: string;
   /** Date ISO du prélèvement, si prélevé. */
   takenAt?: string;
+  /** Robe observée (Standard, Albinos, Leucique, Mélanique, Érythrique). */
+  coat?: string;
   notes?: string;
 }
 

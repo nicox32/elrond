@@ -108,3 +108,52 @@ export function damagedOrgans(h: Hunt): { id: OrganId; label: string; pct: numbe
     .map(([id, pct]) => ({ id, label: ORGAN_LABELS[id], pct }))
     .sort((a, b) => b.pct - a.pct);
 }
+
+/** Robes vues en jeu : « Standard » et les quatre conditions rares de l'encyclopédie. */
+export const COAT_CHOICES: { label: string; rare: boolean; hint?: string }[] = [
+  { label: 'Standard', rare: false },
+  { label: 'Albinos', rare: true, hint: 'fourrure blanche, yeux rouges' },
+  { label: 'Leucique', rare: true, hint: 'fourrure blanche, yeux normaux' },
+  { label: 'Mélanique', rare: true, hint: 'fourrure noire ou foncée' },
+  { label: 'Érythrique', rare: true, hint: 'fourrure rose ou rougeâtre' },
+];
+
+const norm = (s: string) => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const RARE_ROOTS = ['albin', 'leuci', 'melan', 'erythr'];
+
+/** Robe rare (albinisme, leucisme, mélanisme, érythrisme) : trophée « Ultime » potentiel, à empailler. */
+export function isRareCoat(coat: string | undefined): boolean {
+  if (!coat) return false;
+  const c = norm(coat);
+  return RARE_ROOTS.some((r) => c.includes(r));
+}
+
+export interface ConditionBand {
+  label: string;
+  min: number;
+  max: number;
+  count: number;
+  avgScore?: number;
+  avgStars?: number;
+}
+
+/**
+ * « Tout est dans le journal » : moyenne des scores et des étoiles par tranche de condition physique,
+ * pour voir le lien entre condition et qualité des trophées (rien n'est garanti, ce sont des tendances).
+ */
+export function conditionVsTrophy(hunts: Hunt[]): ConditionBand[] {
+  const bands: ConditionBand[] = [
+    { label: 'Moins de 40 %', min: 0, max: 40, count: 0 },
+    { label: '40 à 69 %', min: 40, max: 70, count: 0 },
+    { label: '70 % et plus', min: 70, max: 101, count: 0 },
+  ];
+  for (const b of bands) {
+    const inBand = hunts.filter((h) => h.conditionPct !== undefined && h.conditionPct >= b.min && h.conditionPct < b.max);
+    b.count = inBand.length;
+    const scores = inBand.map((h) => h.trophyScore).filter((n): n is number => n !== undefined);
+    const stars = inBand.map((h) => h.trophyStars).filter((n): n is number => n !== undefined);
+    if (scores.length) b.avgScore = scores.reduce((a, c) => a + c, 0) / scores.length;
+    if (stars.length) b.avgStars = stars.reduce((a, c) => a + c, 0) / stars.length;
+  }
+  return bands;
+}

@@ -18,13 +18,14 @@ import {
   summarizeHerd,
 } from '../../logic/herds';
 import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
+import { COAT_CHOICES, isRareCoat } from '../../logic/details';
 import { formatDate, parseNumber } from '../../logic/stats';
 import type { AgeStage, AnimalSex, HerdAnimal, PopulationStatus } from '../../logic/types';
 import { cancelHerdReminder, REMINDERS_SUPPORTED, scheduleHerdReminder } from '../../reminders';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
-type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'notes'>;
+type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'notes'>;
 
 function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
   initial?: AnimalDraft;
@@ -38,13 +39,22 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
   const [stars, setStars] = useState<number | undefined>(initial?.stars);
   const [condition, setCondition] = useState(initial?.conditionPct !== undefined ? String(initial.conditionPct).replace('.', ',') : '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [coat, setCoat] = useState(initial?.coat ?? '');
   const [error, setError] = useState<string | null>(null);
   const needsStars = sex === 'male' && age !== 'jeune';
 
   function submit() {
     const c = condition.trim() ? parseNumber(condition) : undefined;
     if (condition.trim() && (c === undefined || c > 100)) return setError('Condition invalide (0 à 100 %).');
-    onSubmit({ label: label.trim(), sex, age, stars: needsStars ? stars : undefined, conditionPct: c, notes: notes.trim() || undefined });
+    onSubmit({
+      label: label.trim(),
+      sex,
+      age,
+      stars: needsStars ? stars : undefined,
+      conditionPct: c,
+      coat: coat || undefined,
+      notes: notes.trim() || undefined,
+    });
   }
 
   return (
@@ -74,6 +84,12 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
       <View style={{ maxWidth: 220 }}>
         <Field label="Condition physique (%)" value={condition} onChangeText={setCondition} keyboardType="decimal-pad" placeholder="ex. 31,7" />
       </View>
+      <Label>Robe</Label>
+      <ChipRow>
+        {COAT_CHOICES.map((c) => (
+          <Chip key={c.label} label={c.rare ? `✦ ${c.label}` : c.label} selected={coat === c.label} onPress={() => setCoat(coat === c.label ? '' : c.label)} />
+        ))}
+      </ChipRow>
       <Field label="Notes" value={notes} onChangeText={setNotes} placeholder="ex. boite de la patte avant" />
       {error ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold, marginTop: 8 }}>{error}</Text> : null}
       <View style={[styles.row, { marginTop: 12 }]}>
@@ -140,6 +156,11 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
         )}
       </View>
       {alive ? <Text style={[styles.muted, { color: colors.text }]}>{advice.reason}</Text> : null}
+      {isRareCoat(animal.coat) ? (
+        <Text style={{ color: colors.gold, fontFamily: fonts.semibold, fontSize: 13 }}>
+          ✦ Fourrure {animal.coat?.toLowerCase()} : trophée Ultime potentiel, à empailler.
+        </Text>
+      ) : null}
       {animal.notes ? <Text style={styles.muted}>📝 {animal.notes}</Text> : null}
       <Text style={[styles.muted, { fontSize: 12 }]}>Vu le {formatDate(animal.lastSeen)}</Text>
       {alive ? (

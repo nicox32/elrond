@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Image, Text, View } from 'react-native';
 
 import { findWeapon, getSpecies, TROPHY_TYPE_LABELS } from '../data/game';
+import { isRareCoat } from '../logic/details';
 import { formatDateTime, formatNumber, formatScore } from '../logic/stats';
 import type { Hunt, ReserveId, Weapon } from '../logic/types';
 import { colors, fonts } from '../theme';
@@ -57,6 +58,9 @@ export function HuntRow({ hunt, customWeapons }: { hunt: Hunt; customWeapons: We
           <Text style={[styles.muted, { fontSize: 12 }]} numberOfLines={1}>
             {extra.join(' · ')}
           </Text>
+          {isRareCoat(hunt.coat) ? (
+            <Text style={{ color: colors.gold, fontSize: 12, fontFamily: fonts.semibold }}>✦ Fourrure rare · {hunt.coat}</Text>
+          ) : null}
           {hunt.toPlace ? (
             <Text style={{ color: colors.olive, fontSize: 12, fontFamily: fonts.semibold }}>À exposer au pavillon</Text>
           ) : null}

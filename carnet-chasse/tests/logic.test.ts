@@ -363,3 +363,26 @@ test('carte interactive : liens Shackmaps par réserve', async () => {
   const s = parseState({ mapUrls: { kilimaya: saved.kilimaya, headquarters: 'https://evil.com', inconnu: 'https://www.shackmaps.com/a' } });
   assert.deepEqual(s?.mapUrls, { kilimaya: saved.kilimaya });
 });
+
+test('fourrures rares et lien condition / qualité des trophées', async () => {
+  const { isRareCoat, conditionVsTrophy } = await import('../src/logic/details.ts');
+  for (const c of ['Albinos', 'albinisme', 'Leucique', 'Mélanique', 'melanisme', 'Érythrique', 'erythrisme']) assert.equal(isRareCoat(c), true, c);
+  for (const c of ['Standard', '', undefined]) assert.equal(isRareCoat(c), false, String(c));
+  const bands = conditionVsTrophy([
+    hunt({ id: 'a', conditionPct: 31.7, trophyScore: 100, trophyStars: 1 }),
+    hunt({ id: 'b', conditionPct: 20, trophyScore: 80, trophyStars: 1 }),
+    hunt({ id: 'c', conditionPct: 85, trophyScore: 400, trophyStars: 4 }),
+    hunt({ id: 'd', trophyScore: 999 }),
+  ]);
+  assert.deepEqual(bands.map((b) => b.count), [2, 0, 1]);
+  assert.equal(bands[0].avgScore, 90);
+  assert.equal(bands[0].avgStars, 1);
+  assert.equal(bands[1].avgScore, undefined);
+  assert.equal(bands[2].avgScore, 400);
+});
+
+test('troupeau : robe de l’animal conservée dans la sauvegarde', () => {
+  const s = parseState({ herds: [{ id: 'h', name: 'Lac', speciesId: 'cerf-mulet', reserveId: 'new-laurentia', createdAt: '2026-11-01',
+    animals: [{ id: 'a', sex: 'male', age: 'mur', coat: 'Mélanique', lastSeen: '2026-11-11' }] }] });
+  assert.equal(s?.herds[0].animals[0].coat, 'Mélanique');
+});
