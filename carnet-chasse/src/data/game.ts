@@ -16,6 +16,7 @@ import type {
   Weapon,
   WeaponType,
 } from '../logic/types.ts';
+import { inReserve } from '../logic/stats.ts';
 
 export const GAME_VERSION = '1.4';
 
@@ -42,7 +43,8 @@ export const RESERVES: Reserve[] = [
     region: 'Montagnes Rocheuses',
     areaKm2: 16,
     story: false,
-    description: 'Quartier général dans les montagnes Rocheuses, sans scénario dédié.',
+    description:
+      "Quartier général compact dans les Rocheuses, sans scénario dédié : chasse rapide (wapiti, cerf mulet, lièvre, lagopède, canard colvert), pavillon principal à agrandir pour exposer tous vos trophées, stand de tir pour régler vos armes, et Elijah pour vous guider dans l'aménagement du domaine.",
   },
 ];
 
@@ -53,12 +55,12 @@ export const SPECIES: Species[] = [
   { id: 'mouflon-dall', name: 'Mouflon de Dall', gameName: 'Dall Sheep', reserveId: 'new-laurentia', category: 'moyen', animalClass: 5 },
   { id: 'dindon', name: "Dindon sauvage de l'Est", gameName: 'Eastern Wild Turkey', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 2 },
   { id: 'loup', name: 'Loup gris du Nord-Ouest', gameName: 'Northwestern Grey Wolf', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
-  { id: 'colvert', name: 'Canard colvert', gameName: 'Mallard', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 1 },
+  { id: 'colvert', name: 'Canard colvert', gameName: 'Mallard', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 1, alsoIn: ['headquarters'] },
   { id: 'orignal', name: "Élan de l'Ouest", gameName: 'Western Moose', reserveId: 'new-laurentia', category: 'grand', animalClass: 8 },
-  { id: 'lagopede', name: 'Lagopède à queue blanche', gameName: 'White-tailed Ptarmigan', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 1 },
-  { id: 'wapiti', name: 'Wapiti des Rocheuses', gameName: 'Rocky Mountain Elk', reserveId: 'new-laurentia', category: 'grand', animalClass: 7 },
-  { id: 'cerf-mulet', name: 'Cerf mulet des Rocheuses', gameName: 'Rocky Mountain Mule Deer', reserveId: 'new-laurentia', category: 'moyen', animalClass: 6 },
-  { id: 'lievre', name: "Lièvre d'Amérique", gameName: 'Snowshoe Hare', reserveId: 'new-laurentia', category: 'petit', animalClass: 1 },
+  { id: 'lagopede', name: 'Lagopède à queue blanche', gameName: 'White-tailed Ptarmigan', reserveId: 'new-laurentia', category: 'oiseau', animalClass: 1, alsoIn: ['headquarters'] },
+  { id: 'wapiti', name: 'Wapiti des Rocheuses', gameName: 'Rocky Mountain Elk', reserveId: 'new-laurentia', category: 'grand', animalClass: 7, alsoIn: ['headquarters'] },
+  { id: 'cerf-mulet', name: 'Cerf mulet des Rocheuses', gameName: 'Rocky Mountain Mule Deer', reserveId: 'new-laurentia', category: 'moyen', animalClass: 6, alsoIn: ['headquarters'] },
+  { id: 'lievre', name: "Lièvre d'Amérique", gameName: 'Snowshoe Hare', reserveId: 'new-laurentia', category: 'petit', animalClass: 1, alsoIn: ['headquarters'] },
   { id: 'cerf-virginie', name: 'Cerf de Virginie du Nord-Ouest', gameName: 'Northern White-tailed Deer', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
   { id: 'bison', name: 'Bison des bois', gameName: 'Wood Bison', reserveId: 'new-laurentia', category: 'grand', animalClass: 8 },
   { id: 'pronghorn', name: "Antilope d'Amérique", gameName: 'Rocky Mountain Pronghorn', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4, addedIn: '0.3.0' },
@@ -168,8 +170,11 @@ export function getReserve(id: ReserveId): Reserve | undefined {
 }
 
 export function speciesOfReserve(reserveId: ReserveId): Species[] {
-  return SPECIES.filter((s) => s.reserveId === reserveId);
+  return SPECIES.filter((s) => inReserve(s, reserveId));
 }
+
+/** Zones où l'on peut chasser (au moins une espèce) : New Laurentia, Kilimaya, le QG. */
+export const HUNTING_RESERVES: Reserve[] = RESERVES.filter((r) => SPECIES.some((s) => inReserve(s, r.id)));
 
 /** Armes fournies avec l'appli, puis celles ajoutées par le joueur. */
 export function allWeapons(customWeapons: Weapon[]): Weapon[] {

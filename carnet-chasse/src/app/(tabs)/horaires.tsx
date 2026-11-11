@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
-import { getReserve, getSpecies, RESERVES, SPECIES, speciesOfReserve } from '../../data/game';
+import { getReserve, getSpecies, HUNTING_RESERVES, speciesOfReserve } from '../../data/game';
 import { getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
 import {
   formatTime,
@@ -20,7 +20,6 @@ import type { NeedType, NeedZone, ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
-const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 const NEEDS = Object.keys(NEED_LABELS) as NeedType[];
 const QUICK_HOURS = [6, 8, 12, 16, 20];
 

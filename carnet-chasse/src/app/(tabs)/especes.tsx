@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Card, Chip, ChipRow, Screen, SectionTitle, Title, styles } from '../../components/ui';
-import { allWeapons, CATEGORY_LABELS, GAME_VERSION, RESERVES, SPECIES, SUGGESTED_CALIBERS } from '../../data/game';
+import { allWeapons, CATEGORY_LABELS, GAME_VERSION, RESERVES, SPECIES, speciesOfReserve, SUGGESTED_CALIBERS } from '../../data/game';
 import { getSpeciesInfo, speciesClass } from '../../data/speciesInfo';
 import { summarizeSpecies } from '../../logic/stats';
 import type { ReserveId, SpeciesCategory } from '../../logic/types';
@@ -18,7 +18,7 @@ export default function EspecesScreen() {
   const summary = useMemo(() => summarizeSpecies(state.hunts), [state.hunts]);
   const owned = allWeapons(state.customWeapons).filter((w) => state.ownedWeaponIds.includes(w.id));
   const current = RESERVES.find((r) => r.id === reserve);
-  const list = SPECIES.filter((s) => s.reserveId === reserve);
+  const list = speciesOfReserve(reserve);
 
   return (
     <Screen>

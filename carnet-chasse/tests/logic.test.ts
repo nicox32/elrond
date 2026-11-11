@@ -462,3 +462,14 @@ test('classes des espèces de New Laurentia et munitions adaptées', async () =>
   assert.equal(swift(speciesClass('sanglier')!), true);
   assert.equal(swift(speciesClass('cerf-mulet')!), false);
 });
+
+test('le QG partage 5 espèces avec New Laurentia sans les compter deux fois', async () => {
+  const { speciesOfReserve, HUNTING_RESERVES, SPECIES } = await import('../src/data/game.ts');
+  assert.deepEqual(speciesOfReserve('headquarters').map((s) => s.id).sort(), ['cerf-mulet', 'colvert', 'lagopede', 'lievre', 'wapiti']);
+  assert.equal(speciesOfReserve('new-laurentia').length, 15);
+  assert.equal(SPECIES.length, 29);
+  assert.deepEqual(HUNTING_RESERVES.map((r) => r.id), ['new-laurentia', 'kilimaya', 'headquarters']);
+  const hq = overview([hunt({ id: 'q', reserveId: 'headquarters', speciesId: 'wapiti' })], SPECIES, 'headquarters');
+  assert.equal(hq.speciesTotal, 5);
+  assert.equal(hq.speciesHunted, 1);
+});

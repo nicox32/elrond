@@ -3,13 +3,12 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, styles } from '../components/ui';
-import { getReserve, getSpecies, RESERVES, SPECIES, speciesOfReserve } from '../data/game';
+import { getReserve, getSpecies, HUNTING_RESERVES, speciesOfReserve } from '../data/game';
 import { AGING_NOTE, daysSince, isVisitDue, POPULATION_LABELS, summarizeHerd } from '../logic/herds';
 import type { ReserveId } from '../logic/types';
 import { useCarnet } from '../state/CarnetProvider';
 import { colors, fonts } from '../theme';
 
-const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 
 function AddHerd() {
   const { state, addHerd } = useCarnet();

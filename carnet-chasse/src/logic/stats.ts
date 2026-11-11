@@ -55,9 +55,14 @@ export function weaponStats(hunts: Hunt[], weaponId: string): WeaponStats {
   };
 }
 
+/** L'espèce vit-elle dans cette zone (réserve principale ou zones supplémentaires) ? */
+export function inReserve(s: Species, reserveId: ReserveId): boolean {
+  return s.reserveId === reserveId || !!s.alsoIn?.includes(reserveId);
+}
+
 export function overview(hunts: Hunt[], species: Species[], reserveId?: ReserveId): Overview {
   const scoped = reserveId ? hunts.filter((h) => h.reserveId === reserveId) : hunts;
-  const pool = reserveId ? species.filter((s) => s.reserveId === reserveId) : species;
+  const pool = reserveId ? species.filter((s) => inReserve(s, reserveId)) : species;
   const poolIds = new Set(pool.map((s) => s.id));
   const hunted = new Set(scoped.map((h) => h.speciesId).filter((id) => poolIds.has(id)));
   const distances = scoped.map((h) => h.distanceM).filter((d): d is number => d !== undefined);

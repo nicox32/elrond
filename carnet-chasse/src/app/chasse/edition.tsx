@@ -3,18 +3,7 @@ import { useMemo, useState } from 'react';
 import { Image, Pressable, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Chip, ChipRow, Field, Fold, Label, Screen, styles } from '../../components/ui';
-import {
-  allWeapons,
-  CATEGORY_LABELS,
-  findWeapon,
-  RESERVES,
-  SHOT_ZONE_LABELS,
-  SPECIES,
-  speciesOfReserve,
-  SUGGESTED_CALIBERS,
-  SUGGESTED_DISTANCE,
-  TROPHY_TYPE_LABELS,
-} from '../../data/game';
+import { allWeapons, CATEGORY_LABELS, findWeapon, HUNTING_RESERVES, SHOT_ZONE_LABELS, SPECIES, speciesOfReserve, SUGGESTED_CALIBERS, SUGGESTED_DISTANCE, TROPHY_TYPE_LABELS } from '../../data/game';
 import {
   ALL_NUM_FIELDS,
   ANIMAL_FIELDS,
@@ -34,7 +23,7 @@ import {
 import { ammoForCaliber, classFits, formatClassRange, getWeaponSheet, parseClassRange } from '../../data/armory';
 import { checkEnergy, energyKindFor, formatRange, getSpeciesInfo, speciesClass } from '../../data/speciesInfo';
 import { formatTime, parseTime } from '../../logic/schedule';
-import { formatDate, formatNumber, formatScore, parseNumber } from '../../logic/stats';
+import { formatDate, formatNumber, formatScore, inReserve, parseNumber } from '../../logic/stats';
 import {
   type AnimalSex,
   type HuntMode,
@@ -50,7 +39,6 @@ import { pickTrophyPhoto } from '../../photos';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
-const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 
 type FoldId = 'animal' | 'tir' | 'organes' | 'prix' | 'trophee';
 
@@ -200,7 +188,7 @@ export default function EditionScreen() {
 
   function changeReserve(r: ReserveId) {
     setReserveId(r);
-    if (species && species.reserveId !== r) setSpeciesId(undefined);
+    if (species && !inReserve(species, r)) setSpeciesId(undefined);
   }
 
   async function choosePhoto() {

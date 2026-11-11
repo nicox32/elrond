@@ -35,6 +35,8 @@ export interface Species {
   blurb?: string;
   /** Classe (niveau) de l'animal, de 1 à 9 : sert à choisir arme et munition. */
   animalClass?: number;
+  /** Autres zones où l'espèce est aussi présente (ex. le QG). */
+  alsoIn?: ReserveId[];
 }
 
 export interface Weapon {

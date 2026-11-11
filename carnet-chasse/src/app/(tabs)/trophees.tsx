@@ -4,14 +4,13 @@ import { Text, View } from 'react-native';
 
 import { HuntRow } from '../../components/HuntRow';
 import { Card, Chip, ChipRow, Screen, SectionTitle, Title, styles } from '../../components/ui';
-import { RESERVES, SPECIES } from '../../data/game';
+import { HUNTING_RESERVES, SPECIES, speciesOfReserve } from '../../data/game';
 import { conditionVsTrophy, isRareCoat } from '../../logic/details';
 import { formatDate, formatScore, sortByDateDesc, summarizeSpecies } from '../../logic/stats';
 import type { ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
-const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 
 export default function TropheesScreen() {
   const { state } = useCarnet();
@@ -22,7 +21,7 @@ export default function TropheesScreen() {
   const ultimes = useMemo(() => sortByDateDesc(state.hunts.filter((h) => isRareCoat(h.coat))), [state.hunts]);
   const bands = useMemo(() => conditionVsTrophy(state.hunts), [state.hunts]);
   const huntedTotal = SPECIES.filter((s) => summary.has(s.id)).length;
-  const list = SPECIES.filter((s) => s.reserveId === reserve);
+  const list = speciesOfReserve(reserve);
   const huntedHere = list.filter((s) => summary.has(s.id)).length;
 
   return (

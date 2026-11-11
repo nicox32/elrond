@@ -17,7 +17,7 @@ import {
   TrophyFrame,
   styles,
 } from '../../components/ui';
-import { findWeapon, GAME_VERSION, getReserve, getSpecies, RESERVES, SPECIES } from '../../data/game';
+import { findWeapon, GAME_VERSION, getReserve, getSpecies, HUNTING_RESERVES, SPECIES } from '../../data/game';
 import { totalEarnings } from '../../logic/details';
 import { isVisitDue } from '../../logic/herds';
 import { formatNumber, formatScore, overview, sortByDateDesc } from '../../logic/stats';
@@ -25,7 +25,6 @@ import type { ReserveId } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
-const HUNTING_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
 
 export default function JournalScreen() {
   const { state } = useCarnet();

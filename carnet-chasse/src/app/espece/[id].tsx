@@ -48,7 +48,7 @@ export default function EspeceScreen() {
       <Card style={{ gap: 4 }}>
         <Text style={styles.title}>{species.name}</Text>
         <Text style={styles.muted}>
-          {species.gameName} · {getReserve(species.reserveId)?.name}
+          {species.gameName} · {[species.reserveId, ...(species.alsoIn ?? [])].map((r) => getReserve(r)?.name).join(', ')}
         </Text>
         <View style={[styles.row, { marginTop: 6, flexWrap: 'wrap' }]}>
           {cls ? (
