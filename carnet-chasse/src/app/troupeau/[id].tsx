@@ -26,7 +26,7 @@ import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 import { Select } from '../../components/Select';
 
-type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'endOfLife' | 'notes'>;
+type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'lifeStage' | 'notes'>;
 
 function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
   initial?: AnimalDraft;
@@ -41,7 +41,7 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
   const [condition, setCondition] = useState(initial?.conditionPct !== undefined ? String(initial.conditionPct).replace('.', ',') : '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [coat, setCoat] = useState(initial?.coat ?? '');
-  const [endOfLife, setEndOfLife] = useState(initial?.endOfLife ?? false);
+  const [lifeStage, setLifeStage] = useState<HerdAnimal['lifeStage']>(initial?.lifeStage);
   const [error, setError] = useState<string | null>(null);
   const needsStars = sex === 'male' && age !== 'jeune';
 
@@ -55,7 +55,7 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
       stars: needsStars ? stars : undefined,
       conditionPct: c,
       coat: coat || undefined,
-      endOfLife: sex === 'male' && age === 'mur' && endOfLife ? true : undefined,
+      lifeStage: sex === 'femelle' || age === 'mur' ? lifeStage : undefined,
       notes: notes.trim() || undefined,
     });
   }
@@ -74,10 +74,17 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
           <Chip key={a} label={AGE_LABELS[a]} selected={age === a} onPress={() => setAge(a)} />
         ))}
       </ChipRow>
-      {sex === 'male' && age === 'mur' ? (
-        <ChipRow>
-          <Chip label="Fin de vie (vieux)" tone="olive" selected={endOfLife} onPress={() => setEndOfLife((v) => !v)} />
-        </ChipRow>
+      {sex === 'femelle' || age === 'mur' ? (
+        <>
+          <Label>Moment de vie</Label>
+          <ChipRow>
+            <Chip label="Normal" selected={!lifeStage} onPress={() => setLifeStage(undefined)} />
+            {sex === 'male' ? (
+              <Chip label="Avant-dernière année" selected={lifeStage === 'avant-derniere'} onPress={() => setLifeStage('avant-derniere')} />
+            ) : null}
+            <Chip label="Dernière année" tone="olive" selected={lifeStage === 'derniere'} onPress={() => setLifeStage('derniere')} />
+          </ChipRow>
+        </>
       ) : null}
       {needsStars ? (
         <>
@@ -124,7 +131,8 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
   const { updateAnimal, removeAnimal } = useCarnet();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const advice = adviceFor(animal);
+  const { state } = useCarnet();
+  const advice = adviceFor(animal, state.prudent ? 40 : 50);
   const alive = animal.status === 'vivant';
   const title =
     animal.label || `${animal.sex === 'male' ? 'Mâle' : 'Femelle'} ${AGE_LABELS[animal.age].toLowerCase()} n°${index + 1}`;
@@ -148,7 +156,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
     AGE_LABELS[animal.age],
     animal.stars ? '★'.repeat(animal.stars) : null,
     animal.conditionPct !== undefined ? `${String(animal.conditionPct).replace('.', ',')} %` : null,
-    animal.endOfLife ? 'fin de vie' : null,
+    animal.lifeStage === 'derniere' ? 'dernière année' : animal.lifeStage === 'avant-derniere' ? 'avant-dernière année' : null,
   ].filter(Boolean);
 
   return (
@@ -230,10 +238,10 @@ export default function HerdScreen() {
 
   const species = getSpecies(herd.speciesId);
   const info = getSpeciesInfo(herd.speciesId, state.speciesSheets);
-  const s = summarizeHerd(herd);
+  const s = summarizeHerd(herd, state.prudent ? 40 : 50);
   const takenToday = malesTakenToday(herd);
   const days = daysSince(herd.lastVisit);
-  const animals = sortAnimals(herd.animals);
+  const animals = sortAnimals(herd.animals, state.prudent ? 40 : 50);
   const due = isVisitDue(herd);
   const h = herd;
 

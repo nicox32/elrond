@@ -172,7 +172,8 @@ function parseAnimal(v: unknown): HerdAnimal | null {
     lastSeen,
     takenAt: str(v.takenAt),
     coat: str(v.coat),
-    endOfLife: v.endOfLife === true ? true : undefined,
+    // Ancien champ « endOfLife » repris comme dernière année de vie.
+    lifeStage: oneOf(v.lifeStage, ['avant-derniere', 'derniere'] as const) ?? (v.endOfLife === true ? 'derniere' : undefined),
     notes: str(v.notes),
   };
 }
@@ -355,6 +356,7 @@ export function parseState(raw: unknown): CarnetState | null {
     ammoSheets,
     ownedAmmoIds,
     customChoices,
+    prudent: raw.prudent === true,
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),

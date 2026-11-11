@@ -12,11 +12,15 @@ import {
   DISTANCE_RULES,
   GAME_RULES,
   GOLDEN_RULES,
+  type LifeStage,
   OBJECTIVE,
   POPULATION_PATIENCE,
   POPULATION_STATUSES,
   type Sex,
+  STRATEGY,
   type Verdict,
+  YOUNG_CUTOFF,
+  YOUNG_CUTOFF_PRUDENT,
 } from '../../logic/management';
 import { colors, fonts } from '../../theme';
 
@@ -47,21 +51,20 @@ function GuideBlock({ icon, title, color, items }: { icon: string; title: string
 }
 
 export default function GestionScreen() {
-  const { state } = useCarnet();
+  const { state, setPrudent } = useCarnet();
   const [sex, setSex] = useState<Sex>('male');
   const [age, setAge] = useState<AgeClass>('adulte');
-  const [stars, setStars] = useState<number | undefined>(1);
   const [condition, setCondition] = useState('');
-  const [endOfLife, setEndOfLife] = useState(false);
+  const [stage, setStage] = useState<LifeStage>('normal');
 
-  const needsStars = sex === 'male' && age !== 'jeune';
-  const needsCondition = sex === 'femelle' || age === 'jeune' || (age === 'adulte' && stars === 1);
+  const showStage = sex === 'femelle' || age === 'mur';
+  const cutoff = state.prudent ? YOUNG_CUTOFF_PRUDENT : YOUNG_CUTOFF;
   const advice = advise({
     sex,
     age,
-    stars: needsStars ? stars : undefined,
-    conditionPct: needsCondition ? parseNumber(condition) : undefined,
-    endOfLife: sex === 'male' && age === 'mur' && endOfLife,
+    conditionPct: sex === 'femelle' ? undefined : parseNumber(condition),
+    lifeStage: showStage ? stage : 'normal',
+    youngCutoff: cutoff,
   });
   const v = VERDICT_STYLE[advice.verdict];
 
@@ -88,22 +91,21 @@ export default function GestionScreen() {
         <ChipRow>
           <Chip label="Jeune" selected={age === 'jeune'} onPress={() => setAge('jeune')} />
           <Chip label="Adulte" selected={age === 'adulte'} onPress={() => setAge('adulte')} />
-          <Chip label="Mûr" selected={age === 'mur'} onPress={() => setAge('mur')} />
-          {sex === 'male' && age === 'mur' ? (
-            <Chip label="Fin de vie (vieux)" tone="olive" selected={endOfLife} onPress={() => setEndOfLife((v) => !v)} />
-          ) : null}
+          <Chip label="Âgé (mûr)" selected={age === 'mur'} onPress={() => setAge('mur')} />
         </ChipRow>
-        {needsStars ? (
+        {showStage ? (
           <>
-            <Label>Étoiles</Label>
+            <Label>Moment de vie</Label>
             <ChipRow>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Chip key={n} label={'★'.repeat(n)} selected={stars === n} onPress={() => setStars(n)} />
-              ))}
+              <Chip label="Normal" selected={stage === 'normal'} onPress={() => setStage('normal')} />
+              {sex === 'male' ? (
+                <Chip label="Avant-dernière année" selected={stage === 'avant-derniere'} onPress={() => setStage('avant-derniere')} />
+              ) : null}
+              <Chip label="Dernière année (fin de vie)" tone="olive" selected={stage === 'derniere'} onPress={() => setStage('derniere')} />
             </ChipRow>
           </>
         ) : null}
-        {needsCondition ? (
+        {sex === 'male' ? (
           <View style={{ maxWidth: 220 }}>
             <Field
               label="Condition physique"
@@ -115,6 +117,16 @@ export default function GestionScreen() {
             />
           </View>
         ) : null}
+        {sex === 'male' && age === 'jeune' ? (
+          <ChipRow>
+            <Chip
+              label={state.prudent ? '✓ Mode prudent (seuil 40 %)' : 'Mode prudent (seuil 40 %)'}
+              tone="olive"
+              selected={state.prudent}
+              onPress={() => setPrudent(!state.prudent)}
+            />
+          </ChipRow>
+        ) : null}
 
         <View style={{ marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: v.bg, gap: 4 }}>
           <Text style={{ color: v.color, fontSize: 18, fontFamily: fonts.heading }}>
@@ -125,7 +137,7 @@ export default function GestionScreen() {
       </Card>
 
       <SectionTitle>📖 Ce que dit le jeu</SectionTitle>
-      <Text style={styles.muted}>Encyclopédie du jeu : « Gestion de la faune et abattage ». Prioritaire sur les conseils de joueurs.</Text>
+      <Text style={styles.muted}>Encyclopédie du jeu : « Gestion de la faune et abattage ».</Text>
       <Card style={{ gap: 6, borderColor: colors.accent }}>
         {GAME_RULES.map((t) => (
           <Text key={t} style={styles.text}>
@@ -144,41 +156,15 @@ export default function GestionScreen() {
         <Text style={styles.muted}>{POPULATION_PATIENCE}</Text>
       </Card>
 
-      <SectionTitle>🦌 Le guide du garde-chasse</SectionTitle>
+      <SectionTitle>🦌 La stratégie du garde-chasse</SectionTitle>
       <Card style={{ gap: 4 }}>
         <Text style={styles.strong}>L&apos;objectif</Text>
         <Text style={styles.text}>{OBJECTIVE}</Text>
+        <Text style={[styles.muted, { marginTop: 4 }]}>{STRATEGY.intro}</Text>
       </Card>
-      <GuideBlock
-        icon="🟢"
-        title="Les cibles prioritaires (à tuer)"
-        color={colors.olive}
-        items={[
-          "Mâles mûrs (vieux) à 1 ou 2 étoiles : cibles n°1. Mauvaise génétique : tuez-les pour qu'ils ne se reproduisent plus et pour récupérer l'argent avant qu'ils meurent de vieillesse.",
-          'Mâles adultes à 1 étoile avec une très basse condition physique (moins de 30-40 %) : éliminez-les pour stopper la transmission de leurs mauvais gènes dès le stade adulte.',
-          'Vieux mâles mûrs en fin de vie : abattez-les, peu importe leur condition, pour faire de la place et laisser les jeunes de meilleure qualité se développer.',
-          'Jeunes en condition très basse (moins de 40 %) : éliminez-les vite pour qu’ils laissent la place à des animaux de meilleur potentiel génétique (c’est aussi la cible recommandée par le jeu).',
-          'Femelles en condition basse (surtout jeunes) : possible, mais effet moindre sur la population.',
-        ]}
-      />
-      <GuideBlock
-        icon="🟡"
-        title="Trophées de luxe (à tuer en fin de vie)"
-        color={colors.accent}
-        items={[
-          "Mâles mûrs à 3, 4 ou 5 étoiles : laissez-les transmettre leurs gènes, puis prélevez-les pendant leur dernière année de vie (les 3 derniers jours en jeu) pour le meilleur trophée.",
-        ]}
-      />
-      <GuideBlock
-        icon="🔴"
-        title="Ne jamais toucher (à épargner)"
-        color={colors.danger}
-        items={[
-          'Les jeunes à condition moyenne : laissez-les grandir, leurs stats peuvent s’améliorer avec le temps.',
-          'Les adultes prometteurs (condition 50 % ou plus) : laissez-les grandir, ils deviendront de beaux mûrs.',
-          "Les femelles en bonne condition (sauf mission) : peu d'argent, et les tuer réduit la taille du troupeau.",
-        ]}
-      />
+      <GuideBlock icon="🟢" title="À prélever" color={colors.olive} items={STRATEGY.remove} />
+      <GuideBlock icon="🔴" title="À garder" color={colors.danger} items={STRATEGY.keep} />
+      <Text style={styles.muted}>Stratégie issue de nombreuses heures de jeu et de retours de la communauté.</Text>
 
       <SectionTitle>🤷 Rien à tirer dans ce troupeau ?</SectionTitle>
       <Card style={{ gap: 6 }}>

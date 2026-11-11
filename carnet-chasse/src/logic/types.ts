@@ -162,8 +162,8 @@ export interface HerdAnimal {
   takenAt?: string;
   /** Robe observée (Standard, Albinos, Leucique, Mélanique, Érythrique). */
   coat?: string;
-  /** Mûr arrivé en fin de vie. */
-  endOfLife?: boolean;
+  /** Moment de vie : avant-dernière ou dernière année. */
+  lifeStage?: 'avant-derniere' | 'derniere';
   notes?: string;
 }
 
@@ -251,6 +251,8 @@ export interface CarnetState {
   ownedAmmoIds: string[];
   /** Valeurs perso ajoutées dans les menus de sélection, par menu (robe, météo…). */
   customChoices: Record<string, string[]>;
+  /** Mode prudent du calculateur : seuil des jeunes faibles à 40 % au lieu de 50 %. */
+  prudent: boolean;
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
@@ -267,4 +269,5 @@ export const EMPTY_STATE: CarnetState = {
   ammoSheets: {},
   ownedAmmoIds: [],
   customChoices: {},
+  prudent: false,
 };

@@ -1,26 +1,30 @@
 /**
- * Règles de gestion du troupeau (guide du garde-chasse fourni par le joueur) : éliminer les mâles à faible
- * potentiel pour améliorer la génétique du troupeau. Mûrs 1-2 étoiles et adultes 1 étoile en mauvaise condition
- * à prélever, mûrs 3-5 étoiles à prélever en fin de vie, jeunes, adultes prometteurs et femelles à épargner.
+ * Calculateur « tirer ou épargner » : stratégie recommandée par le joueur (heures de jeu et retours de la
+ * communauté). On oublie la règle simpliste « tout ce qui est sous 50 % » : on analyse troupeau par troupeau,
+ * l'âge et la condition physique aux jumelles.
  */
 
 export const OBJECTIVE =
-  'Éliminer les mâles à faible potentiel pour améliorer la génétique du troupeau, laisser les meilleurs gènes se reproduire et faire apparaître des trophées 5 étoiles.';
+  "Analyser chaque troupeau (âge et condition physique aux jumelles), retirer ce qui tire le troupeau vers le bas, laisser progresser le reste et prélever les âgés au bon moment.";
 
 export type Sex = 'male' | 'femelle';
 export type AgeClass = 'jeune' | 'adulte' | 'mur';
+/** Pour les âgés : avant-dernière ou dernière année de vie (âge actuel = espérance de vie maximale). */
+export type LifeStage = 'normal' | 'avant-derniere' | 'derniere';
 
 export type Verdict = 'eliminer' | 'trophee' | 'surveiller' | 'possible' | 'epargner' | 'libre';
 
 export interface AnimalInput {
   sex: Sex;
   age: AgeClass;
-  /** Étoiles de gènes (1 à 5), pour les mâles adultes et mûrs. */
-  stars?: number;
   /** Condition physique en %. */
   conditionPct?: number;
-  /** Mûr arrivé en fin de vie (vieux), d'après l'analyse en jeu. */
-  endOfLife?: boolean;
+  /** Moment de vie des âgés (et des femelles). */
+  lifeStage?: LifeStage;
+  /** Seuil des jeunes faibles : 50 % (par défaut) ou 40 % (mode prudent). */
+  youngCutoff?: number;
+  /** Étoiles : informatives, elles ne décident plus du verdict. */
+  stars?: number;
 }
 
 export interface Advice {
@@ -29,125 +33,133 @@ export interface Advice {
   reason: string;
 }
 
-/** Sous ce seuil, la condition est « basse » (le jeu ne donne pas de chiffre : seuil du guide du joueur). */
-export const CULL_BELOW_PCT = 40;
-/** À partir de ce seuil, l'animal est prometteur. */
-export const PROMISING_FROM_PCT = 50;
-/** Nombre d'étoiles à partir duquel un mâle mûr est un trophée de luxe. */
-export const TROPHY_MIN_STARS = 3;
+/** Jeunes faibles : sous 50 %, ou sous 40 % en mode prudent. */
+export const YOUNG_CUTOFF = 50;
+export const YOUNG_CUTOFF_PRUDENT = 40;
+/** Adultes médians : environ 35 à 60 % en début de partie ; bonne condition au-delà de 55-60 %. */
+export const ADULT_LOW_PCT = 35;
+export const ADULT_GOOD_PCT = 55;
+/** Âgés : faible condition sous 50 % ; bonne forme dès 40 %, idéalement 55 %. */
+export const OLD_LOW_PCT = 50;
+export const OLD_FAIR_PCT = 40;
+export const OLD_GOOD_PCT = 55;
+
+const ask = (who: string): Advice => ({ verdict: 'libre', title: 'Indiquez la condition', reason: `${who} : la condition physique décide.` });
 
 export function advise(a: AnimalInput): Advice {
   const c = a.conditionPct;
+  const stage = a.lifeStage ?? 'normal';
+
+  // Femelles : seulement en dernière année de vie.
   if (a.sex === 'femelle') {
-    const jeune = a.age === 'jeune';
-    if (c !== undefined && c < CULL_BELOW_PCT) {
+    if (stage === 'derniere') {
+      return {
+        verdict: 'eliminer',
+        title: 'Dernière année : prélèvement possible',
+        reason: 'Femelle dans sa dernière année de vie : vous pouvez la tirer, elle a peu d’impact négatif sur le troupeau.',
+      };
+    }
+    return {
+      verdict: 'epargner',
+      title: 'Ne pas tirer',
+      reason: 'Femelle : ne la tirez qu’en dernière année de vie.',
+    };
+  }
+
+  // Priorité n°1 : jeunes faibles.
+  if (a.age === 'jeune') {
+    if (c === undefined) return ask('Jeune');
+    const cutoff = a.youngCutoff ?? YOUNG_CUTOFF;
+    if (c < cutoff) {
+      return {
+        verdict: 'eliminer',
+        title: 'Priorité n°1 : jeune faible',
+        reason: `Jeune à ${c} % (sous ${cutoff} %) : il tire le troupeau vers le bas sans avoir donné son potentiel, et plus longtemps que les autres puisqu’il est jeune.`,
+      };
+    }
+    return {
+      verdict: 'epargner',
+      title: 'Ne pas tirer : laissez-le grandir',
+      reason: `Jeune à ${c} % : au-dessus du seuil de ${cutoff} %, laissez-le grandir.`,
+    };
+  }
+
+  // Adultes : on garde les médians et les bons.
+  if (a.age === 'adulte') {
+    if (c === undefined) return ask('Adulte');
+    if (c < ADULT_LOW_PCT) {
       return {
         verdict: 'possible',
-        title: 'Abattage possible (effet moindre)',
-        reason: `${jeune ? 'Jeune femelle' : 'Femelle'} en condition basse (${c} %) : le jeu autorise l'abattage des femelles, ${
-          jeune ? 'surtout les jeunes en condition basse' : 'en particulier les jeunes'
-        }, mais l'effet sur la population est moindre qu'avec un mâle.`,
+        title: 'Adulte faible : prélèvement possible',
+        reason: `Adulte à ${c} % : sous la zone médiane (${ADULT_LOW_PCT}-60 %), il a peu de chances de progresser assez.`,
       };
     }
-    return {
-      verdict: 'epargner',
-      title: 'Épargner',
-      reason:
-        c === undefined
-          ? "Femelle : épargnez-la, sauf mission. Seules les femelles en condition basse (surtout jeunes) peuvent être abattues, avec un effet moindre."
-          : `Femelle à ${c} % : pas en condition basse, épargnez-la (sauf mission).`,
-    };
-  }
-
-  if (a.age === 'jeune') {
-    if (c === undefined) {
-      return { verdict: 'libre', title: 'Indiquez la condition', reason: 'Jeune mâle : la condition physique décide.' };
-    }
-    if (c < CULL_BELOW_PCT) {
-      return {
-        verdict: 'eliminer',
-        title: 'Cible prioritaire selon le jeu',
-        reason: `Jeune mâle en condition très basse (${c} %) : éliminez-le vite, il laissera la place à un animal de meilleur potentiel génétique (c'est aussi la cible recommandée par l'encyclopédie du jeu).`,
-      };
-    }
-    if (c < PROMISING_FROM_PCT) {
+    if (c < ADULT_GOOD_PCT) {
       return {
         verdict: 'epargner',
-        title: 'Ne pas tirer : laissez-le grandir',
-        reason: `Jeune mâle à condition moyenne (${c} %) : ses stats peuvent s'améliorer avec le temps, laissez-le grandir.`,
+        title: 'Ne pas tirer : adulte médian',
+        reason: `Adulte à ${c} % : dans la zone médiane (environ ${ADULT_LOW_PCT}-60 % en début de partie), il peut encore progresser.`,
       };
     }
     return {
       verdict: 'epargner',
-      title: 'Ne pas tirer : jeune prometteur',
-      reason: `Jeune mâle à ${c} % : bonne condition, laissez-le grandir.`,
+      title: 'Ne pas tirer : bonne condition',
+      reason: `Adulte en bonne condition physique (${c} %) : laissez-le.`,
     };
   }
 
-  if (a.age === 'mur' && a.endOfLife) {
-    const s = a.stars;
+  // Âgés (mûrs).
+  if (c === undefined) return ask('Âgé');
+  if (c < OLD_FAIR_PCT || (c < OLD_LOW_PCT && stage === 'derniere')) {
     return {
       verdict: 'eliminer',
-      title: 'À prélever maintenant : fin de vie',
+      title: stage === 'derniere' ? 'À prélever : fin de vie' : 'Âgé faible : à prélever',
       reason:
-        s !== undefined && s >= TROPHY_MIN_STARS
-          ? `Vieux mâle à ${s} étoiles en fin de vie : c'est le moment, trophée au maximum et place libérée pour les jeunes.`
-          : 'Vieux mâle en fin de vie : abattez-le, peu importe sa condition, pour faire de la place aux jeunes de meilleure qualité.',
+        stage === 'derniere'
+          ? `Âgé à ${c} % en fin de vie : il va mourir à la prochaine année, autant en tirer l’argent et l’XP.`
+          : `Âgé à faible condition (${c} %) : retirez-le, il ne fera que transmettre une mauvaise condition.`,
     };
   }
-
-  const stars = a.stars;
-  if (stars === undefined) {
-    return { verdict: 'libre', title: 'Indiquez les étoiles', reason: "Il faut le nombre d'étoiles du mâle pour décider." };
-  }
-
-  if (a.age === 'mur') {
-    if (stars >= TROPHY_MIN_STARS) {
-      return {
-        verdict: 'trophee',
-        title: 'Trophée de luxe : à prélever en fin de vie',
-        reason: `Mûr à ${stars} étoiles : laissez-le transmettre ses gènes, puis prélevez-le pendant sa dernière année de vie (les 3 derniers jours en jeu) pour le meilleur trophée et le moins d'impact sur la population.`,
-      };
-    }
+  if (stage === 'derniere') {
     return {
-      verdict: 'eliminer',
-      title: 'Cible n°1 : à prélever',
-      reason: `Mûr à ${stars} étoile${stars > 1 ? 's' : ''} : mauvaise génétique, il ne progressera plus. Prélevez-le pour l'empêcher de se reproduire et récupérer l'argent avant qu'il meure de vieillesse.`,
+      verdict: 'trophee',
+      title: 'Dernière année : prélevez-le',
+      reason: `Âgé en bonne forme (${c} %) dans sa dernière année : prélevez-le pour profiter de son trophée, il a déjà apporté le maximum à la génération future.`,
     };
   }
-
-  // Mâle adulte
-  if (stars === 1) {
-    const c = a.conditionPct;
-    if (c === undefined) {
-      return { verdict: 'libre', title: 'Indiquez la condition', reason: 'Pour un adulte 1 étoile, la condition physique décide.' };
-    }
-    if (c < CULL_BELOW_PCT) {
-      return {
-        verdict: 'eliminer',
-        title: 'À éliminer',
-        reason: `Adulte 1 étoile en très mauvaise condition (${c} %) : le prélever stoppe la transmission de ses mauvais gènes dès le stade adulte.`,
-      };
-    }
-    if (c < PROMISING_FROM_PCT) {
-      return {
-        verdict: 'surveiller',
-        title: 'À surveiller',
-        reason: `Adulte 1 étoile à ${c} % : entre les deux seuils (${CULL_BELOW_PCT} et ${PROMISING_FROM_PCT} %). Revenez le voir plus tard.`,
-      };
-    }
+  if (c < OLD_LOW_PCT) {
     return {
-      verdict: 'epargner',
-      title: 'Ne pas tirer : adulte prometteur',
-      reason: `Adulte 1 étoile à ${c} % : laissez-le grandir, il peut devenir un beau mûr à 3 ou 4 étoiles.`,
+      verdict: 'surveiller',
+      title: 'À surveiller',
+      reason: `Âgé à ${c} % : forme correcte mais limite (faible sous ${OLD_LOW_PCT} %). Gardez-le surtout s’il est en avant-dernière année, et prélevez-le en dernière année.`,
     };
   }
   return {
     verdict: 'epargner',
-    title: 'Ne pas tirer : laissez-le mûrir',
-    reason: `Adulte à ${stars} étoiles : bons gènes, attendez qu'il soit mûr.`,
+    title: stage === 'avant-derniere' ? 'Ne pas tirer : avant-dernière année' : 'Ne pas tirer : âgé en bonne forme',
+    reason:
+      stage === 'avant-derniere'
+        ? `Âgé en bonne forme (${c} %) en avant-dernière année : il peut encore gagner 10 à 20 % de condition dans sa dernière année et contribuer fortement à la génération future. Prélevez-le l’an prochain.`
+        : `Âgé en bonne forme (${c} %${c >= OLD_GOOD_PCT ? '' : `, idéalement ${OLD_GOOD_PCT} % et plus`}) : laissez-le contribuer à la génération future, puis prélevez-le dans sa dernière année.`,
   };
 }
+
+/** Les principes de la stratégie, affichés dans le guide. */
+export const STRATEGY = {
+  intro:
+    'Oubliez la règle simpliste « tout ce qui est sous 50 % ». Analysez toujours troupeau par troupeau, et regardez l’âge et la condition physique aux jumelles.',
+  remove: [
+    'Priorité n°1 : les jeunes faibles (sous 50 %, ou sous 40 % pour être plus prudent). Ils tirent le troupeau vers le bas sans avoir donné leur potentiel, et plus longtemps que les autres.',
+    'Les âgés à faible condition (sous 50 %), surtout en fin de vie (âge actuel = espérance de vie maximale) : ils vont mourir à la prochaine année, autant en tirer l’argent et l’XP.',
+    'Les âgés en bonne forme dans leur dernière année de vie : on profite de leur trophée après leur contribution maximale à la génération future.',
+    'Les femelles : seulement en dernière année de vie (peu d’impact négatif).',
+  ],
+  keep: [
+    'Les adultes médians (environ 35 à 60 % en début de partie) : ils peuvent encore progresser.',
+    'Les adultes en bonne condition physique (plus de 55-60 %).',
+    'Les âgés en bonne forme (40 % et plus, idéalement 55 % et plus), surtout en avant-dernière année : ils peuvent gagner 10 à 20 % de condition dans leur dernière année.',
+  ],
+};
 
 export const GOLDEN_RULES: { title: string; text: string }[] = [
   {

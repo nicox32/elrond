@@ -124,28 +124,29 @@ test('affichage des scores', async () => {
   assert.equal(formatScore(10.123), '10,12');
 });
 
-test('gestion du troupeau : tirer ou épargner', async () => {
+test('calculateur : stratégie âge + condition', async () => {
   const { advise } = await import('../src/logic/management.ts');
-  assert.equal(advise({ sex: 'femelle', age: 'mur', stars: 5 }).verdict, 'epargner');
-  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 10 }).verdict, 'eliminer');
-  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 45 }).verdict, 'epargner');
-  assert.equal(advise({ sex: 'male', age: 'mur', stars: 4, endOfLife: true }).verdict, 'eliminer');
-  assert.equal(advise({ sex: 'male', age: 'mur', endOfLife: true }).verdict, 'eliminer');
-  assert.equal(advise({ sex: 'male', age: 'mur', stars: 4 }).verdict, 'trophee');
-  assert.equal(advise({ sex: 'male', age: 'jeune', conditionPct: 70 }).verdict, 'epargner');
-  assert.equal(advise({ sex: 'male', age: 'jeune' }).verdict, 'libre');
-  assert.equal(advise({ sex: 'femelle', age: 'jeune', conditionPct: 20 }).verdict, 'possible');
-  assert.equal(advise({ sex: 'femelle', age: 'adulte', conditionPct: 60 }).verdict, 'epargner');
-  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 25 }).verdict, 'eliminer');
-  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 39 }).verdict, 'eliminer');
-  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 45 }).verdict, 'surveiller');
-  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1, conditionPct: 50 }).verdict, 'epargner');
-  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 1 }).verdict, 'libre');
-  assert.equal(advise({ sex: 'male', age: 'adulte', stars: 3 }).verdict, 'epargner');
-  assert.equal(advise({ sex: 'male', age: 'mur', stars: 3 }).verdict, 'trophee');
-  assert.equal(advise({ sex: 'male', age: 'mur', stars: 5 }).verdict, 'trophee');
-  assert.equal(advise({ sex: 'male', age: 'mur', stars: 2 }).verdict, 'eliminer');
-  assert.equal(advise({ sex: 'male', age: 'mur', stars: 1 }).verdict, 'eliminer');
+  const v = (o: object) => advise(o as never).verdict;
+  // Jeunes : priorité n°1 sous 50 % (40 % en mode prudent)
+  assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 45 }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 45, youngCutoff: 40 }), 'epargner');
+  assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 39, youngCutoff: 40 }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 60 }), 'epargner');
+  assert.equal(v({ sex: 'male', age: 'jeune' }), 'libre');
+  // Adultes : médians et bons gardés
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 30 }), 'possible');
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 40 }), 'epargner');
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 70 }), 'epargner');
+  // Âgés
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 31.7 }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 45 }), 'surveiller');
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 45, lifeStage: 'derniere' }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 60 }), 'epargner');
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 60, lifeStage: 'avant-derniere' }), 'epargner');
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 60, lifeStage: 'derniere' }), 'trophee');
+  // Femelles : seulement en dernière année
+  assert.equal(v({ sex: 'femelle', age: 'jeune', conditionPct: 10 }), 'epargner');
+  assert.equal(v({ sex: 'femelle', age: 'mur', lifeStage: 'derniere' }), 'eliminer');
 });
 
 test('horaires : lecture, routine, zones en cours et réveil', async () => {
@@ -257,7 +258,7 @@ test('troupeau : verdicts, résumé, un seul mâle par session', async () => {
     id: 'h', name: 'Lac', speciesId: 'cerf-mulet', reserveId: 'new-laurentia' as const, createdAt: '2026-11-01T00:00:00Z', lastVisit: '2026-11-09T12:00:00',
     animals: [
       A({ id: 'vieux', sex: 'male', age: 'mur', stars: 1, conditionPct: 31.7 }),
-      A({ id: 'beau', sex: 'male', age: 'mur', stars: 4 }),
+      A({ id: 'beau', sex: 'male', age: 'mur', stars: 4, conditionPct: 70, lifeStage: 'derniere' }),
       A({ id: 'jeune', sex: 'male', age: 'jeune', conditionPct: 70 }),
       A({ id: 'biche', sex: 'femelle', age: 'adulte', conditionPct: 60 }),
       A({ id: 'pris', sex: 'male', age: 'adulte', stars: 1, conditionPct: 20, status: 'preleve', takenAt: '2026-11-11T09:00:00' }),
@@ -480,4 +481,13 @@ test('le QG partage 5 espèces avec New Laurentia sans les compter deux fois', a
 test('sauvegarde : valeurs perso des menus', () => {
   const s = parseState({ customChoices: { coat: ['Pie', ' Pie ', '', 4, 'Tachetée'], vide: [], pasliste: 'x' } });
   assert.deepEqual(s?.customChoices, { coat: ['Pie', 'Tachetée'] });
+});
+
+test('sauvegarde : ancien « fin de vie » repris comme dernière année', () => {
+  const s = parseState({ herds: [{ id: 'h', name: 'Lac', speciesId: 'cerf-mulet', reserveId: 'new-laurentia', createdAt: '2026-11-01',
+    animals: [{ id: 'a', sex: 'male', age: 'mur', endOfLife: true, lastSeen: '2026-11-11' }, { id: 'b', sex: 'male', age: 'mur', lifeStage: 'avant-derniere', lastSeen: '2026-11-11' }] }],
+    prudent: true });
+  assert.equal(s?.herds[0].animals[0].lifeStage, 'derniere');
+  assert.equal(s?.herds[0].animals[1].lifeStage, 'avant-derniere');
+  assert.equal(s?.prudent, true);
 });
