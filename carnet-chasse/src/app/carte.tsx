@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MapFrame } from '../components/MapFrame';
 import { Chip, ChipRow, styles } from '../components/ui';
-import { RESERVES, SPECIES } from '../data/game';
+import { RESERVES } from '../data/game';
 import { DEFAULT_MAP_URLS, isHubOnly, isMapUrl, mapUrlFor } from '../logic/maps';
 import type { ReserveId } from '../logic/types';
 import { useCarnet } from '../state/CarnetProvider';
@@ -31,8 +31,8 @@ function SmallButton({ label, onPress, primary }: { label: string; onPress: () =
   );
 }
 
-/** Seules les deux réserves de chasse ont une carte : New Laurentia et Kilimaya Reserve. */
-const MAP_RESERVES = RESERVES.filter((r) => SPECIES.some((s) => s.reserveId === r.id));
+/** Les trois zones : New Laurentia, Kilimaya Reserve et le QG (Hearth & Hunt HQ). */
+const MAP_RESERVES = RESERVES;
 
 export default function CarteScreen() {
   const { state, setMapUrl } = useCarnet();

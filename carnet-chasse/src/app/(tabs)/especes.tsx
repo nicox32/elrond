@@ -36,6 +36,8 @@ export default function EspecesScreen() {
             {current.region} · {current.areaKm2} km²
             {list.length ? ` · ${list.length} espèces` : ''}
           </Text>
+          <Text style={[styles.text, { marginTop: 6 }]}>{current.description}</Text>
+          <Text style={[styles.muted, { marginTop: 2 }]}>{current.story ? 'Mode histoire : oui' : 'Pas de scénario dédié'}</Text>
           {list.length === 0 ? (
             <Text style={[styles.muted, { marginTop: 6 }]}>
               Zone centrale (hub) : le studio n&apos;a pas publié de liste d&apos;animaux pour cette carte.

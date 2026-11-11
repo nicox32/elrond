@@ -17,9 +17,30 @@ import type {
 export const GAME_VERSION = '1.4';
 
 export const RESERVES: Reserve[] = [
-  { id: 'new-laurentia', name: 'New Laurentia', region: 'Canada', areaKm2: 100 },
-  { id: 'kilimaya', name: 'Kilimaya Reserve', region: 'Afrique', areaKm2: 100 },
-  { id: 'headquarters', name: 'Hearth & Hunt HQ', region: 'Montagne (hub)', areaKm2: 16 },
+  {
+    id: 'new-laurentia',
+    name: 'New Laurentia',
+    region: 'Canada',
+    areaKm2: 100,
+    story: true,
+    description: "Grande réserve canadienne avec un mode histoire complet, axé sur l'étude de la faune nord-américaine (élans, ours, bisons…).",
+  },
+  {
+    id: 'kilimaya',
+    name: 'Kilimaya Reserve',
+    region: 'Afrique',
+    areaKm2: 100,
+    story: true,
+    description: 'Réserve africaine avec sa propre campagne narrative et ses espèces locales (hippopotames, zèbres…).',
+  },
+  {
+    id: 'headquarters',
+    name: 'Hearth & Hunt HQ',
+    region: 'Montagnes Rocheuses',
+    areaKm2: 16,
+    story: false,
+    description: 'Quartier général dans les montagnes Rocheuses, sans scénario dédié.',
+  },
 ];
 
 export const SPECIES: Species[] = [

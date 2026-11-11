@@ -15,6 +15,9 @@ export interface Reserve {
   name: string;
   region: string;
   areaKm2: number;
+  /** Mode histoire propre à la réserve. */
+  story: boolean;
+  description: string;
 }
 
 export interface Species {
