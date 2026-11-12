@@ -20,16 +20,20 @@ import {
 import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
 import { COAT_CHOICES, isRareCoat } from '../../logic/details';
 import { formatDate, parseNumber } from '../../logic/stats';
+import { isMatureByAge, lifeFromAge } from '../../logic/management';
 import type { AgeStage, AnimalSex, HerdAnimal, PopulationStatus } from '../../logic/types';
 import { cancelHerdReminder, REMINDERS_SUPPORTED, scheduleHerdReminder } from '../../reminders';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 import { Select } from '../../components/Select';
 
-type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'lifeStage' | 'notes'>;
+type AnimalDraft = Pick<HerdAnimal, 'label' | 'sex' | 'age' | 'stars' | 'conditionPct' | 'coat' | 'lifeStage' | 'ageYears' | 'notes'>;
 
-function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
+const LIFE_STAGE_TEXT = { normal: 'normal', 'avant-derniere': 'avant-dernière année', derniere: 'dernière année' } as const;
+
+function AnimalForm({ initial, speciesId, submitLabel, onSubmit, onCancel }: {
   initial?: AnimalDraft;
+  speciesId: string;
   submitLabel: string;
   onSubmit: (a: AnimalDraft) => void;
   onCancel: () => void;
@@ -42,12 +46,24 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [coat, setCoat] = useState(initial?.coat ?? '');
   const [lifeStage, setLifeStage] = useState<HerdAnimal['lifeStage']>(initial?.lifeStage);
+  const [ageYears, setAgeYears] = useState(initial?.ageYears !== undefined ? String(initial.ageYears) : '');
   const [error, setError] = useState<string | null>(null);
+  const { state } = useCarnet();
+  const info = getSpeciesInfo(speciesId, state.speciesSheets);
+  const years = ageYears.trim() ? parseNumber(ageYears) : undefined;
+  const life = lifeFromAge(years, info?.lifespanYears);
+  const onAgeYears = (t: string) => {
+    setAgeYears(t);
+    const mature = isMatureByAge(parseNumber(t), info?.matureAgeYears);
+    if (mature === true) setAge('mur');
+    else if (mature === false && age === 'mur') setAge('adulte');
+  };
   const needsStars = sex === 'male' && age !== 'jeune';
 
   function submit() {
     const c = condition.trim() ? parseNumber(condition) : undefined;
     if (condition.trim() && (c === undefined || c > 100)) return setError('Condition invalide (0 à 100 %).');
+    if (ageYears.trim() && (years === undefined || years > 100)) return setError('Âge invalide (en années).');
     onSubmit({
       label: label.trim(),
       sex,
@@ -55,7 +71,8 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
       stars: needsStars ? stars : undefined,
       conditionPct: c,
       coat: coat || undefined,
-      lifeStage: sex === 'femelle' || age === 'mur' ? lifeStage : undefined,
+      lifeStage: life ? undefined : sex === 'femelle' || age === 'mur' ? lifeStage : undefined,
+      ageYears: years,
       notes: notes.trim() || undefined,
     });
   }
@@ -68,13 +85,26 @@ function AnimalForm({ initial, submitLabel, onSubmit, onCancel }: {
         <Chip label="Mâle" selected={sex === 'male'} onPress={() => setSex('male')} />
         <Chip label="Femelle" selected={sex === 'femelle'} onPress={() => setSex('femelle')} />
       </ChipRow>
-      <Label>Âge</Label>
+      <Label>Classe d&apos;âge</Label>
       <ChipRow>
         {(Object.keys(AGE_LABELS) as AgeStage[]).map((a) => (
           <Chip key={a} label={AGE_LABELS[a]} selected={age === a} onPress={() => setAge(a)} />
         ))}
       </ChipRow>
-      {sex === 'femelle' || age === 'mur' ? (
+      <View style={{ maxWidth: 220 }}>
+        <Field label="Âge (facultatif)" unit="ans" value={ageYears} onChangeText={onAgeYears} keyboardType="decimal-pad" placeholder="ex. 12" />
+      </View>
+      {life ? (
+        <Text style={[styles.muted, { color: colors.olive }]}>
+          Moment de vie calculé : {LIFE_STAGE_TEXT[life.stage]} (espérance de vie {info?.lifespanYears} ans, reste {life.yearsLeft} an
+          {life.yearsLeft > 1 ? 's' : ''}).
+        </Text>
+      ) : years !== undefined && !info?.lifespanYears ? (
+        <Text style={styles.muted}>
+          Notez l&apos;espérance de vie dans la fiche de l&apos;espèce pour que l&apos;appli calcule la dernière année toute seule.
+        </Text>
+      ) : null}
+      {!life && (sex === 'femelle' || age === 'mur') ? (
         <>
           <Label>Moment de vie</Label>
           <ChipRow>
@@ -132,7 +162,9 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const { state } = useCarnet();
-  const advice = adviceFor(animal, state.prudent ? 40 : 50);
+  const lifespanYears = getSpeciesInfo(speciesId, state.speciesSheets)?.lifespanYears;
+  const advice = adviceFor(animal, { youngCutoff: state.prudent ? 40 : 50, lifespanYears });
+  const life = lifeFromAge(animal.ageYears, lifespanYears);
   const alive = animal.status === 'vivant';
   const title =
     animal.label || `${animal.sex === 'male' ? 'Mâle' : 'Femelle'} ${AGE_LABELS[animal.age].toLowerCase()} n°${index + 1}`;
@@ -141,6 +173,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
     return (
       <AnimalForm
         initial={animal}
+        speciesId={speciesId}
         submitLabel="Enregistrer"
         onCancel={() => setEditing(false)}
         onSubmit={(a) => {
@@ -154,9 +187,18 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
   const facts = [
     animal.sex === 'male' ? '♂ Mâle' : '♀ Femelle',
     AGE_LABELS[animal.age],
+    animal.ageYears !== undefined ? `${String(animal.ageYears).replace('.', ',')} ans` : null,
     animal.stars ? '★'.repeat(animal.stars) : null,
     animal.conditionPct !== undefined ? `${String(animal.conditionPct).replace('.', ',')} %` : null,
-    animal.lifeStage === 'derniere' ? 'dernière année' : animal.lifeStage === 'avant-derniere' ? 'avant-dernière année' : null,
+    life
+      ? life.stage === 'normal'
+        ? null
+        : LIFE_STAGE_TEXT[life.stage]
+      : animal.lifeStage === 'derniere'
+        ? 'dernière année'
+        : animal.lifeStage === 'avant-derniere'
+          ? 'avant-dernière année'
+          : null,
   ].filter(Boolean);
 
   return (
@@ -238,10 +280,11 @@ export default function HerdScreen() {
 
   const species = getSpecies(herd.speciesId);
   const info = getSpeciesInfo(herd.speciesId, state.speciesSheets);
-  const s = summarizeHerd(herd, state.prudent ? 40 : 50);
+  const adviceOpts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears: info?.lifespanYears };
+  const s = summarizeHerd(herd, adviceOpts);
   const takenToday = malesTakenToday(herd);
   const days = daysSince(herd.lastVisit);
-  const animals = sortAnimals(herd.animals, state.prudent ? 40 : 50);
+  const animals = sortAnimals(herd.animals, adviceOpts);
   const due = isVisitDue(herd);
   const h = herd;
 
@@ -367,6 +410,7 @@ export default function HerdScreen() {
       <SectionTitle right={<Text style={styles.muted}>{herd.animals.length}</Text>}>Animaux</SectionTitle>
       {adding ? (
         <AnimalForm
+          speciesId={herd.speciesId}
           submitLabel="Ajouter"
           onCancel={() => setAdding(false)}
           onSubmit={(a) => {

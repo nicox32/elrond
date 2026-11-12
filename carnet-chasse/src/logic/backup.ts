@@ -157,6 +157,12 @@ const AGES: AgeStage[] = ['jeune', 'adulte', 'mur'];
 const STATUSES: AnimalStatus[] = ['vivant', 'preleve', 'disparu'];
 const POPULATIONS: PopulationStatus[] = ['vulnerable', 'stable', 'saine', 'prospere'];
 
+/** Nombre d'années plausible (1 à 100). */
+function years(v: unknown): number | undefined {
+  const n = num(v);
+  return n !== undefined && n > 0 && n <= 100 ? n : undefined;
+}
+
 function parseAnimal(v: unknown): HerdAnimal | null {
   if (!isObj(v)) return null;
   const id = str(v.id);
@@ -179,6 +185,10 @@ function parseAnimal(v: unknown): HerdAnimal | null {
     coat: str(v.coat),
     // Ancien champ « endOfLife » repris comme dernière année de vie.
     lifeStage: oneOf(v.lifeStage, ['avant-derniere', 'derniere'] as const) ?? (v.endOfLife === true ? 'derniere' : undefined),
+    ageYears: (() => {
+      const n = num(v.ageYears);
+      return n !== undefined && n >= 0 && n <= 100 ? n : undefined;
+    })(),
     notes: str(v.notes),
   };
 }
@@ -242,6 +252,8 @@ function parseSheet(v: unknown): SpeciesSheet | null {
       : undefined;
   return {
     animalClass: cls !== undefined && Number.isInteger(cls) && cls >= 1 && cls <= 10 ? cls : undefined,
+    matureAgeYears: years(v.matureAgeYears),
+    lifespanYears: years(v.lifespanYears),
     trophyType: str(v.trophyType),
     trophyRange: pair(v.trophyRange),
     energy,

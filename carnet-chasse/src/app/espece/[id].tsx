@@ -77,6 +77,18 @@ export default function EspeceScreen() {
             </Card>
           ) : null}
 
+          {info.matureAgeYears !== undefined || info.lifespanYears !== undefined ? (
+            <Card style={{ gap: 2 }}>
+              <Text style={styles.strong}>Âges</Text>
+              {info.matureAgeYears !== undefined ? <Text style={styles.text}>Mûr à partir de {info.matureAgeYears} ans</Text> : null}
+              {info.lifespanYears !== undefined ? (
+                <Text style={styles.text}>
+                  Espérance de vie : {info.lifespanYears} ans (dernière année à partir de {Math.max(0, info.lifespanYears - 1)} ans)
+                </Text>
+              ) : null}
+            </Card>
+          ) : null}
+
           {info.activity || info.routine ? (
           <Card style={{ gap: 8 }}>
             <Text style={styles.strong}>

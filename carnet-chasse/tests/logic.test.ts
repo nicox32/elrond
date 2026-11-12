@@ -503,3 +503,27 @@ test('sauvegarde : ancien « fin de vie » repris comme dernière année', () =>
   assert.equal(s?.herds[0].animals[1].lifeStage, 'avant-derniere');
   assert.equal(s?.prudent, true);
 });
+
+test('calculateur : âge en années et espérance de vie', async () => {
+  const { advise, lifeFromAge, isMatureByAge } = await import('../src/logic/management.ts');
+  assert.deepEqual(lifeFromAge(12, 13), { stage: 'derniere', yearsLeft: 1 });
+  assert.deepEqual(lifeFromAge(11, 13), { stage: 'avant-derniere', yearsLeft: 2 });
+  assert.deepEqual(lifeFromAge(5, 13), { stage: 'normal', yearsLeft: 8 });
+  assert.equal(lifeFromAge(5, undefined), undefined);
+  assert.equal(isMatureByAge(8, 7), true);
+  assert.equal(isMatureByAge(6, 7), false);
+  assert.equal(isMatureByAge(6, undefined), undefined);
+  // Âgé en bonne forme : l'âge seul fait passer en dernière année → à prélever pour le trophée.
+  const old = advise({ sex: 'male', age: 'mur', conditionPct: 60, ageYears: 12, lifespanYears: 13 });
+  assert.equal(old.verdict, 'trophee');
+  assert.match(old.reason, /reste environ 1 an à vivre, soit 3 jours en jeu/);
+  // L'âge calculé l'emporte sur un moment de vie saisi à la main.
+  assert.equal(advise({ sex: 'male', age: 'mur', conditionPct: 60, lifeStage: 'derniere', ageYears: 5, lifespanYears: 13 }).verdict, 'epargner');
+  // Femelle : dernière année d'après l'âge.
+  assert.equal(advise({ sex: 'femelle', age: 'mur', ageYears: 13, lifespanYears: 13 }).verdict, 'eliminer');
+  // Sans espérance de vie, l'âge est seulement rappelé.
+  assert.match(advise({ sex: 'male', age: 'jeune', conditionPct: 30, ageYears: 2 }).reason, /2 ans\.$/);
+  const s = parseState({ speciesSheets: { 'cerf-mulet': { energy: {}, matureAgeYears: 7, lifespanYears: 'x' } }, herds: [] });
+  assert.equal(s!.speciesSheets['cerf-mulet'].matureAgeYears, 7);
+  assert.equal(s!.speciesSheets['cerf-mulet'].lifespanYears, undefined);
+});

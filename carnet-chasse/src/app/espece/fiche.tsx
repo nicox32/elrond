@@ -34,6 +34,8 @@ export default function FicheScreen() {
   const hasMine = !!state.speciesSheets[id];
 
   const [animalClass, setAnimalClass] = useState(txt(info?.animalClass));
+  const [matureAge, setMatureAge] = useState(txt(info?.matureAgeYears));
+  const [lifespan, setLifespan] = useState(txt(info?.lifespanYears));
   const [trophyType, setTrophyType] = useState(info?.trophyType ?? '');
   const [trophyMin, setTrophyMin] = useState(txt(info?.trophyRange?.[0]));
   const [trophyMax, setTrophyMax] = useState(txt(info?.trophyRange?.[1]));
@@ -74,6 +76,11 @@ export default function FicheScreen() {
     if (animalClass.trim() && (cls === undefined || !Number.isInteger(cls) || cls < 1 || cls > 10)) {
       return setError('Classe invalide (nombre entier de 1 à 10).');
     }
+    const mature = matureAge.trim() ? parseNumber(matureAge) : undefined;
+    const lifeYears = lifespan.trim() ? parseNumber(lifespan) : undefined;
+    if (matureAge.trim() && (mature === undefined || mature <= 0 || mature > 100)) return setError('Âge mûr invalide (en années).');
+    if (lifespan.trim() && (lifeYears === undefined || lifeYears <= 0 || lifeYears > 100)) return setError('Espérance de vie invalide (en années).');
+    if (mature !== undefined && lifeYears !== undefined && mature >= lifeYears) return setError("L'âge mûr doit être inférieur à l'espérance de vie.");
     const tMin = parseNumber(trophyMin);
     const tMax = parseNumber(trophyMax);
     if ((trophyMin.trim() || trophyMax.trim()) && (tMin === undefined || tMax === undefined || tMax < tMin)) {
@@ -103,6 +110,8 @@ export default function FicheScreen() {
 
     saveSheet(species!.id, {
       animalClass: cls,
+      matureAgeYears: mature,
+      lifespanYears: lifeYears,
       trophyType: trophyType.trim() || undefined,
       trophyRange: tMin !== undefined && tMax !== undefined ? [tMin, tMax] : undefined,
       energy: energyOut,
@@ -136,6 +145,13 @@ export default function FicheScreen() {
         <Field label="Rang min" value={trophyMin} onChangeText={setTrophyMin} keyboardType="decimal-pad" placeholder="115" />
         <Field label="Rang max" value={trophyMax} onChangeText={setTrophyMax} keyboardType="decimal-pad" placeholder="610" />
       </FieldRow>
+      <FieldRow>
+        <Field label="Mûr à partir de" unit="ans" value={matureAge} onChangeText={setMatureAge} keyboardType="decimal-pad" placeholder="ex. 7" />
+        <Field label="Espérance de vie" unit="ans" value={lifespan} onChangeText={setLifespan} keyboardType="decimal-pad" placeholder="ex. 14" />
+      </FieldRow>
+      <Text style={styles.muted}>
+        Avec ces deux âges, l&apos;appli trouve seule si un animal est mûr et s&apos;il est dans son avant-dernière ou sa dernière année.
+      </Text>
       <Select label="Type de trophée" value={trophyType} onChange={setTrophyType} options={TROPHY_TYPES} customKey="trophyType" placeholder="Bois" />
 
       <SectionTitle>Routine quotidienne</SectionTitle>

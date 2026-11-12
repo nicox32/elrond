@@ -167,6 +167,8 @@ export interface HerdAnimal {
   coat?: string;
   /** Moment de vie : avant-dernière ou dernière année. */
   lifeStage?: 'avant-derniere' | 'derniere';
+  /** Âge en années, s'il est connu. */
+  ageYears?: number;
   notes?: string;
 }
 
@@ -195,6 +197,10 @@ export type EnergyRange = [number, number] | null;
 /** Fiche espèce recopiée par le joueur (même forme que les fiches fournies, tout facultatif). */
 export interface SpeciesSheet {
   animalClass?: number;
+  /** Âge (ans) à partir duquel l'espèce est mûre. */
+  matureAgeYears?: number;
+  /** Espérance de vie (ans) : âge auquel l'espèce meurt de vieillesse. */
+  lifespanYears?: number;
   trophyType?: string;
   trophyRange?: [number, number];
   energy: { balle?: EnergyRange; grenaille?: EnergyRange; chevrotineM?: EnergyRange; slug?: EnergyRange; fleche?: EnergyRange };

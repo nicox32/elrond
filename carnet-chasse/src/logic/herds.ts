@@ -11,8 +11,23 @@ export const POPULATION_LABELS: Record<PopulationStatus, string> = {
 
 export const AGE_LABELS = { jeune: 'Jeune', adulte: 'Adulte', mur: 'Mûr' } as const;
 
-export function adviceFor(a: HerdAnimal, youngCutoff?: number): Advice {
-  return advise({ sex: a.sex, age: a.age, stars: a.stars, conditionPct: a.conditionPct, lifeStage: a.lifeStage, youngCutoff });
+/** Réglages du calcul : seuil des jeunes (mode prudent) et espérance de vie de l'espèce. */
+export interface AdviceOptions {
+  youngCutoff?: number;
+  lifespanYears?: number;
+}
+
+export function adviceFor(a: HerdAnimal, opts: AdviceOptions = {}): Advice {
+  return advise({
+    sex: a.sex,
+    age: a.age,
+    stars: a.stars,
+    conditionPct: a.conditionPct,
+    lifeStage: a.lifeStage,
+    ageYears: a.ageYears,
+    lifespanYears: opts.lifespanYears,
+    youngCutoff: opts.youngCutoff,
+  });
 }
 
 export interface HerdSummary {
@@ -25,7 +40,7 @@ export interface HerdSummary {
   byVerdict: Record<Verdict, number>;
 }
 
-export function summarizeHerd(herd: Herd, youngCutoff?: number): HerdSummary {
+export function summarizeHerd(herd: Herd, opts: AdviceOptions = {}): HerdSummary {
   const byVerdict: Record<Verdict, number> = { eliminer: 0, trophee: 0, surveiller: 0, possible: 0, epargner: 0, libre: 0 };
   let alive = 0;
   let males = 0;
@@ -39,7 +54,7 @@ export function summarizeHerd(herd: Herd, youngCutoff?: number): HerdSummary {
     if (a.sex === 'male') males += 1;
     else females += 1;
     if (a.age === 'jeune') young += 1;
-    byVerdict[adviceFor(a, youngCutoff).verdict] += 1;
+    byVerdict[adviceFor(a, opts).verdict] += 1;
   }
   return { alive, males, females, young, taken, byVerdict };
 }
@@ -57,8 +72,8 @@ export function malesTakenToday(herd: Herd, now = new Date()): number {
 /** Ordre d'affichage : vivants d'abord, cibles en tête, puis trophées, à surveiller, à épargner. */
 const VERDICT_ORDER: Verdict[] = ['eliminer', 'trophee', 'possible', 'surveiller', 'libre', 'epargner'];
 
-export function sortAnimals(animals: HerdAnimal[], youngCutoff?: number): HerdAnimal[] {
-  const rank = (a: HerdAnimal) => (a.status === 'vivant' ? VERDICT_ORDER.indexOf(adviceFor(a, youngCutoff).verdict) : 10 + (a.status === 'preleve' ? 0 : 1));
+export function sortAnimals(animals: HerdAnimal[], opts: AdviceOptions = {}): HerdAnimal[] {
+  const rank = (a: HerdAnimal) => (a.status === 'vivant' ? VERDICT_ORDER.indexOf(adviceFor(a, opts).verdict) : 10 + (a.status === 'preleve' ? 0 : 1));
   return [...animals].sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label));
 }
 

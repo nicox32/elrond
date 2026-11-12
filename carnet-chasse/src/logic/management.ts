@@ -25,6 +25,34 @@ export interface AnimalInput {
   youngCutoff?: number;
   /** Étoiles : informatives, elles ne décident plus du verdict. */
   stars?: number;
+  /** Âge en années (rapport de chasse, fiche de l'animal). */
+  ageYears?: number;
+  /** Espérance de vie de l'espèce en années : avec l'âge, donne le moment de vie automatiquement. */
+  lifespanYears?: number;
+}
+
+/** Moment de vie calculé d'après l'âge et l'espérance de vie de l'espèce. */
+export function lifeFromAge(ageYears?: number, lifespanYears?: number): { stage: LifeStage; yearsLeft: number } | undefined {
+  if (ageYears === undefined || lifespanYears === undefined || lifespanYears <= 0) return undefined;
+  const yearsLeft = Math.max(0, lifespanYears - ageYears);
+  return { stage: yearsLeft <= 1 ? 'derniere' : yearsLeft === 2 ? 'avant-derniere' : 'normal', yearsLeft };
+}
+
+/** L'animal est-il mûr d'après son âge et l'âge de maturité de l'espèce ? */
+export function isMatureByAge(ageYears?: number, matureAgeYears?: number): boolean | undefined {
+  if (ageYears === undefined || matureAgeYears === undefined) return undefined;
+  return ageYears >= matureAgeYears;
+}
+
+const plural = (n: number, w: string) => `${n} ${w}${n > 1 ? 's' : ''}`;
+
+/** Phrase sur l'âge ajoutée au conseil : âge, années restantes et équivalent en jours de jeu. */
+export function ageNote(ageYears?: number, lifespanYears?: number): string | undefined {
+  if (ageYears === undefined) return undefined;
+  const life = lifeFromAge(ageYears, lifespanYears);
+  if (!life) return `${plural(ageYears, 'an')}.`;
+  if (life.yearsLeft === 0) return `${plural(ageYears, 'an')} sur ${lifespanYears} : il a atteint l’espérance de vie de l’espèce, il peut mourir de vieillesse d’un jour à l’autre.`;
+  return `${plural(ageYears, 'an')} sur ${lifespanYears} : il lui reste environ ${plural(life.yearsLeft, 'an')} à vivre, soit ${life.yearsLeft * GAME_DAYS_PER_YEAR} jours en jeu.`;
 }
 
 export interface Advice {
@@ -47,8 +75,14 @@ export const OLD_GOOD_PCT = 55;
 const ask = (who: string): Advice => ({ verdict: 'libre', title: 'Indiquez la condition', reason: `${who} : la condition physique décide.` });
 
 export function advise(a: AnimalInput): Advice {
+  const base = adviseCore(a);
+  const note = ageNote(a.ageYears, a.lifespanYears);
+  return note ? { ...base, reason: `${base.reason} ${note}` } : base;
+}
+
+function adviseCore(a: AnimalInput): Advice {
   const c = a.conditionPct;
-  const stage = a.lifeStage ?? 'normal';
+  const stage = lifeFromAge(a.ageYears, a.lifespanYears)?.stage ?? a.lifeStage ?? 'normal';
 
   // Femelles : seulement en dernière année de vie.
   if (a.sex === 'femelle') {

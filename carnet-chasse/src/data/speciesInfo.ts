@@ -13,6 +13,8 @@ export type Range = [number, number] | null;
 
 export interface SpeciesInfo {
   animalClass?: number;
+  matureAgeYears?: number;
+  lifespanYears?: number;
   trophyType?: string;
   /** Rangs de trophée estimés (score). */
   trophyRange?: [number, number];

@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 
 import { Button, Card, Chip, ChipRow, Empty, Field, Label, Screen, SectionTitle, styles } from '../components/ui';
 import { getReserve, getSpecies, HUNTING_RESERVES, speciesOfReserve } from '../data/game';
+import { getSpeciesInfo } from '../data/speciesInfo';
 import { AGING_NOTE, daysSince, isVisitDue, POPULATION_LABELS, summarizeHerd } from '../logic/herds';
 import type { ReserveId } from '../logic/types';
 import { useCarnet } from '../state/CarnetProvider';
@@ -98,7 +99,10 @@ export default function TroupeauxScreen() {
         <Empty>Aucun troupeau suivi pour l&apos;instant.</Empty>
       ) : (
         state.herds.map((h) => {
-          const s = summarizeHerd(h, state.prudent ? 40 : 50);
+          const s = summarizeHerd(h, {
+            youngCutoff: state.prudent ? 40 : 50,
+            lifespanYears: getSpeciesInfo(h.speciesId, state.speciesSheets)?.lifespanYears,
+          });
           const days = daysSince(h.lastVisit);
           return (
             <Card key={h.id} onPress={() => router.push({ pathname: '/troupeau/[id]', params: { id: h.id } })} style={{ gap: 4 }}>
