@@ -158,7 +158,7 @@ function adviseCore(a: AnimalInput): Advice {
     return {
       verdict: 'trophee',
       title: 'Dernière année : prélevez-le',
-      reason: `Âgé en bonne forme (${c} %) dans sa dernière année : prélevez-le pour profiter de son trophée, il a déjà apporté le maximum à la génération future.`,
+      reason: `Âgé en bonne forme (${c} %) dans sa dernière année : prélevez-le pour son trophée et pour l’argent (âgé et lourd, il se vend au meilleur prix) ; il a déjà apporté le maximum à la génération future.`,
     };
   }
   if (c < OLD_LOW_PCT) {
@@ -173,7 +173,7 @@ function adviseCore(a: AnimalInput): Advice {
     title: stage === 'avant-derniere' ? 'Ne pas tirer : avant-dernière année' : 'Ne pas tirer : âgé en bonne forme',
     reason:
       stage === 'avant-derniere'
-        ? `Âgé en bonne forme (${c} %) en avant-dernière année : son trophée peut encore grandir dans sa dernière année et il contribue fortement à la génération future. Prélevez-le l’an prochain : plus âgé et plus lourd, il rapportera aussi plus.`
+        ? `Âgé en bonne forme (${c} %) en avant-dernière année : son trophée peut encore grandir dans sa dernière année et il contribue fortement à la génération future. Prélevez-le l’an prochain : plus âgé et plus lourd, il rapportera plus d’argent à la vente.`
         : `Âgé en bonne forme (${c} %${c >= OLD_GOOD_PCT ? '' : `, idéalement ${OLD_GOOD_PCT} % et plus`}) : laissez-le contribuer à la génération future, puis prélevez-le dans sa dernière année.`,
   };
 }
@@ -194,7 +194,7 @@ export const FITNESS_RULES: { title: string; text: string }[] = [
   },
   {
     title: "Le poids et l'âge font le prix",
-    text: "Plus l'animal est âgé et lourd au moment du tir, plus la vente rapporte.",
+    text: "Plus l'animal est âgé et lourd au moment du tir, plus la vente rapporte d'argent.",
   },
   {
     title: "L'abattage sélectif améliore la harde",
@@ -215,7 +215,7 @@ export const STRATEGY = {
   keep: [
     'Les adultes médians (environ 35 à 60 % en début de partie) : leurs bois ou cornes n’ont pas fini de grandir.',
     'Les adultes en bonne condition physique (plus de 55-60 %).',
-    'Les âgés en bonne forme (40 % et plus, idéalement 55 % et plus), surtout en avant-dernière année : leur trophée grandit encore et ils rapporteront plus, plus âgés et plus lourds.',
+    'Les âgés en bonne forme (40 % et plus, idéalement 55 % et plus), surtout en avant-dernière année : leur trophée grandit encore, et plus âgés et plus lourds, ils rapporteront plus d’argent à la vente.',
   ],
 };
 
