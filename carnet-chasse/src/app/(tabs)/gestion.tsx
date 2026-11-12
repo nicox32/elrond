@@ -13,17 +13,11 @@ import {
   advise,
   DISTANCE_GOLDEN_RULE,
   DISTANCE_RULES,
-  FITNESS_RULES,
+  explain,
   isMatureByAge,
   lifeFromAge,
-  GAME_RULES,
-  GOLDEN_RULES,
   type LifeStage,
-  OBJECTIVE,
-  POPULATION_PATIENCE,
-  POPULATION_STATUSES,
   type Sex,
-  STRATEGY,
   type Verdict,
   YOUNG_CUTOFF,
   YOUNG_CUTOFF_PRUDENT,
@@ -38,23 +32,6 @@ const VERDICT_STYLE: Record<Verdict, { color: string; bg: string; icon: string }
   epargner: { color: colors.danger, bg: colors.dangerSoft, icon: '🔴' },
   libre: { color: colors.textMuted, bg: colors.surfaceAlt, icon: '⚪' },
 };
-
-const STATUS_COLORS = [colors.danger, colors.accent, colors.olive, colors.olive];
-
-function GuideBlock({ icon, title, color, items }: { icon: string; title: string; color: string; items: string[] }) {
-  return (
-    <Card style={{ gap: 6, borderColor: color }}>
-      <Text style={[styles.strong, { color }]}>
-        {icon} {title}
-      </Text>
-      {items.map((t) => (
-        <Text key={t} style={styles.text}>
-          • {t}
-        </Text>
-      ))}
-    </Card>
-  );
-}
 
 export default function GestionScreen() {
   const { state, setPrudent } = useCarnet();
@@ -90,6 +67,10 @@ export default function GestionScreen() {
     lifespanYears,
   });
   const v = VERDICT_STYLE[advice.verdict];
+  const details = explain(
+    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears },
+    advice.verdict,
+  );
 
   return (
     <Screen>
@@ -191,72 +172,16 @@ export default function GestionScreen() {
           </Text>
           <Text style={styles.text}>{advice.reason}</Text>
         </View>
-      </Card>
-
-      <SectionTitle>🧬 Comprendre le fitness</SectionTitle>
-      <Text style={styles.muted}>Le fitness est la « condition physique » en % lue aux jumelles.</Text>
-      {FITNESS_RULES.map((r) => (
-        <Card key={r.title} style={{ gap: 4 }}>
-          <Text style={styles.strong}>{r.title}</Text>
-          <Text style={styles.text}>{r.text}</Text>
-        </Card>
-      ))}
-
-      <SectionTitle>📖 Ce que dit le jeu</SectionTitle>
-      <Text style={styles.muted}>Encyclopédie du jeu : « Gestion de la faune et abattage ».</Text>
-      <Card style={{ gap: 6, borderColor: colors.accent }}>
-        {GAME_RULES.map((t) => (
-          <Text key={t} style={styles.text}>
-            • {t}
-          </Text>
-        ))}
-      </Card>
-      <Card style={{ gap: 6 }}>
-        <Text style={styles.strong}>Statut des populations</Text>
-        {POPULATION_STATUSES.map((p, i) => (
-          <View key={p.name} style={[styles.row, { alignItems: 'flex-start' }]}>
-            <Text style={{ color: STATUS_COLORS[i], fontFamily: fonts.heading, width: 92 }}>{p.name}</Text>
-            <Text style={[styles.text, { flex: 1 }]}>{p.text}</Text>
+        {details.length ? (
+          <View style={{ marginTop: 10, gap: 6 }}>
+            {details.map((t) => (
+              <Text key={t} style={styles.text}>
+                {t}
+              </Text>
+            ))}
           </View>
-        ))}
-        <Text style={styles.muted}>{POPULATION_PATIENCE}</Text>
+        ) : null}
       </Card>
-
-      <SectionTitle>🦌 La stratégie du garde-chasse</SectionTitle>
-      <Card style={{ gap: 4 }}>
-        <Text style={styles.strong}>L&apos;objectif</Text>
-        <Text style={styles.text}>{OBJECTIVE}</Text>
-        <Text style={[styles.muted, { marginTop: 4 }]}>{STRATEGY.intro}</Text>
-      </Card>
-      <GuideBlock icon="🟢" title="À prélever" color={colors.olive} items={STRATEGY.remove} />
-      <GuideBlock icon="🔴" title="À garder" color={colors.danger} items={STRATEGY.keep} />
-      <Text style={styles.muted}>Stratégie issue de nombreuses heures de jeu et de retours de la communauté.</Text>
-
-      <SectionTitle>🤷 Rien à tirer dans ce troupeau ?</SectionTitle>
-      <Card style={{ gap: 6 }}>
-        <Text style={styles.text}>
-          • Changez de troupeau : une même espèce forme plusieurs groupes distincts sur la carte. Suivez les lisières de
-          forêts ou les clairières pour en trouver un autre qui aura, lui, des mâles mûrs à faible potentiel (1 ou 2
-          étoiles) à prélever.
-        </Text>
-        <Text style={styles.text}>
-          • Faites passer le temps : pour gérer ce troupeau précis, dormez quelques jours au chalet, ou sous une tente près du troupeau pour revenir plus vite. Les jeunes grandissent,
-          de nouveaux individus apparaissent, et vous pourrez revenir voir si des mâles mûrs intéressants se sont installés.
-        </Text>
-        <Text style={[styles.strong, { color: colors.olive }]}>
-          Un bon garde-chasse sait rentrer bredouille d&apos;une zone pour préserver l&apos;avenir de son territoire.
-        </Text>
-      </Card>
-
-      <SectionTitle>⏱️ Les règles d&apos;or</SectionTitle>
-      {GOLDEN_RULES.map((r, i) => (
-        <Card key={r.title} style={{ gap: 4 }}>
-          <Text style={styles.strong}>
-            {i + 1}. {r.title}
-          </Text>
-          <Text style={styles.text}>{r.text}</Text>
-        </Card>
-      ))}
 
       <SectionTitle>🎯 Distances de tir</SectionTitle>
       {DISTANCE_RULES.map((r) => (

@@ -21,7 +21,7 @@ import {
 import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
 import { COAT_CHOICES, isRareCoat } from '../../logic/details';
 import { formatDate, parseNumber } from '../../logic/stats';
-import { isMatureByAge, lifeFromAge } from '../../logic/management';
+import { explain, isMatureByAge, lifeFromAge } from '../../logic/management';
 import type { AgeStage, AnimalSex, HerdAnimal, PopulationStatus } from '../../logic/types';
 import { cancelHerdReminder, REMINDERS_SUPPORTED, scheduleHerdReminder } from '../../reminders';
 import { useCarnet } from '../../state/CarnetProvider';
@@ -162,6 +162,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
   const { updateAnimal, removeAnimal } = useCarnet();
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState(false);
+  const [why, setWhy] = useState(false);
   const { state } = useCarnet();
   const lifespanYears = getSpeciesInfo(speciesId, state.speciesSheets)?.lifespanYears;
   const advice = adviceFor(animal, { youngCutoff: state.prudent ? 40 : 50, lifespanYears });
@@ -218,6 +219,16 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
         )}
       </View>
       {alive ? <Text style={[styles.muted, { color: colors.text }]}>{advice.reason}</Text> : null}
+      {alive && why
+        ? explain(
+            { sex: animal.sex, age: animal.age, conditionPct: animal.conditionPct, ageYears: animal.ageYears, lifespanYears },
+            advice.verdict,
+          ).map((t) => (
+            <Text key={t} style={styles.text}>
+              {t}
+            </Text>
+          ))
+        : null}
       {isRareCoat(animal.coat) ? (
         <Text style={{ color: colors.gold, fontFamily: fonts.semibold, fontSize: 13 }}>
           ✦ Fourrure {animal.coat?.toLowerCase()} : trophée Ultime potentiel, à empailler.
@@ -229,6 +240,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
         <ChipRow>
           <Chip label="Revu" onPress={() => updateAnimal(herdId, animal.id, { lastSeen: new Date().toISOString() })} />
           <Chip label="Modifier" onPress={() => setEditing(true)} />
+          <Chip label={why ? 'Moins' : 'Tout savoir'} selected={why} onPress={() => setWhy(!why)} />
           <Chip
             label="Prélevé → saisir"
             tone="olive"

@@ -4,9 +4,6 @@
  * l'âge et la condition physique aux jumelles.
  */
 
-export const OBJECTIVE =
-  "Analyser chaque troupeau (âge et condition physique aux jumelles), retirer ce qui tire le troupeau vers le bas, laisser progresser le reste et prélever les âgés au bon moment.";
-
 export type Sex = 'male' | 'femelle';
 export type AgeClass = 'jeune' | 'adulte' | 'mur';
 /** Pour les âgés : avant-dernière ou dernière année de vie (âge actuel = espérance de vie maximale). */
@@ -81,13 +78,65 @@ export const OLD_GOOD_PCT = 55;
 
 const ask = (who: string): Advice => ({ verdict: 'libre', title: 'Indiquez la condition', reason: `${who} : la condition physique décide.` });
 
-export function advise(a: AnimalInput): Advice {
-  const base = adviseCore(a);
+/**
+ * Tout ce qu'il faut savoir sur l'animal saisi, en plus du verdict : fitness, étoiles, âge,
+ * argent, naissances, limite de prélèvements et suite à donner.
+ */
+export function explain(a: AnimalInput, verdict: Verdict): string[] {
+  const out: string[] = [];
+  const c = a.conditionPct;
+  const male = a.sex === 'male';
+  const take = verdict === 'eliminer' || verdict === 'trophee' || verdict === 'possible';
+  const life = lifeFromAge(a.ageYears, a.lifespanYears);
+
+  if (c !== undefined) {
+    const level =
+      c > HIGH_FITNESS_PCT ? 'haut fitness' : c >= OLD_GOOD_PCT ? 'bon fitness' : c >= ADULT_LOW_PCT ? 'fitness moyen' : 'fitness faible';
+    const ceiling = male
+      ? c > HIGH_FITNESS_PCT
+        ? ' Une fois mûr, il peut atteindre 4 ou 5 étoiles.'
+        : c < ADULT_LOW_PCT
+          ? ' Même mûr, son trophée restera petit.'
+          : ''
+      : '';
+    out.push(`🧬 ${c} % : ${level}. C’est son plafond génétique, fixé à la naissance : il ne changera jamais.${ceiling}`);
+  }
+
+  if (male && a.age !== 'mur') {
+    out.push(
+      `⭐ ${a.age === 'jeune' ? 'Jeune' : 'Adulte'} : 1 ou 2 étoiles pour l’instant, même avec un très bon fitness. Ses étoiles ne montrent son vrai potentiel qu’une fois mûr.`,
+    );
+  }
+
   const note = ageNote(a.ageYears, a.lifespanYears);
-  return note ? { ...base, reason: `${base.reason} ${note}` } : base;
+  if (note) out.push(`⏳ ${note}`);
+  if (life && !take && life.yearsLeft > 1 && (a.age === 'mur' || !male)) {
+    const wait = (life.yearsLeft - 1) * GAME_DAYS_PER_YEAR;
+    out.push(`📅 Sa dernière année commence dans environ ${wait} jours en jeu : dormez au chalet ou sous une tente, puis revenez le voir.`);
+  } else if (a.ageYears !== undefined && a.lifespanYears === undefined && (a.age === 'mur' || !male)) {
+    out.push('📅 Notez l’espérance de vie dans la fiche de l’espèce pour savoir quand arrive sa dernière année.');
+  } else if (a.ageYears === undefined && a.age === 'mur') {
+    out.push('📅 Indiquez son âge pour savoir quand arrive sa dernière année.');
+  }
+
+  if (male && a.age === 'mur') {
+    out.push(
+      take
+        ? '💰 Âgé et lourd : c’est au plus vieux et au plus lourd qu’un animal se vend le plus cher.'
+        : '💰 Attendre le fait vieillir et grossir : il rapportera plus d’argent à la vente.',
+    );
+  }
+
+  if (!male) out.push('♀ Les femelles font les naissances : n’en prélevez jamais plusieurs d’un coup dans un troupeau.');
+
+  if (take) {
+    out.push(`🎯 Au plus ${MAX_TAKEN_PER_SESSION} prélèvements dans ce troupeau aujourd’hui, dont un seul mâle : au-delà, la pression de chasse fait fuir les animaux.`);
+    out.push('🌱 Ensuite : dormez quelques jours (chalet ou tente) pour déclencher les naissances. Mangeoires actives et points d’eau propres font monter le statut du troupeau.');
+  }
+  return out;
 }
 
-function adviseCore(a: AnimalInput): Advice {
+export function advise(a: AnimalInput): Advice {
   const c = a.conditionPct;
   const stage = lifeFromAge(a.ageYears, a.lifespanYears)?.stage ?? a.lifeStage ?? 'normal';
 
@@ -131,7 +180,7 @@ function adviseCore(a: AnimalInput): Advice {
     return {
       verdict: 'epargner',
       title: 'Ne pas tirer : laissez-le grandir',
-      reason: `Jeune à ${c} % : au-dessus du seuil de ${cutoff} %, laissez-le grandir. Ne vous fiez pas à ses étoiles : un jeune n’a que 1 ou 2 étoiles, même avec un très bon fitness.`,
+      reason: `Jeune à ${c} % : au-dessus du seuil de ${cutoff} %, laissez-le grandir.`,
     };
   }
 
@@ -155,7 +204,7 @@ function adviseCore(a: AnimalInput): Advice {
     return {
       verdict: 'epargner',
       title: c > HIGH_FITNESS_PCT ? 'Ne pas tirer : haut fitness' : 'Ne pas tirer : bonne condition',
-      reason: `Adulte en bonne condition physique (${c} %) : laissez-le${c > HIGH_FITNESS_PCT ? ' vieillir jusqu’à la fin de son cycle mûr pour qu’il transmette ses gènes' : ''}. Ses 1 ou 2 étoiles actuelles ne montrent pas son potentiel, il n’atteindra ses 4 ou 5 étoiles qu’une fois mûr.`,
+      reason: `Adulte en bonne condition physique (${c} %) : laissez-le${c > HIGH_FITNESS_PCT ? ' vieillir jusqu’à la fin de son cycle mûr pour qu’il transmette ses gènes' : ''}.`,
     };
   }
 
@@ -197,70 +246,6 @@ function adviseCore(a: AnimalInput): Advice {
   };
 }
 
-/** Comprendre le fitness (condition physique) : affiché dans le guide. */
-export const FITNESS_RULES: { title: string; text: string }[] = [
-  {
-    title: 'Le fitness fixe le plafond génétique',
-    text: 'Ce pourcentage est attribué à la naissance et ne change jamais : il définit la taille maximale que les bois ou cornes pourront atteindre.',
-  },
-  {
-    title: "L'âge débloque le potentiel",
-    text: "Un animal à 95 % de fitness n'aura que 1 ou 2 étoiles s'il est jeune ou adulte : il n'a pas encore eu le temps de grandir.",
-  },
-  {
-    title: 'Le stade mûr révèle le vrai score',
-    text: "C'est seulement une fois mûr (et dans ses dernières années de vie) qu'un animal à haut fitness atteint ses 4 ou 5 étoiles.",
-  },
-  {
-    title: "Le poids et l'âge font le prix",
-    text: "Plus l'animal est âgé et lourd au moment du tir, plus la vente rapporte d'argent.",
-  },
-  {
-    title: "L'abattage sélectif améliore la harde",
-    text: 'Prélevez les mâles mûrs à faible fitness (1 étoile) pour relever la moyenne génétique des générations futures.',
-  },
-];
-
-/** Les principes de la stratégie, affichés dans le guide. */
-export const STRATEGY = {
-  intro:
-    'Oubliez la règle simpliste « tout ce qui est sous 50 % ». Analysez toujours troupeau par troupeau, et regardez l’âge et la condition physique aux jumelles.',
-  remove: [
-    'Priorité n°1 : les jeunes faibles (sous 50 %, ou sous 40 % pour être plus prudent). Ils tirent le troupeau vers le bas sans avoir donné leur potentiel, et plus longtemps que les autres.',
-    'Les adultes faibles (sous 35 %) : avec les naissances suivantes, retirer les jeunes et adultes faibles nettoie vite la génétique du secteur.',
-    'Les âgés à faible condition (sous 50 %), surtout en fin de vie (âge actuel = espérance de vie maximale) : ils vont mourir à la prochaine année, autant en tirer l’argent et l’XP.',
-    'Les âgés en bonne forme dans leur dernière année de vie : on profite de leur trophée après leur contribution maximale à la génération future.',
-    'Les femelles très faibles (sous 40 %) : leur impact génétique est moindre que celui des mâles, mais des femelles à 10 ou 20 % tirent la moyenne du troupeau vers le bas.',
-    'Les autres femelles : seulement en dernière année de vie (peu d’impact négatif).',
-  ],
-  keep: [
-    'Les adultes médians (environ 35 à 60 % en début de partie) : leurs bois ou cornes n’ont pas fini de grandir.',
-    'Les adultes en bonne condition physique (plus de 55-60 %).',
-    'Les mâles à haut fitness (plus de 80 %) : laissez-les vieillir jusqu’à la fin de leur cycle mûr pour qu’ils transmettent leurs gènes, puis prélevez-les comme trophées.',
-    'Les femelles : ne les décimez pas d’un coup, moins de femelles c’est moins de naissances dans la harde.',
-    'Les âgés en bonne forme (40 % et plus, idéalement 55 % et plus), surtout en avant-dernière année : leur trophée grandit encore, et plus âgés et plus lourds, ils rapporteront plus d’argent à la vente.',
-  ],
-};
-
-export const GOLDEN_RULES: { title: string; text: string }[] = [
-  {
-    title: '1 ou 2 animaux par troupeau',
-    text: "Limitez-vous à 1 ou 2 prélèvements par troupeau et par session, dont un seul mâle : sinon la pression de chasse fait fuir les animaux, et trop de femelles en moins fait baisser les naissances.",
-  },
-  {
-    title: 'Suivez la routine',
-    text: 'Utilisez les jumelles sur les zones de besoin (manger, boire, dormir) pour retrouver le même troupeau au fil des jours.',
-  },
-  {
-    title: 'Faites passer le temps',
-    text: "Dormez plusieurs jours dans un chalet, ou sous une tente près des points de chasse pour surveiller plus vite : c'est ce qui déclenche les naissances et fait grandir, vieillir et évoluer les animaux.",
-  },
-  {
-    title: "Améliorez l'habitat",
-    text: 'Activez les mangeoires et nettoyez les points d’eau de la zone pour faire monter le statut du troupeau jusqu’au plus haut (Prospère, ou « Florissant »).',
-  },
-];
-
 export interface DistanceRule {
   icon: string;
   title: string;
@@ -296,34 +281,6 @@ export const DISTANCE_RULES: DistanceRule[] = [
 
 export const DISTANCE_GOLDEN_RULE =
   'Mesurez toujours la distance aux jumelles, puis réglez le zéro de la lunette (50, 100, 200 ou 300 m) avant de tirer.';
-
-/** Encyclopédie du jeu, « Gestion de la faune et abattage ». */
-export const GAME_RULES: string[] = [
-  "Plus la condition physique d'un animal est élevée, plus son trophée sera grand : gestion de l'environnement et amélioration des habitats valent le coup.",
-  "L'abattage est le prélèvement sélectif d'animaux aux caractéristiques indésirables, selon la condition physique, le sexe et l'âge. Ciblez les animaux jeunes à la condition physique basse, de préférence les mâles.",
-  "Les femelles peuvent aussi être abattues, en particulier les jeunes en condition basse, mais l'effet sur la population est moindre.",
-  "Une année de vie d'un animal = 3 jours en jeu. En fin d'espérance de vie, il disparaît et d'autres prennent sa place : prélevez-le pendant sa dernière année pour le meilleur trophée et le moins d'impact.",
-  "L'abattage ne compte que pour le territoire où vivait l'animal : gérer les élans d'une région n'affecte que les élans de cette région.",
-  'Espèces solitaires (comme les élans) : explorez tout le territoire pour repérer les individus les plus faibles.',
-  "Trophée « Ultime » : pas seulement grand, il vient d'un animal à condition rare : albinisme (fourrure blanche, yeux rouges), leucisme (fourrure blanche, yeux normaux), mélanisme (fourrure noire ou foncée) ou érythrisme (fourrure rose ou rougeâtre). Il faut de la chance !",
-  "Empaillez ces trophées ultimes : ils coûtent une petite fortune, mais c'est le meilleur moyen de créer une collection dont vous serez fier.",
-  "Tout est dans le journal : vos prélèvements permettent de corréler qualité des trophées et condition physique. Ce ne sont que des probabilités : rien n'est garanti.",
-];
-
-export interface PopulationStatus {
-  name: string;
-  text: string;
-}
-
-export const POPULATION_STATUSES: PopulationStatus[] = [
-  { name: 'Vulnérable', text: 'Aucun spécimen en bonne condition physique.' },
-  { name: 'Stable', text: 'Part moyenne de spécimens en bonne condition.' },
-  { name: 'Saine', text: 'Produit régulièrement des animaux aux meilleurs trophées.' },
-  { name: 'Prospère', text: 'Produit régulièrement des animaux aux meilleurs trophées.' },
-];
-
-export const POPULATION_PATIENCE =
-  "Passer de Vulnérable à Stable, puis de Stable à Saine, prend beaucoup de temps. Continuez d'abattre les spécimens faibles dans votre territoire : la condition physique finira par monter.";
 
 /** Une année de vie d'un animal = 3 jours en jeu. */
 export const GAME_DAYS_PER_YEAR = 3;
