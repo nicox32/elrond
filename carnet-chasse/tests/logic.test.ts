@@ -535,3 +535,23 @@ test('calculateur : âge en années et espérance de vie', async () => {
   assert.equal(s!.speciesSheets['cerf-mulet'].matureAgeYears, 7);
   assert.equal(s!.speciesSheets['cerf-mulet'].lifespanYears, undefined);
 });
+
+test('calculateur : ratio de vie et médiane du troupeau', async () => {
+  const { explain, median, lifeRatio } = await import('../src/logic/management.ts');
+  const { herdMedian } = await import('../src/logic/herds.ts');
+  const { getSpeciesInfo } = await import('../src/data/speciesInfo.ts');
+  assert.equal(getSpeciesInfo('cerf-mulet')?.lifespanYears, 12);
+  assert.equal(median([30, 50, 70]), 50);
+  assert.equal(median([30, 40, 50, 70]), 45);
+  assert.equal(median([]), undefined);
+  assert.equal(lifeRatio(9, 12), 75);
+  const lines = explain({ sex: 'male', age: 'mur', conditionPct: 40, ageYears: 9, lifespanYears: 12, herdMedianPct: 52.5 }, 'surveiller');
+  assert.ok(lines.some((t) => t.includes('9 ans sur 12 (75 % de sa vie, après le milieu de sa vie : 6 ans)')));
+  assert.ok(lines.some((t) => t.includes('Médiane du troupeau : 52,5 %. Il est en dessous (-12,5 points)')));
+  const herd = { animals: [
+    { sex: 'male', status: 'vivant', conditionPct: 30 }, { sex: 'male', status: 'vivant', conditionPct: 60 },
+    { sex: 'male', status: 'preleve', conditionPct: 10 }, { sex: 'femelle', status: 'vivant', conditionPct: 80 },
+  ] };
+  assert.equal(herdMedian(herd as never, 'male'), 45);
+  assert.equal(herdMedian(herd as never, 'femelle'), 80);
+});

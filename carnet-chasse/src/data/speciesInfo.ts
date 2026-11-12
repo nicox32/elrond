@@ -39,6 +39,8 @@ export interface SpeciesInfo {
 export const SPECIES_INFO: Record<string, SpeciesInfo> = {
   'cerf-mulet': {
     animalClass: 6,
+    // Espérance de vie donnée par le joueur.
+    lifespanYears: 12,
     trophyType: 'Bois',
     trophyRange: [115, 610],
     energy: { balle: [1500, 4000], grenaille: null, chevrotineM: [10, 30], slug: [700, 3000], fleche: [70, 300] },

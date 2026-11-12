@@ -6,6 +6,7 @@ import { Select } from '../../components/Select';
 import { Card, Chip, ChipRow, Field, FieldRow, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { SPECIES } from '../../data/game';
 import { getSpeciesInfo } from '../../data/speciesInfo';
+import { herdMedian } from '../../logic/herds';
 import { parseNumber } from '../../logic/stats';
 import { useCarnet } from '../../state/CarnetProvider';
 import {
@@ -40,6 +41,9 @@ export default function GestionScreen() {
   const [condition, setCondition] = useState('');
   const [stage, setStage] = useState<LifeStage>('normal');
   const [speciesId, setSpeciesId] = useState<string | undefined>();
+  const [herdId, setHerdId] = useState<string | undefined>();
+  const herd = state.herds.find((h) => h.id === herdId);
+  const herdMedianPct = herd ? herdMedian(herd, sex) : undefined;
   const [ageYears, setAgeYears] = useState('');
   const [lifespan, setLifespan] = useState('');
 
@@ -68,7 +72,7 @@ export default function GestionScreen() {
   });
   const v = VERDICT_STYLE[advice.verdict];
   const details = explain(
-    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears },
+    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears, herdMedianPct },
     advice.verdict,
   );
 
@@ -86,6 +90,24 @@ export default function GestionScreen() {
 
       <SectionTitle>Tirer ou épargner ?</SectionTitle>
       <Card>
+        {state.herds.length ? (
+          <Select
+            label="Comparer à un troupeau (facultatif)"
+            value={herdId}
+            onChange={(v) => {
+              setHerdId(v || undefined);
+              const h = state.herds.find((x) => x.id === v);
+              if (h) {
+                setSpeciesId(h.speciesId);
+                setLifespan('');
+              }
+            }}
+            placeholder="Aucun"
+            allowCustom={false}
+            allowClear
+            options={state.herds.map((h) => ({ value: h.id, label: h.name }))}
+          />
+        ) : null}
         <Select
           label="Espèce (facultatif)"
           value={speciesId}

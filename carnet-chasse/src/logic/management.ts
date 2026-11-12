@@ -26,6 +26,23 @@ export interface AnimalInput {
   ageYears?: number;
   /** Espérance de vie de l'espèce en années : avec l'âge, donne le moment de vie automatiquement. */
   lifespanYears?: number;
+  /** Condition médiane des animaux vivants du troupeau (même sexe), pour comparer. */
+  herdMedianPct?: number;
+}
+
+/** Médiane d'une liste de pourcentages (undefined si vide). */
+export function median(values: number[]): number | undefined {
+  if (!values.length) return undefined;
+  const v = [...values].sort((x, y) => x - y);
+  const m = Math.floor(v.length / 2);
+  const out = v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+  return Math.round(out * 10) / 10;
+}
+
+/** Part de la vie déjà écoulée, en % (âge / espérance de vie). */
+export function lifeRatio(ageYears?: number, lifespanYears?: number): number | undefined {
+  if (ageYears === undefined || !lifespanYears) return undefined;
+  return Math.min(100, Math.round((ageYears / lifespanYears) * 100));
 }
 
 /** Moment de vie calculé d'après l'âge et l'espérance de vie de l'espèce. */
@@ -56,7 +73,10 @@ export function ageNote(ageYears?: number, lifespanYears?: number): string | und
   const life = lifeFromAge(ageYears, lifespanYears);
   if (!life) return `${plural(ageYears, 'an')}.`;
   if (life.yearsLeft === 0) return `${plural(ageYears, 'an')} sur ${lifespanYears} : il a atteint l’espérance de vie de l’espèce, il peut mourir de vieillesse d’un jour à l’autre.`;
-  return `${plural(ageYears, 'an')} sur ${lifespanYears} : il lui reste environ ${plural(life.yearsLeft, 'an')} à vivre, soit ${life.yearsLeft * GAME_DAYS_PER_YEAR} jours en jeu.`;
+  const ratio = lifeRatio(ageYears, lifespanYears)!;
+  const half = lifespanYears! / 2;
+  const where = ageYears < half ? 'avant le milieu de sa vie' : ageYears === half ? 'au milieu de sa vie' : 'après le milieu de sa vie';
+  return `${plural(ageYears, 'an')} sur ${lifespanYears} (${ratio} % de sa vie, ${where} : ${String(half).replace('.', ',')} ans) : il lui reste environ ${plural(life.yearsLeft, 'an')} à vivre, soit ${life.yearsLeft * GAME_DAYS_PER_YEAR} jours en jeu.`;
 }
 
 export interface Advice {
@@ -105,6 +125,16 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
   if (male && a.age !== 'mur') {
     out.push(
       `⭐ ${a.age === 'jeune' ? 'Jeune' : 'Adulte'} : 1 ou 2 étoiles pour l’instant, même avec un très bon fitness. Ses étoiles ne montrent son vrai potentiel qu’une fois mûr.`,
+    );
+  }
+
+  if (c !== undefined && a.herdMedianPct !== undefined) {
+    const d = Math.round((c - a.herdMedianPct) * 10) / 10;
+    const fmt = (n: number) => String(n).replace('.', ',');
+    out.push(
+      d === 0
+        ? `📊 Pile sur la médiane du troupeau (${fmt(a.herdMedianPct)} %).`
+        : `📊 Médiane du troupeau : ${fmt(a.herdMedianPct)} %. Il est ${d > 0 ? `au-dessus (+${fmt(d)} points) : il fait monter` : `en dessous (${fmt(d)} points) : il tire vers le bas`} la génétique du troupeau.`,
     );
   }
 

@@ -12,6 +12,7 @@ import {
   animalsTakenToday,
   AGING_NOTE,
   daysSince,
+  herdMedian,
   isVisitDue,
   malesTakenToday,
   POPULATION_LABELS,
@@ -221,7 +222,17 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
       {alive ? <Text style={[styles.muted, { color: colors.text }]}>{advice.reason}</Text> : null}
       {alive && why
         ? explain(
-            { sex: animal.sex, age: animal.age, conditionPct: animal.conditionPct, ageYears: animal.ageYears, lifespanYears },
+            {
+              sex: animal.sex,
+              age: animal.age,
+              conditionPct: animal.conditionPct,
+              ageYears: animal.ageYears,
+              lifespanYears,
+              herdMedianPct: (() => {
+                const herd = state.herds.find((h) => h.id === herdId);
+                return herd ? herdMedian(herd, animal.sex) : undefined;
+              })(),
+            },
             advice.verdict,
           ).map((t) => (
             <Text key={t} style={styles.text}>
@@ -395,6 +406,12 @@ export default function HerdScreen() {
           </Text>
           <Text style={styles.muted}>{s.taken} prélevé{s.taken > 1 ? 's' : ''}</Text>
         </View>
+        {herdMedian(herd, 'male') !== undefined || herdMedian(herd, 'femelle') !== undefined ? (
+          <Text style={styles.muted}>
+            Condition médiane :{herdMedian(herd, 'male') !== undefined ? ` ♂ ${String(herdMedian(herd, 'male')).replace('.', ',')} %` : ''}
+            {herdMedian(herd, 'femelle') !== undefined ? ` · ♀ ${String(herdMedian(herd, 'femelle')).replace('.', ',')} %` : ''}
+          </Text>
+        ) : null}
         <ChipRow>
           {s.byVerdict.eliminer ? <VerdictBadge verdict="eliminer" /> : null}
           {s.byVerdict.trophee ? <VerdictBadge verdict="trophee" /> : null}
