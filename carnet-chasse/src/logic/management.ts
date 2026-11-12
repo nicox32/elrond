@@ -189,7 +189,7 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
 
   if (take) {
     out.push(
-      '💰 La vente ne paie que la viande intacte : poids après découpe × prix au kilo de l’espèce. Ni le fitness ni les bois ne changent le prix : visez les organes vitaux pour abîmer le moins de viande.',
+      '💰 La vente ne paie que la viande intacte : poids après découpe × prix au kilo de l’espèce. Ni le fitness ni les bois ne changent le prix. Visez le défaut de l’épaule (juste derrière la patte avant, à mi-hauteur, de profil) : poumons et cœur, 100 % de la viande noble gardée. Évitez l’os de l’épaule, l’arrière-train, le ventre et les pattes.',
     );
   }
 

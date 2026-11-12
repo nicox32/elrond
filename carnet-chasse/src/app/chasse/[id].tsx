@@ -14,6 +14,7 @@ import {
   findWeapon,
   getReserve,
   getSpecies,
+  SHOT_ZONE_ADVICE,
   SHOT_ZONE_LABELS,
   TROPHY_TYPE_LABELS,
 } from "../../data/game";
@@ -23,6 +24,7 @@ import {
   damagedOrgans,
   estimateMeatPrice,
   organShots,
+  organWarnings,
   formatDuration,
   isRareCoat,
 } from "../../logic/details";
@@ -295,6 +297,27 @@ export default function HuntScreen() {
         <Line label="Chasseur détecté" value={tir.detecte} />
         <Line label="Chien utilisé" value={tir.chien} />
       </Block>
+
+      {(() => {
+        const zone = hunt.shotZone ? SHOT_ZONE_ADVICE[hunt.shotZone] : undefined;
+        const warnings = organWarnings(organShots(hunt));
+        if (!zone && !warnings.length) return null;
+        return (
+          <Card style={{ gap: 6, borderColor: zone?.good && !warnings.length ? colors.olive : colors.danger }}>
+            {zone ? (
+              <Text style={[styles.text, { color: zone.good ? colors.olive : colors.danger }]}>
+                {zone.good ? "✓ " : "⚠ "}
+                {zone.text}
+              </Text>
+            ) : null}
+            {warnings.map((t) => (
+              <Text key={t} style={[styles.text, { color: colors.danger }]}>
+                ⚠ {t}
+              </Text>
+            ))}
+          </Card>
+        );
+      })()}
 
       {shots.some((o) => o.length) ? (
         <>

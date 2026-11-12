@@ -145,7 +145,37 @@ export const SHOT_ZONE_LABELS: Record<ShotZone, string> = {
   tete: 'Tête',
   cou: 'Cou',
   colonne: 'Colonne',
+  epaule: 'Épaule (os)',
+  arriere: 'Arrière-train',
+  ventre: 'Ventre / intestins',
+  pattes: 'Pattes',
   autre: 'Autre',
+};
+
+/** Où viser : le défaut de l'épaule, de profil. */
+export const BEST_SHOT =
+  'Visez le défaut de l’épaule : juste derrière la patte avant, à mi-hauteur du corps, l’animal de profil. La balle perfore poumons et cœur, et garde 100 % de la viande noble et le trophée intacts.';
+
+/** Ce que coûte chaque zone touchée (conseils du joueur). Pas de texte = rien de connu. */
+export const SHOT_ZONE_ADVICE: Partial<Record<ShotZone, { good: boolean; text: string }>> = {
+  coeur: { good: true, text: 'Défaut de l’épaule : cœur touché, mort rapide, viande noble et trophée intacts.' },
+  poumons: { good: true, text: 'Défaut de l’épaule : poumons perforés, mort rapide, viande noble et trophée intacts.' },
+  epaule: {
+    good: false,
+    text: 'Trop en avant : l’os massif de l’épaule détruit beaucoup de viande de qualité et peut bloquer la balle avant les poumons.',
+  },
+  arriere: {
+    good: false,
+    text: 'Cuissots et hanches : la zone la plus riche en viande. Des dizaines de kilos détruits, prix de revente en chute, et l’animal blessé ne meurt pas vite.',
+  },
+  ventre: {
+    good: false,
+    text: 'Trop en arrière : estomac ou intestins, hémorragie très lente. L’animal court plusieurs centaines de mètres pendant de longues minutes : pistage long et pénible.',
+  },
+  pattes: {
+    good: false,
+    text: 'Aucun organe vital : l’animal est seulement blessé, il prend la fuite, survit et guérit.',
+  },
 };
 
 export const TROPHY_TYPE_LABELS: Record<TrophyType, string> = {

@@ -118,6 +118,19 @@ export function damagedOrgans(h: Pick<Hunt, 'organs'>): { id: OrganId; label: st
     .sort((a, b) => b.pct - a.pct);
 }
 
+export const OS_WARNING_PCT = 5;
+
+/** Alertes tirées des dégâts aux organes : os (épaule) et ventre (estomac, intestin). */
+export function organWarnings(shots: Partial<Record<OrganId, number>>[]): string[] {
+  const hit = (o: OrganId, min = 0) => shots.some((d) => (d[o] ?? 0) > min);
+  const out: string[] = [];
+  // Quelques % d'os (côtes) restent normaux sur un tir au défaut de l'épaule : alerte au-delà de 5 %.
+  if (hit('os', OS_WARNING_PCT)) out.push('Os nettement touché : trop en avant, l’os de l’épaule détruit de la viande de qualité et peut bloquer la balle avant les poumons.');
+  if (hit('estomac') || hit('intestin'))
+    out.push('Ventre touché : hémorragie très lente, l’animal court longtemps avant de mourir. Visez plus en avant, juste derrière la patte avant.');
+  return out;
+}
+
 /** Robes vues en jeu : « Standard » et les quatre conditions rares de l'encyclopédie. */
 export const COAT_CHOICES: { label: string; rare: boolean; hint?: string }[] = [
   { label: 'Standard', rare: false },

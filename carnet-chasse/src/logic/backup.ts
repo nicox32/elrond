@@ -31,7 +31,7 @@ export const BACKUP_APP = 'carnet-chasse-woth2';
 export const BACKUP_VERSION = 1;
 
 const RESERVE_IDS: ReserveId[] = ['new-laurentia', 'kilimaya', 'headquarters'];
-const SHOT_ZONES: ShotZone[] = ['coeur', 'poumons', 'foie', 'tete', 'cou', 'colonne', 'autre'];
+const SHOT_ZONES: ShotZone[] = ['coeur', 'poumons', 'foie', 'tete', 'cou', 'colonne', 'epaule', 'arriere', 'ventre', 'pattes', 'autre'];
 const TROPHY_TYPES: TrophyType[] = ['normal', 'non-typique'];
 const MODES: HuntMode[] = ['solo', 'coop'];
 const NEED_TYPES: NeedType[] = ['boire', 'manger', 'dormir'];

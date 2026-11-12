@@ -596,3 +596,16 @@ test('vente : seulement la viande intacte × prix au kilo', async () => {
   assert.equal(estimateMeatPrice({ ...deer, shotDegradationKg: 10 }), 129);
   assert.ok(explain({ sex: 'male', age: 'mur', conditionPct: 30 }, 'eliminer').some((t) => t.includes('poids après découpe × prix au kilo')));
 });
+
+test('zones de tir : conseils et alertes des organes', async () => {
+  const { organWarnings } = await import('../src/logic/details.ts');
+  const { SHOT_ZONE_ADVICE, SHOT_ZONE_LABELS } = await import('../src/data/game.ts');
+  assert.equal(SHOT_ZONE_ADVICE.poumons?.good, true);
+  assert.equal(SHOT_ZONE_ADVICE.arriere?.good, false);
+  assert.equal(SHOT_ZONE_LABELS.pattes, 'Pattes');
+  assert.equal(organWarnings([{ chair: 72.6, 'poumon-droit': 100 }]).length, 0);
+  assert.equal(organWarnings([{ chair: 72.6, os: 0.9 }]).length, 0);
+  assert.equal(organWarnings([{ chair: 72.6, os: 40 }]).length, 1);
+  assert.equal(organWarnings([{ chair: 10 }, { intestin: 30 }]).length, 1);
+  assert.equal(parseState({ hunts: [hunt({ shotZone: 'ventre' })] })!.hunts[0].shotZone, 'ventre');
+});

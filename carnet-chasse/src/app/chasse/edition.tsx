@@ -21,6 +21,7 @@ import {
   CATEGORY_LABELS,
   findWeapon,
   HUNTING_RESERVES,
+  SHOT_ZONE_ADVICE,
   SHOT_ZONE_LABELS,
   SPECIES,
   speciesOfReserve,
@@ -39,6 +40,7 @@ import {
   type NumKey,
   ORGAN_LABELS,
   organShots,
+  organWarnings,
   parseDuration,
   PRICE_FIELDS,
   RATING_CHOICES,
@@ -568,6 +570,12 @@ export default function EditionScreen() {
           />
         ))}
       </ChipRow>
+      {shotZone && SHOT_ZONE_ADVICE[shotZone] ? (
+        <Text style={[styles.text, { color: SHOT_ZONE_ADVICE[shotZone]!.good ? colors.olive : colors.danger }]}>
+          {SHOT_ZONE_ADVICE[shotZone]!.good ? '✓ ' : '⚠ '}
+          {SHOT_ZONE_ADVICE[shotZone]!.text}
+        </Text>
+      ) : null}
 
       <Label>Détails</Label>
       <ChipRow>
@@ -865,6 +873,15 @@ export default function EditionScreen() {
             onPress={removeShot}
           />
         ) : null}
+        {organWarnings(
+          shots.map((d) =>
+            Object.fromEntries(ORGAN_IDS.map((o) => [o, parseNumber(d[o]) ?? 0])),
+          ),
+        ).map((t) => (
+          <Text key={t} style={[styles.text, { color: colors.danger }]}>
+            ⚠ {t}
+          </Text>
+        ))}
       </Fold>
 
       <Fold

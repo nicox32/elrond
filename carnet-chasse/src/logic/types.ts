@@ -4,7 +4,7 @@ export type SpeciesCategory = 'petit' | 'oiseau' | 'moyen' | 'grand' | 'dangereu
 
 export type WeaponType = 'carabine' | 'fusil' | 'arc' | 'arbalete';
 
-export type ShotZone = 'coeur' | 'poumons' | 'foie' | 'tete' | 'cou' | 'colonne' | 'autre';
+export type ShotZone = 'coeur' | 'poumons' | 'foie' | 'tete' | 'cou' | 'colonne' | 'epaule' | 'arriere' | 'ventre' | 'pattes' | 'autre';
 
 export type TrophyType = 'normal' | 'non-typique';
 
