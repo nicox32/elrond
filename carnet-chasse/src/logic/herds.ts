@@ -1,4 +1,4 @@
-/** Suivi de troupeau : verdicts du guide pour chaque animal, résumé et règle « un seul mâle par session ». */
+/** Suivi de troupeau : verdicts du guide pour chaque animal, résumé et règle « 1 ou 2 animaux, dont un seul mâle, par session ». */
 import { type Advice, advise, type Verdict } from './management.ts';
 import type { Herd, HerdAnimal, PopulationStatus } from './types.ts';
 
@@ -67,6 +67,11 @@ const sameDay = (a: string, b: Date) => {
 /** Mâles du troupeau prélevés aujourd'hui (règle d'or : un seul mâle par troupeau et par session). */
 export function malesTakenToday(herd: Herd, now = new Date()): number {
   return herd.animals.filter((a) => a.sex === 'male' && a.status === 'preleve' && a.takenAt && sameDay(a.takenAt, now)).length;
+}
+
+/** Animaux du troupeau prélevés aujourd'hui (conseil : 1 ou 2 par troupeau et par session). */
+export function animalsTakenToday(herd: Herd, now = new Date()): number {
+  return herd.animals.filter((a) => a.status === 'preleve' && a.takenAt && sameDay(a.takenAt, now)).length;
 }
 
 /** Ordre d'affichage : vivants d'abord, cibles en tête, puis trophées, à surveiller, à épargner. */

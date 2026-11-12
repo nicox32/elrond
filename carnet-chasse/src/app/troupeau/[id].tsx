@@ -9,6 +9,7 @@ import { getSpeciesInfo, routineSlots } from '../../data/speciesInfo';
 import {
   adviceFor,
   AGE_LABELS,
+  animalsTakenToday,
   AGING_NOTE,
   daysSince,
   isVisitDue,
@@ -283,6 +284,7 @@ export default function HerdScreen() {
   const adviceOpts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears: info?.lifespanYears };
   const s = summarizeHerd(herd, adviceOpts);
   const takenToday = malesTakenToday(herd);
+  const allTakenToday = animalsTakenToday(herd);
   const days = daysSince(herd.lastVisit);
   const animals = sortAnimals(herd.animals, adviceOpts);
   const due = isVisitDue(herd);
@@ -355,6 +357,15 @@ export default function HerdScreen() {
         {herd.reminderId ? <Text style={{ color: colors.olive, fontSize: 13 }}>Rappel actif sur ce téléphone.</Text> : null}
         {reminderMsg ? <Text style={styles.muted}>{reminderMsg}</Text> : null}
       </Card>
+
+      {allTakenToday >= 2 ? (
+        <Card style={{ borderColor: colors.danger, backgroundColor: colors.dangerSoft }}>
+          <Text style={[styles.strong, { color: colors.danger }]}>{allTakenToday} animaux déjà prélevés aujourd&apos;hui</Text>
+          <Text style={styles.text}>
+            Limitez-vous à 1 ou 2 animaux par troupeau et par session. Laissez reposer ce troupeau : dormez et revenez plus tard.
+          </Text>
+        </Card>
+      ) : null}
 
       {takenToday >= 1 ? (
         <Card style={{ borderColor: colors.danger, backgroundColor: colors.dangerSoft }}>

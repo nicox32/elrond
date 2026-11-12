@@ -83,7 +83,7 @@ export default function GestionScreen() {
   const advice = advise({
     sex,
     age,
-    conditionPct: sex === 'femelle' ? undefined : parseNumber(condition),
+    conditionPct: parseNumber(condition),
     lifeStage: showStage ? stage : 'normal',
     youngCutoff: cutoff,
     ageYears: years,
@@ -164,18 +164,16 @@ export default function GestionScreen() {
             </ChipRow>
           </>
         ) : null}
-        {sex === 'male' ? (
-          <View style={{ maxWidth: 220 }}>
-            <Field
-              label="Condition physique"
-              unit="%"
-              value={condition}
-              onChangeText={setCondition}
-              keyboardType="decimal-pad"
-              placeholder="ex. 35"
-            />
-          </View>
-        ) : null}
+        <View style={{ maxWidth: 220 }}>
+          <Field
+            label="Condition physique"
+            unit="%"
+            value={condition}
+            onChangeText={setCondition}
+            keyboardType="decimal-pad"
+            placeholder="ex. 35"
+          />
+        </View>
         {sex === 'male' && age === 'jeune' ? (
           <ChipRow>
             <Chip

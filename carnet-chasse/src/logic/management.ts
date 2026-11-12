@@ -38,6 +38,13 @@ export function lifeFromAge(ageYears?: number, lifespanYears?: number): { stage:
   return { stage: yearsLeft <= 1 ? 'derniere' : yearsLeft === 2 ? 'avant-derniere' : 'normal', yearsLeft };
 }
 
+/** Femelles très faibles : à prélever sous 40 %. */
+export const FEMALE_LOW_PCT = 40;
+/** Mâles à haut fitness : à épargner jusqu'à la fin de leur cycle mûr. */
+export const HIGH_FITNESS_PCT = 80;
+/** Prélèvements conseillés par troupeau et par session. */
+export const MAX_TAKEN_PER_SESSION = 2;
+
 /** L'animal est-il mûr d'après son âge et l'âge de maturité de l'espèce ? */
 export function isMatureByAge(ageYears?: number, matureAgeYears?: number): boolean | undefined {
   if (ageYears === undefined || matureAgeYears === undefined) return undefined;
@@ -84,8 +91,15 @@ function adviseCore(a: AnimalInput): Advice {
   const c = a.conditionPct;
   const stage = lifeFromAge(a.ageYears, a.lifespanYears)?.stage ?? a.lifeStage ?? 'normal';
 
-  // Femelles : seulement en dernière année de vie.
+  // Femelles : très faibles (sous 40 %) ou en dernière année de vie.
   if (a.sex === 'femelle') {
+    if (c !== undefined && c < FEMALE_LOW_PCT) {
+      return {
+        verdict: 'eliminer',
+        title: 'Femelle très faible : à prélever',
+        reason: `Femelle à ${c} % (sous ${FEMALE_LOW_PCT} %) : son impact génétique est moindre que celui d’un mâle, mais la garder tire la moyenne du troupeau vers le bas. Une ou deux à la fois au plus : moins de femelles, c’est moins de naissances.`,
+      };
+    }
     if (stage === 'derniere') {
       return {
         verdict: 'eliminer',
@@ -96,7 +110,10 @@ function adviseCore(a: AnimalInput): Advice {
     return {
       verdict: 'epargner',
       title: 'Ne pas tirer',
-      reason: 'Femelle : ne la tirez qu’en dernière année de vie.',
+      reason:
+        c === undefined
+          ? `Femelle : ne la tirez qu’en dernière année de vie, ou si sa condition est sous ${FEMALE_LOW_PCT} % (indiquez-la).`
+          : `Femelle à ${c} % : gardez-la, elle assure les naissances. Ne la tirez qu’en dernière année de vie.`,
     };
   }
 
@@ -123,9 +140,9 @@ function adviseCore(a: AnimalInput): Advice {
     if (c === undefined) return ask('Adulte');
     if (c < ADULT_LOW_PCT) {
       return {
-        verdict: 'possible',
-        title: 'Adulte faible : prélèvement possible',
-        reason: `Adulte à ${c} % : sous la zone médiane (${ADULT_LOW_PCT}-60 %), même mûr, son trophée restera petit.`,
+        verdict: 'eliminer',
+        title: 'Adulte faible : à prélever',
+        reason: `Adulte à ${c} % : sous la zone médiane (${ADULT_LOW_PCT}-60 %), même mûr, son trophée restera petit. Retirer les jeunes et adultes faibles nettoie vite la génétique du secteur, grâce aux naissances suivantes.`,
       };
     }
     if (c < ADULT_GOOD_PCT) {
@@ -137,8 +154,8 @@ function adviseCore(a: AnimalInput): Advice {
     }
     return {
       verdict: 'epargner',
-      title: 'Ne pas tirer : bonne condition',
-      reason: `Adulte en bonne condition physique (${c} %) : laissez-le. Ses 1 ou 2 étoiles actuelles ne montrent pas son potentiel, il n’atteindra ses 4 ou 5 étoiles qu’une fois mûr.`,
+      title: c > HIGH_FITNESS_PCT ? 'Ne pas tirer : haut fitness' : 'Ne pas tirer : bonne condition',
+      reason: `Adulte en bonne condition physique (${c} %) : laissez-le${c > HIGH_FITNESS_PCT ? ' vieillir jusqu’à la fin de son cycle mûr pour qu’il transmette ses gènes' : ''}. Ses 1 ou 2 étoiles actuelles ne montrent pas son potentiel, il n’atteindra ses 4 ou 5 étoiles qu’une fois mûr.`,
     };
   }
 
@@ -174,7 +191,9 @@ function adviseCore(a: AnimalInput): Advice {
     reason:
       stage === 'avant-derniere'
         ? `Âgé en bonne forme (${c} %) en avant-dernière année : son trophée peut encore grandir dans sa dernière année et il contribue fortement à la génération future. Prélevez-le l’an prochain : plus âgé et plus lourd, il rapportera plus d’argent à la vente.`
-        : `Âgé en bonne forme (${c} %${c >= OLD_GOOD_PCT ? '' : `, idéalement ${OLD_GOOD_PCT} % et plus`}) : laissez-le contribuer à la génération future, puis prélevez-le dans sa dernière année.`,
+        : c > HIGH_FITNESS_PCT
+          ? `Mâle à haut fitness (${c} %) : laissez-le vieillir jusqu’à la fin de son cycle mûr pour qu’il transmette ses gènes, puis prélevez-le comme trophée dans sa dernière année.`
+          : `Âgé en bonne forme (${c} %${c >= OLD_GOOD_PCT ? '' : `, idéalement ${OLD_GOOD_PCT} % et plus`}) : laissez-le contribuer à la génération future, puis prélevez-le dans sa dernière année.`,
   };
 }
 
@@ -208,21 +227,25 @@ export const STRATEGY = {
     'Oubliez la règle simpliste « tout ce qui est sous 50 % ». Analysez toujours troupeau par troupeau, et regardez l’âge et la condition physique aux jumelles.',
   remove: [
     'Priorité n°1 : les jeunes faibles (sous 50 %, ou sous 40 % pour être plus prudent). Ils tirent le troupeau vers le bas sans avoir donné leur potentiel, et plus longtemps que les autres.',
+    'Les adultes faibles (sous 35 %) : avec les naissances suivantes, retirer les jeunes et adultes faibles nettoie vite la génétique du secteur.',
     'Les âgés à faible condition (sous 50 %), surtout en fin de vie (âge actuel = espérance de vie maximale) : ils vont mourir à la prochaine année, autant en tirer l’argent et l’XP.',
     'Les âgés en bonne forme dans leur dernière année de vie : on profite de leur trophée après leur contribution maximale à la génération future.',
-    'Les femelles : seulement en dernière année de vie (peu d’impact négatif).',
+    'Les femelles très faibles (sous 40 %) : leur impact génétique est moindre que celui des mâles, mais des femelles à 10 ou 20 % tirent la moyenne du troupeau vers le bas.',
+    'Les autres femelles : seulement en dernière année de vie (peu d’impact négatif).',
   ],
   keep: [
     'Les adultes médians (environ 35 à 60 % en début de partie) : leurs bois ou cornes n’ont pas fini de grandir.',
     'Les adultes en bonne condition physique (plus de 55-60 %).',
+    'Les mâles à haut fitness (plus de 80 %) : laissez-les vieillir jusqu’à la fin de leur cycle mûr pour qu’ils transmettent leurs gènes, puis prélevez-les comme trophées.',
+    'Les femelles : ne les décimez pas d’un coup, moins de femelles c’est moins de naissances dans la harde.',
     'Les âgés en bonne forme (40 % et plus, idéalement 55 % et plus), surtout en avant-dernière année : leur trophée grandit encore, et plus âgés et plus lourds, ils rapporteront plus d’argent à la vente.',
   ],
 };
 
 export const GOLDEN_RULES: { title: string; text: string }[] = [
   {
-    title: 'Un seul mâle à la fois',
-    text: "Ne tuez jamais plus d'un mâle par troupeau lors d'une même session, pour ne pas faire fuir les animaux (pression de chasse).",
+    title: '1 ou 2 animaux par troupeau',
+    text: "Limitez-vous à 1 ou 2 prélèvements par troupeau et par session, dont un seul mâle : sinon la pression de chasse fait fuir les animaux, et trop de femelles en moins fait baisser les naissances.",
   },
   {
     title: 'Suivez la routine',
@@ -230,7 +253,11 @@ export const GOLDEN_RULES: { title: string; text: string }[] = [
   },
   {
     title: 'Faites passer le temps',
-    text: "Dormez dans un chalet, ou sous une tente près des points de chasse pour surveiller plus vite, afin de faire avancer les jours : c'est ce qui fait grandir, vieillir et évoluer les animaux.",
+    text: "Dormez plusieurs jours dans un chalet, ou sous une tente près des points de chasse pour surveiller plus vite : c'est ce qui déclenche les naissances et fait grandir, vieillir et évoluer les animaux.",
+  },
+  {
+    title: "Améliorez l'habitat",
+    text: 'Activez les mangeoires et nettoyez les points d’eau de la zone pour faire monter le statut du troupeau jusqu’au plus haut (Prospère, ou « Florissant »).',
   },
 ];
 

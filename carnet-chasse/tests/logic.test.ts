@@ -134,18 +134,24 @@ test('calculateur : stratégie âge + condition', async () => {
   assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 60 }), 'epargner');
   assert.equal(v({ sex: 'male', age: 'jeune' }), 'libre');
   // Adultes : médians et bons gardés
-  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 30 }), 'possible');
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 30 }), 'eliminer');
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 40 }), 'epargner');
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 70 }), 'epargner');
+  assert.match(advise({ sex: 'male', age: 'adulte', conditionPct: 85 } as never).title, /haut fitness/);
+  // Femelles : très faibles (sous 40 %) ou en dernière année
+  assert.equal(v({ sex: 'femelle', age: 'adulte', conditionPct: 20 }), 'eliminer');
+  assert.equal(v({ sex: 'femelle', age: 'adulte', conditionPct: 45 }), 'epargner');
   // Âgés
+  assert.match(advise({ sex: 'male', age: 'mur', conditionPct: 85 } as never).reason, /haut fitness/);
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 31.7 }), 'eliminer');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 45 }), 'surveiller');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 45, lifeStage: 'derniere' }), 'eliminer');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 60 }), 'epargner');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 60, lifeStage: 'avant-derniere' }), 'epargner');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 60, lifeStage: 'derniere' }), 'trophee');
-  // Femelles : seulement en dernière année
-  assert.equal(v({ sex: 'femelle', age: 'jeune', conditionPct: 10 }), 'epargner');
+  // Femelles : très faibles (sous 40 %) ou en dernière année
+  assert.equal(v({ sex: 'femelle', age: 'jeune', conditionPct: 10 }), 'eliminer');
+  assert.equal(v({ sex: 'femelle', age: 'jeune' }), 'epargner');
   assert.equal(v({ sex: 'femelle', age: 'mur', lifeStage: 'derniere' }), 'eliminer');
 });
 
