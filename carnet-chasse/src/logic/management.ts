@@ -187,11 +187,9 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
     out.push('📅 Indiquez son âge pour savoir quand arrive sa dernière année.');
   }
 
-  if (male && a.age === 'mur') {
+  if (take) {
     out.push(
-      take
-        ? '💰 Âgé et lourd : c’est au plus vieux et au plus lourd qu’un animal se vend le plus cher.'
-        : '💰 Attendre le fait vieillir et grossir : il rapportera plus d’argent à la vente.',
+      '💰 La vente ne paie que la viande intacte : poids après découpe × prix au kilo de l’espèce. Ni le fitness ni les bois ne changent le prix : visez les organes vitaux pour abîmer le moins de viande.',
     );
   }
 
@@ -311,7 +309,7 @@ export function advise(a: AnimalInput): Advice {
       title: stage === 'derniere' ? 'À prélever : fin de vie' : 'Âgé faible : à prélever',
       reason:
         stage === 'derniere'
-          ? `Âgé à ${c} % en fin de vie${vsHerd} : il va mourir à la prochaine année, autant en tirer l’argent et l’XP.`
+          ? `Âgé à ${c} % en fin de vie${vsHerd} : il va mourir à la prochaine année, autant en tirer la viande et l’XP.`
           : `Âgé à faible condition (${c} %${c < OLD_FAIR_PCT ? '' : `, faible pour ce troupeau${vsHerd}`}) : retirez-le, il ne fera que transmettre une mauvaise condition.`,
     };
   }
@@ -319,7 +317,7 @@ export function advise(a: AnimalInput): Advice {
     return {
       verdict: 'trophee',
       title: 'Dernière année : prélevez-le',
-      reason: `Âgé en bonne forme (${c} %) dans sa dernière année : prélevez-le pour son trophée et pour l’argent (âgé et lourd, il se vend au meilleur prix) ; il a déjà apporté le maximum à la génération future.`,
+      reason: `Âgé en bonne forme (${c} %) dans sa dernière année : prélevez-le pour son trophée ; il a déjà apporté le maximum à la génération future.`,
     };
   }
   if (ref ? c < ref.median : c < OLD_LOW_PCT) {
@@ -334,7 +332,7 @@ export function advise(a: AnimalInput): Advice {
     title: stage === 'avant-derniere' ? 'Ne pas tirer : avant-dernière année' : 'Ne pas tirer : âgé en bonne forme',
     reason:
       stage === 'avant-derniere'
-        ? `Âgé en bonne forme (${c} %) en avant-dernière année : son trophée peut encore grandir dans sa dernière année et il contribue fortement à la génération future. Prélevez-le l’an prochain : plus âgé et plus lourd, il rapportera plus d’argent à la vente.`
+        ? `Âgé en bonne forme (${c} %) en avant-dernière année : son trophée peut encore grandir dans sa dernière année et il contribue fortement à la génération future. Prélevez-le l’an prochain.`
         : c > HIGH_FITNESS_PCT
           ? `Mâle à haut fitness (${c} %) : laissez-le vieillir jusqu’à la fin de son cycle mûr pour qu’il transmette ses gènes, puis prélevez-le comme trophée dans sa dernière année.`
           : `Âgé en bonne forme (${c} %${c >= OLD_GOOD_PCT ? '' : `, idéalement ${OLD_GOOD_PCT} % et plus`}) : laissez-le contribuer à la génération future, puis prélevez-le dans sa dernière année.`,

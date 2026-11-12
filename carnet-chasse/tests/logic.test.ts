@@ -583,3 +583,16 @@ test('calculateur : seuils calés sur la médiane du troupeau', async () => {
   assert.equal(adviceFor(weak as never, { herd: h as never }).verdict, 'eliminer');
   assert.equal(adviceFor(animals[0] as never, { herd: h as never }).verdict, 'epargner');
 });
+
+test('vente : seulement la viande intacte × prix au kilo', async () => {
+  const { estimateMeatPrice } = await import('../src/logic/details.ts');
+  const { explain } = await import('../src/logic/management.ts');
+  // Rapport du cerf mulet : 99,78 − 0 − 3,35 − 39,91 = 56,52 kg × 2,6 = 146,95 → 146 en jeu.
+  const deer = { weightKg: 99.78, timeDegradationKg: 0, shotDegradationKg: 3.35, butcherWasteKg: 39.91, pricePerKg: 2.6 };
+  assert.equal(estimateMeatPrice(deer), 146);
+  // Le fitness et le trophée n'entrent pas dans le prix.
+  assert.equal(estimateMeatPrice({ ...deer, conditionPct: 95, trophyScore: 600 } as never), 146);
+  // Plus de viande abîmée par le tir = moins d'argent.
+  assert.equal(estimateMeatPrice({ ...deer, shotDegradationKg: 10 }), 129);
+  assert.ok(explain({ sex: 'male', age: 'mur', conditionPct: 30 }, 'eliminer').some((t) => t.includes('poids après découpe × prix au kilo')));
+});
