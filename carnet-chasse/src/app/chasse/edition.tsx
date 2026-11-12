@@ -340,6 +340,10 @@ export default function EditionScreen() {
   const ammoRange = parseClassRange(ammoClass);
   // C'est surtout le niveau de l'arme qui compte ; la classe de la munition est donnée pour info.
   const weaponFit = classFits(animalCls, weaponRange);
+  // Arme sous la classe de l'animal (ex. arme de départ 2-5 sur un cerf de classe 6) : c'est
+  // l'énergie à l'impact qui tranche, d'où une courte distance de tir.
+  const weaponUnder =
+    weaponFit === false && animalCls !== undefined && weaponRange !== undefined && animalCls > weaponRange[1];
   const ammoFit = classFits(animalCls, ammoRange);
   const betterAmmo = caliberAmmo.filter((m) =>
     classFits(animalCls, m.classRange),
@@ -724,14 +728,21 @@ export default function EditionScreen() {
               fontSize: 13,
               marginTop: 6,
               fontFamily: fonts.semibold,
-              color: weaponFit ? colors.olive : colors.accent,
+              color:
+                weaponFit || (weaponUnder && energyStatus === "ok")
+                  ? colors.olive
+                  : colors.accent,
             }}
           >
             Classe de l&apos;animal {animalCls} · niveau de l&apos;arme{" "}
             {formatClassRange(weaponRange)}{" "}
             {weaponFit
               ? "✓ adaptée"
-              : "✗ hors niveau : choisissez une arme plus adaptée"}
+              : weaponUnder
+                ? energyStatus === "ok"
+                  ? "· sous la classe, mais l'énergie à l'impact est dans la fourchette du jeu : tir valable ✓. Puissance modérée : presque aucune viande perdue."
+                  : "· sous la classe : possible à courte distance (cerfs à moins de 100-120 m avec une arme de départ) si l'énergie à l'impact reste dans la fourchette du jeu. Notez l'énergie d'impact pour vérifier."
+                : "✗ au-dessus du besoin : arme trop puissante pour cet animal, plus de viande abîmée"}
           </Text>
         ) : null}
         {ammoFit === false ? (
@@ -813,7 +824,7 @@ export default function EditionScreen() {
             ) : {formatRange(energyRange, "J")}
             {energyStatus === "ok" ? " · impact optimal ✓" : ""}
             {energyStatus === "faible"
-              ? " · trop faible : risque de blesser"
+              ? " · trop faible : risque de blesser, la balle peut ne pas atteindre les poumons. Rapprochez-vous : elle perd de l'énergie avec la distance"
               : ""}
             {energyStatus === "forte" ? " · trop forte : viande abîmée" : ""}
             {energyStatus === "inadapte" ? " · munition inadaptée" : ""}
