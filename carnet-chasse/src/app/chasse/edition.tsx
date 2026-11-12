@@ -44,6 +44,8 @@ import {
   parseDuration,
   PRICE_FIELDS,
   RATING_CHOICES,
+  ratingHints,
+  ratingMeaning,
   SHOT_FIELDS,
   WEATHER_CHOICES,
 } from "../../logic/details";
@@ -949,6 +951,30 @@ export default function EditionScreen() {
           placeholder="S++"
           options={RATING_CHOICES}
         />
+        {ratingMeaning(huntRating) ? (
+          <Text style={styles.muted}>{ratingMeaning(huntRating)}</Text>
+        ) : null}
+        {ratingHints({
+          rating: huntRating,
+          oneShot: shots.length > 1 ? false : undefined,
+          zone:
+            shotZone && SHOT_ZONE_ADVICE[shotZone]
+              ? { label: SHOT_ZONE_LABELS[shotZone], good: SHOT_ZONE_ADVICE[shotZone]!.good }
+              : undefined,
+          energy: energyStatus,
+          weaponFit: weaponFit === false && !(weaponUnder && energyStatus === "ok") ? false : undefined,
+          organWarnings: organWarnings(
+            shots.map((d) => Object.fromEntries(ORGAN_IDS.map((o) => [o, parseNumber(d[o]) ?? 0]))),
+          ),
+          trackingDistanceM: parsedNums.trackingDistanceM,
+          trackingTimeSec: trackingTime.trim() ? parseDuration(trackingTime) : undefined,
+          weightKg: parsedNums.weightKg,
+          shotDegradationKg: parsedNums.shotDegradationKg,
+        }).map((t) => (
+          <Text key={t} style={[styles.text, { color: colors.accent }]}>
+            • {t}
+          </Text>
+        ))}
         <Label>Classement de trophée (étoiles)</Label>
         <ChipRow>
           {[1, 2, 3, 4, 5].map((n) => (

@@ -55,7 +55,56 @@ export const ORGAN_LABELS: Record<OrganId, string> = {
 
 /** Choix rapides vus en jeu ; chaque champ accepte aussi un texte libre. */
 export const WEATHER_CHOICES = ['Ensoleillé', 'Partiellement nuageux', 'Nuageux', 'Pluie', 'Brouillard', 'Neige'];
-export const RATING_CHOICES = ['S++', 'S+', 'S', 'A', 'B', 'C', 'D'];
+/** Classement de chasse, du meilleur (S++ : prélèvement parfait) au pire (E : carcasse saccagée). */
+export const RATING_CHOICES = ['S++', 'S+', 'S', 'A++', 'A+', 'A', 'B', 'C', 'D', 'E'];
+
+/** Ce que veut dire la note, d'après sa place dans l'échelle. */
+export function ratingMeaning(rating: string | undefined): string | undefined {
+  const i = rating ? RATING_CHOICES.indexOf(rating.trim().toUpperCase()) : -1;
+  if (i < 0) return undefined;
+  if (i === 0) return 'Prélèvement parfait : tir éthique, viande préservée.';
+  if (i === RATING_CHOICES.length - 1) return 'Carcasse saccagée, presque invendable.';
+  return `${i + 1}e palier sur ${RATING_CHOICES.length} : la note suit la part de viande intacte que vous pourrez vendre (elle ne change pas la valeur génétique du trophée).`;
+}
+
+export interface RatingFacts {
+  rating?: string;
+  oneShot?: boolean;
+  /** Zone touchée : libellé et bon tir ou non (défaut de l'épaule). */
+  zone?: { label: string; good: boolean };
+  energy?: 'ok' | 'faible' | 'forte' | 'inadapte';
+  /** La classe de l'arme couvre-t-elle celle de l'animal ? */
+  weaponFit?: boolean;
+  organWarnings?: string[];
+  trackingDistanceM?: number;
+  trackingTimeSec?: number;
+  weightKg?: number;
+  shotDegradationKg?: number;
+}
+
+/** Ce qui, dans le rapport noté, a pu faire baisser la note (sous S++). */
+export function ratingHints(f: RatingFacts): string[] {
+  const r = f.rating?.trim().toUpperCase();
+  if (!r || r === 'S++') return [];
+  const out: string[] = [];
+  if (f.oneShot === false) out.push('Plusieurs tirs : un seul tir dans le cœur ou les poumons fait grimper la note.');
+  if (f.zone && !f.zone.good) out.push(`Zone touchée : ${f.zone.label}. Visez le défaut de l’épaule (cœur, poumons) pour garder les morceaux nobles.`);
+  if (f.energy && f.energy !== 'ok') out.push('Énergie à l’impact hors de la fourchette du jeu pour cette espèce.');
+  if (f.weaponFit === false) out.push('Classe de l’arme différente de celle de l’animal : la bonne classe donne l’énergie d’impact idéale.');
+  for (const w of f.organWarnings ?? []) out.push(w);
+  if (f.trackingDistanceM !== undefined || f.trackingTimeSec !== undefined) {
+    const parts = [
+      f.trackingDistanceM !== undefined ? `${f.trackingDistanceM} m` : null,
+      f.trackingTimeSec !== undefined ? formatDuration(f.trackingTimeSec) : null,
+    ].filter(Boolean);
+    out.push(`Traque : ${parts.join(' en ')} avant la mort. Plus l’animal meurt vite, sans courir, meilleure est la note.`);
+  }
+  if (f.shotDegradationKg && f.weightKg) {
+    out.push(`${String(f.shotDegradationKg).replace('.', ',')} kg de viande abîmée par le tir (${String(Math.round((f.shotDegradationKg / f.weightKg) * 1000) / 10).replace('.', ',')} % du poids).`);
+  }
+  if (!out.length) out.push('Rien de ce que vous avez noté n’explique la note : remplissez la zone, l’énergie, la traque et les dégâts aux organes.');
+  return out;
+}
 export const MEASUREMENT_PRESETS = [
   'Longueur du merrain',
   'Écart intérieur',

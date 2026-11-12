@@ -609,3 +609,20 @@ test('zones de tir : conseils et alertes des organes', async () => {
   assert.equal(organWarnings([{ chair: 10 }, { intestin: 30 }]).length, 1);
   assert.equal(parseState({ hunts: [hunt({ shotZone: 'ventre' })] })!.hunts[0].shotZone, 'ventre');
 });
+
+test('classement de chasse : échelle S++ à E et pistes pour une note basse', async () => {
+  const { RATING_CHOICES, ratingMeaning, ratingHints } = await import('../src/logic/details.ts');
+  assert.deepEqual(RATING_CHOICES, ['S++', 'S+', 'S', 'A++', 'A+', 'A', 'B', 'C', 'D', 'E']);
+  assert.match(ratingMeaning('S++')!, /parfait/);
+  assert.match(ratingMeaning('e')!, /saccagée/);
+  assert.equal(ratingMeaning('Z'), undefined);
+  assert.deepEqual(ratingHints({ rating: 'S++', oneShot: false }), []);
+  const hints = ratingHints({
+    rating: 'B', oneShot: false, zone: { label: 'Arrière-train', good: false }, energy: 'faible',
+    trackingDistanceM: 300, trackingTimeSec: 125, weightKg: 100, shotDegradationKg: 12.5,
+  });
+  assert.equal(hints.length, 5);
+  assert.ok(hints.some((t) => t.includes('300 m en 2 min 05 s')));
+  assert.ok(hints.some((t) => t.includes('12,5 kg de viande abîmée par le tir (12,5 % du poids)')));
+  assert.equal(ratingHints({ rating: 'A' }).length, 1);
+});

@@ -18,13 +18,15 @@ import {
   SHOT_ZONE_LABELS,
   TROPHY_TYPE_LABELS,
 } from "../../data/game";
-import { getSpeciesInfo } from "../../data/speciesInfo";
+import { checkEnergy, energyKindFor, getSpeciesInfo } from "../../data/speciesInfo";
 import {
   computeNetWeight,
   damagedOrgans,
   estimateMeatPrice,
   organShots,
   organWarnings,
+  ratingHints,
+  ratingMeaning,
   formatDuration,
   isRareCoat,
 } from "../../logic/details";
@@ -92,6 +94,18 @@ export default function HuntScreen() {
 
   const species = getSpecies(hunt.speciesId);
   const weapon = findWeapon(hunt.weaponId, state.customWeapons);
+  const zoneAdvice = hunt.shotZone ? SHOT_ZONE_ADVICE[hunt.shotZone] : undefined;
+  const ratingNotes = ratingHints({
+    rating: hunt.huntRating,
+    oneShot: (hunt.moreShots?.length ?? 0) > 0 ? false : undefined,
+    zone: zoneAdvice && hunt.shotZone ? { label: SHOT_ZONE_LABELS[hunt.shotZone], good: zoneAdvice.good } : undefined,
+    energy: checkEnergy(getSpeciesInfo(hunt.speciesId, state.speciesSheets), energyKindFor(weapon?.type), hunt.impactEnergyJ),
+    organWarnings: organWarnings(organShots(hunt)),
+    trackingDistanceM: hunt.trackingDistanceM,
+    trackingTimeSec: hunt.trackingTimeSec,
+    weightKg: hunt.weightKg,
+    shotDegradationKg: hunt.shotDegradationKg,
+  });
   const shots = organShots(hunt).map((d) => damagedOrgans({ organs: d }));
   const net = hunt.netWeightKg ?? computeNetWeight(hunt);
   const meat =
@@ -297,6 +311,18 @@ export default function HuntScreen() {
         <Line label="Chasseur détecté" value={tir.detecte} />
         <Line label="Chien utilisé" value={tir.chien} />
       </Block>
+
+      {hunt.huntRating && (ratingMeaning(hunt.huntRating) || ratingNotes.length) ? (
+        <Card style={{ gap: 6 }}>
+          <Text style={styles.strong}>Classement de chasse {hunt.huntRating}</Text>
+          {ratingMeaning(hunt.huntRating) ? <Text style={styles.muted}>{ratingMeaning(hunt.huntRating)}</Text> : null}
+          {ratingNotes.map((t) => (
+            <Text key={t} style={[styles.text, { color: colors.accent }]}>
+              • {t}
+            </Text>
+          ))}
+        </Card>
+      ) : null}
 
       {(() => {
         const zone = hunt.shotZone ? SHOT_ZONE_ADVICE[hunt.shotZone] : undefined;
