@@ -653,3 +653,15 @@ test('distance de tir des gros gibiers', async () => {
   assert.equal(bigGameDistanceCheck(200, true)?.ok, false);
   assert.equal(bigGameDistanceCheck(undefined), undefined);
 });
+
+test('fiche du mouflon de Dall : habitat et horaires, créneaux non renseignés', async () => {
+  const { getSpeciesInfo, routineSlots } = await import('../src/data/speciesInfo.ts');
+  const info = getSpeciesInfo('mouflon-dall')!;
+  assert.match(info.biomes!, /altitude/);
+  assert.deepEqual(
+    routineSlots(info).map((r) => `${r.from}-${r.to} ${r.need}`),
+    ['5-9 manger', '9-13 boire', '13-17 inconnu', '17-21 manger', '21-5 inconnu'],
+  );
+  const s = parseState({ speciesSheets: { 'mouflon-dall': { energy: {}, routine: [{ hour: 13, need: 'inconnu' }, { hour: 9, need: 'boire' }, { hour: 3, need: 'x' }] } } });
+  assert.deepEqual(s!.speciesSheets['mouflon-dall'].routine, [{ hour: 9, need: 'boire' }, { hour: 13, need: 'inconnu' }]);
+});

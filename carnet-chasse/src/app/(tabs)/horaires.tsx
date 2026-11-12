@@ -10,6 +10,7 @@ import {
   minutesUntil,
   NEED_ICONS,
   NEED_LABELS,
+  ROUTINE_LABELS,
   parseTime,
   routineAt,
   sortByNext,
@@ -123,7 +124,7 @@ function AddZone({ defaultReserve }: { defaultReserve: ReserveId }) {
         <Text style={{ color: colors.olive, fontSize: 13, marginTop: 6 }}>
           Routine du jeu :{' '}
           {routineSlots(getSpeciesInfo(speciesId, state.speciesSheets)!)
-            .map((r) => `${NEED_LABELS[r.need].toLowerCase()} ${String(r.from).padStart(2, '0')}–${String(r.to).padStart(2, '0')} h`)
+            .map((r) => `${ROUTINE_LABELS[r.need].toLowerCase()} ${String(r.from).padStart(2, '0')}–${String(r.to).padStart(2, '0')} h`)
             .join(', ')}
         </Text>
       ) : null}

@@ -2,7 +2,7 @@
  * Horaires des zones de besoin (boire, manger, dormir). Routine standard tirée du guide du joueur ;
  * l'horaire exact d'un troupeau est celui affiché sur la carte quand on examine sa zone de besoin.
  */
-import type { NeedType, NeedZone } from './types.ts';
+import type { NeedType, NeedZone, RoutineNeed } from './types.ts';
 
 export const MINUTES_PER_DAY = 24 * 60;
 
@@ -17,6 +17,10 @@ export const NEED_ICONS: Record<NeedType, string> = {
   manger: '🌿',
   dormir: '💤',
 };
+
+/** Libellés des phases d'une routine d'espèce (avec les créneaux non renseignés). */
+export const ROUTINE_LABELS: Record<RoutineNeed, string> = { ...NEED_LABELS, inconnu: 'Non renseigné' };
+export const ROUTINE_ICONS: Record<RoutineNeed, string> = { ...NEED_ICONS, inconnu: '❔' };
 
 export interface RoutinePeriod {
   icon: string;

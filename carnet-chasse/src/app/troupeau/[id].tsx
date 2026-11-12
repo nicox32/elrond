@@ -20,7 +20,7 @@ import {
   sortAnimals,
   summarizeHerd,
 } from '../../logic/herds';
-import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
+import { ROUTINE_ICONS, ROUTINE_LABELS } from '../../logic/schedule';
 import { COAT_CHOICES, isRareCoat } from '../../logic/details';
 import { formatDate, parseNumber } from '../../logic/stats';
 import { explain, isMatureByAge, lifeFromAge } from '../../logic/management';
@@ -440,7 +440,7 @@ export default function HerdScreen() {
           <Text style={styles.strong}>Routine selon le jeu</Text>
           <Text style={styles.text}>
             {routineSlots(info)
-              .map((r) => `${NEED_ICONS[r.need]} ${NEED_LABELS[r.need]} ${String(r.from).padStart(2, '0')}–${String(r.to).padStart(2, '0')} h`)
+              .map((r) => `${ROUTINE_ICONS[r.need]} ${ROUTINE_LABELS[r.need]} ${String(r.from).padStart(2, '0')}–${String(r.to).padStart(2, '0')} h`)
               .join('   ')}
           </Text>
           <Text style={styles.muted}>Les horaires exacts du troupeau sont ceux de ses zones de besoin sur la carte.</Text>

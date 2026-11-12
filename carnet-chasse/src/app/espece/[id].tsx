@@ -6,13 +6,13 @@ import { Button, Card, Empty, Screen, SectionTitle, styles } from '../../compone
 import { CATEGORY_LABELS, getReserve, getSpecies, SUGGESTED_CALIBERS, SUGGESTED_DISTANCE } from '../../data/game';
 import { ammoForAnimalClass, formatClassRange } from '../../data/armory';
 import { ENERGY_LABELS, formatRange, getSpeciesInfo, routineSlots, speciesClass } from '../../data/speciesInfo';
-import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
+import { ROUTINE_ICONS, ROUTINE_LABELS } from '../../logic/schedule';
 import { formatScore, sortByDateDesc, summarizeSpecies } from '../../logic/stats';
-import type { NeedType } from '../../logic/types';
+import type { RoutineNeed } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
-const NEED_COLORS: Record<NeedType, string> = { boire: '#5AA9E6', manger: colors.olive, dormir: colors.textMuted };
+const NEED_COLORS: Record<RoutineNeed, string> = { boire: '#5AA9E6', manger: colors.olive, dormir: colors.textMuted, inconnu: colors.border };
 
 function Line({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
@@ -106,7 +106,7 @@ export default function EspeceScreen() {
                 {routineSlots(info).map((r) => (
                   <Text key={r.from} style={styles.text}>
                     <Text style={{ color: NEED_COLORS[r.need], fontFamily: fonts.semibold }}>
-                      {NEED_ICONS[r.need]} {NEED_LABELS[r.need]}
+                      {ROUTINE_ICONS[r.need]} {ROUTINE_LABELS[r.need]}
                     </Text>{' '}
                     {String(r.from).padStart(2, '0')} h – {String(r.to).padStart(2, '0')} h
                   </Text>

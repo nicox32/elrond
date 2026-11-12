@@ -6,9 +6,9 @@ import { Select } from '../../components/Select';
 import { Button, Card, Chip, Empty, Field, FieldRow, Label, Screen, SectionTitle, styles } from '../../components/ui';
 import { getSpecies } from '../../data/game';
 import { ENERGY_LABELS, getSpeciesInfo, SPECIES_INFO } from '../../data/speciesInfo';
-import { NEED_ICONS, NEED_LABELS } from '../../logic/schedule';
+import { ROUTINE_ICONS, ROUTINE_LABELS } from '../../logic/schedule';
 import { parseNumber } from '../../logic/stats';
-import type { EnergyRange, NeedType, SpeciesSheet } from '../../logic/types';
+import type { EnergyRange, RoutineNeed, SpeciesSheet } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
@@ -18,7 +18,7 @@ type EnergyDraft = { min: string; max: string; inadapte: boolean };
 const TROPHY_TYPES = ['Bois', 'Cornes', 'Défenses', 'Crâne'];
 const ACTIVITIES = ['Diurne', 'Nocturne', 'Crépusculaire'];
 const SENSE_LEVELS = ['Faible', 'Moyen(ne)', 'Bon(ne)', 'Excellent(e)'];
-const NEEDS: NeedType[] = ['boire', 'manger', 'dormir'];
+const NEEDS: RoutineNeed[] = ['boire', 'manger', 'dormir', 'inconnu'];
 
 const txt = (n: number | undefined) => (n === undefined ? '' : String(n).replace('.', ','));
 
@@ -41,7 +41,7 @@ export default function FicheScreen() {
   const [trophyMax, setTrophyMax] = useState(txt(info?.trophyRange?.[1]));
   const [activity, setActivity] = useState(info?.activity ?? '');
   const [activityNote, setActivityNote] = useState(info?.activityNote ?? '');
-  const [routine, setRoutine] = useState<{ hour: string; need: NeedType }[]>(
+  const [routine, setRoutine] = useState<{ hour: string; need: RoutineNeed }[]>(
     () => info?.routine?.map((p) => ({ hour: String(p.hour), need: p.need })) ?? [],
   );
   const [vue, setVue] = useState(info?.senses?.vue ?? '');
@@ -99,7 +99,7 @@ export default function FicheScreen() {
       if (a === undefined || b === undefined || b < a) return setError(`${e.label} : indiquez un minimum et un maximum.`);
       energyOut[e.key] = [a, b] as EnergyRange;
     }
-    const phases: { hour: number; need: NeedType }[] = [];
+    const phases: { hour: number; need: RoutineNeed }[] = [];
     for (const p of routine) {
       const h = Number(p.hour.trim());
       if (!p.hour.trim() || !Number.isInteger(h) || h < 0 || h > 23) return setError('Routine : heures de 0 à 23.');
@@ -176,7 +176,7 @@ export default function FicheScreen() {
             {NEEDS.map((n) => (
               <Chip
                 key={n}
-                label={`${NEED_ICONS[n]} ${NEED_LABELS[n]}`}
+                label={`${ROUTINE_ICONS[n]} ${ROUTINE_LABELS[n]}`}
                 selected={p.need === n}
                 onPress={() => setRoutine((r) => r.map((x, j) => (j === i ? { ...x, need: n } : x)))}
               />

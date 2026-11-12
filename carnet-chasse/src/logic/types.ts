@@ -132,6 +132,8 @@ export interface Hunt extends HuntNumbers {
 }
 
 export type NeedType = 'boire' | 'manger' | 'dormir';
+/** Phase d'une routine d'espèce : un besoin, ou « inconnu » quand la source ne dit rien de ce créneau. */
+export type RoutineNeed = NeedType | 'inconnu';
 
 /** Zone de besoin repérée en jeu, avec l'horaire affiché sur la carte. */
 export interface NeedZone {
@@ -206,7 +208,7 @@ export interface SpeciesSheet {
   energy: { balle?: EnergyRange; grenaille?: EnergyRange; chevrotineM?: EnergyRange; slug?: EnergyRange; fleche?: EnergyRange };
   activity?: string;
   activityNote?: string;
-  routine?: { hour: number; need: NeedType }[];
+  routine?: { hour: number; need: RoutineNeed }[];
   senses?: { vue: string; odorat: string; ouie: string };
   biomes?: string;
   description?: string;

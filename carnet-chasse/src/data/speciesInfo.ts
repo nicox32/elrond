@@ -3,7 +3,7 @@
  * prélèvement de l'espèce : le joueur la recopie alors dans l'appli (fiches « perso », dans l'état).
  * Les fiches fournies ici viennent de captures du joueur ; on n'invente rien.
  */
-import type { NeedType } from '../logic/types.ts';
+import type { RoutineNeed } from '../logic/types.ts';
 import { getSpecies } from './game.ts';
 
 export type EnergyKind = 'balle' | 'slug' | 'fleche';
@@ -29,7 +29,7 @@ export interface SpeciesInfo {
   activity?: string;
   activityNote?: string;
   /** Début de chaque phase de la journée, dans l'ordre (la dernière court jusqu'à la première). */
-  routine?: { hour: number; need: NeedType }[];
+  routine?: { hour: number; need: RoutineNeed }[];
   senses?: { vue: string; odorat: string; ouie: string };
   biomes?: string;
   description?: string;
@@ -60,6 +60,20 @@ export const SPECIES_INFO: Record<string, SpeciesInfo> = {
       "La sous-espèce de cerf mulet la plus répandue, dont la population s'étend des régions septentrionales des États américains du sud-ouest aux provinces du nord du Canada.",
     anecdote: "Les cerfs mulets n'ont pas d'incisives ; leur palais est simplement très solide.",
   },
+  'mouflon-dall': {
+    // Habitat et horaires donnés par le joueur ; le reste de la fiche est à recopier depuis l'encyclopédie.
+    energy: {},
+    routine: [
+      { hour: 5, need: 'manger' },
+      { hour: 9, need: 'boire' },
+      { hour: 13, need: 'inconnu' },
+      { hour: 17, need: 'manger' },
+      { hour: 21, need: 'inconnu' },
+    ],
+    biomes:
+      'Exclusivement en altitude, dans les zones rocheuses et montagneuses : crêtes, falaises, plateaux enneigés ou rocailleux. Pas dans les forêts denses ni au fond des vallées.',
+    activityNote: 'Boit de 9 h à 13 h autour des lacs et ruisseaux de montagne : le plus facile pour le repérer à découvert. Mange sur les versants herbeux et rocheux.',
+  },
 };
 
 /**
@@ -87,7 +101,7 @@ export function isSheetEmpty(info: SpeciesInfo): boolean {
 }
 
 /** Phases de la routine sous forme de créneaux [début, fin[ en heures. */
-export function routineSlots(info: SpeciesInfo): { from: number; to: number; need: NeedType }[] {
+export function routineSlots(info: SpeciesInfo): { from: number; to: number; need: RoutineNeed }[] {
   const r = info.routine ?? [];
   return r.map((p, i) => ({ from: p.hour, to: r[(i + 1) % r.length].hour, need: p.need }));
 }

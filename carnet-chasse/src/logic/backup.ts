@@ -19,6 +19,7 @@ import type {
   Hunt,
   HuntMode,
   NeedType,
+  RoutineNeed,
   NeedZone,
   ReserveId,
   ShotZone,
@@ -35,6 +36,7 @@ const SHOT_ZONES: ShotZone[] = ['coeur', 'poumons', 'foie', 'tete', 'cou', 'colo
 const TROPHY_TYPES: TrophyType[] = ['normal', 'non-typique'];
 const MODES: HuntMode[] = ['solo', 'coop'];
 const NEED_TYPES: NeedType[] = ['boire', 'manger', 'dormir'];
+const ROUTINE_NEEDS: RoutineNeed[] = [...NEED_TYPES, 'inconnu'];
 const WEAPON_TYPES: WeaponType[] = ['carabine', 'fusil', 'arc', 'arbalete'];
 
 type Obj = Record<string, unknown>;
@@ -241,7 +243,7 @@ function parseSheet(v: unknown): SpeciesSheet | null {
         .flatMap((p) => {
           if (!isObj(p)) return [];
           const hour = num(p.hour);
-          const need = oneOf(p.need, NEED_TYPES);
+          const need = oneOf(p.need, ROUTINE_NEEDS);
           return hour !== undefined && Number.isInteger(hour) && hour >= 0 && hour < 24 && need ? [{ hour, need }] : [];
         })
         .sort((a, b) => a.hour - b.hour)
