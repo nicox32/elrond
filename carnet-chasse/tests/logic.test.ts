@@ -555,3 +555,31 @@ test('calculateur : ratio de vie et médiane du troupeau', async () => {
   assert.equal(herdMedian(herd as never, 'male'), 45);
   assert.equal(herdMedian(herd as never, 'femelle'), 80);
 });
+
+test('calculateur : seuils calés sur la médiane du troupeau', async () => {
+  const { advise, explain } = await import('../src/logic/management.ts');
+  const { adviceFor } = await import('../src/logic/herds.ts');
+  const v = (o: object) => advise(o as never).verdict;
+  const herd = { herdMedianPct: 70, herdSampleSize: 6, medianGap: 10 };
+  // Adulte à 55 % : « bon » en seuils fixes, mais faible pour un troupeau à 70 % de médiane.
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 55 }), 'epargner');
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 55, ...herd }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 65, ...herd }), 'epargner');
+  // Écart réglable : à 15 points, 55 % redevient médian.
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 56, ...herd, medianGap: 15 }), 'epargner');
+  // Pas assez d'animaux notés : seuils fixes.
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 55, ...herd, herdSampleSize: 4 }), 'epargner');
+  assert.ok(explain({ sex: 'male', age: 'adulte', conditionPct: 55, ...herd, herdSampleSize: 4 }, 'epargner').some((t) => t.includes('il en faut 5')));
+  // Jeunes, âgés et femelles suivent aussi la médiane ; le haut fitness n'est jamais « faible ».
+  assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 58, ...herd }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 58, ...herd }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 65, ...herd }), 'surveiller');
+  assert.equal(v({ sex: 'femelle', age: 'adulte', conditionPct: 58, ...herd }), 'eliminer');
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 85, herdMedianPct: 97, herdSampleSize: 6 }), 'epargner');
+  // Depuis un troupeau : la médiane est calculée par sexe.
+  const animals = [62, 70, 72, 75, 80].map((c, i) => ({ id: `m${i}`, label: '', sex: 'male', age: 'adulte', conditionPct: c, status: 'vivant', lastSeen: '' }));
+  const weak = { id: 'w', label: '', sex: 'male', age: 'adulte', conditionPct: 50, status: 'vivant', lastSeen: '' };
+  const h = { animals: [...animals, weak] };
+  assert.equal(adviceFor(weak as never, { herd: h as never }).verdict, 'eliminer');
+  assert.equal(adviceFor(animals[0] as never, { herd: h as never }).verdict, 'epargner');
+});

@@ -102,6 +102,7 @@ export default function TroupeauxScreen() {
           const s = summarizeHerd(h, {
             youngCutoff: state.prudent ? 40 : 50,
             lifespanYears: getSpeciesInfo(h.speciesId, state.speciesSheets)?.lifespanYears,
+            medianGap: state.medianGap,
           });
           const days = daysSince(h.lastVisit);
           return (

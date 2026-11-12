@@ -15,6 +15,17 @@ export const AGE_LABELS = { jeune: 'Jeune', adulte: 'Adulte', mur: 'Mûr' } as c
 export interface AdviceOptions {
   youngCutoff?: number;
   lifespanYears?: number;
+  /** Troupeau de l'animal : sa médiane (même sexe) remplace les seuils fixes s'il y a assez d'animaux notés. */
+  herd?: Herd;
+  medianGap?: number;
+}
+
+/** Repère du troupeau pour un sexe : médiane et nombre d'animaux notés. */
+export function herdSample(herd: Herd, sex: HerdAnimal['sex']): { median?: number; count: number } {
+  const values = herd.animals
+    .filter((a) => a.status === 'vivant' && a.sex === sex && a.conditionPct !== undefined)
+    .map((a) => a.conditionPct!);
+  return { median: median(values), count: values.length };
 }
 
 export function adviceFor(a: HerdAnimal, opts: AdviceOptions = {}): Advice {
@@ -27,7 +38,15 @@ export function adviceFor(a: HerdAnimal, opts: AdviceOptions = {}): Advice {
     ageYears: a.ageYears,
     lifespanYears: opts.lifespanYears,
     youngCutoff: opts.youngCutoff,
+    ...herdInputs(a.sex, opts),
   });
+}
+
+/** Champs « troupeau » du calcul pour un sexe donné. */
+export function herdInputs(sex: HerdAnimal['sex'], opts: AdviceOptions): { herdMedianPct?: number; herdSampleSize?: number; medianGap?: number } {
+  if (!opts.herd) return {};
+  const s = herdSample(opts.herd, sex);
+  return { herdMedianPct: s.median, herdSampleSize: s.count, medianGap: opts.medianGap };
 }
 
 export interface HerdSummary {
@@ -54,7 +73,7 @@ export function summarizeHerd(herd: Herd, opts: AdviceOptions = {}): HerdSummary
     if (a.sex === 'male') males += 1;
     else females += 1;
     if (a.age === 'jeune') young += 1;
-    byVerdict[adviceFor(a, opts).verdict] += 1;
+    byVerdict[adviceFor(a, { herd, ...opts }).verdict] += 1;
   }
   return { alive, males, females, young, taken, byVerdict };
 }
@@ -76,9 +95,7 @@ export function animalsTakenToday(herd: Herd, now = new Date()): number {
 
 /** Condition médiane des animaux vivants du troupeau, d'un sexe donné (ceux dont la condition est notée). */
 export function herdMedian(herd: Herd, sex: HerdAnimal['sex']): number | undefined {
-  return median(
-    herd.animals.filter((a) => a.status === 'vivant' && a.sex === sex && a.conditionPct !== undefined).map((a) => a.conditionPct!),
-  );
+  return herdSample(herd, sex).median;
 }
 
 /** Ordre d'affichage : vivants d'abord, cibles en tête, puis trophées, à surveiller, à épargner. */

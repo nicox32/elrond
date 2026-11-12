@@ -6,7 +6,7 @@ import { Select } from '../../components/Select';
 import { Card, Chip, ChipRow, Field, FieldRow, Label, Screen, SectionTitle, Title, styles } from '../../components/ui';
 import { SPECIES } from '../../data/game';
 import { getSpeciesInfo } from '../../data/speciesInfo';
-import { herdMedian } from '../../logic/herds';
+import { herdInputs } from '../../logic/herds';
 import { parseNumber } from '../../logic/stats';
 import { useCarnet } from '../../state/CarnetProvider';
 import {
@@ -14,6 +14,7 @@ import {
   advise,
   DISTANCE_GOLDEN_RULE,
   DISTANCE_RULES,
+  MEDIAN_GAPS,
   explain,
   isMatureByAge,
   lifeFromAge,
@@ -35,7 +36,7 @@ const VERDICT_STYLE: Record<Verdict, { color: string; bg: string; icon: string }
 };
 
 export default function GestionScreen() {
-  const { state, setPrudent } = useCarnet();
+  const { state, setPrudent, setMedianGap } = useCarnet();
   const [sex, setSex] = useState<Sex>('male');
   const [age, setAge] = useState<AgeClass>('adulte');
   const [condition, setCondition] = useState('');
@@ -43,7 +44,7 @@ export default function GestionScreen() {
   const [speciesId, setSpeciesId] = useState<string | undefined>();
   const [herdId, setHerdId] = useState<string | undefined>();
   const herd = state.herds.find((h) => h.id === herdId);
-  const herdMedianPct = herd ? herdMedian(herd, sex) : undefined;
+  const herdFields = herdInputs(sex, { herd, medianGap: state.medianGap });
   const [ageYears, setAgeYears] = useState('');
   const [lifespan, setLifespan] = useState('');
 
@@ -67,12 +68,13 @@ export default function GestionScreen() {
     conditionPct: parseNumber(condition),
     lifeStage: showStage ? stage : 'normal',
     youngCutoff: cutoff,
+    ...herdFields,
     ageYears: years,
     lifespanYears,
   });
   const v = VERDICT_STYLE[advice.verdict];
   const details = explain(
-    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears, herdMedianPct },
+    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears, ...herdFields },
     advice.verdict,
   );
 
@@ -107,6 +109,16 @@ export default function GestionScreen() {
             allowClear
             options={state.herds.map((h) => ({ value: h.id, label: h.name }))}
           />
+        ) : null}
+        {herd ? (
+          <>
+            <Label>Faible si sous la médiane de</Label>
+            <ChipRow>
+              {MEDIAN_GAPS.map((g) => (
+                <Chip key={g} label={`${g} points`} selected={state.medianGap === g} onPress={() => setMedianGap(g)} />
+              ))}
+            </ChipRow>
+          </>
         ) : null}
         <Select
           label="Espèce (facultatif)"

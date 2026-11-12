@@ -28,7 +28,24 @@ export interface AnimalInput {
   lifespanYears?: number;
   /** Condition médiane des animaux vivants du troupeau (même sexe), pour comparer. */
   herdMedianPct?: number;
+  /** Nombre d'animaux (même sexe, vivants) dont la condition est notée dans le troupeau. */
+  herdSampleSize?: number;
+  /** Écart à la médiane (points) sous lequel un animal est « faible du troupeau » : 5, 10 ou 15. */
+  medianGap?: number;
 }
+
+/** Il faut au moins 5 animaux notés (même sexe) pour que la médiane du troupeau remplace les seuils fixes. */
+export const MIN_HERD_SAMPLE = 5;
+export const MEDIAN_GAP_DEFAULT = 10;
+export const MEDIAN_GAPS = [5, 10, 15] as const;
+
+/** Repère du troupeau, s'il y a assez d'animaux notés ; sinon le calcul garde les seuils fixes. */
+export function herdReference(a: Pick<AnimalInput, 'herdMedianPct' | 'herdSampleSize' | 'medianGap'>): { median: number; gap: number } | undefined {
+  if (a.herdMedianPct === undefined || (a.herdSampleSize ?? 0) < MIN_HERD_SAMPLE) return undefined;
+  return { median: a.herdMedianPct, gap: a.medianGap ?? MEDIAN_GAP_DEFAULT };
+}
+
+const pct = (n: number) => `${String(Math.round(n * 10) / 10).replace('.', ',')} %`;
 
 /** Médiane d'une liste de pourcentages (undefined si vide). */
 export function median(values: number[]): number | undefined {
@@ -109,13 +126,27 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
   const take = verdict === 'eliminer' || verdict === 'trophee' || verdict === 'possible';
   const life = lifeFromAge(a.ageYears, a.lifespanYears);
 
+  const ref = herdReference(a);
   if (c !== undefined) {
+    const weak = ref ? c <= ref.median - ref.gap : c < ADULT_LOW_PCT;
     const level =
-      c > HIGH_FITNESS_PCT ? 'haut fitness' : c >= OLD_GOOD_PCT ? 'bon fitness' : c >= ADULT_LOW_PCT ? 'fitness moyen' : 'fitness faible';
+      c > HIGH_FITNESS_PCT
+        ? 'haut fitness'
+        : ref
+          ? weak
+            ? 'faible pour ce troupeau'
+            : c <= ref.median + ref.gap
+              ? 'dans la moyenne de ce troupeau'
+              : 'bon pour ce troupeau'
+          : c >= OLD_GOOD_PCT
+            ? 'bon fitness'
+            : c >= ADULT_LOW_PCT
+              ? 'fitness moyen'
+              : 'fitness faible';
     const ceiling = male
       ? c > HIGH_FITNESS_PCT
         ? ' Une fois mûr, il peut atteindre 4 ou 5 étoiles.'
-        : c < ADULT_LOW_PCT
+        : weak
           ? ' Même mûr, son trophée restera petit.'
           : ''
       : '';
@@ -128,6 +159,13 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
     );
   }
 
+  if (a.herdMedianPct !== undefined) {
+    out.push(
+      ref
+        ? `📐 Seuils calés sur ce troupeau : faible à ${pct(ref.median - ref.gap)} ou moins (médiane ${pct(ref.median)} − ${ref.gap} points), bon au-dessus de ${pct(ref.median + ref.gap)}.`
+        : `📐 Seuils fixes : seulement ${a.herdSampleSize ?? 0} ${male ? 'mâle' : 'femelle'}${(a.herdSampleSize ?? 0) > 1 ? 's' : ''} noté${(a.herdSampleSize ?? 0) > 1 ? 's' : ''} dans ce troupeau, il en faut ${MIN_HERD_SAMPLE} pour caler les seuils sur sa médiane.`,
+    );
+  }
   if (c !== undefined && a.herdMedianPct !== undefined) {
     const d = Math.round((c - a.herdMedianPct) * 10) / 10;
     const fmt = (n: number) => String(n).replace('.', ',');
@@ -169,6 +207,11 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
 export function advise(a: AnimalInput): Advice {
   const c = a.conditionPct;
   const stage = lifeFromAge(a.ageYears, a.lifespanYears)?.stage ?? a.lifeStage ?? 'normal';
+  // Seuils relatifs : faible du troupeau = médiane − écart (jamais un animal à haut fitness).
+  const ref = herdReference(a);
+  const weakLine = ref ? ref.median - ref.gap : undefined;
+  const weakVsHerd = c !== undefined && weakLine !== undefined && c <= HIGH_FITNESS_PCT && c <= weakLine;
+  const vsHerd = ref ? ` (médiane du troupeau ${pct(ref.median)}, faible à ${pct(weakLine!)} ou moins)` : '';
 
   // Femelles : très faibles (sous 40 %) ou en dernière année de vie.
   if (a.sex === 'femelle') {
@@ -177,6 +220,13 @@ export function advise(a: AnimalInput): Advice {
         verdict: 'eliminer',
         title: 'Femelle très faible : à prélever',
         reason: `Femelle à ${c} % (sous ${FEMALE_LOW_PCT} %) : son impact génétique est moindre que celui d’un mâle, mais la garder tire la moyenne du troupeau vers le bas. Une ou deux à la fois au plus : moins de femelles, c’est moins de naissances.`,
+      };
+    }
+    if (weakVsHerd) {
+      return {
+        verdict: 'eliminer',
+        title: 'Femelle faible du troupeau : à prélever',
+        reason: `Femelle à ${c} %${vsHerd} : parmi les plus faibles de ce troupeau. Une ou deux à la fois au plus : moins de femelles, c’est moins de naissances.`,
       };
     }
     if (stage === 'derniere') {
@@ -200,31 +250,46 @@ export function advise(a: AnimalInput): Advice {
   if (a.age === 'jeune') {
     if (c === undefined) return ask('Jeune');
     const cutoff = a.youngCutoff ?? YOUNG_CUTOFF;
-    if (c < cutoff) {
+    if (c < cutoff || weakVsHerd) {
       return {
         verdict: 'eliminer',
         title: 'Priorité n°1 : jeune faible',
-        reason: `Jeune à ${c} % (sous ${cutoff} %) : il tire le troupeau vers le bas sans avoir donné son potentiel, et plus longtemps que les autres puisqu’il est jeune.`,
+        reason: `Jeune à ${c} % (${c < cutoff ? `sous ${cutoff} %` : `faible pour ce troupeau${vsHerd}`}) : il tire le troupeau vers le bas sans avoir donné son potentiel, et plus longtemps que les autres puisqu’il est jeune.`,
       };
     }
     return {
       verdict: 'epargner',
       title: 'Ne pas tirer : laissez-le grandir',
-      reason: `Jeune à ${c} % : au-dessus du seuil de ${cutoff} %, laissez-le grandir.`,
+      reason: `Jeune à ${c} % : au-dessus du seuil de ${cutoff} %${ref ? ` et de la ligne des faibles du troupeau (${pct(weakLine!)})` : ''}, laissez-le grandir.`,
     };
   }
 
   // Adultes : on garde les médians et les bons.
   if (a.age === 'adulte') {
     if (c === undefined) return ask('Adulte');
-    if (c < ADULT_LOW_PCT) {
+    if (ref) {
+      if (weakVsHerd) {
+        return {
+          verdict: 'eliminer',
+          title: 'Adulte faible du troupeau : à prélever',
+          reason: `Adulte à ${c} %${vsHerd} : parmi les plus faibles de ce troupeau, même mûr son trophée restera petit. Retirer les jeunes et adultes faibles nettoie vite la génétique du secteur, grâce aux naissances suivantes.`,
+        };
+      }
+      if (c <= ref.median + ref.gap) {
+        return {
+          verdict: 'epargner',
+          title: 'Ne pas tirer : adulte médian',
+          reason: `Adulte à ${c} % : dans la zone médiane de ce troupeau (${pct(weakLine!)} à ${pct(ref.median + ref.gap)}), ses bois ou cornes n’ont pas fini de grandir.`,
+        };
+      }
+    } else if (c < ADULT_LOW_PCT) {
       return {
         verdict: 'eliminer',
         title: 'Adulte faible : à prélever',
         reason: `Adulte à ${c} % : sous la zone médiane (${ADULT_LOW_PCT}-60 %), même mûr, son trophée restera petit. Retirer les jeunes et adultes faibles nettoie vite la génétique du secteur, grâce aux naissances suivantes.`,
       };
     }
-    if (c < ADULT_GOOD_PCT) {
+    if (!ref && c < ADULT_GOOD_PCT) {
       return {
         verdict: 'epargner',
         title: 'Ne pas tirer : adulte médian',
@@ -240,14 +305,14 @@ export function advise(a: AnimalInput): Advice {
 
   // Âgés (mûrs).
   if (c === undefined) return ask('Âgé');
-  if (c < OLD_FAIR_PCT || (c < OLD_LOW_PCT && stage === 'derniere')) {
+  if (c < OLD_FAIR_PCT || weakVsHerd || (c < OLD_LOW_PCT && stage === 'derniere')) {
     return {
       verdict: 'eliminer',
       title: stage === 'derniere' ? 'À prélever : fin de vie' : 'Âgé faible : à prélever',
       reason:
         stage === 'derniere'
-          ? `Âgé à ${c} % en fin de vie : il va mourir à la prochaine année, autant en tirer l’argent et l’XP.`
-          : `Âgé à faible condition (${c} %) : retirez-le, il ne fera que transmettre une mauvaise condition.`,
+          ? `Âgé à ${c} % en fin de vie${vsHerd} : il va mourir à la prochaine année, autant en tirer l’argent et l’XP.`
+          : `Âgé à faible condition (${c} %${c < OLD_FAIR_PCT ? '' : `, faible pour ce troupeau${vsHerd}`}) : retirez-le, il ne fera que transmettre une mauvaise condition.`,
     };
   }
   if (stage === 'derniere') {
@@ -257,11 +322,11 @@ export function advise(a: AnimalInput): Advice {
       reason: `Âgé en bonne forme (${c} %) dans sa dernière année : prélevez-le pour son trophée et pour l’argent (âgé et lourd, il se vend au meilleur prix) ; il a déjà apporté le maximum à la génération future.`,
     };
   }
-  if (c < OLD_LOW_PCT) {
+  if (ref ? c < ref.median : c < OLD_LOW_PCT) {
     return {
       verdict: 'surveiller',
       title: 'À surveiller',
-      reason: `Âgé à ${c} % : forme correcte mais limite (faible sous ${OLD_LOW_PCT} %). Gardez-le surtout s’il est en avant-dernière année, et prélevez-le en dernière année.`,
+      reason: `Âgé à ${c} % : forme correcte mais limite (${ref ? `sous la médiane du troupeau, ${pct(ref.median)}` : `faible sous ${OLD_LOW_PCT} %`}). Gardez-le surtout s’il est en avant-dernière année, et prélevez-le en dernière année.`,
     };
   }
   return {
