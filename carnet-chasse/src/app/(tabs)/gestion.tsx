@@ -10,6 +10,7 @@ import {
   advise,
   DISTANCE_GOLDEN_RULE,
   DISTANCE_RULES,
+  FITNESS_RULES,
   GAME_RULES,
   GOLDEN_RULES,
   type LifeStage,
@@ -135,6 +136,15 @@ export default function GestionScreen() {
           <Text style={styles.text}>{advice.reason}</Text>
         </View>
       </Card>
+
+      <SectionTitle>🧬 Comprendre le fitness</SectionTitle>
+      <Text style={styles.muted}>Le fitness est la « condition physique » en % lue aux jumelles.</Text>
+      {FITNESS_RULES.map((r) => (
+        <Card key={r.title} style={{ gap: 4 }}>
+          <Text style={styles.strong}>{r.title}</Text>
+          <Text style={styles.text}>{r.text}</Text>
+        </Card>
+      ))}
 
       <SectionTitle>📖 Ce que dit le jeu</SectionTitle>
       <Text style={styles.muted}>Encyclopédie du jeu : « Gestion de la faune et abattage ».</Text>

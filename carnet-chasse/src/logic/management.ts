@@ -80,7 +80,7 @@ export function advise(a: AnimalInput): Advice {
     return {
       verdict: 'epargner',
       title: 'Ne pas tirer : laissez-le grandir',
-      reason: `Jeune à ${c} % : au-dessus du seuil de ${cutoff} %, laissez-le grandir.`,
+      reason: `Jeune à ${c} % : au-dessus du seuil de ${cutoff} %, laissez-le grandir. Ne vous fiez pas à ses étoiles : un jeune n’a que 1 ou 2 étoiles, même avec un très bon fitness.`,
     };
   }
 
@@ -91,20 +91,20 @@ export function advise(a: AnimalInput): Advice {
       return {
         verdict: 'possible',
         title: 'Adulte faible : prélèvement possible',
-        reason: `Adulte à ${c} % : sous la zone médiane (${ADULT_LOW_PCT}-60 %), il a peu de chances de progresser assez.`,
+        reason: `Adulte à ${c} % : sous la zone médiane (${ADULT_LOW_PCT}-60 %), même mûr, son trophée restera petit.`,
       };
     }
     if (c < ADULT_GOOD_PCT) {
       return {
         verdict: 'epargner',
         title: 'Ne pas tirer : adulte médian',
-        reason: `Adulte à ${c} % : dans la zone médiane (environ ${ADULT_LOW_PCT}-60 % en début de partie), il peut encore progresser.`,
+        reason: `Adulte à ${c} % : dans la zone médiane (environ ${ADULT_LOW_PCT}-60 % en début de partie), ses bois ou cornes n’ont pas fini de grandir.`,
       };
     }
     return {
       verdict: 'epargner',
       title: 'Ne pas tirer : bonne condition',
-      reason: `Adulte en bonne condition physique (${c} %) : laissez-le.`,
+      reason: `Adulte en bonne condition physique (${c} %) : laissez-le. Ses 1 ou 2 étoiles actuelles ne montrent pas son potentiel, il n’atteindra ses 4 ou 5 étoiles qu’une fois mûr.`,
     };
   }
 
@@ -139,10 +139,34 @@ export function advise(a: AnimalInput): Advice {
     title: stage === 'avant-derniere' ? 'Ne pas tirer : avant-dernière année' : 'Ne pas tirer : âgé en bonne forme',
     reason:
       stage === 'avant-derniere'
-        ? `Âgé en bonne forme (${c} %) en avant-dernière année : il peut encore gagner 10 à 20 % de condition dans sa dernière année et contribuer fortement à la génération future. Prélevez-le l’an prochain.`
+        ? `Âgé en bonne forme (${c} %) en avant-dernière année : son trophée peut encore grandir dans sa dernière année et il contribue fortement à la génération future. Prélevez-le l’an prochain : plus âgé et plus lourd, il rapportera aussi plus.`
         : `Âgé en bonne forme (${c} %${c >= OLD_GOOD_PCT ? '' : `, idéalement ${OLD_GOOD_PCT} % et plus`}) : laissez-le contribuer à la génération future, puis prélevez-le dans sa dernière année.`,
   };
 }
+
+/** Comprendre le fitness (condition physique) : affiché dans le guide. */
+export const FITNESS_RULES: { title: string; text: string }[] = [
+  {
+    title: 'Le fitness fixe le plafond génétique',
+    text: 'Ce pourcentage est attribué à la naissance et ne change jamais : il définit la taille maximale que les bois ou cornes pourront atteindre.',
+  },
+  {
+    title: "L'âge débloque le potentiel",
+    text: "Un animal à 95 % de fitness n'aura que 1 ou 2 étoiles s'il est jeune ou adulte : il n'a pas encore eu le temps de grandir.",
+  },
+  {
+    title: 'Le stade mûr révèle le vrai score',
+    text: "C'est seulement une fois mûr (et dans ses dernières années de vie) qu'un animal à haut fitness atteint ses 4 ou 5 étoiles.",
+  },
+  {
+    title: "Le poids et l'âge font le prix",
+    text: "Plus l'animal est âgé et lourd au moment du tir, plus la vente rapporte.",
+  },
+  {
+    title: "L'abattage sélectif améliore la harde",
+    text: 'Prélevez les mâles mûrs à faible fitness (1 étoile) pour relever la moyenne génétique des générations futures.',
+  },
+];
 
 /** Les principes de la stratégie, affichés dans le guide. */
 export const STRATEGY = {
@@ -155,9 +179,9 @@ export const STRATEGY = {
     'Les femelles : seulement en dernière année de vie (peu d’impact négatif).',
   ],
   keep: [
-    'Les adultes médians (environ 35 à 60 % en début de partie) : ils peuvent encore progresser.',
+    'Les adultes médians (environ 35 à 60 % en début de partie) : leurs bois ou cornes n’ont pas fini de grandir.',
     'Les adultes en bonne condition physique (plus de 55-60 %).',
-    'Les âgés en bonne forme (40 % et plus, idéalement 55 % et plus), surtout en avant-dernière année : ils peuvent gagner 10 à 20 % de condition dans leur dernière année.',
+    'Les âgés en bonne forme (40 % et plus, idéalement 55 % et plus), surtout en avant-dernière année : leur trophée grandit encore et ils rapporteront plus, plus âgés et plus lourds.',
   ],
 };
 
