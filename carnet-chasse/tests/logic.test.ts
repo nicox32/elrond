@@ -206,6 +206,18 @@ test('rapport de chasse : durées, poids après découpe, prix et organes', asyn
   assert.deepEqual(organs.map((o) => o.id), ['poumon-droit', 'chair', 'poumon-gauche', 'os']);
 });
 
+test('dégâts aux organes : plusieurs tirs, valeurs 0 à 100 %', async () => {
+  const { organShots } = await import('../src/logic/details.ts');
+  assert.equal(organShots(hunt({})).length, 1);
+  const shots = organShots(hunt({ organs: { chair: 72.6 }, moreShots: [{ coeur: 100 }] }));
+  assert.deepEqual(shots, [{ chair: 72.6 }, { coeur: 100 }]);
+  const s = parseState({
+    hunts: [hunt({ organs: { chair: 72.6, artere: 150 }, moreShots: [{ os: 0.9 }, { chair: 'x' } as never, 'bad' as never] })],
+  });
+  assert.deepEqual(s!.hunts[0].organs, { chair: 72.6 });
+  assert.deepEqual(s!.hunts[0].moreShots, [{ os: 0.9 }]);
+});
+
 test('sauvegarde : champs du rapport conservés, valeurs abîmées ignorées', () => {
   const s = parseState({
     hunts: [

@@ -54,7 +54,7 @@ function parseOrgans(v: unknown): Partial<Record<OrganId, number>> | undefined {
   const out: Partial<Record<OrganId, number>> = {};
   for (const id of ORGAN_IDS) {
     const n = num(v[id]);
-    if (n !== undefined && n >= 0) out[id] = n;
+    if (n !== undefined && n >= 0 && n <= 100) out[id] = n;
   }
   return Object.keys(out).length ? out : undefined;
 }
@@ -111,6 +111,11 @@ function parseHunt(v: unknown): Hunt | null {
     dogUsed: bool(v.dogUsed),
     weather: str(v.weather),
     organs: parseOrgans(v.organs),
+    moreShots: (() => {
+      if (!Array.isArray(v.moreShots)) return undefined;
+      const shots = v.moreShots.map(parseOrgans).filter((o): o is Partial<Record<OrganId, number>> => !!o);
+      return shots.length ? shots : undefined;
+    })(),
     measurements: parseMeasurements(v.measurements),
     huntRating: str(v.huntRating),
     trophyStars: (() => {

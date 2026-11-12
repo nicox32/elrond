@@ -103,8 +103,15 @@ export function totalEarnings(hunts: Hunt[]): number {
   return hunts.reduce((sum, h) => sum + (h.salePrice ?? 0), 0);
 }
 
-/** Organes touchés, du plus abîmé au moins abîmé. */
-export function damagedOrgans(h: Hunt): { id: OrganId; label: string; pct: number }[] {
+export type OrganDamage = Partial<Record<OrganId, number>>;
+
+/** Tous les tirs notés : tir 1 puis les suivants. */
+export function organShots(h: Pick<Hunt, 'organs' | 'moreShots'>): OrganDamage[] {
+  return [h.organs ?? {}, ...(h.moreShots ?? [])];
+}
+
+/** Organes touchés par un tir, du plus abîmé au moins abîmé. */
+export function damagedOrgans(h: Pick<Hunt, 'organs'>): { id: OrganId; label: string; pct: number }[] {
   return Object.entries(h.organs ?? {})
     .filter((e): e is [OrganId, number] => typeof e[1] === 'number' && e[1] > 0)
     .map(([id, pct]) => ({ id, label: ORGAN_LABELS[id], pct }))

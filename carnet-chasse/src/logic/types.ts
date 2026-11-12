@@ -121,7 +121,10 @@ export interface Hunt extends HuntNumbers {
   hunterDetected?: boolean;
   dogUsed?: boolean;
   weather?: string;
+  /** Dégâts aux organes du tir 1, en %. */
   organs?: Partial<Record<OrganId, number>>;
+  /** Dégâts aux organes des tirs suivants (tir 2, tir 3…), en %. */
+  moreShots?: Partial<Record<OrganId, number>>[];
   measurements?: Measurement[];
   huntRating?: string;
   trophyStars?: number;
