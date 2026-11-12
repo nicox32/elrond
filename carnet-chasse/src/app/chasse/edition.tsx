@@ -64,6 +64,7 @@ import {
   getSpeciesInfo,
   speciesClass,
 } from "../../data/speciesInfo";
+import { scopeSetting } from "../../logic/management";
 import { formatTime, parseTime } from "../../logic/schedule";
 import {
   formatDate,
@@ -564,6 +565,11 @@ export default function EditionScreen() {
           placeholder="152,4"
         />
       </FieldRow>
+      {scopeSetting(parseNumber(distance)) !== undefined ? (
+        <Text style={{ color: colors.olive, fontSize: 13, fontFamily: fonts.semibold }}>
+          🔭 Lunette : réglez sur {scopeSetting(parseNumber(distance))} m (palier le plus proche de {distance.trim()} m)
+        </Text>
+      ) : null}
 
       <Label>Zone touchée</Label>
       <ChipRow>

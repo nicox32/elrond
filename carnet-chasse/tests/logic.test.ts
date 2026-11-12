@@ -626,3 +626,17 @@ test('classement de chasse : échelle S++ à E et pistes pour une note basse', a
   assert.ok(hints.some((t) => t.includes('12,5 kg de viande abîmée par le tir (12,5 % du poids)')));
   assert.equal(ratingHints({ rating: 'A' }).length, 1);
 });
+
+test('réglage de lunette : palier le plus proche', async () => {
+  const { scopeSetting } = await import('../src/logic/management.ts');
+  assert.equal(scopeSetting(80), 100);
+  assert.equal(scopeSetting(120), 100);
+  assert.equal(scopeSetting(130), 150);
+  assert.equal(scopeSetting(174), 150);
+  assert.equal(scopeSetting(180), 200);
+  assert.equal(scopeSetting(220), 200);
+  assert.equal(scopeSetting(260), 250);
+  assert.equal(scopeSetting(30), 50);
+  assert.equal(scopeSetting(undefined), undefined);
+  assert.equal(scopeSetting(0), undefined);
+});

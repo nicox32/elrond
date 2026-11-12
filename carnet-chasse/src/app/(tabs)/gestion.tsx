@@ -15,6 +15,7 @@ import {
   DISTANCE_GOLDEN_RULE,
   DISTANCE_RULES,
   MEDIAN_GAPS,
+  scopeSetting,
   explain,
   isMatureByAge,
   lifeFromAge,
@@ -47,6 +48,8 @@ export default function GestionScreen() {
   const herdFields = herdInputs(sex, { herd, medianGap: state.medianGap });
   const [ageYears, setAgeYears] = useState('');
   const [lifespan, setLifespan] = useState('');
+  const [shotDistance, setShotDistance] = useState('');
+  const scope = scopeSetting(parseNumber(shotDistance));
 
   const info = getSpeciesInfo(speciesId, state.speciesSheets);
   const years = parseNumber(ageYears);
@@ -215,6 +218,19 @@ export default function GestionScreen() {
             ))}
           </View>
         ) : null}
+      </Card>
+
+      <SectionTitle>🔭 Réglage de la lunette</SectionTitle>
+      <Card style={{ gap: 6 }}>
+        <View style={{ maxWidth: 220 }}>
+          <Field label="Distance de l'animal" unit="m" value={shotDistance} onChangeText={setShotDistance} keyboardType="decimal-pad" placeholder="ex. 140" />
+        </View>
+        {scope !== undefined ? (
+          <Text style={{ color: colors.accent, fontSize: 22, fontFamily: fonts.heading }}>Réglez sur {scope} m</Text>
+        ) : null}
+        <Text style={styles.muted}>
+          Palier le plus proche de la distance réelle : 75-125 m → 100 m, 125-175 m → 150 m, 175-225 m → 200 m.
+        </Text>
       </Card>
 
       <SectionTitle>🎯 Distances de tir</SectionTitle>

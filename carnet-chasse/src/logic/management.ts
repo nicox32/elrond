@@ -339,6 +339,18 @@ export function advise(a: AnimalInput): Advice {
   };
 }
 
+/** Pas des réglages de lunette (m). */
+export const SCOPE_STEP_M = 50;
+
+/**
+ * Réglage de lunette : le palier le plus proche de la distance réelle (75-125 m → 100 m,
+ * 125-175 m → 150 m, 175-225 m → 200 m…). Au milieu pile, on prend le palier du dessus.
+ */
+export function scopeSetting(distanceM: number | undefined): number | undefined {
+  if (distanceM === undefined || !(distanceM > 0)) return undefined;
+  return Math.max(SCOPE_STEP_M, Math.round(distanceM / SCOPE_STEP_M) * SCOPE_STEP_M);
+}
+
 export interface DistanceRule {
   icon: string;
   title: string;
