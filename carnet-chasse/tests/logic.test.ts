@@ -640,3 +640,16 @@ test('réglage de lunette : palier le plus proche', async () => {
   assert.equal(scopeSetting(undefined), undefined);
   assert.equal(scopeSetting(0), undefined);
 });
+
+test('distance de tir des gros gibiers', async () => {
+  const { bigGameDistanceCheck } = await import('../src/logic/management.ts');
+  assert.equal(bigGameDistanceCheck(200)?.ok, true);
+  assert.equal(bigGameDistanceCheck(150)?.ok, true);
+  assert.equal(bigGameDistanceCheck(250)?.ok, true);
+  assert.equal(bigGameDistanceCheck(100)?.ok, false);
+  assert.match(bigGameDistanceCheck(400)!.text, /grosse carabine/);
+  assert.match(bigGameDistanceCheck(600)!.text, /Trop loin/);
+  assert.equal(bigGameDistanceCheck(110, true)?.ok, true);
+  assert.equal(bigGameDistanceCheck(200, true)?.ok, false);
+  assert.equal(bigGameDistanceCheck(undefined), undefined);
+});

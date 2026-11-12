@@ -364,9 +364,9 @@ export const DISTANCE_RULES: DistanceRule[] = [
   {
     icon: '🦌',
     title: 'Gros et moyens gibiers (cerfs, élans, loups, ours…)',
-    range: '150 à 200 m',
-    why: "Équilibre idéal : la balle garde assez d'énergie pour les organes vitaux sans abîmer la viande, et vous restez assez loin pour ne pas être repéré.",
-    weapons: 'Carabines à verrou de gros calibre.',
+    range: '150 à 250 m',
+    why: "Distance idéale de sécurité : aucun risque de fuite, 100 % de pénétration. Au maximum « à coup sûr » : 450 à 500 m avec une grosse carabine.",
+    weapons: 'Carabines à verrou de gros calibre. Arme de départ : cerfs à moins de 100-120 m.',
   },
   {
     icon: '🐇',
@@ -385,7 +385,29 @@ export const DISTANCE_RULES: DistanceRule[] = [
 ];
 
 export const DISTANCE_GOLDEN_RULE =
-  'Mesurez toujours la distance aux jumelles, puis réglez le zéro de la lunette (50, 100, 200 ou 300 m) avant de tirer.';
+  'Mesurez toujours la distance aux jumelles, puis réglez la lunette sur le palier le plus proche (100, 150, 200 m…) avant de tirer.';
+
+/** Gros et moyens gibiers à la carabine : distance idéale et maximum « à coup sûr ». */
+export const BIG_GAME_IDEAL_M: [number, number] = [150, 250];
+export const BIG_GAME_MAX_M: [number, number] = [450, 500];
+/** Arme de départ (sous la classe de l'animal) : cerfs à moins de 100-120 m. */
+export const STARTER_MAX_M = 120;
+
+/** Avis sur la distance de tir d'un gros ou moyen gibier à la carabine. */
+export function bigGameDistanceCheck(distanceM: number | undefined, weaponUnderClass = false): { ok: boolean; text: string } | undefined {
+  if (distanceM === undefined || !(distanceM > 0)) return undefined;
+  if (weaponUnderClass) {
+    return distanceM <= STARTER_MAX_M
+      ? { ok: true, text: `Arme sous la classe de l’animal : ${distanceM} m reste dans la limite de 100-120 m.` }
+      : { ok: false, text: `Arme sous la classe de l’animal : au-delà de 100-120 m, l’énergie tombe sous le seuil et la balle risque de ne pas atteindre les poumons.` };
+  }
+  const [lo, hi] = BIG_GAME_IDEAL_M;
+  if (distanceM < lo) return { ok: false, text: `Plus près que l’idéal (${lo}-${hi} m) : l’animal risque de vous repérer et de fuir.` };
+  if (distanceM <= hi) return { ok: true, text: `Distance idéale de sécurité (${lo}-${hi} m) : aucun risque de fuite, 100 % de pénétration.` };
+  if (distanceM <= BIG_GAME_MAX_M[1])
+    return { ok: false, text: `Au-delà de l’idéal : seulement avec une grosse carabine, ${BIG_GAME_MAX_M[0]}-${BIG_GAME_MAX_M[1]} m au maximum « à coup sûr ».` };
+  return { ok: false, text: `Trop loin : au-delà de ${BIG_GAME_MAX_M[1]} m, même une grosse carabine n’est plus « à coup sûr ».` };
+}
 
 /** Une année de vie d'un animal = 3 jours en jeu. */
 export const GAME_DAYS_PER_YEAR = 3;

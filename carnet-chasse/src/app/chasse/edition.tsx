@@ -64,7 +64,7 @@ import {
   getSpeciesInfo,
   speciesClass,
 } from "../../data/speciesInfo";
-import { scopeSetting } from "../../logic/management";
+import { bigGameDistanceCheck, scopeSetting } from "../../logic/management";
 import { formatTime, parseTime } from "../../logic/schedule";
 import {
   formatDate,
@@ -565,6 +565,17 @@ export default function EditionScreen() {
           placeholder="152,4"
         />
       </FieldRow>
+      {(() => {
+        const big =
+          species && weapon?.type === "carabine" && species.category !== "petit" && species.category !== "oiseau";
+        const check = big ? bigGameDistanceCheck(parseNumber(distance), weaponUnder) : undefined;
+        return check ? (
+          <Text style={{ color: check.ok ? colors.olive : colors.accent, fontSize: 13, fontFamily: fonts.semibold }}>
+            {check.ok ? "✓ " : "⚠ "}
+            {check.text}
+          </Text>
+        ) : null;
+      })()}
       {scopeSetting(parseNumber(distance)) !== undefined ? (
         <Text style={{ color: colors.olive, fontSize: 13, fontFamily: fonts.semibold }}>
           🔭 Lunette : réglez sur {scopeSetting(parseNumber(distance))} m (palier le plus proche de {distance.trim()} m)
