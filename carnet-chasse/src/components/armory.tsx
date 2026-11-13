@@ -15,7 +15,7 @@ export function Thumb({ uri, label, size = 56 }: { uri?: string; label: string; 
     .join('');
   return (
     <View
-      style={{ width: size, height: size, borderRadius: 12, backgroundColor: '#24301F', alignItems: 'center', justifyContent: 'center' }}
+      style={{ width: size, height: size, borderRadius: 4, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center' }}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
@@ -29,8 +29,8 @@ export function ClassBadge({ range, prefix = 'Classe' }: { range?: [number, numb
   const r = formatClassRange(range);
   if (!r) return null;
   return (
-    <View style={{ borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 1, alignSelf: 'flex-start' }}>
-      <Text style={{ color: colors.gold, fontFamily: fonts.heading, fontSize: 14 }}>
+    <View style={{ backgroundColor: colors.gold, borderRadius: 4, paddingHorizontal: 7, paddingVertical: 1, alignSelf: 'flex-start' }}>
+      <Text style={{ color: colors.onPaper, fontFamily: fonts.heading, fontSize: 14 }}>
         {prefix} {r}
       </Text>
     </View>

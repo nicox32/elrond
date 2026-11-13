@@ -12,14 +12,14 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.highlight,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.border,
           ...(Platform.OS === 'web' ? { height: 58, paddingBottom: 6 } : null),
         },
-        tabBarLabelStyle: { fontSize: 11, lineHeight: 14, fontFamily: fonts.semibold },
+        tabBarLabelStyle: { fontSize: 12, lineHeight: 14, fontFamily: fonts.heading, letterSpacing: 0.6, textTransform: 'uppercase' },
         sceneStyle: { backgroundColor: colors.background },
       }}
     >

@@ -31,19 +31,19 @@ export function HuntRow({ hunt, customWeapons }: { hunt: Hunt; customWeapons: We
     <Card onPress={() => router.push({ pathname: '/chasse/[id]', params: { id: hunt.id } })}>
       <View style={styles.row}>
         {hunt.photoUri ? (
-          <Image source={{ uri: hunt.photoUri }} style={{ width: 44, height: 44, borderRadius: 12 }} />
+          <Image source={{ uri: hunt.photoUri }} style={{ width: 44, height: 44, borderRadius: 4 }} />
         ) : (
           <View
             style={{
               width: 44,
               height: 44,
-              borderRadius: 12,
-              backgroundColor: dangerous ? '#3A1F1A' : '#24301F',
+              borderRadius: 4,
+              backgroundColor: dangerous ? colors.dangerSoft : colors.surfaceAlt,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontFamily: fonts.heading, fontSize: dangerous ? 22 : 15, color: dangerous ? '#F08A7C' : colors.olive }}>
+            <Text style={{ fontFamily: fonts.heading, fontSize: dangerous ? 22 : 15, color: dangerous ? colors.danger : colors.gold }}>
               {dangerous ? '!' : RESERVE_BADGE[hunt.reserveId]}
             </Text>
           </View>

@@ -36,7 +36,7 @@ export async function scheduleHerdReminder(herdName: string): Promise<string | u
     if (status !== 'granted') return undefined;
     return await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Affût · troupeau à surveiller',
+        title: 'WotH2 Tracker · troupeau à surveiller',
         body: `${herdName} : repasse voir le troupeau. Rappel : 1 an de vie d'un animal = 3 jours en jeu.`,
       },
       trigger: {

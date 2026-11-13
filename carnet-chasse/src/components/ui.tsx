@@ -2,21 +2,43 @@ import { Children, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, type TextInputProps, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, fonts, space } from '../theme';
+import { colors, fonts, radius, space } from '../theme';
 
-/** Liseré à carreaux (clin d'œil au pavillon de chasse) en haut des onglets. */
-export function PlaidStrip() {
+/** Filet orné comme les séparateurs du jeu (« ⁂ ·──────· ⁂ »). */
+export function Ornament({ color = colors.border }: { color?: string }) {
   return (
-    <View style={styles.plaid} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {Array.from({ length: 80 }, (_, i) => (
-        <View key={i} style={{ width: 6, height: 6, backgroundColor: i % 2 ? colors.background : colors.plaid }} />
-      ))}
+    <View style={styles.ornament} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Text style={[styles.ornamentGlyph, { color }]}>❧</Text>
+      <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: color }} />
+      <View style={{ flex: 1, height: 1, backgroundColor: color }} />
+      <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: color }} />
+      <Text style={[styles.ornamentGlyph, { color, transform: [{ scaleX: -1 }] }]}>❧</Text>
+    </View>
+  );
+}
+
+/** Étiquette « papier déchiré » du jeu (S++, onglet choisi…). */
+export function PaperTag({ children, size = 'md' }: { children: ReactNode; size?: 'sm' | 'md' | 'lg' }) {
+  const fontSize = size === 'lg' ? 26 : size === 'sm' ? 13 : 17;
+  return (
+    <View style={[styles.paperTag, { transform: [{ rotate: '-1.5deg' }] }]}>
+      <Text style={{ color: colors.onPaper, fontFamily: fonts.display, fontSize, letterSpacing: 0.6 }}>{children}</Text>
+    </View>
+  );
+}
+
+/** Insigne de classe du jeu : chevrons et chiffre sur fond or. */
+export function ClassTile({ value }: { value: string | number }) {
+  return (
+    <View style={styles.classTile}>
+      <Text style={{ color: colors.onPaper, fontFamily: fonts.display, fontSize: 13, lineHeight: 15 }}>︽</Text>
+      <Text style={{ color: colors.onPaper, fontFamily: fonts.display, fontSize: 17, lineHeight: 20 }}>{value}</Text>
     </View>
   );
 }
 
 /** Réticule de lunette dessiné en vues (sans dépendance SVG). */
-export function Reticle({ size = 48, color = colors.accent }: { size?: number; color?: string }) {
+export function Reticle({ size = 48, color = colors.highlight }: { size?: number; color?: string }) {
   const r = size * 0.36;
   const line = Math.max(2, Math.round(size / 24));
   const arm = (size - r * 2) / 2 + r * 0.45;
@@ -49,8 +71,9 @@ export function Reticle({ size = 48, color = colors.accent }: { size?: number; c
 export function Screen({ children, top = true }: { children: ReactNode; top?: boolean }) {
   return (
     <SafeAreaView style={styles.screen} edges={top ? ['top'] : []}>
-      {top ? <PlaidStrip /> : null}
+
       <ScrollView contentContainerStyle={styles.screenContent} keyboardShouldPersistTaps="handled">
+        {top ? <Ornament /> : null}
         {children}
       </ScrollView>
     </SafeAreaView>
@@ -73,7 +96,10 @@ export function Title({ children, subtitle }: { children: ReactNode; subtitle?: 
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <View style={styles.sectionRow}>
-      <Text style={styles.section}>{children}</Text>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={styles.section}>{children}</Text>
+        <View style={{ width: 36, height: 2, backgroundColor: colors.highlight, opacity: 0.8 }} />
+      </View>
       {right}
     </View>
   );
@@ -132,7 +158,7 @@ export function Fold({
             </Text>
           ) : null}
         </View>
-        <Text style={{ color: colors.accent, fontFamily: fonts.heading, fontSize: 22 }}>{open ? '−' : '+'}</Text>
+        <Text style={{ color: colors.highlight, fontFamily: fonts.heading, fontSize: 22 }}>{open ? '−' : '+'}</Text>
       </Pressable>
       {open ? <View style={{ paddingHorizontal: space.md, paddingBottom: space.md }}>{children}</View> : null}
     </View>
@@ -150,17 +176,24 @@ export function Chip({
   onPress?: () => void;
   tone?: 'accent' | 'olive' | 'danger';
 }) {
-  const tint = tone === 'olive' ? colors.olive : tone === 'danger' ? colors.danger : colors.accent;
-  const soft = tone === 'olive' ? colors.oliveSoft : tone === 'danger' ? colors.dangerSoft : colors.accentSoft;
+  // Choix par défaut : étiquette papier comme l'onglet actif du jeu ; olive/danger : teinte de verdict.
+  const paper = tone === 'accent';
+  const tint = tone === 'olive' ? colors.olive : colors.danger;
+  const soft = tone === 'olive' ? colors.oliveSoft : colors.dangerSoft;
   return (
     <Pressable
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={onPress ? { selected: !!selected } : undefined}
-      style={[styles.chip, selected && { borderColor: tint, backgroundColor: soft }]}
+      style={[
+        styles.chip,
+        selected && (paper ? { borderColor: colors.paper, backgroundColor: colors.paper } : { borderColor: tint, backgroundColor: soft }),
+      ]}
     >
-      <Text style={[styles.chipText, selected && { color: tint }]}>{label}</Text>
+      <Text style={[styles.chipText, selected && { color: paper ? colors.onPaper : tint, fontFamily: paper ? fonts.heading : fonts.semibold, fontSize: paper ? 15 : 14 }]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -180,8 +213,8 @@ export function Button({
   kind?: 'primary' | 'secondary' | 'danger';
   disabled?: boolean;
 }) {
-  const bg = kind === 'primary' ? colors.accent : kind === 'danger' ? colors.dangerSoft : colors.surfaceAlt;
-  const fg = kind === 'primary' ? colors.onAccent : kind === 'danger' ? colors.danger : colors.text;
+  const bg = kind === 'primary' ? colors.paper : kind === 'danger' ? colors.dangerSoft : colors.surfaceAlt;
+  const fg = kind === 'primary' ? colors.onPaper : kind === 'danger' ? colors.danger : colors.text;
   return (
     <Pressable
       onPress={onPress}
@@ -280,10 +313,22 @@ export function Empty({ children }: { children: ReactNode }) {
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   screenContent: { padding: space.lg, paddingTop: 20, paddingBottom: 48, gap: space.sm, maxWidth: 720, width: '100%', alignSelf: 'center' },
-  plaid: { height: 6, flexDirection: 'row', overflow: 'hidden', backgroundColor: colors.plaid },
+  ornament: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: space.xs },
+  ornamentGlyph: { fontSize: 14, lineHeight: 16 },
+  paperTag: { backgroundColor: colors.paper, paddingHorizontal: 10, paddingVertical: 2, borderRadius: 2, alignSelf: 'flex-start' },
+  classTile: {
+    backgroundColor: colors.gold,
+    borderRadius: radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    alignSelf: 'flex-start',
+  },
   eyebrow: { fontFamily: fonts.semibold, fontSize: 12, letterSpacing: 2.2, textTransform: 'uppercase' },
   title: { color: colors.text, fontFamily: fonts.display, fontSize: 34, letterSpacing: 0.8, textTransform: 'uppercase', lineHeight: 38 },
-  display: { color: colors.accent, fontFamily: fonts.display, fontSize: 46, letterSpacing: 1, lineHeight: 48 },
+  display: { color: colors.text, fontFamily: fonts.display, fontSize: 40, letterSpacing: 1.5, lineHeight: 44 },
   section: { color: colors.text, fontFamily: fonts.heading, fontSize: 21, letterSpacing: 0.8, textTransform: 'uppercase' },
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.lg, marginBottom: space.xs },
   text: { color: colors.text, fontSize: 15, fontFamily: fonts.body, lineHeight: 21 },
@@ -294,22 +339,22 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: radius.md,
     padding: space.md,
   },
-  trophyOuter: { borderWidth: 1, borderColor: colors.gold, borderRadius: 16, padding: 3 },
-  trophyInner: { borderWidth: 1, borderColor: colors.goldFrame, borderRadius: 13, backgroundColor: colors.trophyBg, padding: 14 },
+  trophyOuter: { borderWidth: 1, borderColor: colors.gold, borderRadius: radius.lg, padding: 3 },
+  trophyInner: { borderWidth: 1, borderColor: colors.goldFrame, borderRadius: radius.md, backgroundColor: colors.trophyBg, padding: 14 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
     paddingHorizontal: space.md,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
   chipText: { color: colors.textMuted, fontSize: 14, fontFamily: fonts.semibold },
-  button: { borderRadius: 14, minHeight: 50, paddingVertical: 12, paddingHorizontal: space.lg, alignItems: 'center', justifyContent: 'center' },
+  button: { borderRadius: radius.sm, minHeight: 50, paddingVertical: 12, paddingHorizontal: space.lg, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 16, fontFamily: fonts.semibold },
   buttonTextPrimary: { fontSize: 20, fontFamily: fonts.display, letterSpacing: 1.4 },
   label: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.semibold, letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: space.xs, marginTop: space.md },
@@ -317,14 +362,14 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.sm,
     color: colors.text,
     fontSize: 16,
     fontFamily: fonts.body,
     paddingHorizontal: space.md,
     paddingVertical: 10,
   },
-  statRow: { flexDirection: 'row', borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.hud },
+  statRow: { flexDirection: 'row', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.hud },
   stat: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
   statValue: { color: colors.text, fontFamily: fonts.heading, fontSize: 26 },
   statLabel: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.semibold, letterSpacing: 1.4 },

@@ -1,7 +1,7 @@
 # Construit l'APK Android du Carnet de chasse (Way of the Hunter 2), dossier carnet-chasse/,
 # et le publie dans une « Release » GitHub dédiée (tag carnet-chasse-v1.0.<numéro>).
 # La release n'est pas marquée « latest » : le lien de téléchargement d'Orvia ne change pas.
-name: APK Carnet de chasse
+name: APK Way of the Hunter 2 Tracker
 
 on:
   push:
@@ -82,11 +82,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: carnet-chasse-v1.0.${{ github.run_number }}
-          name: Affût (carnet de chasse) v1.0.${{ github.run_number }}
+          name: Way of the Hunter 2 Tracker v1.0.${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           make_latest: false
           files: carnet-chasse/carnet-chasse-1.0.${{ github.run_number }}.apk
           body: |
-            Affût, le carnet de chasse pour Way of the Hunter 2.
+            Way of the Hunter 2 Tracker : le carnet de chasse pour Way of the Hunter 2.
             Téléchargez **carnet-chasse-1.0.${{ github.run_number }}.apk** depuis votre téléphone Android pour l'installer
             (autorisez l'installation d'applications inconnues si Android le demande).

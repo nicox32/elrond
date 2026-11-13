@@ -8,8 +8,7 @@ import {
   Empty,
   Screen,
   SectionTitle,
-  styles,
-} from "../../components/ui";
+  styles, PaperTag } from "../../components/ui";
 import {
   findWeapon,
   getReserve,
@@ -178,27 +177,7 @@ export default function HuntScreen() {
               {formatScore(hunt.trophyScore)} pts
             </Text>
           ) : null}
-          {hunt.huntRating ? (
-            <View
-              style={{
-                borderWidth: 2,
-                borderColor: colors.text,
-                borderRadius: 6,
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-              }}
-            >
-              <Text
-                style={{
-                  color: colors.text,
-                  fontFamily: fonts.display,
-                  fontSize: 24,
-                }}
-              >
-                {hunt.huntRating}
-              </Text>
-            </View>
-          ) : null}
+          {hunt.huntRating ? <PaperTag size="lg">{hunt.huntRating}</PaperTag> : null}
           {hunt.trophyStars ? (
             <Text style={{ color: colors.gold, fontSize: 22 }}>
               {"★".repeat(hunt.trophyStars)}

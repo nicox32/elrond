@@ -49,8 +49,8 @@ export default function JournalScreen() {
     <Screen>
       <View style={[styles.row, { justifyContent: 'space-between' }]}>
         <View style={{ gap: 2 }}>
-          <Eyebrow>Way of the Hunter 2</Eyebrow>
-          <Text style={styles.display}>AFFÛT</Text>
+          <Eyebrow color={colors.highlight}>Way of the Hunter 2</Eyebrow>
+          <Text style={styles.display}>TRACKER</Text>
         </View>
         <Reticle size={50} />
       </View>

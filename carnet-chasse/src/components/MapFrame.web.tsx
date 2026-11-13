@@ -5,7 +5,7 @@ export function MapFrame({ url }: { url: string; onUrlChange?: (url: string) => 
   return createElement('iframe', {
     src: url,
     title: 'Carte interactive Shackmaps',
-    style: { flex: 1, width: '100%', height: '100%', border: 0, backgroundColor: '#0E120E' },
+    style: { flex: 1, width: '100%', height: '100%', border: 0, backgroundColor: '#0B1422' },
     referrerPolicy: 'no-referrer',
   });
 }

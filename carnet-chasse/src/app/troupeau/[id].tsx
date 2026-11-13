@@ -335,7 +335,7 @@ export default function HerdScreen() {
       updateHerd(h.id, { reminderId: rid });
       setReminderMsg('Rappel programmé : une notification toutes les 24 h.');
     } else {
-      setReminderMsg('Notifications refusées : autorisez-les pour Affût dans les réglages du téléphone.');
+      setReminderMsg('Notifications refusées : autorisez-les pour Way of the Hunter 2 Tracker dans les réglages du téléphone.');
     }
   }
 

@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import { HuntRow } from '../../components/HuntRow';
-import { Button, Card, Empty, Screen, SectionTitle, styles } from '../../components/ui';
+import { Button, Card, Empty, Screen, SectionTitle, styles, ClassTile } from '../../components/ui';
 import { CATEGORY_LABELS, getReserve, getSpecies, SUGGESTED_CALIBERS, SUGGESTED_DISTANCE } from '../../data/game';
 import { ammoForAnimalClass, formatClassRange } from '../../data/armory';
 import { ENERGY_LABELS, formatRange, getSpeciesInfo, routineSlots, speciesClass } from '../../data/speciesInfo';
@@ -12,7 +12,7 @@ import { type RoutineNeed, SPECIES_DETAIL_FIELDS } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
-const NEED_COLORS: Record<RoutineNeed, string> = { boire: '#5AA9E6', manger: colors.olive, dormir: colors.textMuted, inconnu: colors.border };
+const NEED_COLORS: Record<RoutineNeed, string> = { boire: colors.water, manger: colors.olive, dormir: colors.accent, inconnu: colors.border };
 
 function Line({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
@@ -52,9 +52,7 @@ export default function EspeceScreen() {
         </Text>
         <View style={[styles.row, { marginTop: 6, flexWrap: 'wrap' }]}>
           {cls ? (
-            <View style={{ borderWidth: 1, borderColor: colors.gold, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
-              <Text style={{ color: colors.gold, fontFamily: fonts.heading, fontSize: 16 }}>Classe {cls}</Text>
-            </View>
+            <ClassTile value={cls} />
           ) : null}
           <Text style={styles.muted}>{CATEGORY_LABELS[species.category]}</Text>
           {species.dangerous ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold }}>⚠ Peut charger</Text> : null}
