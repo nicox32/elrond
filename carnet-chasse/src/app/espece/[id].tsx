@@ -8,7 +8,7 @@ import { ammoForAnimalClass, formatClassRange } from '../../data/armory';
 import { ENERGY_LABELS, formatRange, getSpeciesInfo, routineSlots, speciesClass } from '../../data/speciesInfo';
 import { ROUTINE_ICONS, ROUTINE_LABELS } from '../../logic/schedule';
 import { formatScore, sortByDateDesc, summarizeSpecies } from '../../logic/stats';
-import type { RoutineNeed } from '../../logic/types';
+import { type RoutineNeed, SPECIES_DETAIL_FIELDS } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
@@ -133,6 +133,18 @@ export default function EspeceScreen() {
             <Line label="Ouïe" value={info.senses?.ouie} />
             {info.biomes ? <Text style={[styles.muted, { marginTop: 6 }]}>Biomes : {info.biomes}</Text> : null}
           </Card>
+          {info.details && Object.values(info.details).some(Boolean) ? (
+            <Card style={{ gap: 4 }}>
+              {SPECIES_DETAIL_FIELDS.map((f) =>
+                info.details?.[f.key] ? (
+                  <Text key={f.key} style={styles.text}>
+                    <Text style={{ fontFamily: fonts.semibold, color: colors.gold }}>{f.label} : </Text>
+                    {info.details[f.key]}
+                  </Text>
+                ) : null,
+              )}
+            </Card>
+          ) : null}
           {info.anecdote ? <Text style={[styles.muted, { fontStyle: 'italic' }]}>Anecdote : {info.anecdote}</Text> : null}
           <Button
             label="Modifier la fiche"

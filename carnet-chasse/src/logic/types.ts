@@ -197,6 +197,23 @@ export interface Herd {
 export type EnergyRange = [number, number] | null;
 
 /** Fiche espèce recopiée par le joueur (même forme que les fiches fournies, tout facultatif). */
+/** Autres rubriques de l'encyclopédie (page « Infos » de la fiche). */
+export const SPECIES_DETAIL_FIELDS = [
+  { key: 'sexDifferences', label: 'Différences sexuelles' },
+  { key: 'variants', label: 'Variantes (âge)' },
+  { key: 'coats', label: 'Couleurs de robe' },
+  { key: 'strengths', label: 'Forces' },
+  { key: 'weaknesses', label: 'Faiblesses' },
+  { key: 'otherNames', label: 'Autres dénominations' },
+  { key: 'behavior', label: 'Comportement' },
+  { key: 'social', label: 'Structure sociale' },
+  { key: 'maxSize', label: 'Taille max.' },
+  { key: 'maxLength', label: 'Longueur max.' },
+  { key: 'maxWeight', label: 'Poids max.' },
+  { key: 'maxSpeed', label: 'Vitesse max.' },
+] as const;
+export type SpeciesDetailKey = (typeof SPECIES_DETAIL_FIELDS)[number]['key'];
+
 export interface SpeciesSheet {
   animalClass?: number;
   /** Âge (ans) à partir duquel l'espèce est mûre. */
@@ -213,6 +230,7 @@ export interface SpeciesSheet {
   biomes?: string;
   description?: string;
   anecdote?: string;
+  details?: Partial<Record<SpeciesDetailKey, string>>;
 }
 
 /** Fiche d'arme recopiée depuis l'armurerie du jeu (tout facultatif), avec la photo du joueur. */

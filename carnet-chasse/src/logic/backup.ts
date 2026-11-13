@@ -1,6 +1,6 @@
 import { ALL_NUM_FIELDS } from './details.ts';
 import { isMapUrl } from './maps.ts';
-import { ORGAN_IDS } from './types.ts';
+import { ORGAN_IDS, SPECIES_DETAIL_FIELDS } from './types.ts';
 import type {
   Ammo,
   WeaponSheet,
@@ -19,6 +19,7 @@ import type {
   Hunt,
   HuntMode,
   NeedType,
+  SpeciesDetailKey,
   RoutineNeed,
   NeedZone,
   ReserveId,
@@ -266,6 +267,15 @@ function parseSheet(v: unknown): SpeciesSheet | null {
     biomes: str(v.biomes),
     description: str(v.description),
     anecdote: str(v.anecdote),
+    details: (() => {
+      if (!isObj(v.details)) return undefined;
+      const out: Partial<Record<SpeciesDetailKey, string>> = {};
+      for (const f of SPECIES_DETAIL_FIELDS) {
+        const t = str(v.details[f.key]);
+        if (t) out[f.key] = t;
+      }
+      return Object.keys(out).length ? out : undefined;
+    })(),
   };
 }
 

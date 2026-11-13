@@ -654,14 +654,27 @@ test('distance de tir des gros gibiers', async () => {
   assert.equal(bigGameDistanceCheck(undefined), undefined);
 });
 
-test('fiche du mouflon de Dall : habitat et horaires, créneaux non renseignés', async () => {
-  const { getSpeciesInfo, routineSlots } = await import('../src/data/speciesInfo.ts');
+test('fiche du mouflon de Dall (encyclopédie) et rapport de chasse', async () => {
+  const { getSpeciesInfo, routineSlots, checkEnergy } = await import('../src/data/speciesInfo.ts');
+  const { computeNetWeight, estimateMeatPrice } = await import('../src/logic/details.ts');
+  const { advise } = await import('../src/logic/management.ts');
   const info = getSpeciesInfo('mouflon-dall')!;
-  assert.match(info.biomes!, /altitude/);
+  assert.equal(info.animalClass, 5);
+  assert.deepEqual(info.trophyRange, [105, 265]);
+  assert.equal(checkEnergy(info, 'balle', 2000), 'ok');
+  assert.equal(checkEnergy(info, 'balle', 1000), 'faible');
   assert.deepEqual(
     routineSlots(info).map((r) => `${r.from}-${r.to} ${r.need}`),
-    ['5-9 manger', '9-13 boire', '13-17 inconnu', '17-21 manger', '21-5 inconnu'],
+    ['4-7 manger', '7-10 boire', '10-14 dormir', '14-19 manger', '19-22 boire', '22-4 dormir'],
   );
-  const s = parseState({ speciesSheets: { 'mouflon-dall': { energy: {}, routine: [{ hour: 13, need: 'inconnu' }, { hour: 9, need: 'boire' }, { hour: 3, need: 'x' }] } } });
-  assert.deepEqual(s!.speciesSheets['mouflon-dall'].routine, [{ hour: 9, need: 'boire' }, { hour: 13, need: 'inconnu' }]);
+  assert.equal(info.details?.maxWeight, '135,0 kg');
+  // Rapport : 49,9 − 0 − 2,53 − 19,96 = 27,41 kg × 3,2 = 87,71 → 87 en jeu.
+  const hunt = { weightKg: 49.9, timeDegradationKg: 0, shotDegradationKg: 2.53, butcherWasteKg: 19.96, pricePerKg: 3.2 };
+  assert.equal(computeNetWeight(hunt), 27.41);
+  assert.equal(estimateMeatPrice(hunt), 87);
+  // Mâle adulte à 16 % : à prélever.
+  assert.equal(advise({ sex: 'male', age: 'adulte', conditionPct: 16, ageYears: 5 }).verdict, 'eliminer');
+  // Rubriques « Infos » sauvegardées.
+  const s = parseState({ speciesSheets: { 'mouflon-dall': { energy: {}, details: { maxSpeed: '48 km/h', bad: 'x', social: '' } } } });
+  assert.deepEqual(s!.speciesSheets['mouflon-dall'].details, { maxSpeed: '48 km/h' });
 });

@@ -8,7 +8,7 @@ import { getSpecies } from '../../data/game';
 import { ENERGY_LABELS, getSpeciesInfo, SPECIES_INFO } from '../../data/speciesInfo';
 import { ROUTINE_ICONS, ROUTINE_LABELS } from '../../logic/schedule';
 import { parseNumber } from '../../logic/stats';
-import type { EnergyRange, RoutineNeed, SpeciesSheet } from '../../logic/types';
+import { type EnergyRange, type RoutineNeed, SPECIES_DETAIL_FIELDS, type SpeciesDetailKey, type SpeciesSheet } from '../../logic/types';
 import { useCarnet } from '../../state/CarnetProvider';
 import { colors, fonts } from '../../theme';
 
@@ -58,6 +58,7 @@ export default function FicheScreen() {
   const [biomes, setBiomes] = useState(info?.biomes ?? '');
   const [description, setDescription] = useState(info?.description ?? '');
   const [anecdote, setAnecdote] = useState(info?.anecdote ?? '');
+  const [details, setDetails] = useState<Partial<Record<SpeciesDetailKey, string>>>(() => ({ ...info?.details }));
   const [error, setError] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -122,6 +123,12 @@ export default function FicheScreen() {
       biomes: biomes.trim() || undefined,
       description: description.trim() || undefined,
       anecdote: anecdote.trim() || undefined,
+      details: (() => {
+        const out = Object.fromEntries(
+          Object.entries(details).flatMap(([k, t]) => (t?.trim() ? [[k, t.trim()]] : [])),
+        ) as Partial<Record<SpeciesDetailKey, string>>;
+        return Object.keys(out).length ? out : undefined;
+      })(),
     });
     router.back();
   }
@@ -247,6 +254,17 @@ export default function FicheScreen() {
       <Field label="Biomes préférés" value={biomes} onChangeText={setBiomes} multiline placeholder="Forêts, prairies…" style={{ minHeight: 60, textAlignVertical: 'top' }} />
       <Field label="Description" value={description} onChangeText={setDescription} multiline style={{ minHeight: 70, textAlignVertical: 'top' }} />
       <Field label="Anecdote" value={anecdote} onChangeText={setAnecdote} multiline style={{ minHeight: 50, textAlignVertical: 'top' }} />
+
+      <SectionTitle>Infos (page 2 de l&apos;encyclopédie)</SectionTitle>
+      {SPECIES_DETAIL_FIELDS.map((f) => (
+        <Field
+          key={f.key}
+          label={f.label}
+          value={details[f.key] ?? ''}
+          onChangeText={(t) => setDetails((d) => ({ ...d, [f.key]: t }))}
+          multiline={!f.key.startsWith('max')}
+        />
+      ))}
 
       {error ? <Text style={{ color: colors.danger, fontFamily: fonts.semibold, marginTop: 12 }}>{error}</Text> : null}
       <View style={{ marginTop: 16, gap: 8 }}>

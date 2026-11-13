@@ -3,7 +3,7 @@
  * prélèvement de l'espèce : le joueur la recopie alors dans l'appli (fiches « perso », dans l'état).
  * Les fiches fournies ici viennent de captures du joueur ; on n'invente rien.
  */
-import type { RoutineNeed } from '../logic/types.ts';
+import type { RoutineNeed, SpeciesDetailKey } from '../logic/types.ts';
 import { getSpecies } from './game.ts';
 
 export type EnergyKind = 'balle' | 'slug' | 'fleche';
@@ -34,6 +34,7 @@ export interface SpeciesInfo {
   biomes?: string;
   description?: string;
   anecdote?: string;
+  details?: Partial<Record<SpeciesDetailKey, string>>;
 }
 
 export const SPECIES_INFO: Record<string, SpeciesInfo> = {
@@ -61,18 +62,41 @@ export const SPECIES_INFO: Record<string, SpeciesInfo> = {
     anecdote: "Les cerfs mulets n'ont pas d'incisives ; leur palais est simplement très solide.",
   },
   'mouflon-dall': {
-    // Habitat et horaires donnés par le joueur ; le reste de la fiche est à recopier depuis l'encyclopédie.
-    energy: {},
+    // Recopié de l'encyclopédie du jeu (captures du joueur).
+    animalClass: 5,
+    trophyType: 'Cornes',
+    trophyRange: [105, 265],
+    energy: { balle: [1200, 3500], grenaille: null, chevrotineM: [20, 40], slug: [500, 2000], fleche: [65, 300] },
+    activity: 'Diurne',
+    activityNote: 'Actif pendant la journée',
     routine: [
-      { hour: 5, need: 'manger' },
-      { hour: 9, need: 'boire' },
-      { hour: 13, need: 'inconnu' },
-      { hour: 17, need: 'manger' },
-      { hour: 21, need: 'inconnu' },
+      { hour: 4, need: 'manger' },
+      { hour: 7, need: 'boire' },
+      { hour: 10, need: 'dormir' },
+      { hour: 14, need: 'manger' },
+      { hour: 19, need: 'boire' },
+      { hour: 22, need: 'dormir' },
     ],
-    biomes:
-      'Exclusivement en altitude, dans les zones rocheuses et montagneuses : crêtes, falaises, plateaux enneigés ou rocailleux. Pas dans les forêts denses ni au fond des vallées.',
-    activityNote: 'Boit de 9 h à 13 h autour des lacs et ruisseaux de montagne : le plus facile pour le repérer à découvert. Mange sur les versants herbeux et rocheux.',
+    senses: { vue: 'Excellent(e)', odorat: 'Bon(ne)', ouie: 'Moyen(ne)' },
+    biomes: 'Chaînes montagneuses avec des falaises accidentées et escarpées. Ils descendent dans les prairies pour se nourrir.',
+    description:
+      "La sous-espèce nordique du mouflon nord-américain, qui est en moyenne moins susceptible d'être gris clair ou de couleur crème.",
+    anecdote:
+      "Le mouflon de Dall est nommé d'après William Healey Dall, un scientifique qui a dirigé des études sur les moutons en Alaska à la fin des années 1800. Les mouflons nord-américains peuvent former des groupes de nurseries avec une ou deux brebis qui surveillent les agneaux pendant que les autres mères se nourrissent.",
+    details: {
+      sexDifferences:
+        'Les béliers sont significativement plus grands et peuvent peser deux fois plus lourd que les brebis. Ils ont des cornes courbées avec lesquelles ils se battent contre d’autres béliers.',
+      variants: 'Les adultes ont des cornes courbées.',
+      coats: 'Blanc, parfois de couleur crème et grise.',
+      strengths: 'Très agile en terrain accidenté.',
+      weaknesses: 'Habitats dégagés.',
+      behavior: 'Altitudinal : alterne entre hautes et basses altitudes.',
+      social: 'Groupes surtout de femelles ; groupes de mâles seulement ; mâles solitaires.',
+      maxSize: '110 cm',
+      maxLength: '180 cm',
+      maxWeight: '135,0 kg',
+      maxSpeed: '48 km/h',
+    },
   },
 };
 
@@ -86,7 +110,12 @@ export function getSpeciesInfo(id: string | undefined, sheets?: Record<string, S
   if (!mine) return base;
   if (!base) return mine;
   const defined = <T extends object>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
-  return { ...base, ...defined(mine), energy: { ...base.energy, ...defined(mine.energy) } };
+  return {
+    ...base,
+    ...defined(mine),
+    energy: { ...base.energy, ...defined(mine.energy) },
+    details: base.details || mine.details ? { ...base.details, ...defined(mine.details ?? {}) } : undefined,
+  };
 }
 
 /** Une fiche a-t-elle au moins une information utile ? */

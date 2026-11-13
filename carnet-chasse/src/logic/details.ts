@@ -111,6 +111,10 @@ export const MEASUREMENT_PRESETS = [
   'Circonférence à la base',
   'Longueur des cors typiques',
   'Écart extérieur',
+  'Longueur de corne',
+  'Circonférence au 1er quart',
+  'Circonférence au 2e quart',
+  'Circonférence au 3e quart',
 ];
 
 /** « 9m49s », « 9 min 49 s », « 9:49 », « 49s », « 9m » → secondes. */
