@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { Select } from '../../components/Select';
-import { Button, Card, Chip, Empty, Field, FieldRow, Label, Screen, SectionTitle, styles } from '../../components/ui';
+import { Button, Card, Chip, ChipRow, Empty, Field, FieldRow, Label, Screen, SectionTitle, styles } from '../../components/ui';
 import { getSpecies } from '../../data/game';
 import { ENERGY_LABELS, getSpeciesInfo, SPECIES_INFO } from '../../data/speciesInfo';
 import { ROUTINE_ICONS, ROUTINE_LABELS } from '../../logic/schedule';
@@ -159,7 +159,13 @@ export default function FicheScreen() {
       <Text style={styles.muted}>
         Avec ces deux âges, l&apos;appli trouve seule si un animal est mûr et s&apos;il est dans son avant-dernière ou sa dernière année.
       </Text>
-      <Select label="Type de trophée" value={trophyType} onChange={setTrophyType} options={TROPHY_TYPES} customKey="trophyType" placeholder="Bois" />
+      <Label>Type de trophée</Label>
+      <ChipRow>
+        {[...TROPHY_TYPES, ...(trophyType && !TROPHY_TYPES.includes(trophyType) ? [trophyType] : [])].map((t) => (
+          <Chip key={t} label={t} selected={trophyType === t} onPress={() => setTrophyType(trophyType === t ? '' : t)} />
+        ))}
+      </ChipRow>
+      <Select label="Autre type (facultatif)" value={TROPHY_TYPES.includes(trophyType) ? '' : trophyType} onChange={setTrophyType} options={[]} customKey="trophyType" placeholder="Saisir un autre type…" />
 
       <SectionTitle>Routine quotidienne</SectionTitle>
       <Select label="Activité" value={activity} onChange={setActivity} options={ACTIVITIES} customKey="activity" placeholder="Crépusculaire" />

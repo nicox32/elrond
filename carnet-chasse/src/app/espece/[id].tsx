@@ -2,7 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import { HuntRow } from '../../components/HuntRow';
-import { Button, Card, Empty, Screen, SectionTitle, styles, ClassTile } from '../../components/ui';
+import { Button, Card, Chip, ChipRow, ClassTile, Empty, Screen, SectionTitle, styles } from '../../components/ui';
 import { CATEGORY_LABELS, getReserve, getSpecies, SUGGESTED_CALIBERS, SUGGESTED_DISTANCE } from '../../data/game';
 import { ammoForAnimalClass, formatClassRange } from '../../data/armory';
 import { ENERGY_LABELS, formatRange, getSpeciesInfo, routineSlots, speciesClass } from '../../data/speciesInfo';
@@ -26,7 +26,7 @@ function Line({ label, value }: { label: string; value?: string }) {
 
 export default function EspeceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state } = useCarnet();
+  const { state, saveSheet } = useCarnet();
   const species = getSpecies(id);
   if (!species) {
     return (
@@ -125,6 +125,18 @@ export default function EspeceScreen() {
 
           <Card>
             <Line label="Type de trophée" value={info.trophyType} />
+            <ChipRow>
+              {['Bois', 'Cornes'].map((t) => (
+                <Chip
+                  key={t}
+                  label={t}
+                  selected={info.trophyType === t}
+                  onPress={() =>
+                    saveSheet(species.id, { ...(state.speciesSheets[species.id] ?? { energy: {} }), trophyType: t })
+                  }
+                />
+              ))}
+            </ChipRow>
             <Line label="Rangs de trophée estimés" value={info.trophyRange ? `${info.trophyRange[0]} – ${info.trophyRange[1]}` : undefined} />
             <Line label="Vue" value={info.senses?.vue} />
             <Line label="Odorat" value={info.senses?.odorat} />
