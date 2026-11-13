@@ -678,3 +678,24 @@ test('fiche du mouflon de Dall (encyclopédie) et rapport de chasse', async () =
   const s = parseState({ speciesSheets: { 'mouflon-dall': { energy: {}, details: { maxSpeed: '48 km/h', bad: 'x', social: '' } } } });
   assert.deepEqual(s!.speciesSheets['mouflon-dall'].details, { maxSpeed: '48 km/h' });
 });
+
+test("fiche de l'antilocapre des Rocheuses et rapport de chasse", async () => {
+  const { getSpeciesInfo, checkEnergy } = await import('../src/data/speciesInfo.ts');
+  const { getSpecies } = await import('../src/data/game.ts');
+  const { computeNetWeight, estimateMeatPrice } = await import('../src/logic/details.ts');
+  const { advise } = await import('../src/logic/management.ts');
+  const { classFits, parseClassRange } = await import('../src/data/armory.ts');
+  assert.equal(getSpecies('pronghorn')?.name, 'Antilocapre des Rocheuses');
+  const info = getSpeciesInfo('pronghorn')!;
+  assert.equal(info.animalClass, 4);
+  assert.deepEqual(info.trophyRange, [135, 237]);
+  assert.equal(checkEnergy(info, 'balle', 3200), 'forte');
+  assert.equal(info.details?.maxSpeed, '97 km/h');
+  // Grande Swift 3-5 sur un animal de classe 4 : adaptée.
+  assert.equal(classFits(4, parseClassRange('3-5')), true);
+  // 38,11 − 0 − 2,81 − 15,24 = 20,06 kg × 6,0 = 120,36 → 120 en jeu.
+  const hunt = { weightKg: 38.11, timeDegradationKg: 0, shotDegradationKg: 2.81, butcherWasteKg: 15.24, pricePerKg: 6 };
+  assert.equal(computeNetWeight(hunt), 20.06);
+  assert.equal(estimateMeatPrice(hunt), 120);
+  assert.equal(advise({ sex: 'male', age: 'adulte', conditionPct: 24.7 }).verdict, 'eliminer');
+});

@@ -61,6 +61,45 @@ export const SPECIES_INFO: Record<string, SpeciesInfo> = {
       "La sous-espèce de cerf mulet la plus répandue, dont la population s'étend des régions septentrionales des États américains du sud-ouest aux provinces du nord du Canada.",
     anecdote: "Les cerfs mulets n'ont pas d'incisives ; leur palais est simplement très solide.",
   },
+  pronghorn: {
+    // Recopié de l'encyclopédie du jeu (captures du joueur).
+    animalClass: 4,
+    trophyType: 'Cornes',
+    trophyRange: [135, 237],
+    energy: { balle: [1000, 3000], grenaille: null, chevrotineM: [20, 45], slug: [400, 1500], fleche: [50, 300] },
+    activity: 'Crépusculaire',
+    activityNote: 'Actif le soir et le matin',
+    routine: [
+      { hour: 4, need: 'manger' },
+      { hour: 7, need: 'boire' },
+      { hour: 10, need: 'dormir' },
+      { hour: 14, need: 'manger' },
+      { hour: 19, need: 'boire' },
+      { hour: 22, need: 'dormir' },
+    ],
+    senses: { vue: 'Excellent(e)', odorat: 'Bon(ne)', ouie: 'Moyen(ne)' },
+    biomes: 'Prairies, brousses, déserts.',
+    description:
+      "Cette sous-espèce d'antilocapre vit dans les contreforts des montagnes Rocheuses, ce qui n'est pas vraiment pour leur plaire en raison de la nature accidentée de cet environnement.",
+    anecdote:
+      "Les antilocapres peuvent ajuster l'angle de leurs poils. Ils sont aussi capables de faire remonter la nourriture de leur estomac jusque dans leur bouche pour la mâcher plusieurs fois.",
+    details: {
+      sexDifferences:
+        'Les mâles sont légèrement plus grands et plus lourds que les femelles. Les femelles ont des cornes plus petites, parfois à peine visibles ; les mâles ont de grandes cornes en forme de lyre, un grand masque noir des yeux jusqu’au museau et des taches noires sur le cou.',
+      variants: 'Les adultes sont non seulement plus rapides, mais aussi beaucoup plus endurants.',
+      coats: 'De brun clair à marron foncé.',
+      strengths: 'Haute vigilance.',
+      weaknesses: 'Préférence pour les habitats dégagés.',
+      otherNames: 'Antilope d’Amérique des Rocheuses ; Pronghorn des Rocheuses.',
+      equipment: 'Sac rattling Big Bucks par Primos.',
+      behavior: 'Migrateur/territorial : ne reste jamais sur un même territoire et protège chacun d’entre eux.',
+      social: 'Groupes surtout de femelles ; mâles solitaires ; groupes de mâles seulement.',
+      maxSize: '104 cm',
+      maxLength: '140 cm',
+      maxWeight: '70,0 kg',
+      maxSpeed: '97 km/h',
+    },
+  },
   'mouflon-dall': {
     // Recopié de l'encyclopédie du jeu (captures du joueur).
     animalClass: 5,

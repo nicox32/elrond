@@ -54,7 +54,7 @@ export const ORGAN_LABELS: Record<OrganId, string> = {
 };
 
 /** Choix rapides vus en jeu ; chaque champ accepte aussi un texte libre. */
-export const WEATHER_CHOICES = ['Ensoleillé', 'Partiellement nuageux', 'Nuageux', 'Pluie', 'Brouillard', 'Neige'];
+export const WEATHER_CHOICES = ['Ensoleillé', 'Dégagé', 'Partiellement nuageux', 'Nuageux', 'Pluie', 'Brouillard', 'Neige'];
 /** Classement de chasse, du meilleur (S++ : prélèvement parfait) au pire (E : carcasse saccagée). */
 export const RATING_CHOICES = ['S++', 'S+', 'S', 'A++', 'A+', 'A', 'B', 'C', 'D', 'E'];
 
@@ -112,6 +112,7 @@ export const MEASUREMENT_PRESETS = [
   'Longueur des cors typiques',
   'Écart extérieur',
   'Longueur de corne',
+  'Écart de pointe à pointe',
   'Circonférence au 1er quart',
   'Circonférence au 2e quart',
   'Circonférence au 3e quart',

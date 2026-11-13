@@ -58,7 +58,7 @@ export const SPECIES: Species[] = [
   { id: 'lievre', name: "Lièvre d'Amérique", gameName: 'Snowshoe Hare', reserveId: 'new-laurentia', category: 'petit', animalClass: 1, alsoIn: ['headquarters'] },
   { id: 'cerf-virginie', name: 'Cerf de Virginie du Nord-Ouest', gameName: 'Northern White-tailed Deer', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
   { id: 'bison', name: 'Bison des bois', gameName: 'Wood Bison', reserveId: 'new-laurentia', category: 'grand', animalClass: 8 },
-  { id: 'pronghorn', name: "Antilope d'Amérique", gameName: 'Rocky Mountain Pronghorn', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
+  { id: 'pronghorn', name: 'Antilocapre des Rocheuses', gameName: 'Rocky Mountain Pronghorn', reserveId: 'new-laurentia', category: 'moyen', animalClass: 4 },
   { id: 'sanglier', name: "Sanglier d'Europe centrale", gameName: 'Central European Boar', reserveId: 'new-laurentia', category: 'moyen', animalClass: 5 },
   // Kilimaya Reserve
   { id: 'koudou', name: 'Grand koudou', gameName: 'Greater Kudu', reserveId: 'kilimaya', category: 'grand', blurb: 'Grande antilope aux cornes torsadées.' },

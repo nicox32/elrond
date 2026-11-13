@@ -205,6 +205,7 @@ export const SPECIES_DETAIL_FIELDS = [
   { key: 'strengths', label: 'Forces' },
   { key: 'weaknesses', label: 'Faiblesses' },
   { key: 'otherNames', label: 'Autres dénominations' },
+  { key: 'equipment', label: 'Équipement recommandé' },
   { key: 'behavior', label: 'Comportement' },
   { key: 'social', label: 'Structure sociale' },
   { key: 'maxSize', label: 'Taille max.' },
