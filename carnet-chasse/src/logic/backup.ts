@@ -387,6 +387,7 @@ export function parseState(raw: unknown): CarnetState | null {
     customChoices,
     prudent: raw.prudent === true,
     medianGap: raw.medianGap === 5 || raw.medianGap === 15 ? raw.medianGap : 10,
+    cullMethod: raw.cullMethod === 'detaillee' ? 'detaillee' : 'etapes',
     ownedWeaponIds,
     lastReserveId: oneOf(raw.lastReserveId, RESERVE_IDS),
     lastWeaponId: str(raw.lastWeaponId),

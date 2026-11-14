@@ -126,7 +126,7 @@ test('affichage des scores', async () => {
 
 test('calculateur : stratégie âge + condition', async () => {
   const { advise } = await import('../src/logic/management.ts');
-  const v = (o: object) => advise(o as never).verdict;
+  const v = (o: object) => advise({ method: 'detaillee', ...o } as never).verdict;
   // Jeunes : priorité n°1 sous 50 % (40 % en mode prudent)
   assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 45 }), 'eliminer');
   assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 45, youngCutoff: 40 }), 'epargner');
@@ -137,12 +137,12 @@ test('calculateur : stratégie âge + condition', async () => {
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 30 }), 'eliminer');
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 40 }), 'epargner');
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 70 }), 'epargner');
-  assert.match(advise({ sex: 'male', age: 'adulte', conditionPct: 85 } as never).title, /haut fitness/);
+  assert.match(advise({ method: 'detaillee', sex: 'male', age: 'adulte', conditionPct: 85 } as never).title, /haut fitness/);
   // Femelles : très faibles (sous 40 %) ou en dernière année
   assert.equal(v({ sex: 'femelle', age: 'adulte', conditionPct: 20 }), 'eliminer');
   assert.equal(v({ sex: 'femelle', age: 'adulte', conditionPct: 45 }), 'epargner');
   // Âgés
-  assert.match(advise({ sex: 'male', age: 'mur', conditionPct: 85 } as never).reason, /haut fitness/);
+  assert.match(advise({ method: 'detaillee', sex: 'male', age: 'mur', conditionPct: 85 } as never).reason, /haut fitness/);
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 31.7 }), 'eliminer');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 45 }), 'surveiller');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 45, lifeStage: 'derniere' }), 'eliminer');
@@ -282,7 +282,7 @@ test('troupeau : verdicts, résumé, un seul mâle par session', async () => {
       A({ id: 'pris', sex: 'male', age: 'adulte', stars: 1, conditionPct: 20, status: 'preleve', takenAt: '2026-11-11T09:00:00' }),
     ],
   };
-  const s = summarizeHerd(herd as never);
+  const s = summarizeHerd(herd as never, { method: 'detaillee' });
   assert.equal(s.alive, 4);
   assert.equal(s.males, 3);
   assert.equal(s.females, 1);
@@ -290,10 +290,10 @@ test('troupeau : verdicts, résumé, un seul mâle par session', async () => {
   assert.equal(s.byVerdict.eliminer, 1);
   assert.equal(s.byVerdict.trophee, 1);
   assert.equal(s.byVerdict.epargner, 2);
-  assert.equal(adviceFor(herd.animals[0] as never).verdict, 'eliminer');
+  assert.equal(adviceFor(herd.animals[0] as never, { method: 'detaillee' }).verdict, 'eliminer');
   assert.equal(malesTakenToday(herd as never, now), 1);
   assert.equal(malesTakenToday(herd as never, new Date('2026-11-12T08:00:00')), 0);
-  const order = sortAnimals(herd.animals as never).map((a: { id: string }) => a.id);
+  const order = sortAnimals(herd.animals as never, { method: 'detaillee' }).map((a: { id: string }) => a.id);
   assert.deepEqual(order.slice(0, 2), ['vieux', 'beau']);
   assert.equal(order[4], 'pris');
   assert.equal(daysSince(herd.lastVisit, now), 2);
@@ -520,17 +520,17 @@ test('calculateur : âge en années et espérance de vie', async () => {
   assert.equal(isMatureByAge(6, 7), false);
   assert.equal(isMatureByAge(6, undefined), undefined);
   // Âgé en bonne forme : l'âge seul fait passer en dernière année → à prélever pour le trophée.
-  const old = advise({ sex: 'male', age: 'mur', conditionPct: 60, ageYears: 12, lifespanYears: 13 });
+  const old = advise({ method: 'detaillee', sex: 'male', age: 'mur', conditionPct: 60, ageYears: 12, lifespanYears: 13 });
   assert.equal(old.verdict, 'trophee');
   const { explain } = await import('../src/logic/management.ts');
-  assert.ok(explain({ sex: 'male', age: 'mur', conditionPct: 60, ageYears: 12, lifespanYears: 13 }, old.verdict).some((t) => /reste environ 1 an à vivre, soit 3 jours en jeu/.test(t)));
-  assert.ok(explain({ sex: 'male', age: 'mur', conditionPct: 85, ageYears: 5, lifespanYears: 13 }, 'epargner').some((t) => /dans environ 21 jours en jeu/.test(t)));
+  assert.ok(explain({ method: 'detaillee', sex: 'male', age: 'mur', conditionPct: 60, ageYears: 12, lifespanYears: 13 }, old.verdict).some((t) => /reste environ 1 an à vivre, soit 3 jours en jeu/.test(t)));
+  assert.ok(explain({ method: 'detaillee', sex: 'male', age: 'mur', conditionPct: 85, ageYears: 5, lifespanYears: 13 }, 'epargner').some((t) => /dans environ 21 jours en jeu/.test(t)));
   // L'âge calculé l'emporte sur un moment de vie saisi à la main.
-  assert.equal(advise({ sex: 'male', age: 'mur', conditionPct: 60, lifeStage: 'derniere', ageYears: 5, lifespanYears: 13 }).verdict, 'epargner');
+  assert.equal(advise({ method: 'detaillee', sex: 'male', age: 'mur', conditionPct: 60, lifeStage: 'derniere', ageYears: 5, lifespanYears: 13 }).verdict, 'epargner');
   // Femelle : dernière année d'après l'âge.
-  assert.equal(advise({ sex: 'femelle', age: 'mur', ageYears: 13, lifespanYears: 13 }).verdict, 'eliminer');
+  assert.equal(advise({ method: 'detaillee', sex: 'femelle', age: 'mur', ageYears: 13, lifespanYears: 13 }).verdict, 'eliminer');
   // Sans espérance de vie, l'âge est seulement rappelé.
-  assert.ok(explain({ sex: 'male', age: 'jeune', conditionPct: 30, ageYears: 2 }, 'eliminer').includes('⏳ 2 ans.'));
+  assert.ok(explain({ method: 'detaillee', sex: 'male', age: 'jeune', conditionPct: 30, ageYears: 2 }, 'eliminer').includes('⏳ 2 ans.'));
   const s = parseState({ speciesSheets: { 'cerf-mulet': { energy: {}, matureAgeYears: 7, lifespanYears: 'x' } }, herds: [] });
   assert.equal(s!.speciesSheets['cerf-mulet'].matureAgeYears, 7);
   assert.equal(s!.speciesSheets['cerf-mulet'].lifespanYears, undefined);
@@ -559,7 +559,7 @@ test('calculateur : ratio de vie et médiane du troupeau', async () => {
 test('calculateur : seuils calés sur la médiane du troupeau', async () => {
   const { advise, explain } = await import('../src/logic/management.ts');
   const { adviceFor } = await import('../src/logic/herds.ts');
-  const v = (o: object) => advise(o as never).verdict;
+  const v = (o: object) => advise({ method: 'detaillee', ...o } as never).verdict;
   const herd = { herdMedianPct: 70, herdSampleSize: 6, medianGap: 10 };
   // Adulte à 55 % : « bon » en seuils fixes, mais faible pour un troupeau à 70 % de médiane.
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 55 }), 'epargner');
@@ -569,7 +569,7 @@ test('calculateur : seuils calés sur la médiane du troupeau', async () => {
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 56, ...herd, medianGap: 15 }), 'epargner');
   // Pas assez d'animaux notés : seuils fixes.
   assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 55, ...herd, herdSampleSize: 4 }), 'epargner');
-  assert.ok(explain({ sex: 'male', age: 'adulte', conditionPct: 55, ...herd, herdSampleSize: 4 }, 'epargner').some((t) => t.includes('il en faut 5')));
+  assert.ok(explain({ method: 'detaillee', sex: 'male', age: 'adulte', conditionPct: 55, ...herd, herdSampleSize: 4 }, 'epargner').some((t) => t.includes('il en faut 5')));
   // Jeunes, âgés et femelles suivent aussi la médiane ; le haut fitness n'est jamais « faible ».
   assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 58, ...herd }), 'eliminer');
   assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 58, ...herd }), 'eliminer');
@@ -580,8 +580,8 @@ test('calculateur : seuils calés sur la médiane du troupeau', async () => {
   const animals = [62, 70, 72, 75, 80].map((c, i) => ({ id: `m${i}`, label: '', sex: 'male', age: 'adulte', conditionPct: c, status: 'vivant', lastSeen: '' }));
   const weak = { id: 'w', label: '', sex: 'male', age: 'adulte', conditionPct: 50, status: 'vivant', lastSeen: '' };
   const h = { animals: [...animals, weak] };
-  assert.equal(adviceFor(weak as never, { herd: h as never }).verdict, 'eliminer');
-  assert.equal(adviceFor(animals[0] as never, { herd: h as never }).verdict, 'epargner');
+  assert.equal(adviceFor(weak as never, { herd: h as never, method: 'detaillee' }).verdict, 'eliminer');
+  assert.equal(adviceFor(animals[0] as never, { herd: h as never, method: 'detaillee' }).verdict, 'epargner');
 });
 
 test('vente : seulement la viande intacte × prix au kilo', async () => {
@@ -698,4 +698,31 @@ test("fiche de l'antilocapre des Rocheuses et rapport de chasse", async () => {
   assert.equal(computeNetWeight(hunt), 20.06);
   assert.equal(estimateMeatPrice(hunt), 120);
   assert.equal(advise({ sex: 'male', age: 'adulte', conditionPct: 24.7 }).verdict, 'eliminer');
+});
+
+test('calculateur : tri par étapes (0-50 tous âges, 50-70 sans jeunes, 85-100 mûrs)', async () => {
+  const { advise, cullStep } = await import('../src/logic/management.ts');
+  const v = (o: object) => advise(o as never).verdict;
+  // 1er tri : tri strict, tous âges.
+  assert.equal(cullStep('male', 'jeune', 30), 1);
+  assert.equal(cullStep('male', 'mur', 49), 1);
+  assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 30 }), 'eliminer');
+  assert.equal(v({ sex: 'femelle', age: 'adulte', conditionPct: 40 }), 'eliminer');
+  // 2e tri : tri adulte, sans les jeunes.
+  assert.equal(cullStep('male', 'adulte', 60), 2);
+  assert.equal(cullStep('male', 'mur', 70), 2);
+  assert.equal(cullStep('male', 'jeune', 60), undefined);
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 60 }), 'possible');
+  assert.equal(v({ sex: 'male', age: 'jeune', conditionPct: 60 }), 'epargner');
+  // 3e réglage : trophée, mâles mûrs seulement.
+  assert.equal(cullStep('male', 'mur', 90), 3);
+  assert.equal(cullStep('male', 'adulte', 90), undefined);
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 90 }), 'trophee');
+  // Entre les tris : à garder.
+  assert.equal(v({ sex: 'male', age: 'mur', conditionPct: 78 }), 'epargner');
+  assert.equal(v({ sex: 'male', age: 'adulte' }), 'libre');
+  // La stratégie détaillée reste disponible.
+  assert.equal(v({ sex: 'male', age: 'adulte', conditionPct: 60, method: 'detaillee' }), 'epargner');
+  assert.equal(parseState({ cullMethod: 'detaillee' })!.cullMethod, 'detaillee');
+  assert.equal(parseState({})!.cullMethod, 'etapes');
 });

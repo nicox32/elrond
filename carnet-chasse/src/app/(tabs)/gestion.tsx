@@ -13,6 +13,8 @@ import {
   type AgeClass,
   advise,
   DISTANCE_GOLDEN_RULE,
+  CULL_STEPS,
+  cullStep,
   DISTANCE_RULES,
   MEDIAN_GAPS,
   scopeSetting,
@@ -37,7 +39,8 @@ const VERDICT_STYLE: Record<Verdict, { color: string; bg: string; icon: string }
 };
 
 export default function GestionScreen() {
-  const { state, setPrudent, setMedianGap } = useCarnet();
+  const { state, setPrudent, setMedianGap, setCullMethod } = useCarnet();
+  const steps = state.cullMethod === 'etapes';
   const [sex, setSex] = useState<Sex>('male');
   const [age, setAge] = useState<AgeClass>('adulte');
   const [condition, setCondition] = useState('');
@@ -71,13 +74,14 @@ export default function GestionScreen() {
     conditionPct: parseNumber(condition),
     lifeStage: showStage ? stage : 'normal',
     youngCutoff: cutoff,
+    method: state.cullMethod,
     ...herdFields,
     ageYears: years,
     lifespanYears,
   });
   const v = VERDICT_STYLE[advice.verdict];
   const details = explain(
-    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears, ...herdFields },
+    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears, method: state.cullMethod, ...herdFields },
     advice.verdict,
   );
 
@@ -95,6 +99,11 @@ export default function GestionScreen() {
 
       <SectionTitle>Tirer ou épargner ?</SectionTitle>
       <Card>
+        <Label>Méthode</Label>
+        <ChipRow>
+          <Chip label="Tri par étapes" selected={steps} onPress={() => setCullMethod('etapes')} />
+          <Chip label="Stratégie détaillée" selected={!steps} onPress={() => setCullMethod('detaillee')} />
+        </ChipRow>
         {state.herds.length ? (
           <Select
             label="Comparer à un troupeau (facultatif)"
@@ -113,7 +122,7 @@ export default function GestionScreen() {
             options={state.herds.map((h) => ({ value: h.id, label: h.name }))}
           />
         ) : null}
-        {herd ? (
+        {herd && !steps ? (
           <>
             <Label>Faible si sous la médiane de</Label>
             <ChipRow>
@@ -192,7 +201,7 @@ export default function GestionScreen() {
             placeholder="ex. 35"
           />
         </View>
-        {sex === 'male' && age === 'jeune' ? (
+        {!steps && sex === 'male' && age === 'jeune' ? (
           <ChipRow>
             <Chip
               label={state.prudent ? '✓ Mode prudent (seuil 40 %)' : 'Mode prudent (seuil 40 %)'}
@@ -209,6 +218,37 @@ export default function GestionScreen() {
           </Text>
           <Text style={styles.text}>{advice.reason}</Text>
         </View>
+        {steps ? (
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
+            {CULL_STEPS.map((st) => {
+              const on = cullStep(sex, age, parseNumber(condition)) === st.id;
+              return (
+                <View
+                  key={st.id}
+                  style={{
+                    flex: 1,
+                    padding: 8,
+                    borderRadius: 4,
+                    borderWidth: 1,
+                    borderColor: on ? colors.paper : colors.border,
+                    backgroundColor: on ? colors.paper : colors.surface,
+                    gap: 2,
+                  }}
+                >
+                  <Text style={{ color: on ? colors.onPaper : colors.textMuted, fontFamily: fonts.heading, fontSize: 13 }}>
+                    {st.id}. {st.name.toUpperCase()}
+                  </Text>
+                  <Text style={{ color: on ? colors.onPaper : colors.text, fontFamily: fonts.display, fontSize: 18 }}>
+                    {st.range[0]}–{st.range[1]} %
+                  </Text>
+                  <Text style={{ color: on ? colors.onPaper : colors.textMuted, fontFamily: fonts.body, fontSize: 11, lineHeight: 14 }}>
+                    {st.ages.map((x) => (x === 'mur' ? 'Mature' : x === 'adulte' ? 'Adulte' : 'Jeune')).join(', ')}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ) : null}
         {details.length ? (
           <View style={{ marginTop: 10, gap: 6 }}>
             {details.map((t) => (

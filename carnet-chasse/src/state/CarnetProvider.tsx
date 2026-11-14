@@ -36,6 +36,7 @@ interface CarnetContextValue {
   removeChoice: (key: string, value: string) => void;
   setPrudent: (on: boolean) => void;
   setMedianGap: (gap: number) => void;
+  setCullMethod: (m: 'etapes' | 'detaillee') => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -233,6 +234,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
 
   const setPrudent = useCallback((on: boolean) => setState((s) => ({ ...s, prudent: on })), []);
   const setMedianGap = useCallback((gap: number) => setState((s) => ({ ...s, medianGap: gap })), []);
+  const setCullMethod = useCallback((m: 'etapes' | 'detaillee') => setState((s) => ({ ...s, cullMethod: m })), []);
 
   const value = useMemo(
     () => ({
@@ -264,6 +266,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       removeChoice,
       setPrudent,
       setMedianGap,
+      setCullMethod,
     }),
     [
       state,
@@ -294,6 +297,7 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       removeChoice,
       setPrudent,
       setMedianGap,
+      setCullMethod,
     ],
   );
 

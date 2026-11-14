@@ -103,6 +103,7 @@ export default function TroupeauxScreen() {
             youngCutoff: state.prudent ? 40 : 50,
             lifespanYears: getSpeciesInfo(h.speciesId, state.speciesSheets)?.lifespanYears,
             medianGap: state.medianGap,
+            method: state.cullMethod,
           });
           const days = daysSince(h.lastVisit);
           return (

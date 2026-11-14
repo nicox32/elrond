@@ -168,7 +168,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
   const { state } = useCarnet();
   const lifespanYears = getSpeciesInfo(speciesId, state.speciesSheets)?.lifespanYears;
   const herd = state.herds.find((h) => h.id === herdId);
-  const opts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears, herd, medianGap: state.medianGap };
+  const opts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears, herd, medianGap: state.medianGap, method: state.cullMethod };
   const advice = adviceFor(animal, opts);
   const life = lifeFromAge(animal.ageYears, lifespanYears);
   const alive = animal.status === 'vivant';
@@ -231,6 +231,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
               conditionPct: animal.conditionPct,
               ageYears: animal.ageYears,
               lifespanYears,
+              method: state.cullMethod,
               ...herdInputs(animal.sex, opts),
             },
             advice.verdict,
@@ -304,7 +305,7 @@ export default function HerdScreen() {
 
   const species = getSpecies(herd.speciesId);
   const info = getSpeciesInfo(herd.speciesId, state.speciesSheets);
-  const adviceOpts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears: info?.lifespanYears, herd, medianGap: state.medianGap };
+  const adviceOpts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears: info?.lifespanYears, herd, medianGap: state.medianGap, method: state.cullMethod };
   const s = summarizeHerd(herd, adviceOpts);
   const takenToday = malesTakenToday(herd);
   const allTakenToday = animalsTakenToday(herd);

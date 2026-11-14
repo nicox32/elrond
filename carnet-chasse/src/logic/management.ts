@@ -32,6 +32,62 @@ export interface AnimalInput {
   herdSampleSize?: number;
   /** Écart à la médiane (points) sous lequel un animal est « faible du troupeau » : 5, 10 ou 15. */
   medianGap?: number;
+  /** Méthode du calculateur : tri par étapes (défaut) ou stratégie détaillée. */
+  method?: CullMethod;
+}
+
+export type CullMethod = 'etapes' | 'detaillee';
+
+/** Les trois tris, dans l'ordre où on les applique. */
+export const CULL_STEPS = [
+  { id: 1, name: 'Tri strict', range: [0, 50] as [number, number], ages: ['jeune', 'adulte', 'mur'] as AgeClass[], goal: 'Les plus faibles, de tous âges' },
+  { id: 2, name: 'Tri adulte', range: [50, 70] as [number, number], ages: ['adulte', 'mur'] as AgeClass[], goal: 'Les moyens, sans les jeunes' },
+  { id: 3, name: 'Trophée', range: [85, 100] as [number, number], ages: ['mur'] as AgeClass[], goal: 'Les plus beaux mâles : à garder ou à viser comme trophées' },
+] as const;
+
+/** Tri (1, 2 ou 3) dans lequel tombe l'animal, ou undefined s'il n'est dans aucun. */
+export function cullStep(sex: Sex, age: AgeClass, c: number | undefined): 1 | 2 | 3 | undefined {
+  if (c === undefined) return undefined;
+  if (c < 50) return 1;
+  if (c <= 70 && age !== 'jeune') return 2;
+  if (c >= 85 && age === 'mur' && sex === 'male') return 3;
+  return undefined;
+}
+
+function adviseSteps(a: AnimalInput): Advice {
+  const c = a.conditionPct;
+  if (c === undefined) return ask(a.age === 'jeune' ? 'Jeune' : a.age === 'adulte' ? 'Adulte' : 'Âgé');
+  const step = cullStep(a.sex, a.age, c);
+  const who = a.sex === 'femelle' ? 'Femelle' : a.age === 'jeune' ? 'Jeune' : a.age === 'adulte' ? 'Adulte' : 'Mâle mûr';
+  if (step === 1) {
+    return {
+      verdict: 'eliminer',
+      title: '1er tri – tri strict : à prélever',
+      reason: `${who} à ${c} % : dans le tri strict (0 à 50 %, tous âges). Ce sont les plus faibles : retirez-les en premier.`,
+    };
+  }
+  if (step === 2) {
+    return {
+      verdict: 'possible',
+      title: '2e tri – tri adulte : à prélever ensuite',
+      reason: `${who} à ${c} % : dans le tri adulte (50 à 70 %, adultes et mûrs, sans les jeunes). À prélever une fois le tri strict fini.`,
+    };
+  }
+  if (step === 3) {
+    return {
+      verdict: 'trophee',
+      title: '3e réglage – trophée',
+      reason: `Mâle mûr à ${c} % : parmi les plus beaux (85 à 100 %). Gardez-le pour ses gènes, ou visez-le comme trophée.`,
+    };
+  }
+  return {
+    verdict: 'epargner',
+    title: 'Hors tri : à garder',
+    reason:
+      a.age === 'jeune'
+        ? `Jeune à ${c} % : au-dessus de 50 %, les jeunes ne sont pas dans les tris suivants. Laissez-le grandir.`
+        : `${who} à ${c} % : dans aucun des trois tris (0-50 %, 50-70 %, 85-100 % mûrs). À garder.`,
+  };
 }
 
 /** Il faut au moins 5 animaux notés (même sexe) pour que la médiane du troupeau remplace les seuils fixes. */
@@ -128,9 +184,17 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
 
   const ref = herdReference(a);
   if (c !== undefined) {
-    const weak = ref ? c <= ref.median - ref.gap : c < ADULT_LOW_PCT;
-    const level =
-      c > HIGH_FITNESS_PCT
+    const stepsMode = (a.method ?? 'etapes') === 'etapes';
+    const weak = stepsMode ? c < 50 : ref ? c <= ref.median - ref.gap : c < ADULT_LOW_PCT;
+    const level = stepsMode
+      ? c < 50
+        ? 'fitness faible'
+        : c <= 70
+          ? 'fitness moyen'
+          : c >= 85
+            ? 'haut fitness'
+            : 'bon fitness'
+      : c > HIGH_FITNESS_PCT
         ? 'haut fitness'
         : ref
           ? weak
@@ -144,7 +208,7 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
               ? 'fitness moyen'
               : 'fitness faible';
     const ceiling = male
-      ? c > HIGH_FITNESS_PCT
+      ? c > HIGH_FITNESS_PCT || (stepsMode && c >= 85)
         ? ' Une fois mûr, il peut atteindre 4 ou 5 étoiles.'
         : weak
           ? ' Même mûr, son trophée restera petit.'
@@ -159,7 +223,7 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
     );
   }
 
-  if (a.herdMedianPct !== undefined) {
+  if (a.herdMedianPct !== undefined && a.method === 'detaillee') {
     out.push(
       ref
         ? `📐 Seuils calés sur ce troupeau : faible à ${pct(ref.median - ref.gap)} ou moins (médiane ${pct(ref.median)} − ${ref.gap} points), bon au-dessus de ${pct(ref.median + ref.gap)}.`
@@ -203,6 +267,7 @@ export function explain(a: AnimalInput, verdict: Verdict): string[] {
 }
 
 export function advise(a: AnimalInput): Advice {
+  if ((a.method ?? 'etapes') === 'etapes') return adviseSteps(a);
   const c = a.conditionPct;
   const stage = lifeFromAge(a.ageYears, a.lifespanYears)?.stage ?? a.lifeStage ?? 'normal';
   // Seuils relatifs : faible du troupeau = médiane − écart (jamais un animal à haut fitness).

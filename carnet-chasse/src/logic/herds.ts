@@ -1,5 +1,5 @@
 /** Suivi de troupeau : verdicts du guide pour chaque animal, résumé et règle « 1 ou 2 animaux, dont un seul mâle, par session ». */
-import { type Advice, advise, median, type Verdict } from './management.ts';
+import { type Advice, advise, type CullMethod, median, type Verdict } from './management.ts';
 import type { Herd, HerdAnimal, PopulationStatus } from './types.ts';
 
 export const POPULATION_LABELS: Record<PopulationStatus, string> = {
@@ -18,6 +18,7 @@ export interface AdviceOptions {
   /** Troupeau de l'animal : sa médiane (même sexe) remplace les seuils fixes s'il y a assez d'animaux notés. */
   herd?: Herd;
   medianGap?: number;
+  method?: CullMethod;
 }
 
 /** Repère du troupeau pour un sexe : médiane et nombre d'animaux notés. */
@@ -38,6 +39,7 @@ export function adviceFor(a: HerdAnimal, opts: AdviceOptions = {}): Advice {
     ageYears: a.ageYears,
     lifespanYears: opts.lifespanYears,
     youngCutoff: opts.youngCutoff,
+    method: opts.method,
     ...herdInputs(a.sex, opts),
   });
 }

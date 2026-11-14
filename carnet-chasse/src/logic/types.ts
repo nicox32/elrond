@@ -285,6 +285,8 @@ export interface CarnetState {
   prudent: boolean;
   /** Écart à la médiane du troupeau (points) qui définit un animal « faible » : 5, 10 ou 15. */
   medianGap: number;
+  /** Méthode du calculateur : tri par étapes (0-50 / 50-70 / 85-100) ou stratégie détaillée. */
+  cullMethod: 'etapes' | 'detaillee';
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
@@ -303,4 +305,5 @@ export const EMPTY_STATE: CarnetState = {
   customChoices: {},
   prudent: false,
   medianGap: 10,
+  cullMethod: 'etapes',
 };
