@@ -16,16 +16,12 @@ import {
   CULL_STEPS,
   cullStep,
   DISTANCE_RULES,
-  MEDIAN_GAPS,
   scopeSetting,
   explain,
   isMatureByAge,
   lifeFromAge,
-  type LifeStage,
   type Sex,
   type Verdict,
-  YOUNG_CUTOFF,
-  YOUNG_CUTOFF_PRUDENT,
 } from '../../logic/management';
 import { colors, fonts } from '../../theme';
 
@@ -39,16 +35,14 @@ const VERDICT_STYLE: Record<Verdict, { color: string; bg: string; icon: string }
 };
 
 export default function GestionScreen() {
-  const { state, setPrudent, setMedianGap, setCullMethod } = useCarnet();
-  const steps = state.cullMethod === 'etapes';
+  const { state } = useCarnet();
   const [sex, setSex] = useState<Sex>('male');
   const [age, setAge] = useState<AgeClass>('adulte');
   const [condition, setCondition] = useState('');
-  const [stage, setStage] = useState<LifeStage>('normal');
   const [speciesId, setSpeciesId] = useState<string | undefined>();
   const [herdId, setHerdId] = useState<string | undefined>();
   const herd = state.herds.find((h) => h.id === herdId);
-  const herdFields = herdInputs(sex, { herd, medianGap: state.medianGap });
+  const herdFields = herdInputs(sex, { herd });
   const [ageYears, setAgeYears] = useState('');
   const [lifespan, setLifespan] = useState('');
   const [shotDistance, setShotDistance] = useState('');
@@ -66,24 +60,10 @@ export default function GestionScreen() {
     else if (mature === false && age === 'mur') setAge('adulte');
   };
 
-  const showStage = !life && (sex === 'femelle' || age === 'mur');
-  const cutoff = state.prudent ? YOUNG_CUTOFF_PRUDENT : YOUNG_CUTOFF;
-  const advice = advise({
-    sex,
-    age,
-    conditionPct: parseNumber(condition),
-    lifeStage: showStage ? stage : 'normal',
-    youngCutoff: cutoff,
-    method: state.cullMethod,
-    ...herdFields,
-    ageYears: years,
-    lifespanYears,
-  });
+  const input = { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears, ...herdFields };
+  const advice = advise(input);
   const v = VERDICT_STYLE[advice.verdict];
-  const details = explain(
-    { sex, age, conditionPct: parseNumber(condition), ageYears: years, lifespanYears, method: state.cullMethod, ...herdFields },
-    advice.verdict,
-  );
+  const details = explain(input, advice.verdict);
 
   return (
     <Screen>
@@ -99,14 +79,9 @@ export default function GestionScreen() {
 
       <SectionTitle>Tirer ou épargner ?</SectionTitle>
       <Card>
-        <Label>Méthode</Label>
-        <ChipRow>
-          <Chip label="Tri par étapes" selected={steps} onPress={() => setCullMethod('etapes')} />
-          <Chip label="Stratégie détaillée" selected={!steps} onPress={() => setCullMethod('detaillee')} />
-        </ChipRow>
         {state.herds.length ? (
           <Select
-            label="Comparer à un troupeau (facultatif)"
+            label="Troupeau (facultatif)"
             value={herdId}
             onChange={(v) => {
               setHerdId(v || undefined);
@@ -121,16 +96,6 @@ export default function GestionScreen() {
             allowClear
             options={state.herds.map((h) => ({ value: h.id, label: h.name }))}
           />
-        ) : null}
-        {herd && !steps ? (
-          <>
-            <Label>Faible si sous la médiane de</Label>
-            <ChipRow>
-              {MEDIAN_GAPS.map((g) => (
-                <Chip key={g} label={`${g} points`} selected={state.medianGap === g} onPress={() => setMedianGap(g)} />
-              ))}
-            </ChipRow>
-          </>
         ) : null}
         <Select
           label="Espèce (facultatif)"
@@ -179,18 +144,6 @@ export default function GestionScreen() {
             dernière année.
           </Text>
         )}
-        {showStage ? (
-          <>
-            <Label>Moment de vie</Label>
-            <ChipRow>
-              <Chip label="Normal" selected={stage === 'normal'} onPress={() => setStage('normal')} />
-              {sex === 'male' ? (
-                <Chip label="Avant-dernière année" selected={stage === 'avant-derniere'} onPress={() => setStage('avant-derniere')} />
-              ) : null}
-              <Chip label="Dernière année (fin de vie)" tone="olive" selected={stage === 'derniere'} onPress={() => setStage('derniere')} />
-            </ChipRow>
-          </>
-        ) : null}
         <View style={{ maxWidth: 220 }}>
           <Field
             label="Condition physique"
@@ -201,24 +154,13 @@ export default function GestionScreen() {
             placeholder="ex. 35"
           />
         </View>
-        {!steps && sex === 'male' && age === 'jeune' ? (
-          <ChipRow>
-            <Chip
-              label={state.prudent ? '✓ Mode prudent (seuil 40 %)' : 'Mode prudent (seuil 40 %)'}
-              tone="olive"
-              selected={state.prudent}
-              onPress={() => setPrudent(!state.prudent)}
-            />
-          </ChipRow>
-        ) : null}
-
         <View style={{ marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: v.bg, gap: 4 }}>
           <Text style={{ color: v.color, fontSize: 18, fontFamily: fonts.heading }}>
             {v.icon} {advice.title}
           </Text>
           <Text style={styles.text}>{advice.reason}</Text>
         </View>
-        {steps ? (
+        {sex === 'male' ? (
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 10 }}>
             {CULL_STEPS.map((st) => {
               const on = cullStep(sex, age, parseNumber(condition)) === st.id;

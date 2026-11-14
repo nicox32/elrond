@@ -34,9 +34,6 @@ interface CarnetContextValue {
   toggleOwnedAmmo: (ammoId: string) => void;
   addChoice: (key: string, value: string) => void;
   removeChoice: (key: string, value: string) => void;
-  setPrudent: (on: boolean) => void;
-  setMedianGap: (gap: number) => void;
-  setCullMethod: (m: 'etapes' | 'detaillee') => void;
 }
 
 const CarnetContext = createContext<CarnetContextValue | null>(null);
@@ -232,9 +229,6 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, customChoices: { ...s.customChoices, [key]: (s.customChoices[key] ?? []).filter((x) => x !== value) } }));
   }, []);
 
-  const setPrudent = useCallback((on: boolean) => setState((s) => ({ ...s, prudent: on })), []);
-  const setMedianGap = useCallback((gap: number) => setState((s) => ({ ...s, medianGap: gap })), []);
-  const setCullMethod = useCallback((m: 'etapes' | 'detaillee') => setState((s) => ({ ...s, cullMethod: m })), []);
 
   const value = useMemo(
     () => ({
@@ -264,9 +258,6 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       toggleOwnedAmmo,
       addChoice,
       removeChoice,
-      setPrudent,
-      setMedianGap,
-      setCullMethod,
     }),
     [
       state,
@@ -295,9 +286,6 @@ export function CarnetProvider({ children }: { children: ReactNode }) {
       toggleOwnedAmmo,
       addChoice,
       removeChoice,
-      setPrudent,
-      setMedianGap,
-      setCullMethod,
     ],
   );
 

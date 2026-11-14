@@ -99,12 +99,7 @@ export default function TroupeauxScreen() {
         <Empty>Aucun troupeau suivi pour l&apos;instant.</Empty>
       ) : (
         state.herds.map((h) => {
-          const s = summarizeHerd(h, {
-            youngCutoff: state.prudent ? 40 : 50,
-            lifespanYears: getSpeciesInfo(h.speciesId, state.speciesSheets)?.lifespanYears,
-            medianGap: state.medianGap,
-            method: state.cullMethod,
-          });
+          const s = summarizeHerd(h, { lifespanYears: getSpeciesInfo(h.speciesId, state.speciesSheets)?.lifespanYears });
           const days = daysSince(h.lastVisit);
           return (
             <Card key={h.id} onPress={() => router.push({ pathname: '/troupeau/[id]', params: { id: h.id } })} style={{ gap: 4 }}>

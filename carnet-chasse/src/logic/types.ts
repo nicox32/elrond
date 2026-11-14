@@ -281,12 +281,6 @@ export interface CarnetState {
   ownedAmmoIds: string[];
   /** Valeurs perso ajoutées dans les menus de sélection, par menu (robe, météo…). */
   customChoices: Record<string, string[]>;
-  /** Mode prudent du calculateur : seuil des jeunes faibles à 40 % au lieu de 50 %. */
-  prudent: boolean;
-  /** Écart à la médiane du troupeau (points) qui définit un animal « faible » : 5, 10 ou 15. */
-  medianGap: number;
-  /** Méthode du calculateur : tri par étapes (0-50 / 50-70 / 85-100) ou stratégie détaillée. */
-  cullMethod: 'etapes' | 'detaillee';
   lastReserveId?: ReserveId;
   lastWeaponId?: string;
 }
@@ -303,7 +297,4 @@ export const EMPTY_STATE: CarnetState = {
   ammoSheets: {},
   ownedAmmoIds: [],
   customChoices: {},
-  prudent: false,
-  medianGap: 10,
-  cullMethod: 'etapes',
 };

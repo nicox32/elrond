@@ -1,5 +1,5 @@
 /** Suivi de troupeau : verdicts du guide pour chaque animal, résumé et règle « 1 ou 2 animaux, dont un seul mâle, par session ». */
-import { type Advice, advise, type CullMethod, median, type Verdict } from './management.ts';
+import { type Advice, advise, median, type Verdict } from './management.ts';
 import type { Herd, HerdAnimal, PopulationStatus } from './types.ts';
 
 export const POPULATION_LABELS: Record<PopulationStatus, string> = {
@@ -11,14 +11,10 @@ export const POPULATION_LABELS: Record<PopulationStatus, string> = {
 
 export const AGE_LABELS = { jeune: 'Jeune', adulte: 'Adulte', mur: 'Mûr' } as const;
 
-/** Réglages du calcul : seuil des jeunes (mode prudent) et espérance de vie de l'espèce. */
+/** Réglages du calcul : espérance de vie de l'espèce et troupeau (pour sa médiane). */
 export interface AdviceOptions {
-  youngCutoff?: number;
   lifespanYears?: number;
-  /** Troupeau de l'animal : sa médiane (même sexe) remplace les seuils fixes s'il y a assez d'animaux notés. */
   herd?: Herd;
-  medianGap?: number;
-  method?: CullMethod;
 }
 
 /** Repère du troupeau pour un sexe : médiane et nombre d'animaux notés. */
@@ -30,25 +26,12 @@ export function herdSample(herd: Herd, sex: HerdAnimal['sex']): { median?: numbe
 }
 
 export function adviceFor(a: HerdAnimal, opts: AdviceOptions = {}): Advice {
-  return advise({
-    sex: a.sex,
-    age: a.age,
-    stars: a.stars,
-    conditionPct: a.conditionPct,
-    lifeStage: a.lifeStage,
-    ageYears: a.ageYears,
-    lifespanYears: opts.lifespanYears,
-    youngCutoff: opts.youngCutoff,
-    method: opts.method,
-    ...herdInputs(a.sex, opts),
-  });
+  return advise({ sex: a.sex, age: a.age, stars: a.stars, conditionPct: a.conditionPct, ageYears: a.ageYears, lifespanYears: opts.lifespanYears });
 }
 
-/** Champs « troupeau » du calcul pour un sexe donné. */
-export function herdInputs(sex: HerdAnimal['sex'], opts: AdviceOptions): { herdMedianPct?: number; herdSampleSize?: number; medianGap?: number } {
-  if (!opts.herd) return {};
-  const s = herdSample(opts.herd, sex);
-  return { herdMedianPct: s.median, herdSampleSize: s.count, medianGap: opts.medianGap };
+/** Champs « troupeau » des explications pour un sexe donné. */
+export function herdInputs(sex: HerdAnimal['sex'], opts: AdviceOptions): { herdMedianPct?: number } {
+  return opts.herd ? { herdMedianPct: herdSample(opts.herd, sex).median } : {};
 }
 
 export interface HerdSummary {

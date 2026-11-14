@@ -48,7 +48,6 @@ function AnimalForm({ initial, speciesId, submitLabel, onSubmit, onCancel }: {
   const [condition, setCondition] = useState(initial?.conditionPct !== undefined ? String(initial.conditionPct).replace('.', ',') : '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [coat, setCoat] = useState(initial?.coat ?? '');
-  const [lifeStage, setLifeStage] = useState<HerdAnimal['lifeStage']>(initial?.lifeStage);
   const [ageYears, setAgeYears] = useState(initial?.ageYears !== undefined ? String(initial.ageYears) : '');
   const [error, setError] = useState<string | null>(null);
   const { state } = useCarnet();
@@ -74,7 +73,7 @@ function AnimalForm({ initial, speciesId, submitLabel, onSubmit, onCancel }: {
       stars: needsStars ? stars : undefined,
       conditionPct: c,
       coat: coat || undefined,
-      lifeStage: life ? undefined : sex === 'femelle' || age === 'mur' ? lifeStage : undefined,
+      lifeStage: undefined,
       ageYears: years,
       notes: notes.trim() || undefined,
     });
@@ -106,18 +105,6 @@ function AnimalForm({ initial, speciesId, submitLabel, onSubmit, onCancel }: {
         <Text style={styles.muted}>
           Notez l&apos;espérance de vie dans la fiche de l&apos;espèce pour que l&apos;appli calcule la dernière année toute seule.
         </Text>
-      ) : null}
-      {!life && (sex === 'femelle' || age === 'mur') ? (
-        <>
-          <Label>Moment de vie</Label>
-          <ChipRow>
-            <Chip label="Normal" selected={!lifeStage} onPress={() => setLifeStage(undefined)} />
-            {sex === 'male' ? (
-              <Chip label="Avant-dernière année" selected={lifeStage === 'avant-derniere'} onPress={() => setLifeStage('avant-derniere')} />
-            ) : null}
-            <Chip label="Dernière année" tone="olive" selected={lifeStage === 'derniere'} onPress={() => setLifeStage('derniere')} />
-          </ChipRow>
-        </>
       ) : null}
       {needsStars ? (
         <>
@@ -168,7 +155,7 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
   const { state } = useCarnet();
   const lifespanYears = getSpeciesInfo(speciesId, state.speciesSheets)?.lifespanYears;
   const herd = state.herds.find((h) => h.id === herdId);
-  const opts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears, herd, medianGap: state.medianGap, method: state.cullMethod };
+  const opts = { lifespanYears, herd };
   const advice = adviceFor(animal, opts);
   const life = lifeFromAge(animal.ageYears, lifespanYears);
   const alive = animal.status === 'vivant';
@@ -231,7 +218,6 @@ function AnimalCard({ herdId, animal, speciesId, reserveId, index }: {
               conditionPct: animal.conditionPct,
               ageYears: animal.ageYears,
               lifespanYears,
-              method: state.cullMethod,
               ...herdInputs(animal.sex, opts),
             },
             advice.verdict,
@@ -305,7 +291,7 @@ export default function HerdScreen() {
 
   const species = getSpecies(herd.speciesId);
   const info = getSpeciesInfo(herd.speciesId, state.speciesSheets);
-  const adviceOpts = { youngCutoff: state.prudent ? 40 : 50, lifespanYears: info?.lifespanYears, herd, medianGap: state.medianGap, method: state.cullMethod };
+  const adviceOpts = { lifespanYears: info?.lifespanYears, herd };
   const s = summarizeHerd(herd, adviceOpts);
   const takenToday = malesTakenToday(herd);
   const allTakenToday = animalsTakenToday(herd);
