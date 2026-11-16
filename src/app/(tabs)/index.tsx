@@ -15,6 +15,7 @@ import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
 import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
 import { formatLou, loyalty } from '../../logic/loyalty';
+import { homeVaultTotal } from '../../logic/physical';
 import { estimateTax } from '../../logic/tax';
 import { METALS } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
@@ -49,6 +50,10 @@ export default function AccountScreen() {
   const value = accountValue(account, quote.prices);
   const total = value.total;
   const tax = estimateTax(account, quote.prices);
+  const home = {
+    ...homeVaultTotal(account, quote.prices),
+    preparing: (account.homeVault ?? []).filter((b) => b.status === 'preparing').length,
+  };
 
   return (
     <Screen testID="screen-compte">
@@ -220,6 +225,31 @@ export default function AccountScreen() {
             <Text style={styles.chevron}>›</Text>
           </Pressable>
         ))}
+        {home.count > 0 && (
+          // Lingotins retirés et gardés chez soi : visibles ici dès le premier retrait.
+          <Pressable
+            onPress={() => router.push('/coffre-maison')}
+            style={[styles.vault, styles.vaultBorder]}
+            accessibilityRole="button"
+            testID="home-vault-row"
+          >
+            <View style={[styles.symbol, { borderColor: metalColor.gold, borderStyle: 'dashed' }]}>
+              <Text style={[styles.symbolText, { color: metalColor.gold }]}>⌂</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.vaultName}>Coffre maison</Text>
+              <Text style={styles.vaultPrice}>
+                {home.count} lingotin{home.count > 1 ? 's' : ''} d’or chez vous
+                {home.preparing ? ` · ${home.preparing} en livraison` : ''}
+              </Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.vaultWeight}>{discreet ? '•••' : formatWeight(home.grams, unit, 'gold')}</Text>
+              <Text style={styles.vaultValue}>{eur(home.value)}</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </Pressable>
+        )}
       </Card>
       <CustodyNote />
 
