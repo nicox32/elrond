@@ -5,13 +5,11 @@
  */
 import { loyalty, LOYALTY } from './loyalty.ts';
 import { accountValue } from './ledger.ts';
-import type { Account, Prices, Transaction } from './types.ts';
+import { type Account, type Metal, METALS, type Prices, type Transaction } from './types.ts';
 
 export const COMPANY = {
-  /** Garde en port franc et assurance du métal, par an, en part des stocks. */
-  custodyYearly: 0.002,
-  /** Commission versée par le commerçant sur un paiement par carte (plafond européen d'une carte de débit). */
-  interchange: 0.002,
+  /** Garde en port franc et assurance, par an, en part des stocks de chaque métal (l'argent, encombrant, coûte plus). */
+  custodyYearly: { gold: 0.001, silver: 0.003, platinum: 0.0012 } as Record<Metal, number>,
   /** Vérification d'identité et anti-blanchiment, par compte ouvert. */
   kycPerAccount: 3,
   /** Frais fixes d'une petite fintech (équipe, conformité, audit, appli), par an. */
@@ -29,7 +27,6 @@ export interface CompanyReport {
     dormancy: number;
     custody: number;
     physical: number;
-    card: number;
     total: number;
   };
   costs: { custody: number; kyc: number; loyalty: number; referral: number; physical: number; total: number };
@@ -68,17 +65,10 @@ export function companyReport(
     dormancy: sum((t) => (t.kind === 'fee_dormancy' ? t.eur : 0)),
     custody: sum((t) => (t.kind === 'fee_custody' ? t.eur : 0)),
     physical: sum((t) => (t.kind === 'withdraw_physical' ? (t.fees ?? 0) : 0)),
-    card: sum((t) => (t.kind === 'card_payment' ? t.eur * COMPANY.interchange : 0)),
     total: 0,
   };
   revenue.total =
-    revenue.buy +
-    revenue.sale +
-    revenue.conversion +
-    revenue.dormancy +
-    revenue.custody +
-    revenue.physical +
-    revenue.card;
+    revenue.buy + revenue.sale + revenue.conversion + revenue.dormancy + revenue.custody + revenue.physical;
 
   const assets = wallets.reduce((s, w) => s + accountValue(w, prices).total, 0);
   // Louis gagnés sur la période (échangés ou encore dus) : un coût pour la société.
@@ -86,7 +76,12 @@ export function companyReport(
   const loyaltyCost = (loyalty(account, now).earned - earnedBefore) * LOYALTY.eurPerLou;
   const accountsOpened = wallets.filter((w) => new Date(w.createdAt).getTime() >= from).length;
   const costs = {
-    custody: assets * COMPANY.custodyYearly * years,
+    custody:
+      wallets.reduce(
+        (s, w) =>
+          s + METALS.reduce((m, metal) => m + accountValue(w, prices).byMetal[metal] * COMPANY.custodyYearly[metal], 0),
+        0,
+      ) * years,
     kyc: accountsOpened * COMPANY.kycPerAccount,
     loyalty: loyaltyCost,
     referral: sum((t) => (t.kind === 'referral_bonus' ? t.eur : 0)),

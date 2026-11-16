@@ -39,13 +39,13 @@ test('achat en euros, en grammes et en onces : frais en part du montant payé', 
   close(acc.holdings.platinum, TROY_OUNCE);
 });
 
-test('revente : 0,8 % en différé, 0,8 % + 2,8 % en immédiat', () => {
+test('revente : 0,8 % en différé, 0,8 % + 1 % en immédiat', () => {
   const start = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
   let acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'deferred');
   close(acc.transactions[0].eur, 100 * (1 - 0.008), 0.01);
   close(acc.transactions[0].fees ?? 0, 0.8, 0.01);
   acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'immediate');
-  close(acc.transactions[0].eur, 100 * (1 - 0.008 - 0.028), 0.01);
+  close(acc.transactions[0].eur, 100 * (1 - 0.008 - 0.01), 0.01);
   // saisie en euros = montant reçu
   acc = sell(start, prices, 'gold', { unit: 'eur', value: 99.2 }, 'deferred');
   close(acc.holdings.gold, 9);
@@ -72,8 +72,8 @@ test('conversion or → platine : 0,8 % + frais d’achat du métal reçu', () =
   let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
   acc = convert(acc, prices, 'gold', 'platinum', { unit: 'g', value: 3 });
   close(acc.holdings.gold, 7);
-  // 0,8 % de frais de conversion puis 6,3 % de frais d'achat du platine
-  close(acc.holdings.platinum, (300 * (1 - 0.008) * (1 - 0.063)) / 30);
+  // 0,8 % de frais de conversion puis 4,5 % de frais d'achat du platine
+  close(acc.holdings.platinum, (300 * (1 - 0.008) * (1 - 0.045)) / 30);
   assert.throws(() => convert(acc, prices, 'gold', 'gold', { unit: 'g', value: 1 }), LedgerError);
 });
 
@@ -100,7 +100,7 @@ test('virement SEPA : vend le métal, IBAN vérifié, frais fixe vers l’étran
   // Étranger (Belgique), immédiat : saisie en euros = montant reçu, + 30 € de frais fixe
   const be = addBeneficiary(account, 'iban', 'Zoé', 'BE68539007547034');
   acc = transferToIban(be.account, prices, 'gold', { unit: 'eur', value: 100 }, be.beneficiary, 'immediate');
-  close(acc.holdings.gold, 10 - 130 / (100 * (1 - 0.036)));
+  close(acc.holdings.gold, 10 - 130 / (100 * (1 - 0.018)));
   close(acc.transactions[0].eur, 100, 0.01);
   // trop faible pour couvrir les 30 €
   assert.throws(
@@ -322,37 +322,6 @@ test('opérations qui évitent les frais : achat et échanges de louis, pas les 
   const converted = convert(acc, prices, 'gold', 'silver', { unit: 'g', value: 1 }, later);
   assert.equal(dormancyStatus(converted, later).lastMovement.toISOString(), later.toISOString()); // échange : compte
   // 1 louis = 1 euro
-});
-
-test('carte Orvia : paiements et retraits gratuits, plafonds, gel, comptent comme mouvements', async () => {
-  const { issueCard, cardPay, cardWithdraw, setCardFrozen, setCardMetal, dormancyStatus, CARD } =
-    await import('../src/logic/ledger.ts');
-  const t0 = new Date('2026-03-01T12:00:00Z');
-  let acc = buy(createAccount('Nico', t0), prices, 'gold', { unit: 'g', value: 50 }, t0); // 5 000 € d'or
-  assert.throws(() => cardPay(acc, prices, 'Boulangerie', 5, t0), LedgerError); // pas encore de carte
-  acc = issueCard(acc, t0);
-  assert.match(acc.card!.last4, /^\d{4}$/);
-  assert.equal(acc.card!.expiry, '03/30');
-  const t1 = new Date('2026-05-01T12:00:00Z');
-  acc = cardPay(acc, prices, 'Boulangerie', 25, t1);
-  close(acc.holdings.gold, 50 - 0.25); // 25 € à 100 €/g, sans frais
-  assert.equal(acc.transactions[0].fees, undefined);
-  assert.equal(dormancyStatus(acc, t1).lastMovement.toISOString(), t1.toISOString()); // évite l'oxydation
-  acc = cardWithdraw(acc, prices, 100, t1);
-  close(acc.holdings.gold, 50 - 1.25);
-  // plafonds
-  assert.throws(() => cardWithdraw(acc, prices, CARD.withdrawalLimit7d, t1), LedgerError);
-  acc = cardWithdraw(acc, prices, 100, new Date('2026-05-09T12:00:00Z')); // 8 jours plus tard : nouveau plafond
-  assert.throws(() => cardPay(acc, prices, 'Voyage', 3000, t1), LedgerError);
-  // métal débité au choix
-  acc = buy(acc, prices, 'silver', { unit: 'g', value: 1000 }, t1);
-  acc = setCardMetal(acc, 'silver');
-  acc = cardPay(acc, prices, 'Café', 2, t1);
-  close(acc.holdings.silver, 1000 - 2);
-  // gel
-  acc = setCardFrozen(acc, true);
-  assert.throws(() => cardPay(acc, prices, 'Café', 2, t1), LedgerError);
-  assert.doesNotThrow(() => cardPay(setCardFrozen(acc, false), prices, 'Café', 2, t1));
 });
 
 test('parrainage : code saisi une fois, bonus de 10 LOU en or au premier achat d’au moins 50 €', async () => {
@@ -879,12 +848,12 @@ test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais com
   );
   close(
     acc.transactions.reduce((s, t) => s + (t.fees ?? 0), 0),
-    449.5,
+    403.5,
     1,
   );
   close(acc.holdings.gold, 83.94, 0.05);
   close(acc.holdings.silver, 3334.7, 1);
-  close(acc.holdings.platinum, 80.44, 0.05);
+  close(acc.holdings.platinum, 81.98, 0.05);
   assert.equal(acc.history2019Prices, 'monthly');
   assert.ok(acc.transactions.every((t) => t.origin === 'history2019'));
   assert.equal(loyalty(acc, now).earned, 161); // dont 5 LOU pour 5 ans d'ancienneté

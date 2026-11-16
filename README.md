@@ -63,8 +63,8 @@ jamais dans Git (dossier `signing/` ignoré).
   cher est retenu pour chaque métal ; durée de détention calculée en premier entré, premier sorti. Estimation
   indicative, sans valeur de conseil fiscal.
 - **Impôt retenu automatiquement** à chaque cession, au régime le moins cher (`docs/impots-par-operation.png`) :
-  vente (« Tout vendre » en un geste ; en euros, montant reçu après impôt), virement vers un IBAN, paiement ou retrait
-  par carte (le commerçant reçoit le montant exact) et conversion entre métaux. L'aperçu de chaque opération indique
+  vente (« Tout vendre » en un geste ; en euros, montant reçu après impôt), virement vers un IBAN et conversion entre
+  métaux. L'aperçu de chaque opération indique
   l'impôt et le régime retenu, l'historique aussi. Virement de métal à un membre ou versement sur un compte enfant :
   pas une vente, donc pas d'impôt sur la plus-value ; règles des dons rappelées (présent d'usage, abattements,
   formulaire 2735).
@@ -86,7 +86,7 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Fidélité : les louis (LOU)** (`src/logic/loyalty.ts`, `docs/fidelite.png`) : programme modeste qui récompense
   l'épargne régulière — 1 LOU par mois avec au moins 50 € investis (+5 LOU tous les 12 mois consécutifs), 1 LOU par
   500 € achetés, 1 LOU par mois avec au moins 25 € versés à un compte enfant, 1 LOU par anniversaire du compte
-  et 5 LOU tous les 5 ans ; rien sur les paiements par carte (qui vendent du métal), les ventes,
+  et 5 LOU tous les 5 ans ; rien sur les ventes,
   conversions ou virements. 1 LOU s'échange contre 1 € de métal sans frais, dès 10 LOU.
 - **Relevés PDF** (`src/logic/statement.ts`, `docs/exemple-releve.pdf`) : une ligne par opération avec grammes, prix
   au gramme, frais d'achat, autres frais et impôt ; soldes de début et de fin avec prix moyen payé (frais compris) ;
@@ -146,9 +146,9 @@ jamais dans Git (dossier `signing/` ignoré).
   `src/logic/shareView.ts`) : lien vers la version web, sans appli ni code, qui montre la valeur aux cours du moment,
   les coffres, les règles de protection et les derniers mouvements, sans aucune opération possible. Les données sont
   après le « # » du lien (jamais envoyées au serveur) ; c'est une photo du compte au moment du partage.
-- **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
-  ou retrait vend le métal choisi au cours du moment, sans frais ; plafonds de 3 000 € / 30 jours
-  (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).
+- **Pas de carte de paiement** : la carte Orvia a été supprimée (chaque paiement vendait du métal, donc imposé) ;
+  pour sortir des euros, la vente par virement ; pour avoir l'or en main, le retrait en lingotins. Les anciens
+  paiements par carte restent dans l'historique.
 - **Parrainage** : un code par compte à partager ; le filleul reçoit 10 € en or à son premier achat
   d'au moins 50 € (`docs/parrainage.png`).
 - **Alertes de prix** (🔔 sur l'écran du compte) : seuil de prix, variation sur 24 h ou 7 jours, écart à la
@@ -181,9 +181,9 @@ jamais dans Git (dossier `signing/` ignoré).
   (écran Plus-value et impôts), **changer son code**, **mode discret** (œil à côté du solde) et **bandeau de mise à
   jour** sur Android quand une version plus récente est publiée.
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
-  achat 2,5 % (or), 6,3 % (argent, platine) ; garde en coffre 0,12 %/an (or), 0,4 %/an (argent, platine),
+  achat 2,5 % (or), 6,3 % (argent), 4,5 % (platine) ; garde en coffre 0,12 %/an (or), 0,4 %/an (argent), 0,2 %/an (platine),
   prélevée en métal chaque mois (comptes enfants exonérés jusqu’à 18 ans) ; revente par virement 0,8 % (+ 30 € hors de France) ;
-  écart de 2,8 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
+  écart de 1 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
   envois et réceptions entre membres gratuits.
 - **Comptes enfants gratuits**, aux règles inspirées du droit français (à faire valider par un juriste) :
   - l'argent versé appartient à l'enfant (c'est un don) : le parent ne peut pas le reprendre pour lui-même ;
@@ -194,7 +194,7 @@ jamais dans Git (dossier `signing/` ignoré).
   - **aucun frais avant 18 ans** ; à la majorité, le parent ne gère plus le compte et le **transfère à l'enfant**
     (code de rattachement) ; logique dans `src/logic/childRules.ts` (`docs/compte-enfant.png`).
 - **Frais d'oxydation** : un compte (principal, ou enfant devenu majeur) laissé 6 mois calendaires sans opération éligible
-  d'au moins 1 € (paiement ou retrait par carte, échange de louis, achat, parrainage) est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
+  d'au moins 1 € (achat, crédit du compte d'attente, échange de métal, retrait physique, parrainage) est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
   période de 6 mois d'inactivité est facturée de même. L'appli prévient un mois avant (`docs/oxydation.png`).
 
 Sources des cours : [gold-api.com](https://gold-api.com) (métaux) et

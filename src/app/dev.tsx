@@ -140,8 +140,8 @@ function CompanyDashboard() {
           />
         </View>
         <Text style={styles.muted}>
-          0,12 % par an pour l’or, 0,4 % pour l’argent et le platine, prélevés en métal au début de chaque mois (comptes
-          enfants exonérés jusqu’à 18 ans). Désactivés, rien n’est prélevé et rien n’est rattrapé ensuite.
+          0,12 % par an pour l’or, 0,4 % pour l’argent, 0,2 % pour le platine, prélevés en métal au début de chaque mois
+          (comptes enfants exonérés jusqu’à 18 ans). Désactivés, rien n’est prélevé et rien n’est rattrapé ensuite.
         </Text>
       </Card>
 
@@ -153,10 +153,6 @@ function CompanyDashboard() {
         <Row label="Frais d’oxydation (comptes inactifs)" value={formatEur(r.revenue.dormancy)} />
         <Row label="Frais de garde en coffre" value={formatEur(r.revenue.custody)} />
         <Row label="Retraits physiques (fabrication et livraison)" value={formatEur(r.revenue.physical)} />
-        <Row
-          label={`Commission sur les paiements par carte (${pct(COMPANY.interchange)})`}
-          value={formatEur(r.revenue.card)}
-        />
         <View style={styles.sep} />
         <Row label="Total des revenus" value={formatEur(r.revenue.total)} strong />
       </Card>
@@ -164,7 +160,7 @@ function CompanyDashboard() {
       <SectionTitle>Coûts</SectionTitle>
       <Card style={{ gap: 6 }}>
         <Row
-          label={`Garde en port franc et assurance (${pct(COMPANY.custodyYearly)} par an de ${formatEur(r.assets)})`}
+          label={`Garde en port franc et assurance (or ${pct(COMPANY.custodyYearly.gold)}, argent ${pct(COMPANY.custodyYearly.silver)}, platine ${pct(COMPANY.custodyYearly.platinum)} par an, sur ${formatEur(r.assets)})`}
           value={formatEur(r.costs.custody)}
         />
         <Row

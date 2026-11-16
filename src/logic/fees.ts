@@ -1,20 +1,22 @@
 import type { Metal } from './types.ts';
 
 /**
- * Grille tarifaire d'Orvia : frais d'achat modérés et garde en coffre transparente (0,12 % par an pour l'or,
- * 0,4 % pour l'argent et le platine, plus encombrants), prélevée en métal chaque mois.
+ * Grille tarifaire d'Orvia : frais d'achat modérés et garde en coffre transparente, prélevée en métal chaque mois.
+ * Les frais suivent la place prise au coffre et la liquidité de chaque métal : l'or et le platine, denses, sont peu
+ * encombrants (garde 0,12 % et 0,2 % par an) ; l'argent, environ 80 fois plus volumineux à valeur égale, coûte plus
+ * cher à stocker et à négocier (achat 6,3 %, garde 0,4 % par an).
  */
 export const FEES = {
   /** Frais de gestion à l'achat, en part du montant payé. */
-  buy: { gold: 0.025, silver: 0.063, platinum: 0.063 } as Record<Metal, number>,
+  buy: { gold: 0.025, silver: 0.063, platinum: 0.045 } as Record<Metal, number>,
   /** Garde en coffre, par an, en part du métal détenu ; prélevée en métal chaque mois (1/12). */
-  custodyYearly: { gold: 0.0012, silver: 0.004, platinum: 0.004 } as Record<Metal, number>,
+  custodyYearly: { gold: 0.0012, silver: 0.004, platinum: 0.002 } as Record<Metal, number>,
   /** Frais de gestion sur revente par virement vers un compte bancaire. */
   sale: 0.008,
   /** Supplément fixe pour un virement vers un compte bancaire hors de France. */
   saleAbroadFixed: 30,
   /** Écart supplémentaire pour un virement immédiat (aucun en différé). */
-  immediateSpread: 0.028,
+  immediateSpread: 0.01,
   /** Frais de gestion sur la revente lors d'une conversion (s'ajoutent aux frais d'achat du métal reçu). */
   conversion: 0.008,
   /** Frais d'oxydation : part du solde facturée par jour d'une période de 6 mois sans mouvement. */
@@ -93,16 +95,6 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication ≈ 2 %' },
       { label: 'Livraison assurée, remise contre signature', orvia: '12 € par envoi, offerte dès 20 g' },
       { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
-    ],
-  },
-  {
-    title: 'Carte Orvia',
-    rows: [
-      { label: 'Émission et tenue de la carte virtuelle', orvia: 'Gratuit' },
-      { label: 'Paiement par carte (revente du métal au cours du moment)', orvia: 'Gratuit' },
-      { label: 'Retrait au distributeur', orvia: 'Gratuit' },
-      { label: 'Plafond de paiements', orvia: '3 000 € / 30 jours' },
-      { label: 'Plafond de retraits', orvia: '500 € / 7 jours' },
     ],
   },
   {

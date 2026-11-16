@@ -54,9 +54,9 @@ export type TransactionKind =
   | 'fee_custody'
   /** Or retiré du coffre en lingotins, livré au titulaire (pas une vente). */
   | 'withdraw_physical'
-  /** Paiement chez un commerçant avec la carte Orvia. */
+  /** Paiement avec l'ancienne carte Orvia (supprimée) : gardé pour l'historique. */
   | 'card_payment'
-  /** Retrait au distributeur avec la carte Orvia. */
+  /** Retrait avec l'ancienne carte Orvia (supprimée) : gardé pour l'historique. */
   | 'card_withdrawal'
   /** Bonus de parrainage crédité. */
   | 'referral_bonus'
@@ -252,19 +252,6 @@ export interface ChildAccount extends Wallet {
   declarationRemindedFor?: string;
 }
 
-/** Carte de paiement Orvia, adossée aux métaux du compte. */
-export interface Card {
-  /** Seuls les 4 derniers chiffres sont connus de l'appli. */
-  last4: string;
-  /** Date d'expiration « MM/AA ». */
-  expiry: string;
-  holderName: string;
-  /** Métal vendu pour régler les paiements et retraits. */
-  fundingMetal: Metal;
-  frozen: boolean;
-  issuedAt: string;
-}
-
 export interface Referral {
   /** Code à partager pour parrainer quelqu'un. */
   code: string;
@@ -284,7 +271,6 @@ export interface Account extends Wallet {
   children: ChildAccount[];
   balanceHistory: BalancePoint[];
   settings: Settings;
-  card?: Card;
   referral: Referral;
   /** Alertes de prix choisies par l'utilisateur. */
   alerts?: PriceAlert[];

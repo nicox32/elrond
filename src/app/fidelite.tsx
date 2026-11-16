@@ -83,7 +83,7 @@ export default function LoyaltyScreen() {
           </View>
         )}
         <Text style={styles.muted}>
-          Aucun louis sur les ventes, conversions, virements, paiements par carte ou euros laissés dans le compte
+          Aucun louis sur les ventes, conversions, virements ou euros laissés dans le compte
           d’attente : Orvia est un compte d’épargne, le programme récompense l’épargne régulière et la durée.
         </Text>
       </Card>

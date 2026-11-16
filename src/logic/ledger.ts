@@ -200,9 +200,11 @@ export function migrateAccount(raw: unknown): Account | null {
   if (!raw || typeof raw !== 'object') return null;
   const a = raw as Record<string, any>;
   if (a.version === 2) {
-    // Champs ajoutés au fil des versions.
+    // Champs ajoutés au fil des versions. La carte Orvia a été supprimée : son réglage disparaît, ses anciens
+    // paiements restent dans l'historique.
+    const { card: _card, ...rest } = a;
     return {
-      ...safely(a as Account, (acc) => compactHistory(removeHistory2021(retireGoldOria(acc)))),
+      ...safely(rest as Account, (acc) => compactHistory(removeHistory2021(retireGoldOria(acc)))),
       children: Array.isArray(a.children)
         ? a.children.map((c: ChildAccount) => safely(c, (w) => compactHistory(retireGoldOria(w))))
         : [],
@@ -783,7 +785,7 @@ export const MIN_MOVEMENT_EUR = 1;
 /**
  * Opérations qui évitent les frais d'oxydation, à partir d'un euro : crédit du compte (achat) et échanges de louis
  * (envoi à un membre, conversion, versements entre comptes de la famille). Ventes, virements vers un IBAN et frais
- * ne comptent pas. Les paiements et retraits par carte et le parrainage compteront quand ils existeront.
+ * ne comptent pas. Les paiements par l'ancienne carte Orvia (supprimée) restent comptés pour l'historique.
  */
 export const MOVEMENT_KINDS: ReadonlySet<TransactionKind> = new Set<TransactionKind>([
   'buy',
@@ -1028,97 +1030,6 @@ export function redeemLoyalty(account: Account, prices: Prices, lou: number, met
   );
   const [tx, ...rest] = next.transactions;
   return { ...next, transactions: [{ ...tx, loyaltyLou: n }, ...rest] };
-}
-
-// ——— Carte Orvia ————————————————————————————————————————————————
-
-export const CARD = {
-  /** Plafond de paiements sur 30 jours glissants. */
-  paymentLimit30d: 3000,
-  /** Plafond de retraits sur 7 jours glissants. */
-  withdrawalLimit7d: 500,
-} as const;
-
-/** Émet la carte virtuelle (gratuite). */
-export function issueCard(account: Account, now = new Date()): Account {
-  if (account.card) return account;
-  const exp = new Date(now.getTime());
-  exp.setFullYear(exp.getFullYear() + 4);
-  return {
-    ...account,
-    card: {
-      last4: randomDigits(4),
-      expiry: `${String(exp.getMonth() + 1).padStart(2, '0')}/${String(exp.getFullYear()).slice(-2)}`,
-      holderName: account.holder.toUpperCase(),
-      fundingMetal: 'gold',
-      frozen: false,
-      issuedAt: now.toISOString(),
-    },
-  };
-}
-
-function requireCard(account: Account) {
-  if (!account.card) throw new LedgerError('Commandez d’abord votre carte.');
-  return account.card;
-}
-
-export function setCardFrozen(account: Account, frozen: boolean): Account {
-  return { ...account, card: { ...requireCard(account), frozen } };
-}
-
-export function setCardMetal(account: Account, fundingMetal: Metal): Account {
-  return { ...account, card: { ...requireCard(account), fundingMetal } };
-}
-
-/** Montant déjà utilisé sur une période glissante (en euros). */
-export function cardUsage(account: Account, kind: 'card_payment' | 'card_withdrawal', days: number, now = new Date()) {
-  const from = now.getTime() - days * 86_400_000;
-  return account.transactions
-    .filter((t) => t.kind === kind && new Date(t.date).getTime() > from)
-    .reduce((sum, t) => sum + t.eur, 0);
-}
-
-function cardDebit(
-  account: Account,
-  prices: Prices,
-  kind: 'card_payment' | 'card_withdrawal',
-  amount: number,
-  label: string,
-  now: Date,
-): Account {
-  assertPositive(amount, 'Le montant');
-  const card = requireCard(account);
-  if (card.frozen) throw new LedgerError('Votre carte est gelée. Dégelez-la pour l’utiliser.');
-  const [limit, days, what] =
-    kind === 'card_payment'
-      ? [CARD.paymentLimit30d, 30, 'de paiement sur 30 jours']
-      : [CARD.withdrawalLimit7d, 7, 'de retrait sur 7 jours'];
-  const used = cardUsage(account, kind, days, now);
-  if (used + amount > limit + 1e-9) {
-    throw new LedgerError(
-      `Plafond ${what} atteint : il reste ${Math.max(0, limit - used)
-        .toFixed(2)
-        .replace('.', ',')} €.`,
-    );
-  }
-  // Paiements et retraits par carte : revente du métal sans frais, au cours du moment. C'est une cession : on vend
-  // un peu plus de métal pour couvrir l'impôt, le commerçant reçoit le montant exact.
-  const metal = card.fundingMetal;
-  const unitPrice = prices[metal];
-  const grams = gramsForNet(account, metal, amount, unitPrice, 0, now);
-  const tax = saleTax(account, metal, grams, grams * unitPrice, now);
-  return apply(account, kind, { [metal]: -grams }, amount, label, now, 0, tax);
-}
-
-/** Paiement chez un commerçant : le métal choisi est vendu au cours du moment, sans frais. */
-export function cardPay(account: Account, prices: Prices, merchant: string, amount: number, now = new Date()): Account {
-  const name = merchant.trim() || 'Commerçant';
-  return cardDebit(account, prices, 'card_payment', amount, `Carte · ${name}`, now);
-}
-
-/** Retrait au distributeur : le métal choisi est vendu au cours du moment, sans frais. */
-export function cardWithdraw(account: Account, prices: Prices, amount: number, now = new Date()): Account {
-  return cardDebit(account, prices, 'card_withdrawal', amount, 'Carte · Retrait au distributeur', now);
 }
 
 /** Enregistre une opération (utilisé par les modules voisins : retrait physique). */

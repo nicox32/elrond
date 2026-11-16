@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BalanceChart } from '../../components/BalanceChart';
 import { CustodyNote } from '../../components/Custody';
 import { DormancyNotice } from '../../components/DormancyNotice';
-import { OrviaCard } from '../../components/OrviaCard';
 import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
@@ -145,24 +144,6 @@ export default function AccountScreen() {
       </Card>
 
       <HomeNews />
-
-      <SectionTitle>Ma carte</SectionTitle>
-      {account.card ? (
-        <Pressable
-          onPress={() => router.push('/carte')}
-          accessibilityRole="button"
-          accessibilityLabel="Ouvrir ma carte"
-        >
-          <OrviaCard card={account.card} />
-        </Pressable>
-      ) : (
-        <Pressable onPress={() => router.push('/carte')} style={styles.kids} accessibilityRole="button">
-          <Text style={styles.kidsText}>
-            Payez et retirez avec votre or, votre argent ou votre platine : commandez votre carte Orvia, gratuite.
-          </Text>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-      )}
 
       <Pressable onPress={() => router.push('/parrainage')} style={styles.referral} accessibilityRole="button">
         <Text style={styles.referralText}>

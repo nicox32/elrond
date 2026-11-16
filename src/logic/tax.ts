@@ -185,7 +185,7 @@ export const REGIME_LABEL: Record<TaxRegime, string> = {
   gain: 'régime des plus-values',
 };
 
-/** Impôt d'une cession (vente, virement vers une banque, paiement par carte, conversion). */
+/** Impôt d'une cession (vente, virement vers une banque, conversion). */
 export interface SaleTax {
   grams: number;
   /** Prix de cession, frais Orvia déduits, avant impôt. */
