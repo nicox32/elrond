@@ -101,3 +101,31 @@ test('Napoléon 20 F : 5,806 g d’or fin, prime indicative, millésime au coffr
   assert.equal(a.homeVault![0].serial, '1910');
   close(a.holdings.gold, 10 - 5.806);
 });
+
+test('coffre maison : fiche QR de chaque objet et inventaire imprimable', async () => {
+  const { barQrText, homeVaultHtml } = await import('../src/logic/homeVaultDoc.ts');
+  const { qrMatrix } = await import('../src/logic/qr.ts');
+  let a = creditCash(
+    buy(
+      createAccount('T', new Date('2019-03-01')),
+      p,
+      'gold',
+      { unit: 'g', value: 30 },
+      new Date('2019-03-04T12:00:00'),
+    ),
+    100,
+  );
+  a = withdrawPhysical(a, p, { g10: 1, nap20: 1 }, new Date('2026-11-16T12:00:00'));
+  a = receiveBar(a, a.homeVault![0].id, 'ab123456', new Date('2026-11-20T12:00:00'));
+  const text = barQrText(a.homeVault![0]);
+  assert.match(text, /Lingotin 10 g/);
+  assert.match(text, /N° de série : AB123456/);
+  assert.match(text, /Exonéré de plus-value en 2041/);
+  assert.match(text, /pas un certificat d’authenticité/);
+  assert.match(barQrText(a.homeVault![1]), /Millésime : à noter|N° de série : à noter/);
+  assert.ok(qrMatrix(text).length >= 21);
+  const html = homeVaultHtml(a, p, new Date('2026-11-20T12:00:00'));
+  assert.equal((html.match(/<svg /g) ?? []).length, 2);
+  assert.match(html, /Inventaire du coffre maison/);
+  assert.match(html, /2 objets/);
+});

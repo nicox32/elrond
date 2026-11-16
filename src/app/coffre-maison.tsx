@@ -5,12 +5,13 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { Button, Card, Hint, Message, Screen, styles as ui } from '../components/ui';
 import { formatDate, formatEur, formatWeight } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
+import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
 import { homeVaultTotal, productOf, receiveBar, removeBar } from '../logic/physical';
+import { exportPdf } from '../pdf';
+import { QrCode } from '../components/QrCode';
 import type { HomeBar } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors, metalColor } from '../theme';
-
-const exemptYear = (b: HomeBar) => new Date(b.acquiredTo).getFullYear() + 22;
 
 /** Mon coffre maison : les lingotins retirés d'Orvia, avec leur numéro de série. */
 export default function HomeVaultScreen() {
@@ -43,6 +44,13 @@ export default function HomeVaultScreen() {
           />
         ))
       )}
+      {bars.length > 0 && (
+        <Button
+          title="Inventaire imprimable (PDF, avec QR codes)"
+          variant="ghost"
+          onPress={() => exportPdf(homeVaultHtml(account, quote.prices), 'Inventaire du coffre maison')}
+        />
+      )}
       <Hint>
         Gardez le certificat avec chaque lingotin. Le prix et les dates d’achat d’origine servent à l’impôt si vous le
         revendez chez un comptoir : la durée de détention de l’or continue depuis son achat chez Orvia.
@@ -58,6 +66,7 @@ export default function HomeVaultScreen() {
 
 function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: string) => void; onRemove: () => void }) {
   const [serial, setSerial] = useState(bar.serial ?? '');
+  const [showQr, setShowQr] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const p = productOf(bar.product);
   const confirmRemove = () => {
@@ -118,6 +127,18 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
         </View>
       )}
       {msg && <Message {...msg} />}
+      <Pressable onPress={() => setShowQr((v) => !v)} accessibilityRole="button" testID={`qr-toggle-${bar.id}`}>
+        <Text style={ui.link}>{showQr ? 'Masquer le QR code' : 'Afficher le QR code de la fiche'}</Text>
+      </Pressable>
+      {showQr && (
+        <View style={styles.qr} testID="bar-qr">
+          <QrCode value={barQrText(bar)} size={200} />
+          <Text style={styles.sub}>
+            Se lit avec n’importe quel téléphone : objet, {p.coin ? 'millésime' : 'numéro de série'}, dates, prix de
+            revient. À imprimer et ranger avec le certificat. Fiche d’inventaire, pas un certificat d’authenticité.
+          </Text>
+        </View>
+      )}
       <Pressable onPress={confirmRemove} accessibilityRole="button">
         <Text style={styles.remove}>Revendu ou donné : retirer du registre</Text>
       </Pressable>
@@ -142,5 +163,6 @@ const styles = StyleSheet.create({
   ok: { color: colors.up, backgroundColor: 'rgba(46,204,113,0.15)' },
   wait: { color: colors.warning, backgroundColor: 'rgba(241,196,15,0.15)' },
   serial: { color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  qr: { alignItems: 'center', gap: 8, paddingVertical: 6 },
   remove: { color: colors.textMuted, fontSize: 12.5, textDecorationLine: 'underline' },
 });

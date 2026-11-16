@@ -1,0 +1,59 @@
+/**
+ * Fiches du coffre maison : texte de chaque lingotin ou pièce (lu par n'importe quel lecteur de QR code) et inventaire
+ * imprimable. Ce sont des fiches d'inventaire : seuls le numéro gravé et le certificat de l'affinerie prouvent
+ * l'authenticité d'un lingotin.
+ */
+import { formatEur } from './format.ts';
+import { homeVaultTotal, productOf } from './physical.ts';
+import { qrSvg } from './qr.ts';
+import { docHead, esc, STYLE_A } from './statement.ts';
+import type { Account, HomeBar, Prices } from './types.ts';
+
+const d = (iso: string) => new Date(iso).toLocaleDateString('fr-FR');
+
+export const exemptYear = (b: HomeBar) => new Date(b.acquiredTo).getFullYear() + 22;
+
+/** Texte encodé dans le QR code d'un lingotin ou d'une pièce. */
+export function barQrText(b: HomeBar): string {
+  const p = productOf(b.product);
+  const grams = b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+  return [
+    'ORVIA · Coffre maison',
+    `${p.label} · ${grams} g d’or fin`,
+    b.serial ? `${p.coin ? 'Millésime' : 'N° de série'} : ${b.serial}` : 'N° de série : à noter à réception',
+    `Retiré du coffre Orvia le ${d(b.orderedAt)}${b.receivedAt ? ` · reçu le ${d(b.receivedAt)}` : ''}`,
+    `Or acheté du ${d(b.acquiredFrom)} au ${d(b.acquiredTo)}`,
+    `Prix de revient : ${formatEur(b.cost)}`,
+    `Exonéré de plus-value en ${exemptYear(b)}`,
+    'Fiche d’inventaire, pas un certificat d’authenticité.',
+  ].join('\n');
+}
+
+/** Inventaire du coffre maison en HTML imprimable (PDF) : un QR code par lingotin ou pièce. */
+export function homeVaultHtml(account: Account, prices: Prices, now = new Date()): string {
+  const bars = account.homeVault ?? [];
+  const total = homeVaultTotal(account, prices);
+  const rows = bars
+    .map((b) => {
+      const p = productOf(b.product);
+      return `<tr>
+        <td style="width:110px">${qrSvg(barQrText(b), 100)}</td>
+        <td><b>${esc(p.label)}</b><br/>${b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin<br/>
+          ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b></td>
+        <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}</td>
+        <td>Acheté du ${d(b.acquiredFrom)}<br/>au ${d(b.acquiredTo)}<br/>exonéré en ${exemptYear(b)}</td>
+        <td class="num">${formatEur(b.cost)}</td>
+        <td class="num">${formatEur(b.grams * prices.gold)}</td>
+      </tr>`;
+    })
+    .join('');
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Inventaire du coffre maison</title><style>${STYLE_A}
+  td { vertical-align: middle; }</style></head><body>
+  ${docHead(account)}
+  <h1>Inventaire du coffre maison</h1>
+  <p class="sub">Lingotins et pièces d’or retirés du coffre Orvia · ${total.count} objet${total.count > 1 ? 's' : ''}, ${total.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin, ≈ ${formatEur(total.value)} au cours du ${d(now.toISOString())}</p>
+  <table><thead><tr><th>QR code</th><th>Objet</th><th>Retrait</th><th>Or d’origine</th><th class="num">Prix de revient</th><th class="num">Valeur de l’or</th></tr></thead>
+  <tbody>${rows || '<tr><td colspan="6" class="muted">Aucun lingotin ni pièce chez vous.</td></tr>'}</tbody></table>
+  <div class="foot">Fiche d’inventaire éditée par l’application Orvia, à garder avec vos papiers (succession, assurance habitation, revente). Chaque QR code reprend la fiche de l’objet et se lit avec n’importe quel téléphone. Ce document n’est pas un certificat d’authenticité : seuls le numéro gravé et le certificat de l’affinerie le sont. Prix de revient et dates d’achat d’origine : à présenter pour l’impôt en cas de revente.</div>
+  </body></html>`;
+}
