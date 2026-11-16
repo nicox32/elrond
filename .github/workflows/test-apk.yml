@@ -47,16 +47,10 @@ jobs:
             adb logcat -d -v brief > logcat.txt || true
             grep -E "FATAL|AndroidRuntime|ReactNativeJS|Exception|Error" logcat.txt | grep -iv "chatty" | head -120 || true
             echo "--- Fin de vie de l'appli (plantage natif, mémoire, ANR) ---"
-            grep -iE "fatal signal|libc|tombstone|has died|Process com.nicox32.orvia|ANR in|lowmemorykiller|Force finishing|am_kill|DEBUG" logcat.txt | head -80 || true
+            grep -iE "fatal signal|tombstone|has died|Process com.nicox32.orvia|ANR in|lowmemorykiller|Force finishing|am_kill|DEBUG" logcat.txt | head -80 || true
             adb exec-out screencap -p > screen.png || true
-            if ! adb shell pidof com.nicox32.orvia > /dev/null; then
-              echo "APPLI FERMEE : nouvel essai de lancement"
-              adb logcat -c
-              adb shell monkey -p com.nicox32.orvia -c android.intent.category.LAUNCHER 1
-              sleep 40
-              adb logcat -d -v brief > logcat2.txt || true
-              grep -iE "fatal|AndroidRuntime|ReactNativeJS|has died|Process com.nicox32.orvia|ANR in|libc|DEBUG" logcat2.txt | grep -iv "chatty" | head -120 || true
-            fi
+            # Chaque ligne est lancée à part : tout le second essai tient sur une ligne.
+            adb shell pidof com.nicox32.orvia > /dev/null || { echo "APPLI FERMEE : nouvel essai de lancement"; adb logcat -c; adb shell monkey -p com.nicox32.orvia -c android.intent.category.LAUNCHER 1; sleep 40; adb logcat -d -v brief > logcat2.txt; grep -iE "fatal|AndroidRuntime|ReactNativeJS|has died|Process com.nicox32.orvia|ANR in|DEBUG" logcat2.txt | grep -iv "chatty" | head -120; true; }
             adb shell pidof com.nicox32.orvia > /dev/null && echo "APPLI TOUJOURS OUVERTE" || { echo "APPLI FERMEE"; exit 1; }
             ! grep -q "FATAL EXCEPTION" logcat.txt || { echo "PLANTAGE DANS LE JOURNAL"; exit 1; }
       - uses: actions/upload-artifact@v4
