@@ -13,16 +13,28 @@ export interface BarProduct {
   id: string;
   label: string;
   grams: number;
-  /** Surcoût de fabrication, en part de la valeur du métal (ordre de grandeur du marché). */
+  /** Surcoût de fabrication (lingotin) ou prime de marché (pièce), en part de la valeur du métal. */
   premium: number;
+  /** Pièce : sa prime varie avec la demande, le prix exact est fixé le jour de la préparation. */
+  coin?: boolean;
 }
+
+/** Napoléon 20 francs : 6,45 g d'or à 900 ‰, soit 5,806 g d'or fin. */
+export const NAPOLEON_FINE_GRAMS = 5.806;
 
 export const BAR_PRODUCTS: BarProduct[] = [
   { id: 'g5', label: 'Lingotin 5 g', grams: 5, premium: 0.045 },
   { id: 'g10', label: 'Lingotin 10 g', grams: 10, premium: 0.03 },
   { id: 'g20', label: 'Lingotin 20 g', grams: 20, premium: 0.025 },
   { id: 'oz1', label: 'Lingot 1 once (31,1 g)', grams: OZ_GRAMS, premium: 0.02 },
+  { id: 'nap20', label: 'Napoléon 20 F (5,81 g d’or fin)', grams: NAPOLEON_FINE_GRAMS, premium: 0.06, coin: true },
 ];
+
+/** Valeur d'un Napoléon : l'or qu'il contient au cours du moment, et le prix indicatif avec sa prime. */
+export function napoleonPrice(goldEurPerGram: number) {
+  const metal = goldEurPerGram * NAPOLEON_FINE_GRAMS;
+  return { metal, withPremium: metal * (1 + (BAR_PRODUCTS.find((p) => p.id === 'nap20')?.premium ?? 0)) };
+}
 
 export const PHYSICAL = {
   /** Livraison assurée, remise en main propre contre signature, par envoi… */
@@ -129,7 +141,7 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
 /** Lingotin reçu : on note la date et son numéro de série (gravé sur le lingotin et son certificat). */
 export function receiveBar(account: Account, barId: string, serial: string, now = new Date()): Account {
   const s = serial.trim().toUpperCase();
-  if (s.length < 3) throw new LedgerError('Indiquez le numéro de série gravé sur le lingotin.');
+  if (s.length < 3) throw new LedgerError('Indiquez le numéro de série du lingotin, ou le millésime de la pièce.');
   if (!(account.homeVault ?? []).some((b) => b.id === barId)) throw new LedgerError('Lingotin introuvable.');
   return {
     ...account,

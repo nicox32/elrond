@@ -85,3 +85,19 @@ test('minimum d’achat 10 € sur le total, supplément du week-end, ordres pas
   const s = sell(a, p, 'gold', { unit: 'g', value: 1 }, 'deferred', new Date(), 0.005);
   assert.match(s.transactions[0].label, /week-end immédiat/);
 });
+
+test('Napoléon 20 F : 5,806 g d’or fin, prime indicative, millésime au coffre maison', async () => {
+  const { napoleonPrice } = await import('../src/logic/physical.ts');
+  const n = napoleonPrice(100);
+  close(n.metal, 580.6);
+  close(n.withPremium, 580.6 * 1.06);
+  // 4 Napoléons = 23,2 g d'or : livraison offerte (dès 20 g).
+  const q = quoteWithdrawal(p, { nap20: 4 });
+  close(q.grams, 23.224);
+  assert.equal(q.delivery, 0);
+  let a = creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 10 }), 100);
+  a = withdrawPhysical(a, p, { nap20: 1 });
+  a = receiveBar(a, a.homeVault![0].id, '1910');
+  assert.equal(a.homeVault![0].serial, '1910');
+  close(a.holdings.gold, 10 - 5.806);
+});

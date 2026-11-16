@@ -3,7 +3,8 @@ import { router } from 'expo-router';
 import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/format';
+import { formatEur as formatEurShort, formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/format';
+import { napoleonPrice } from '../logic/physical';
 import { METAL_LABEL } from '../logic/ledger';
 import { metalTrend } from '../logic/priceHistory';
 import { METALS, type WeightUnit } from '../logic/types';
@@ -63,6 +64,28 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
       })}
 
       <Pressable
+        onPress={() => router.push('/retrait')}
+        style={[styles.row, styles.rowBorder]}
+        accessibilityRole="button"
+        accessibilityHint="Retrait physique d’or"
+        testID="napoleon-row"
+      >
+        <View style={[styles.symbol, { borderColor: metalColor.gold, borderStyle: 'dashed' }]}>
+          <Text style={[styles.symbolText, { color: metalColor.gold, fontSize: 10.5 }]}>20 F</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.metal}>Napoléon 20 F</Text>
+          <Text style={styles.priceOther}>5,81 g d’or fin · prime ≈ 6 %</Text>
+        </View>
+        <View style={styles.prices}>
+          <Text style={styles.price}>{formatEurShort(napoleonPrice(quote.prices.gold).metal)}</Text>
+          <Text style={styles.priceOther}>
+            ≈ {formatEurShort(napoleonPrice(quote.prices.gold).withPremium)} avec prime
+          </Text>
+        </View>
+      </Pressable>
+
+      <Pressable
         onPress={() => router.push('/ratio')}
         style={[styles.row, styles.rowBorder, { paddingVertical: 10 }]}
         accessibilityRole="button"
@@ -76,7 +99,7 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
 
       <Text style={styles.footnote}>
         Cours au comptant, convertis en euros. Variation et courbe : dernières 24 h. Touchez un métal pour son graphique
-        sur 20 ans.
+        sur 20 ans. Napoléon : valeur de son or, et prix indicatif avec sa prime.
       </Text>
     </View>
   );

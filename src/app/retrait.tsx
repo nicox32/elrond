@@ -57,8 +57,9 @@ export default function WithdrawScreen() {
   return (
     <Screen testID="screen-retrait">
       <Hint>
-        Recevez une partie de votre Gold Spot en lingotins d’or 999,9 d’affineries agréées LBMA, avec numéro de série et
-        certificat. Ce n’est pas une vente : pas d’impôt, et la durée de détention de votre or continue.
+        Recevez une partie de votre Gold Spot en lingotins d’or 999,9 d’affineries agréées LBMA (numéro de série et
+        certificat) ou en Napoléons 20 F. Ce n’est pas une vente : pas d’impôt, et la durée de détention de votre or
+        continue.
       </Hint>
       <Text style={styles.avail}>
         Or au coffre : <Text style={{ color: metalColor.gold }}>{formatWeight(gold, 'g', 'gold')}</Text> · compte
@@ -73,8 +74,9 @@ export default function WithdrawScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{p.label}</Text>
                 <Text style={styles.sub}>
-                  ≈ {formatEur(p.grams * quote.prices.gold)} · fabrication ≈ {pct(p.premium)}
-                  {p.id === 'g10' ? ' · conseillé' : ''}
+                  ≈ {formatEur(p.grams * quote.prices.gold)} ·{' '}
+                  {p.coin ? `prime ≈ ${pct(p.premium)}, variable` : `fabrication ≈ ${pct(p.premium)}`}
+                  {p.id === 'g10' ? ' · conseillé' : p.coin ? ' · la pièce la plus facile à revendre en France' : ''}
                 </Text>
               </View>
               <Pressable
@@ -99,7 +101,17 @@ export default function WithdrawScreen() {
         <Card style={{ gap: 6 }}>
           <Line label="Or retiré du coffre" value={formatWeight(q.grams, 'g', 'gold')} />
           <Line label="Valeur au cours du jour" value={formatEur(q.value)} />
-          <Line label="Fabrication des lingotins" value={formatEur(q.premium)} />
+          <Line
+            label={
+              q.lines.some((l) => l.product.coin) ? 'Fabrication et prime des pièces' : 'Fabrication des lingotins'
+            }
+            value={formatEur(q.premium)}
+          />
+          {q.lines.some((l) => l.product.coin) && (
+            <Text style={styles.sub}>
+              La prime du Napoléon varie avec la demande : son prix exact est fixé le jour de la préparation.
+            </Text>
+          )}
           <Line
             label={`Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${PHYSICAL.freeDeliveryFromGrams} g)` : ''}`}
             value={q.delivery ? formatEur(q.delivery) : 'Offerte'}

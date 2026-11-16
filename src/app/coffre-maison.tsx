@@ -88,7 +88,9 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
         plus-value en {exemptYear(bar)}
       </Text>
       {bar.serial ? (
-        <Text style={styles.serial}>N° de série : {bar.serial}</Text>
+        <Text style={styles.serial}>
+          {p.coin ? 'Millésime' : 'N° de série'} : {bar.serial}
+        </Text>
       ) : (
         <View style={{ gap: 6 }}>
           <TextInput
@@ -97,14 +99,14 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
               setSerial(t);
               setMsg(null);
             }}
-            placeholder="Numéro de série gravé sur le lingotin"
+            placeholder={p.coin ? 'Millésime de la pièce (ex. 1910)' : 'Numéro de série gravé sur le lingotin'}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="characters"
             style={ui.input}
             accessibilityLabel="Numéro de série"
           />
           <Button
-            title="Lingotin reçu"
+            title={p.coin ? 'Pièce reçue' : 'Lingotin reçu'}
             onPress={() => {
               try {
                 onReceive(serial);
