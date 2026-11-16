@@ -30,10 +30,15 @@ export const BAR_PRODUCTS: BarProduct[] = [
   { id: 'nap20', label: 'Napoléon 20 F (5,81 g d’or fin)', grams: NAPOLEON_FINE_GRAMS, premium: 0.06, coin: true },
 ];
 
+/** Valeur d'un lingotin ou d'une pièce : son or au cours du moment, et le prix indicatif avec fabrication ou prime. */
+export function productPrice(p: BarProduct, goldEurPerGram: number) {
+  const metal = goldEurPerGram * p.grams;
+  return { metal, withPremium: metal * (1 + p.premium) };
+}
+
 /** Valeur d'un Napoléon : l'or qu'il contient au cours du moment, et le prix indicatif avec sa prime. */
 export function napoleonPrice(goldEurPerGram: number) {
-  const metal = goldEurPerGram * NAPOLEON_FINE_GRAMS;
-  return { metal, withPremium: metal * (1 + (BAR_PRODUCTS.find((p) => p.id === 'nap20')?.premium ?? 0)) };
+  return productPrice(productOf('nap20'), goldEurPerGram);
 }
 
 export const PHYSICAL = {

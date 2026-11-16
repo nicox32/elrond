@@ -4,7 +4,7 @@ import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react
 import Svg, { Path } from 'react-native-svg';
 
 import { formatEur as formatEurShort, formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/format';
-import { napoleonPrice } from '../logic/physical';
+import { BAR_PRODUCTS, productPrice } from '../logic/physical';
 import { METAL_LABEL } from '../logic/ledger';
 import { metalTrend } from '../logic/priceHistory';
 import { METALS, type WeightUnit } from '../logic/types';
@@ -13,6 +13,7 @@ import { LIVE_REFRESH_MS, useBank } from '../state/BankProvider';
 import { colors, metalColor, metalSymbol } from '../theme';
 
 const SPARK_H = 30;
+const pctShort = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
 
 /** Cours en direct de l'or, de l'argent et du platine, avec leur évolution sur 24 h. */
 export function LivePrices({ unit }: { unit: WeightUnit }) {
@@ -65,24 +66,33 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
 
       <Pressable
         onPress={() => router.push('/retrait')}
-        style={[styles.row, styles.rowBorder]}
+        style={[styles.bars, styles.rowBorder]}
         accessibilityRole="button"
         accessibilityHint="Retrait physique d’or"
-        testID="napoleon-row"
+        testID="bars-block"
       >
-        <View style={[styles.symbol, { borderColor: metalColor.gold, borderStyle: 'dashed' }]}>
-          <Text style={[styles.symbolText, { color: metalColor.gold, fontSize: 10.5 }]}>20 F</Text>
+        <View style={styles.barsHead}>
+          <Text style={styles.metal}>Lingotins et pièce</Text>
+          <Text style={styles.barsCol}>valeur de l’or</Text>
+          <Text style={styles.barsCol}>avec frais</Text>
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.metal}>Napoléon 20 F</Text>
-          <Text style={styles.priceOther}>5,81 g d’or fin · prime ≈ 6 %</Text>
-        </View>
-        <View style={styles.prices}>
-          <Text style={styles.price}>{formatEurShort(napoleonPrice(quote.prices.gold).metal)}</Text>
-          <Text style={styles.priceOther}>
-            ≈ {formatEurShort(napoleonPrice(quote.prices.gold).withPremium)} avec prime
-          </Text>
-        </View>
+        {BAR_PRODUCTS.map((b) => {
+          const p = productPrice(b, quote.prices.gold);
+          return (
+            <View key={b.id} style={styles.barsLine} testID={`bar-${b.id}`}>
+              <Text style={styles.barsName} numberOfLines={1}>
+                {b.coin ? 'Napoléon 20 F' : b.id === 'oz1' ? 'Lingot 1 once' : `Lingotin ${b.grams} g`}
+                <Text style={styles.priceOther}>
+                  {'  '}
+                  {b.coin ? `prime ${pctShort(b.premium)}` : `fab. ${pctShort(b.premium)}`}
+                </Text>
+              </Text>
+              <Text style={styles.barsVal}>{formatEurShort(p.metal)}</Text>
+              <Text style={[styles.barsVal, styles.barsGold]}>{formatEurShort(p.withPremium)}</Text>
+            </View>
+          );
+        })}
+        <Text style={styles.priceOther}>Livraison 12 €, offerte dès 20 g · touchez pour un retrait physique</Text>
       </Pressable>
 
       <Pressable
@@ -99,7 +109,7 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
 
       <Text style={styles.footnote}>
         Cours au comptant, convertis en euros. Variation et courbe : dernières 24 h. Touchez un métal pour son graphique
-        sur 20 ans. Napoléon : valeur de son or, et prix indicatif avec sa prime.
+        sur 20 ans. Lingotins et pièce : valeur de leur or, et prix indicatif avec fabrication ou prime.
       </Text>
     </View>
   );
@@ -162,5 +172,12 @@ const styles = StyleSheet.create({
   prices: { alignItems: 'flex-end', minWidth: 96 },
   price: { color: colors.text, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
   priceOther: { color: colors.textMuted, fontSize: 11, fontVariant: ['tabular-nums'] },
+  bars: { paddingVertical: 10, gap: 5 },
+  barsHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 2 },
+  barsCol: { color: colors.textMuted, fontSize: 10.5, width: 82, textAlign: 'right' },
+  barsLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  barsName: { color: colors.text, fontSize: 13.5, fontWeight: '600', flex: 1 },
+  barsVal: { color: colors.textMuted, fontSize: 13, width: 82, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  barsGold: { color: colors.text, fontWeight: '700' },
   footnote: { color: colors.textMuted, fontSize: 11, lineHeight: 15, marginTop: 4 },
 });
