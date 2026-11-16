@@ -1,0 +1,35 @@
+# Historique des cours (20 ans, €/g) pour les graphiques de l'appli, mis à jour chaque jour.
+# Publié dans la release « cours » (pré-version : ne compte pas comme une version de l'appli) :
+#   https://github.com/nicox32/elrond/releases/download/cours/cours.json
+name: Cours historiques
+
+on:
+  schedule:
+    - cron: '17 22 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cours:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+
+      - name: Calculer l'historique
+        run: python3 scripts/price-history.py cours.json
+
+      - name: Publier cours.json
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cours
+          name: Cours historiques (données de l'appli)
+          prerelease: true
+          make_latest: false
+          files: cours.json
+          body: |
+            Cours quotidiens de l'or, de l'argent et du platine en euros par gramme, sur 20 ans, utilisés par les
+            graphiques de l'appli Orvia. Mis à jour automatiquement chaque soir. Ce n'est pas une version de l'appli.
