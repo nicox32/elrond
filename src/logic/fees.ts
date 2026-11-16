@@ -91,7 +91,7 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Lingotin 10 g', orvia: 'Fabrication ≈ 3 %' },
       { label: 'Lingotin 20 g', orvia: 'Fabrication ≈ 2,5 %' },
       { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication ≈ 2 %' },
-      { label: 'Livraison assurée, remise contre signature', orvia: '19 € par envoi' },
+      { label: 'Livraison assurée, remise contre signature', orvia: '12 € par envoi, offerte dès 20 g' },
       { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
     ],
   },

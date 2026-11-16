@@ -163,7 +163,7 @@ jamais dans Git (dossier `signing/` ignoré).
   (modèles 50/25/25, 60/20/20…), comparaison avec la répartition actuelle, et **achat réparti en euros** en un geste,
   « selon mes % » ou « vers mon objectif » (priorité aux métaux en retard, sans rien vendre) (`docs/repartition.png`).
 - **Retrait physique d'or** (coffre Gold Spot, ou Profil › Mon coffre maison) : lingotins LBMA de 5 g, 10 g, 20 g
-  et 1 once ; fabrication 2 à 4,5 % et livraison assurée 19 €, payées depuis le compte d'attente (pas une vente, pas
+  et 1 once ; fabrication 2 à 4,5 % et livraison assurée 12 € (offerte dès 20 g), payées depuis le compte d'attente (pas une vente, pas
   d'impôt, la durée de détention continue). Registre « Mon coffre maison » : numéro de série, prix et dates d'achat
   d'origine. Argent et platine non retirables (20 % de TVA à la sortie du port franc).
 - **Règles d'achat** : minimum 10 € sur le total de l'opération, aucun minimum de frais. Le week-end (marché fermé),

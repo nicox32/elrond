@@ -100,7 +100,10 @@ export default function WithdrawScreen() {
           <Line label="Or retiré du coffre" value={formatWeight(q.grams, 'g', 'gold')} />
           <Line label="Valeur au cours du jour" value={formatEur(q.value)} />
           <Line label="Fabrication des lingotins" value={formatEur(q.premium)} />
-          <Line label="Livraison assurée, remise contre signature" value={formatEur(q.delivery)} />
+          <Line
+            label={`Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${PHYSICAL.freeDeliveryFromGrams} g)` : ''}`}
+            value={q.delivery ? formatEur(q.delivery) : 'Offerte'}
+          />
           <View style={styles.sep} />
           <Line label={`Frais payés depuis le compte d’attente (${pct(q.feesPct)})`} value={formatEur(q.fees)} strong />
           {tooMuch && <Text style={styles.err}>Pas assez d’or au coffre pour ce retrait.</Text>}

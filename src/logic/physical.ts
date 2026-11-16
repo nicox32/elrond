@@ -25,8 +25,10 @@ export const BAR_PRODUCTS: BarProduct[] = [
 ];
 
 export const PHYSICAL = {
-  /** Livraison assurée, remise en main propre contre signature, par envoi. */
-  delivery: 19,
+  /** Livraison assurée, remise en main propre contre signature, par envoi… */
+  delivery: 12,
+  /** … offerte à partir de ce poids d'or dans le même envoi (inciter à grouper les retraits). */
+  freeDeliveryFromGrams: 20,
   /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
   vatSilverPlatinum: 0.2,
   /** Délai indicatif de livraison, en jours ouvrés. */
@@ -51,7 +53,7 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder) {
   const grams = lines.reduce((s, l) => s + l.grams, 0);
   const value = lines.reduce((s, l) => s + l.value, 0);
   const premium = lines.reduce((s, l) => s + l.premium, 0);
-  const delivery = lines.length ? PHYSICAL.delivery : 0;
+  const delivery = !lines.length || grams >= PHYSICAL.freeDeliveryFromGrams - 1e-9 ? 0 : PHYSICAL.delivery;
   const fees = Math.round((premium + delivery) * 100) / 100;
   return { lines, grams, value, premium, delivery, fees, feesPct: value ? fees / value : 0 };
 }

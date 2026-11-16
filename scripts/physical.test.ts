@@ -18,7 +18,8 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   const q = quoteWithdrawal(p, { g10: 2, g5: 1 });
   assert.equal(q.grams, 25);
   close(q.premium, 10 * 100 * 0.03 * 2 + 5 * 100 * 0.045);
-  close(q.fees, 60 + 22.5 + 19, 0.01);
+  close(q.fees, 60 + 22.5, 0.01); // 25 g : livraison offerte (dès 20 g)
+  close(quoteWithdrawal(p, { g10: 1 }).fees, 30 + 12, 0.01); // 10 g seul : livraison 12 €
   // Frais à payer depuis le compte d'attente : vide → refusé (payer en or serait une vente imposée).
   assert.throws(() => withdrawPhysical(a, p, { g10: 2, g5: 1 }), LedgerError);
   a = creditCash(a, 150);
