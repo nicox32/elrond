@@ -17,17 +17,66 @@ export interface BarProduct {
   premium: number;
   /** Pièce : sa prime varie avec la demande, le prix exact est fixé le jour de la préparation. */
   coin?: boolean;
+  /** Fiche technique du produit livré (quand elle est connue). */
+  spec?: BarSpec;
+}
+
+export interface BarSpec {
+  producer: string;
+  /** Titre en millièmes, tel qu'écrit sur le produit (« 999,9 »). */
+  purity: string;
+  /** Dimensions en mm : lingotin (longueur × largeur × épaisseur) ou pièce (diamètre). */
+  lengthMm?: number;
+  widthMm?: number;
+  thicknessMm?: number;
+  diameterMm?: number;
+  /** Référence du produit chez le fournisseur. */
+  ref?: string;
+}
+
+const mm = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+
+/** Fiche technique en une ligne : « PAMP Suisse · or 999,9 · 23,3 × 14 × 0,79 mm ». */
+export function specLine(s: BarSpec | undefined): string | null {
+  if (!s) return null;
+  const size = s.diameterMm
+    ? `Ø ${mm(s.diameterMm)} mm`
+    : s.lengthMm && s.widthMm
+      ? `${mm(s.lengthMm)} × ${mm(s.widthMm)}${s.thicknessMm ? ` × ${mm(s.thicknessMm)}` : ''} mm`
+      : '';
+  return [s.producer, `or ${s.purity}`, size].filter(Boolean).join(' · ');
 }
 
 /** Napoléon 20 francs : 6,45 g d'or à 900 ‰, soit 5,806 g d'or fin. */
 export const NAPOLEON_FINE_GRAMS = 5.806;
 
 export const BAR_PRODUCTS: BarProduct[] = [
-  { id: 'g5', label: 'Lingotin 5 g', grams: 5, premium: 0.045 },
+  {
+    id: 'g5',
+    label: 'Lingotin 5 g',
+    grams: 5,
+    premium: 0.045,
+    spec: {
+      producer: 'PAMP Suisse',
+      purity: '999,9',
+      lengthMm: 23.3,
+      widthMm: 14,
+      thicknessMm: 0.79,
+      ref: 'ZAUFS00080',
+    },
+  },
   { id: 'g10', label: 'Lingotin 10 g', grams: 10, premium: 0.03 },
   { id: 'g20', label: 'Lingotin 20 g', grams: 20, premium: 0.025 },
   { id: 'oz1', label: 'Lingot 1 once (31,1 g)', grams: OZ_GRAMS, premium: 0.02 },
-  { id: 'nap20', label: 'Napoléon 20 F (5,81 g d’or fin)', grams: NAPOLEON_FINE_GRAMS, premium: 0.06, coin: true },
+  {
+    id: 'nap20',
+    label: 'Napoléon 20 F (5,81 g d’or fin)',
+    grams: NAPOLEON_FINE_GRAMS,
+    premium: 0.06,
+    coin: true,
+    // Pièce de 6,45 g à 900 ‰, frappée en France (Monnaie de Paris) de 1803 à 1914.
+    spec: { producer: 'Monnaie de Paris', purity: '900 ‰', diameterMm: 21 },
+  },
 ];
 
 /** Valeur d'un lingotin ou d'une pièce : son or au cours du moment, et le prix indicatif avec fabrication ou prime. */

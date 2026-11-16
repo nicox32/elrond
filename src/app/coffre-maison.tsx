@@ -6,7 +6,7 @@ import { Button, Card, Hint, Message, Screen, styles as ui } from '../components
 import { formatDate, formatEur, formatWeight } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
 import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
-import { homeVaultTotal, productOf, receiveBar, removeBar } from '../logic/physical';
+import { homeVaultTotal, productOf, receiveBar, removeBar, specLine } from '../logic/physical';
 import { exportPdf } from '../pdf';
 import { QrCode } from '../components/QrCode';
 import type { HomeBar } from '../logic/types';
@@ -87,6 +87,7 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
       </View>
+      {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
       <Text style={styles.sub}>
         Commandé le {formatDate(bar.orderedAt)}
         {bar.receivedAt ? ` · reçu le ${formatDate(bar.receivedAt)}` : ''}

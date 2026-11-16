@@ -11,6 +11,7 @@ import {
   type BarOrder,
   PHYSICAL,
   quoteWithdrawal,
+  specLine,
   vatIfWithdrawn,
   withdrawPhysical,
 } from '../logic/physical';
@@ -78,6 +79,7 @@ export default function WithdrawScreen() {
                   {p.coin ? `prime ≈ ${pct(p.premium)}, variable` : `fabrication ≈ ${pct(p.premium)}`}
                   {p.id === 'g10' ? ' · conseillé' : p.coin ? ' · la pièce la plus facile à revendre en France' : ''}
                 </Text>
+                {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
               </View>
               <Pressable
                 onPress={() => set(p.id, n - 1)}

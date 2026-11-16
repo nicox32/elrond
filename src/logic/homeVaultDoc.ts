@@ -4,7 +4,7 @@
  * l'authenticité d'un lingotin.
  */
 import { formatEur } from './format.ts';
-import { homeVaultTotal, productOf } from './physical.ts';
+import { homeVaultTotal, productOf, specLine } from './physical.ts';
 import { qrSvg } from './qr.ts';
 import { docHead, esc, STYLE_A } from './statement.ts';
 import type { Account, HomeBar, Prices } from './types.ts';
@@ -20,6 +20,7 @@ export function barQrText(b: HomeBar): string {
   return [
     'ORVIA · Coffre maison',
     `${p.label} · ${grams} g d’or fin`,
+    ...(specLine(p.spec) ? [specLine(p.spec)!] : []),
     b.serial ? `${p.coin ? 'Millésime' : 'N° de série'} : ${b.serial}` : 'N° de série : à noter à réception',
     `Retiré du coffre Orvia le ${d(b.orderedAt)}${b.receivedAt ? ` · reçu le ${d(b.receivedAt)}` : ''}`,
     `Or acheté du ${d(b.acquiredFrom)} au ${d(b.acquiredTo)}`,
@@ -39,6 +40,7 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
       return `<tr>
         <td style="width:110px">${qrSvg(barQrText(b), 100)}</td>
         <td><b>${esc(p.label)}</b><br/>${b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin<br/>
+          ${specLine(p.spec) ? `<span class="muted">${esc(specLine(p.spec)!)}</span><br/>` : ''}
           ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b></td>
         <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}</td>
         <td>Acheté du ${d(b.acquiredFrom)}<br/>au ${d(b.acquiredTo)}<br/>exonéré en ${exemptYear(b)}</td>
