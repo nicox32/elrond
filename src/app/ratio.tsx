@@ -1,11 +1,11 @@
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PriceChartCard, useSeries } from '../components/PriceChartCard';
 import { PriceStatus } from '../components/PriceStatus';
 import { Segmented } from '../components/Segmented';
-import { Card, Hint, Screen, SectionTitle } from '../components/ui';
+import { Button, Card, Hint, Screen, SectionTitle } from '../components/ui';
 import { ratioZone, seriesStats } from '../logic/priceSeries';
 import { colors, metalColor } from '../theme';
 
@@ -110,10 +110,11 @@ export default function RatioScreen() {
         </>
       ) : (
         <Hint>
-          Jusqu’au début de 2015, le platine valait souvent plus cher que l’or (ratio sous 1). Depuis, l’or vaut nettement plus : le
-          platine dépend surtout de l’industrie automobile, l’or de la demande d’épargne.
+          Jusqu’au début de 2015, le platine valait souvent plus cher que l’or (ratio sous 1). Depuis, l’or vaut
+          nettement plus : le platine dépend surtout de l’industrie automobile, l’or de la demande d’épargne.
         </Hint>
       )}
+      <Button title="Alertes ntfy sur les ratios" variant="ghost" onPress={() => router.push('/alertes')} />
       <Hint>
         Le ratio sert à choisir quel métal acheter avec vos nouveaux euros, pas à échanger ce que vous avez : une
         conversion est une vente imposée, et le métal reçu repart à zéro pour l’exonération des 22 ans.

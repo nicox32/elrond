@@ -13,6 +13,7 @@ import {
   createAlert,
   describeAlert,
   metalOfServerTitle,
+  MANUAL_BUY_ALERTS,
   RECOMMENDED_ALERTS,
   serverAlertMessages,
   serverTriggers,
@@ -33,13 +34,14 @@ import {
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 
-type Family = 'price' | 'change' | 'average';
+type Family = 'price' | 'change' | 'average' | 'ratio';
 type Direction = 'down' | 'up';
 
 const KIND: Record<Family, Record<Direction, AlertKind>> = {
   price: { down: 'below', up: 'above' },
   change: { down: 'drop', up: 'rise' },
   average: { down: 'belowAvg30', up: 'aboveAvg30' },
+  ratio: { down: 'ratioBelow', up: 'ratioAbove' },
 };
 
 export default function AlertsScreen() {
@@ -75,6 +77,7 @@ export default function AlertsScreen() {
     .slice(0, 20);
 
   const current = unit === 'oz' ? quote.prices[metal] * TROY_OUNCE : quote.prices[metal];
+  const ratioNow = metal === 'gold' ? null : quote.prices.gold / quote.prices[metal];
 
   function add() {
     try {
@@ -97,6 +100,13 @@ export default function AlertsScreen() {
     `${a.metal}|${a.kind}|${a.value}|${a.window ?? ''}`;
   const existing = new Set((account.alerts ?? []).map(key));
   const missing = RECOMMENDED_ALERTS.filter((a) => !existing.has(key(a)));
+  const missingManual = MANUAL_BUY_ALERTS.filter((a) => !existing.has(key(a)));
+
+  function applyManual() {
+    const added = missingManual.map((a) => createAlert(a));
+    updateAccount((acc) => ({ ...acc, alerts: [...(acc.alerts ?? []), ...added] }));
+    setMessage({ ok: true, text: `${added.length} alerte(s) de ratio ajoutée(s).` });
+  }
 
   function applyRecommended() {
     const added = missing.map((a) => createAlert(a));
@@ -195,6 +205,42 @@ export default function AlertsScreen() {
         />
       </Card>
 
+      <SectionTitle>Achats manuels : ratios</SectionTitle>
+      <Card style={{ gap: 8 }}>
+        <Text style={styles.para}>
+          Pour vos achats manuels d’argent et de platine, en plus des paliers de prix : le ratio dit si le métal est bon
+          marché ou cher par rapport à l’or. Aujourd’hui : or/argent{' '}
+          {(quote.prices.gold / quote.prices.silver).toLocaleString('fr-FR', { maximumFractionDigits: 1 })}, or/platine{' '}
+          {(quote.prices.gold / quote.prices.platinum).toLocaleString('fr-FR', { maximumFractionDigits: 2 })}.
+        </Text>
+        {MANUAL_BUY_ALERTS.map((a) => (
+          <Text key={key(a)} style={styles.muted}>
+            • {describeAlert(createAlert(a))} :{' '}
+            {a.kind === 'ratioAbove'
+              ? a.metal === 'silver'
+                ? a.value >= 90
+                  ? 'argent très bon marché'
+                  : 'argent bon marché, moment d’en acheter'
+                : 'platine bon marché, moment d’en acheter'
+              : a.metal === 'silver'
+                ? 'argent cher, privilégiez l’or'
+                : 'platine cher, privilégiez l’or'}
+          </Text>
+        ))}
+        <Button
+          title={
+            missingManual.length
+              ? `Ajouter les ${missingManual.length} alertes de ratio`
+              : 'Alertes de ratio en place ✓'
+          }
+          onPress={applyManual}
+          disabled={!missingManual.length}
+        />
+        <Hint>
+          Elles sont aussi surveillées par le serveur et envoyées sur votre canal ntfy, toutes les 15 minutes.
+        </Hint>
+      </Card>
+
       <SectionTitle>Nouvelle alerte</SectionTitle>
       <MetalPicker value={metal} onChange={setMetal} metals={SPOT_METALS} />
       <Segmented
@@ -207,6 +253,7 @@ export default function AlertsScreen() {
           { value: 'price', label: 'Prix' },
           { value: 'change', label: 'Variation' },
           { value: 'average', label: 'Moyenne 30 j' },
+          { value: 'ratio', label: 'Ratio' },
         ]}
       />
       <Segmented
@@ -223,10 +270,15 @@ export default function AlertsScreen() {
                   { value: 'down', label: 'Baisse de' },
                   { value: 'up', label: 'Hausse de' },
                 ]
-              : [
-                  { value: 'down', label: 'Sous la moyenne de' },
-                  { value: 'up', label: 'Au-dessus de' },
-                ]
+              : family === 'ratio'
+                ? [
+                    { value: 'down', label: 'Passe sous' },
+                    { value: 'up', label: 'Passe au-dessus' },
+                  ]
+                : [
+                    { value: 'down', label: 'Sous la moyenne de' },
+                    { value: 'up', label: 'Au-dessus de' },
+                  ]
         }
       />
       {family === 'change' && (
@@ -240,7 +292,13 @@ export default function AlertsScreen() {
         />
       )}
       <View style={{ gap: 6 }}>
-        <Label>{family === 'price' ? `Prix (€/${unit})` : 'Pourcentage'}</Label>
+        <Label>
+          {family === 'price'
+            ? `Prix (€/${unit})`
+            : family === 'ratio'
+              ? `Ratio or/${metal === 'platinum' ? 'platine' : 'argent'}`
+              : 'Pourcentage'}
+        </Label>
         <View style={styles.row}>
           <TextInput
             value={text}
@@ -248,20 +306,29 @@ export default function AlertsScreen() {
               setText(t);
               setMessage(null);
             }}
-            placeholder={family === 'price' ? current.toFixed(0) : '5'}
+            placeholder={
+              family === 'price' ? current.toFixed(0) : family === 'ratio' ? (ratioNow?.toFixed(1) ?? '85') : '5'
+            }
             placeholderTextColor={colors.textMuted}
             keyboardType="decimal-pad"
             style={[ui.input, { flex: 1, minWidth: 0 }]}
             accessibilityLabel={family === 'price' ? 'Prix' : 'Pourcentage'}
           />
-          <Text style={styles.unit}>{family === 'price' ? `€/${unit}` : '%'}</Text>
+          <Text style={styles.unit}>{family === 'price' ? `€/${unit}` : family === 'ratio' ? '' : '%'}</Text>
         </View>
         {family === 'price' && (
           <Hint>
             Cours actuel : {current.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}/{unit}
           </Hint>
         )}
-        {family !== 'price' && (
+        {family === 'ratio' && (
+          <Hint>
+            {ratioNow
+              ? `Ratio actuel : ${ratioNow.toLocaleString('fr-FR', { maximumFractionDigits: 2 })}. Au-dessus : le métal devient bon marché par rapport à l’or.`
+              : 'Choisissez l’argent ou le platine : le ratio les compare à l’or.'}
+          </Hint>
+        )}
+        {family !== 'price' && family !== 'ratio' && (
           <Hint>
             {family === 'change' && win === '7d'
               ? 'Il faut 7 jours de relevés : l’alerte commence à surveiller une fois ce recul atteint.'

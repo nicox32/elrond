@@ -36,7 +36,7 @@ export interface Notification {
 }
 
 const METALS: Metal[] = ['gold', 'silver', 'platinum'];
-const KINDS: AlertKind[] = ['above', 'below', 'drop', 'rise', 'belowAvg30', 'aboveAvg30'];
+const KINDS: AlertKind[] = ['above', 'below', 'drop', 'rise', 'belowAvg30', 'aboveAvg30', 'ratioAbove', 'ratioBelow'];
 
 /** Clé stable d'une alerte : la même configuration garde son état d'une exécution à l'autre. */
 export function alertKey(c: AlertConfig): string {
@@ -53,6 +53,8 @@ export function parseConfig(raw: unknown, log: (m: string) => void = () => {}): 
       a &&
       METALS.includes(a.metal) &&
       KINDS.includes(a.kind) &&
+      // Un ratio compare l'or à l'argent ou au platine.
+      !((a.kind === 'ratioAbove' || a.kind === 'ratioBelow') && a.metal === 'gold') &&
       typeof a.value === 'number' &&
       a.value > 0 &&
       (a.unit === undefined || a.unit === 'g' || a.unit === 'oz') &&

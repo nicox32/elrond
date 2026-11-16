@@ -1,4 +1,4 @@
- {
+{
   "alerts": [
     {
       "metal": "gold",
@@ -126,6 +126,31 @@
       "kind": "below",
       "value": 37,
       "unit": "g"
+    },
+    {
+      "metal": "silver",
+      "kind": "ratioAbove",
+      "value": 85
+    },
+    {
+      "metal": "silver",
+      "kind": "ratioAbove",
+      "value": 90
+    },
+    {
+      "metal": "silver",
+      "kind": "ratioBelow",
+      "value": 65
+    },
+    {
+      "metal": "platinum",
+      "kind": "ratioAbove",
+      "value": 2.9
+    },
+    {
+      "metal": "platinum",
+      "kind": "ratioBelow",
+      "value": 2
     }
   ]
-}   
+}

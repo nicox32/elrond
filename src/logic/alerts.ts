@@ -18,7 +18,13 @@ export type AlertKind =
   /** Cours au moins X % sous sa moyenne des 30 derniers jours. */
   | 'belowAvg30'
   /** Cours au moins X % au-dessus de sa moyenne des 30 derniers jours. */
-  | 'aboveAvg30';
+  | 'aboveAvg30'
+  /** Ratio or/métal (argent ou platine) au-dessus d'une valeur : le métal est bon marché par rapport à l'or. */
+  | 'ratioAbove'
+  /** Ratio or/métal sous une valeur : le métal est cher par rapport à l'or. */
+  | 'ratioBelow';
+
+export const isRatioKind = (k: AlertKind) => k === 'ratioAbove' || k === 'ratioBelow';
 
 export type AlertWindow = '24h' | '7d';
 
@@ -106,6 +112,8 @@ const pricePer = (eurPerGram: number, unit: WeightUnit = 'oz') =>
 const eur = (n: number) => n.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 const pct = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
 const WINDOW_LABEL: Record<AlertWindow, string> = { '24h': '24 h', '7d': '7 jours' };
+const ratioFmt = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+const ratioName = (m: Metal) => (m === 'platinum' ? 'or/platine' : 'or/argent');
 
 /** Description lisible d'une alerte. */
 export function describeAlert(a: PriceAlert): string {
@@ -124,6 +132,10 @@ export function describeAlert(a: PriceAlert): string {
       return `${metal} au moins ${pct(a.value)} sous sa moyenne 30 jours`;
     case 'aboveAvg30':
       return `${metal} au moins ${pct(a.value)} au-dessus de sa moyenne 30 jours`;
+    case 'ratioAbove':
+      return `Ratio ${ratioName(a.metal)} au-dessus de ${ratioFmt(a.value)}`;
+    case 'ratioBelow':
+      return `Ratio ${ratioName(a.metal)} sous ${ratioFmt(a.value)}`;
   }
 }
 
@@ -134,6 +146,9 @@ export function createAlert(
   if (!Number.isFinite(input.value) || input.value <= 0) throw new Error('Indiquez une valeur positive.');
   if ((input.kind === 'drop' || input.kind === 'rise' || input.kind.endsWith('Avg30')) && input.value >= 100) {
     throw new Error('Le pourcentage doit être inférieur à 100 %.');
+  }
+  if (isRatioKind(input.kind) && input.metal === 'gold') {
+    throw new Error('Un ratio compare l’or à l’argent ou au platine : choisissez l’argent ou le platine.');
   }
   return {
     id: newId(),
@@ -178,7 +193,25 @@ export function checkAlert(a: PriceAlert, prices: Prices, history: PricePoint[],
         ? `${gap > 0 ? '+' : ''}${pct(gap)} par rapport à la moyenne 30 jours (${eur(pricePer(avg))}/oz).`
         : false;
     }
+    case 'ratioAbove':
+    case 'ratioBelow': {
+      if (a.metal === 'gold' || !(current > 0)) return null;
+      const ratio = prices.gold / current;
+      const hit = a.kind === 'ratioAbove' ? ratio >= a.value : ratio <= a.value;
+      return hit ? ratioMessage(a.kind, a.metal, ratio, prices) : false;
+    }
   }
+}
+
+/** Texte d'une alerte de ratio : la valeur, les deux cours et ce que ça veut dire pour un achat manuel. */
+function ratioMessage(kind: AlertKind, metal: Metal, ratio: number, prices: Prices): string {
+  const of = metal === 'platinum' ? 'de platine' : 'd’argent';
+  const subject = metal === 'platinum' ? 'Le platine' : 'L’argent';
+  const advice =
+    kind === 'ratioAbove'
+      ? `${subject} est bon marché par rapport à l’or : moment favorable pour un achat manuel ${of}.`
+      : `${subject} est cher par rapport à l’or : privilégiez l’or pour vos prochains achats.`;
+  return `Ratio ${ratioName(metal)} : ${ratioFmt(ratio)} (1 g d’or = ${ratioFmt(ratio)} g ${of}). ${METAL_LABEL[metal]} ${eur(prices[metal])}/g · Gold Spot ${eur(prices.gold)}/g. ${advice}`;
 }
 
 /**
@@ -270,6 +303,19 @@ export const RECOMMENDED_ALERTS: (Pick<PriceAlert, 'metal' | 'kind' | 'value'> &
   { metal: 'platinum', kind: 'aboveAvg30', value: 8 },
 ];
 
+/**
+ * Alertes pour les achats manuels d'argent et de platine : ratios or/métal, à côté des paliers de prix.
+ * Or/argent : moyenne sur 20 ans ≈ 72, zone habituelle 60–70, bon marché au-delà de 80. Or/platine : moyenne sur
+ * 20 ans ≈ 1,7, autour de 2,4–2,7 sur la dernière année (plus haut 3,6 en avril 2025).
+ */
+export const MANUAL_BUY_ALERTS: (Pick<PriceAlert, 'metal' | 'kind' | 'value'> & { window?: AlertWindow })[] = [
+  { metal: 'silver', kind: 'ratioAbove', value: 85 },
+  { metal: 'silver', kind: 'ratioAbove', value: 90 },
+  { metal: 'silver', kind: 'ratioBelow', value: 65 },
+  { metal: 'platinum', kind: 'ratioAbove', value: 2.9 },
+  { metal: 'platinum', kind: 'ratioBelow', value: 2 },
+];
+
 /** Notification de test d'une alerte : le message reçu quand sa condition sera remplie. */
 export function testNotification(
   a: Pick<PriceAlert, 'metal' | 'kind' | 'value'> & Partial<Pick<PriceAlert, 'unit' | 'window'>>,
@@ -282,7 +328,9 @@ export function testNotification(
   const n = index !== undefined && total ? ` (${index + 1}/${total})` : '';
   return {
     title: `Test${n} · Alerte ${label} · ${desc}`,
-    body: `Notification de test : c’est ce message que vous recevrez quand la condition sera remplie. Cours actuel : ${eur((prices[a.metal as 'gold'] ?? 0) * TROY_OUNCE)}/oz.`,
+    body: isRatioKind(a.kind)
+      ? `Notification de test : c’est ce message que vous recevrez quand la condition sera remplie. Ratio ${ratioName(a.metal)} actuel : ${ratioFmt(prices.gold / prices[a.metal as 'silver'])}.`
+      : `Notification de test : c’est ce message que vous recevrez quand la condition sera remplie. Cours actuel : ${eur((prices[a.metal as 'gold'] ?? 0) * TROY_OUNCE)}/oz.`,
   };
 }
 

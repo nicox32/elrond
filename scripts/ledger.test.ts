@@ -766,7 +766,9 @@ test('alertes recommandées : identiques côté appli et serveur, plus serrées 
   assert.ok(
     server
       .slice(RECOMMENDED_ALERTS.length)
-      .every((a: { kind: string; unit?: string }) => a.kind === 'below' && a.unit === 'g'),
+      .every(
+        (a: { kind: string; unit?: string }) => (a.kind === 'below' && a.unit === 'g') || a.kind.startsWith('ratio'),
+      ),
   );
   const drop24 = (m: string) =>
     RECOMMENDED_ALERTS.find((a) => a.metal === m && a.kind === 'drop' && a.window === '24h')!.value;
@@ -1362,4 +1364,37 @@ test('garde en coffre : 0,12 %/an or, 0,4 %/an argent et platine, en métal chaq
   close(offLater.holdings.gold, 90);
   const on = { ...offLater, settings: { ...offLater.settings, custodyFees: true } };
   close(applyDormancy(on, prices, new Date('2026-06-20T12:00:00')).holdings.gold, 90);
+});
+
+test('alertes de ratio : or/argent et or/platine, pour les achats manuels, comprises par le serveur', async () => {
+  const { createAlert, evaluateAlerts, describeAlert, MANUAL_BUY_ALERTS, metalOfServerTitle } =
+    await import('../src/logic/alerts.ts');
+  const { parseConfig } = await import('../server/alertServer.ts');
+  const { readFileSync } = await import('node:fs');
+  const live = (g: number, s: number, p: number) => ({
+    prices: { gold: g, silver: s, platinum: p },
+    source: 'live' as const,
+    fetchedAt: new Date('2026-11-16T20:00:00Z').toISOString(),
+  });
+  const alerts = MANUAL_BUY_ALERTS.map((a) => createAlert(a));
+  assert.equal(describeAlert(alerts[0]), 'Ratio or/argent au-dessus de 85');
+  assert.equal(describeAlert(alerts[3]), 'Ratio or/platine au-dessus de 2,9');
+  assert.throws(() => createAlert({ metal: 'gold', kind: 'ratioAbove', value: 80 }));
+  // Ratio or/argent 112,7 / 1,30 = 86,7 : seule l'alerte « au-dessus de 85 » part.
+  const r = evaluateAlerts(alerts, live(112.7, 1.3, 42), [], new Date('2026-11-16T20:00:00Z'));
+  assert.equal(r.events.length, 1);
+  assert.match(r.events[0].title, /^Alerte argent · Ratio or\/argent au-dessus de 85$/);
+  assert.match(r.events[0].body, /86,69.*achat manuel d’argent/);
+  assert.equal(metalOfServerTitle(r.events[0].title), 'silver');
+  // Platine à 60 €/g : ratio 1,88 → « or/platine sous 2 ».
+  const r2 = evaluateAlerts(alerts, live(112.7, 1.5, 60), [], new Date('2026-11-16T20:00:00Z'));
+  assert.deepEqual(
+    r2.events.map((e) => e.title),
+    ['Alerte platine · Ratio or/platine sous 2'],
+  );
+  // Le serveur lit ces alertes et refuse un ratio sur l'or.
+  const cfg = parseConfig({ alerts: [...MANUAL_BUY_ALERTS, { metal: 'gold', kind: 'ratioAbove', value: 80 }] });
+  assert.equal(cfg.length, MANUAL_BUY_ALERTS.length);
+  const json = JSON.parse(readFileSync(new URL('../server/alerts.json', import.meta.url), 'utf8'));
+  assert.equal(parseConfig(json).filter((c) => c.kind.startsWith('ratio')).length, 5);
 });
