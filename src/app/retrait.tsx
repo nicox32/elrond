@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PinConfirm } from '../components/PinConfirm';
-import { Button, Card, Hint, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
+import { Button, Card, Hint, KeyValue, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { formatEur, formatWeight } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
 import {
@@ -167,12 +167,7 @@ export default function WithdrawScreen() {
 }
 
 function Line({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <View style={styles.line}>
-      <Text style={[styles.lineLabel, strong && styles.strong]}>{label}</Text>
-      <Text style={[styles.lineValue, strong && styles.strong]}>{value}</Text>
-    </View>
-  );
+  return <KeyValue label={label} value={value} strong={strong} />;
 }
 
 const styles = StyleSheet.create({

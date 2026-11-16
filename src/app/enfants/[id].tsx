@@ -12,7 +12,7 @@ import { MetalPicker } from '../../components/MetalPicker';
 import { ShareViewCard } from '../../components/ShareViewCard';
 import { ChildStatementCard, StatementCard } from '../../components/Statement';
 import { TransactionRow } from '../../components/TransactionRow';
-import { Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
+import { Banner, Button, Card, Hint, Label, Message, Screen, SectionTitle, styles as ui } from '../../components/ui';
 import {
   approveChildWithdrawal,
   cancelDeposit,
@@ -259,12 +259,9 @@ export default function ChildScreen() {
       </View>
 
       {stage === 'minor' && child.birthDate && (
-        <View style={[styles.banner, { borderColor: colors.up }]}>
-          <Text style={styles.bannerText}>
-            Aucun frais jusqu’aux 18 ans de {name}, le {longDate(majorityDate(child.birthDate))}. À cette date, son
-            compte lui sera transféré.
-          </Text>
-        </View>
+        <Banner tone="success" icon="🎓" title="Aucun frais jusqu’à ses 18 ans">
+          {`Jusqu’au ${longDate(majorityDate(child.birthDate))}. À cette date, le compte de ${name} lui sera transféré.`}
+        </Banner>
       )}
       {stage === 'adult' && (
         <View style={[styles.banner, { borderColor: colors.gold }]}>
@@ -590,8 +587,8 @@ const styles = StyleSheet.create({
   metals: { flexDirection: 'row', marginTop: 10, alignSelf: 'stretch' },
   metalName: { fontSize: 12, fontWeight: '700' },
   metalWeight: { color: colors.text, fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  banner: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8, backgroundColor: colors.surface },
-  bannerTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  banner: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 8, backgroundColor: colors.goldSoft },
+  bannerTitle: { color: colors.gold, fontSize: 14.5, fontWeight: '800' },
   bannerText: { color: colors.text, fontSize: 13, lineHeight: 19 },
   code: { color: colors.gold, fontSize: 18, fontWeight: '800', letterSpacing: 1, textAlign: 'center' },
   para: { color: colors.text, fontSize: 14, lineHeight: 20 },

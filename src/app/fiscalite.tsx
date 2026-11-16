@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PriceStatus } from '../components/PriceStatus';
 import { ExemptionCalendar, TaxYearCard } from '../components/TaxYearCard';
-import { Card, Hint, Label, Screen, SectionTitle } from '../components/ui';
+import { Card, Hint, KeyValue, Label, Screen, SectionTitle } from '../components/ui';
 import { formatEur, formatPercent, formatWeight } from '../logic/format';
 import { METAL_LABEL } from '../logic/ledger';
 import { estimateTax, GAIN_RATE, type MetalTax, TAX, type TaxOutlook, taxOutlook } from '../logic/tax';
@@ -357,12 +357,8 @@ function Row({
   valueStyle?: { color: string };
   strong?: boolean;
 }) {
-  return (
-    <View style={styles.rowBetween}>
-      <Text style={[styles.label, strong && styles.bold]}>{label}</Text>
-      <Text style={[styles.value, strong && styles.bold, valueStyle]}>{value}</Text>
-    </View>
-  );
+  const tone = valueStyle?.color === colors.up ? 'up' : valueStyle?.color === colors.down ? 'down' : undefined;
+  return <KeyValue label={label} value={value} strong={strong} tone={tone} />;
 }
 
 function Bullet({ children }: { children: React.ReactNode }) {

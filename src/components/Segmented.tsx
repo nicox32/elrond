@@ -21,7 +21,14 @@ export function Segmented<T extends string>({ options, value, onChange }: Props<
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >
-            <Text style={[styles.text, active && styles.textActive]}>{o.label}</Text>
+            <Text
+              style={[styles.text, active && styles.textActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -38,8 +45,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  item: { flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center' },
+  item: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   itemActive: { backgroundColor: colors.gold },
-  text: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  text: { color: colors.textMuted, fontSize: 13, fontWeight: '600', textAlign: 'center' },
   textActive: { color: colors.background },
 });

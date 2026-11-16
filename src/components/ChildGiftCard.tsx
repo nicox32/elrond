@@ -184,7 +184,14 @@ export function ChildGiftCard({ child }: { child: ChildAccount }) {
 
 const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  due: { backgroundColor: colors.goldSoft, borderRadius: 12, padding: 12, gap: 8 },
+  due: {
+    backgroundColor: colors.goldSoft,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+  },
   dueTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
   dueSub: { color: colors.text, fontSize: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },

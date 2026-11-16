@@ -10,7 +10,7 @@ import { TransactionRow } from '../../components/TransactionRow';
 import { HomeNews } from '../../components/HomeNews';
 import { HomeNtfyBanner } from '../../components/HomeNtfyBanner';
 import { UpdateBanner } from '../../components/UpdateBanner';
-import { Card, Screen, SectionTitle, styles as ui } from '../../components/ui';
+import { Banner, Card, ListRow, Screen, SectionTitle, styles as ui, Title } from '../../components/ui';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
 import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
 import { formatLou, loyalty } from '../../logic/loyalty';
@@ -56,7 +56,7 @@ export default function AccountScreen() {
 
   return (
     <Screen testID="screen-compte">
-      <Text style={styles.hello}>Bonjour {account.holder}</Text>
+      <Title>Bonjour {account.holder}</Title>
       <UpdateBanner />
       <PriceStatus />
       <DormancyNotice wallet={account} />
@@ -126,10 +126,9 @@ export default function AccountScreen() {
         Cours en direct
       </SectionTitle>
       {account.alertEvents?.[0] && (
-        <Pressable onPress={() => router.push('/alertes')} style={styles.alertBanner} accessibilityRole="button">
-          <Text style={styles.alertBannerTitle}>{account.alertEvents[0].title}</Text>
-          <Text style={styles.alertBannerBody}>{account.alertEvents[0].body}</Text>
-        </Pressable>
+        <Banner tone="gold" icon="🔔" title={account.alertEvents[0].title} onPress={() => router.push('/alertes')}>
+          {account.alertEvents[0].body}
+        </Banner>
       )}
       <HomeNtfyBanner topic={account.ntfyTopic} after={account.alertEvents?.[0]?.date} />
       <LivePrices unit={unit} />
@@ -145,12 +144,9 @@ export default function AccountScreen() {
 
       <HomeNews />
 
-      <Pressable onPress={() => router.push('/parrainage')} style={styles.referral} accessibilityRole="button">
-        <Text style={styles.referralText}>
-          ★ Parrainez vos proches : ils reçoivent {REFERRAL.bonusLou} € en or à leur premier achat.
-        </Text>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
+      <Banner tone="gold" icon="★" title="Parrainez vos proches" onPress={() => router.push('/parrainage')}>
+        {`Ils reçoivent ${REFERRAL.bonusLou} € en or à leur premier achat.`}
+      </Banner>
 
       <SectionTitle
         right={
@@ -161,19 +157,27 @@ export default function AccountScreen() {
       >
         Comptes enfants
       </SectionTitle>
-      <Pressable onPress={() => router.push('/enfants')} style={styles.kids} accessibilityRole="button">
-        <Text style={styles.kidsText}>
-          {account.children.length === 0
-            ? 'Ouvrez gratuitement un compte en or, argent ou platine pour chacun de vos enfants.'
-            : account.children
-                .map(
-                  (c) =>
-                    `${c.name} · ${c.transferredAt ? 'compte transféré' : eur(accountValue(c, quote.prices).total)}`,
-                )
-                .join('\n')}
-        </Text>
-        <Text style={styles.chevron}>›</Text>
-      </Pressable>
+      <Card style={{ paddingVertical: 4 }}>
+        {account.children.length === 0 ? (
+          <ListRow
+            first
+            title="Ouvrir un compte enfant"
+            subtitle="Gratuit, en or, argent ou platine, pour chacun de vos enfants."
+            onPress={() => router.push('/enfants')}
+          />
+        ) : (
+          account.children.map((c, i) => (
+            <ListRow
+              key={c.id}
+              first={i === 0}
+              title={c.name}
+              subtitle={c.transferredAt ? 'Compte transféré' : 'Compte enfant · gratuit'}
+              right={c.transferredAt ? undefined : eur(accountValue(c, quote.prices).total)}
+              onPress={() => router.push({ pathname: '/enfants/[id]', params: { id: c.id } })}
+            />
+          ))
+        )}
+      </Card>
 
       <SectionTitle
         right={
@@ -261,7 +265,6 @@ const styles = StyleSheet.create({
   taxRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   taxText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
   taxLink: { color: colors.gold, fontSize: 13, fontWeight: '700' },
-  hello: { color: colors.textMuted, fontSize: 15 },
   balanceCard: {
     backgroundColor: colors.surface,
     borderRadius: 20,
@@ -312,35 +315,5 @@ const styles = StyleSheet.create({
   vaultWeight: { color: colors.text, fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   vaultValue: { color: colors.textMuted, fontSize: 12, fontVariant: ['tabular-nums'] },
   chevron: { color: colors.textMuted, fontSize: 22, marginLeft: 2 },
-  kids: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  kidsText: { color: colors.text, fontSize: 14, lineHeight: 21, flex: 1 },
-  alertBanner: {
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: colors.gold,
-    backgroundColor: colors.goldSoft,
-    gap: 2,
-  },
-  alertBannerTitle: { color: colors.gold, fontSize: 13, fontWeight: '700' },
-  alertBannerBody: { color: colors.text, fontSize: 13, lineHeight: 18 },
-  referral: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.goldSoft,
-    borderRadius: 16,
-    padding: 14,
-  },
-  referralText: { color: colors.text, fontSize: 14, lineHeight: 20, flex: 1, fontWeight: '600' },
   empty: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
 });

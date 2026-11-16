@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AddressCard } from '../../components/AddressCard';
 import { BackupCard } from '../../components/BackupCard';
 import { ChangePinCard } from '../../components/ChangePinCard';
 import { CsvExportCard } from '../../components/CsvExportCard';
 import { Segmented } from '../../components/Segmented';
-import { Button, Card, Hint, Label, Screen, SectionTitle, Title } from '../../components/ui';
+import { Button, Card, Hint, Label, ListRow, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate, formatEur as formatEurShort } from '../../logic/format';
 import { loyalty } from '../../logic/loyalty';
 import { useAccount, useBank } from '../../state/BankProvider';
@@ -232,19 +232,7 @@ function LinkRow({
     | '/fidelite';
   border?: boolean;
 }) {
-  return (
-    <Pressable
-      onPress={() => router.push(to)}
-      style={[styles.link, border && styles.linkBorder]}
-      accessibilityRole="link"
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={styles.switchLabel}>{label}</Text>
-        <Hint>{hint}</Hint>
-      </View>
-      <Text style={styles.chevron}>›</Text>
-    </Pressable>
-  );
+  return <ListRow title={label} subtitle={hint} first={!border} onPress={() => router.push(to)} />;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

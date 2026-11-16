@@ -5,7 +5,7 @@ import { CustodyNote } from '../../components/Custody';
 import { PriceStatus } from '../../components/PriceStatus';
 import { StatementCard } from '../../components/Statement';
 import { TransactionRow } from '../../components/TransactionRow';
-import { Button, Card, Hint, Screen, SectionTitle } from '../../components/ui';
+import { Button, Card, Hint, KeyValue, ListRow, Screen, SectionTitle } from '../../components/ui';
 import { formatEur, formatUnitPrice, formatWeight } from '../../logic/format';
 import { buyPrice, METAL_LABEL, sellPrice } from '../../logic/ledger';
 import { type Metal, METALS } from '../../logic/types';
@@ -29,11 +29,6 @@ export default function VaultScreen() {
         }}
       />
       <PriceStatus />
-      <Button
-        title="Graphique du cours (5 jours à 20 ans)"
-        variant="ghost"
-        onPress={() => router.push({ pathname: '/cours/[metal]', params: { metal } })}
-      />
 
       <View style={[styles.hero, { borderColor: metalColor[metal] }]}>
         <Text style={[styles.metal, { color: metalColor[metal] }]}>{METAL_LABEL[metal]}</Text>
@@ -72,18 +67,30 @@ export default function VaultScreen() {
           />
         </View>
       </View>
-      {metal === 'gold' ? (
-        <Button
-          title={`Retrait physique en lingotins${account.homeVault?.length ? ` · ${account.homeVault.length} chez vous` : ''}`}
-          variant="ghost"
-          onPress={() => router.push('/retrait')}
+      <Card style={{ paddingVertical: 4 }}>
+        <ListRow
+          first
+          title="Graphique du cours"
+          subtitle="De 5 jours à 20 ans, au cours ou au tarif Orvia"
+          onPress={() => router.push({ pathname: '/cours/[metal]', params: { metal } })}
         />
-      ) : (
-        <Hint>
-          Pas de retrait physique pour {metal === 'silver' ? 'l’argent' : 'le platine'} : 20 % de TVA seraient dus à la
-          sortie du port franc. Il reste au coffre et se revend en ligne.
-        </Hint>
-      )}
+        {metal === 'gold' ? (
+          <ListRow
+            title="Retrait physique"
+            subtitle={
+              account.homeVault?.length
+                ? `Lingotins ou Napoléons · ${account.homeVault.length} chez vous`
+                : 'Lingotins ou Napoléons livrés chez vous'
+            }
+            onPress={() => router.push('/retrait')}
+          />
+        ) : (
+          <ListRow
+            title="Pas de retrait physique"
+            subtitle={`20 % de TVA seraient dus à la sortie du port franc : ${metal === 'silver' ? 'l’argent' : 'le platine'} reste au coffre et se revend en ligne.`}
+          />
+        )}
+      </Card>
 
       <CustodyNote />
 
@@ -100,12 +107,7 @@ export default function VaultScreen() {
 }
 
 function Line({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.line}>
-      <Text style={styles.lineLabel}>{label}</Text>
-      <Text style={styles.lineValue}>{value}</Text>
-    </View>
-  );
+  return <KeyValue label={label} value={value} />;
 }
 
 const styles = StyleSheet.create({

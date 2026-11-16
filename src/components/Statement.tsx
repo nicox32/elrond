@@ -39,7 +39,7 @@ export function StatementCard({
         onChange={setPeriod}
         options={(['month', 'lastMonth', 'year', 'all'] as StatementPeriod[]).map((p) => ({
           value: p,
-          label: p === 'month' ? 'Ce mois' : p === 'lastMonth' ? 'Mois dernier' : p === 'year' ? '12 mois' : 'Tout',
+          label: p === 'month' ? 'Ce mois' : p === 'lastMonth' ? 'Mois préc.' : p === 'year' ? '12 mois' : 'Tout',
         }))}
       />
       <Button

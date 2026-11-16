@@ -6,7 +6,7 @@ import { ChildGifts2022 } from '../components/ChildGifts2022';
 import { History2019 } from '../components/History2019';
 import { History900 } from '../components/History900';
 import { PinConfirm } from '../components/PinConfirm';
-import { Button, Card, Hint, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
+import { Button, Card, Hint, KeyValue, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { resetVaults } from '../logic/ledger';
 import { COMPANY, type CompanyPeriod, companyReport } from '../logic/company';
 import { formatEur } from '../logic/format';
@@ -209,12 +209,7 @@ function CompanyDashboard() {
 const signed = (n: number) => `${n >= 0 ? '+' : '−'}${formatEur(Math.abs(n))}`;
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <View style={styles.row}>
-      <Text style={[styles.label, strong && styles.bold]}>{label}</Text>
-      <Text style={[styles.value, strong && styles.bold]}>{value}</Text>
-    </View>
-  );
+  return <KeyValue label={label} value={value} strong={strong} />;
 }
 
 const styles = StyleSheet.create({

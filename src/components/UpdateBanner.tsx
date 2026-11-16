@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
-import { Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import { availableUpdate, fetchLatestRelease, type UpdateInfo } from '../logic/update';
-import { colors } from '../theme';
+import { Banner } from './ui';
 
 /** Bandeau « nouvelle version » sur l'accueil (appli Android) : ouvre le téléchargement de l'APK. */
 export function UpdateBanner() {
@@ -21,30 +21,14 @@ export function UpdateBanner() {
 
   if (!update) return null;
   return (
-    <Pressable
-      testID="update-banner"
+    <Banner
+      tone="gold"
+      icon="⬇"
+      title={`Nouvelle version ${update.version} disponible`}
       onPress={() => Linking.openURL(update.apkUrl)}
-      style={styles.banner}
-      accessibilityRole="link"
+      testID="update-banner"
     >
-      <Text style={styles.title}>Nouvelle version {update.version} disponible</Text>
-      <Text style={styles.body}>
-        Vous avez la {installed}. Touchez pour télécharger orvia-{update.version}.apk, puis ouvrez-le pour l’installer :
-        votre compte est conservé.
-      </Text>
-    </Pressable>
+      {`Vous avez la ${installed}. Touchez pour télécharger orvia-${update.version}.apk, puis ouvrez-le pour l’installer : votre compte est conservé.`}
+    </Banner>
   );
 }
-
-const styles = StyleSheet.create({
-  banner: {
-    backgroundColor: colors.surface,
-    borderColor: colors.gold,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    gap: 3,
-  },
-  title: { color: colors.gold, fontSize: 14, fontWeight: '800' },
-  body: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17 },
-});

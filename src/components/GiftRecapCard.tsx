@@ -145,7 +145,14 @@ const styles = StyleSheet.create({
   allowanceSub: { color: colors.textMuted, fontSize: 12 },
   bar: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceAlt, overflow: 'hidden' },
   fill: { height: 6, backgroundColor: colors.gold },
-  toSign: { backgroundColor: colors.goldSoft, borderRadius: 12, padding: 12, gap: 6 },
+  toSign: {
+    backgroundColor: colors.goldSoft,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    borderRadius: 14,
+    padding: 14,
+    gap: 6,
+  },
   toSignTitle: { color: colors.text, fontSize: 14, fontWeight: '700' },
   toSignSub: { color: colors.text, fontSize: 12 },
 });
