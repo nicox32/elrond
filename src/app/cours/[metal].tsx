@@ -80,7 +80,7 @@ export default function MetalPriceScreen() {
             label: `Cours ${METAL_LABEL[m] === 'Gold Spot' ? 'du Gold Spot' : METAL_LABEL[m] === 'Argent' ? 'de l’argent' : 'du platine'}`,
             go: () => router.replace({ pathname: '/cours/[metal]', params: { metal: m } }),
           })),
-          { key: 'ratio', label: 'Ratio or/argent', go: () => router.push('/ratio') },
+          { key: 'ratio', label: 'Ratios or/argent et or/platine', go: () => router.push('/ratio') },
         ].map((l, i) => (
           <Pressable key={l.key} onPress={l.go} style={[styles.link, i > 0 && styles.border]} accessibilityRole="link">
             <Text style={styles.linkText}>{l.label}</Text>

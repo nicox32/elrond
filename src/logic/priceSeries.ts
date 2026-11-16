@@ -17,7 +17,8 @@ export interface CoursData {
   p: number[];
 }
 
-export type SeriesKind = Metal | 'ratio';
+/** Un métal, le ratio or/argent (« ratio ») ou le ratio or/platine (« ratioPt »). */
+export type SeriesKind = Metal | 'ratio' | 'ratioPt';
 export type PriceMode = 'spot' | 'buy' | 'sell';
 export type Range = '5d' | '1m' | '6m' | '1y' | '5y' | '20y';
 
@@ -54,7 +55,8 @@ export function applyMode(v: number, metal: Metal, mode: PriceMode): number {
   return v;
 }
 
-const valueOf = (kind: SeriesKind, p: Prices) => (kind === 'ratio' ? p.gold / p.silver : p[kind]);
+const valueOf = (kind: SeriesKind, p: Prices) =>
+  kind === 'ratio' ? p.gold / p.silver : kind === 'ratioPt' ? p.gold / p.platinum : p[kind];
 
 /**
  * Série complète (cours au comptant) : l'historique quotidien jusqu'au premier relevé de l'appli, puis les relevés
