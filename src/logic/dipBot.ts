@@ -4,6 +4,7 @@
  * Garde-fous : un achat de baisse par métal sur 7 jours glissants, et un plafond mensuel pour ces achats.
  * Les prix fixes sont remis à jour chaque mois d'après la moyenne 30 jours.
  */
+import { FEES } from './fees.ts';
 import { buy, LedgerError, METAL_LABEL } from './ledger.ts';
 import type { PricePoint } from './priceHistory.ts';
 import { type Account, type Prices, SPOT_METALS, type SpotMetal } from './types.ts';
@@ -157,7 +158,7 @@ export function runDipBot(
     const wanted = signal.kind === 'strong' ? bot.amount * 2 : bot.amount;
     const left = Math.floor((bot.monthlyCap - dipSpentThisMonth(acc, now)) * 100) / 100;
     const amount = Math.min(wanted, left);
-    if (amount < 5) continue; // plafond du mois atteint
+    if (amount < FEES.minOrder) continue; // plafond du mois atteint (achat minimum)
     const why =
       signal.kind === 'fixed'
         ? `sous ${eur(rule.fixedPrice)}/g`

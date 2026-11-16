@@ -1,3 +1,5 @@
+import { isWeekendClosed } from '../logic/market';
+import { placeOrder } from '../logic/orders';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -19,7 +21,7 @@ import {
   type SplitMode,
 } from '../logic/allocation';
 import { formatEur, formatWeight, parseAmount } from '../logic/format';
-import { LedgerError, METAL_LABEL, type PaySource } from '../logic/ledger';
+import { LedgerError, METAL_LABEL, minOrderError, type PaySource } from '../logic/ledger';
 import { SPOT_METALS } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors, metalColor } from '../theme';
@@ -28,7 +30,7 @@ const pct = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits:
 
 export default function AllocationScreen() {
   const account = useAccount();
-  const { quote, commit, updateSettings } = useBank();
+  const { quote, commit, updateAccount, updateSettings } = useBank();
   const unit = account.settings.unit;
   const saved = account.settings.allocation ?? DEFAULT_ALLOCATION;
 
@@ -66,6 +68,21 @@ export default function AllocationScreen() {
   function submit() {
     if (!amounts) return;
     try {
+      const err = minOrderError(amount);
+      if (err) throw new LedgerError(err);
+      if (isWeekendClosed()) {
+        // Week-end : l'achat réparti passe lundi à la réouverture, au cours du moment, sans supplément.
+        updateAccount((acc) =>
+          placeOrder(acc, { kind: 'split', amounts: splitAmount(amount, target, mode, acc, quote.prices), source }),
+        );
+        if (dirty) updateSettings({ allocation: target });
+        setText('');
+        setMessage({
+          ok: true,
+          text: `Marché fermé : l’achat réparti de ${formatEur(amount)} passera lundi à la réouverture.`,
+        });
+        return;
+      }
       commit((acc, p) => buySplit(acc, p, splitAmount(amount, target, mode, acc, p), new Date(), source));
       if (dirty) updateSettings({ allocation: target });
       setText('');

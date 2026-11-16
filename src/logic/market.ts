@@ -74,3 +74,9 @@ export function londonStatus(now = new Date()): { open: boolean; next: string } 
   if (day >= 1 && day <= 4) return { open: false, next: 'ouvre demain à 9 h' };
   return { open: false, next: 'ouvre lundi à 9 h' };
 }
+
+/** Week-end : marché fermé jusqu'au lundi. Les ordres attendent la réouverture, ou passent tout de suite avec un supplément. */
+export function isWeekendClosed(now = new Date()): boolean {
+  const s = marketStatus(now);
+  return !s.open && s.reason === 'weekend';
+}

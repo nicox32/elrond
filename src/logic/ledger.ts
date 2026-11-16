@@ -49,13 +49,18 @@ export function emptyHoldings(): Holdings {
 }
 
 /** Prix effectif d'un gramme à l'achat, frais de gestion compris (frais en part du montant payé). */
-export function buyPrice(prices: Prices, metal: Metal): number {
-  return prices[metal] / (1 - FEES.buy[metal]);
+export function buyPrice(prices: Prices, metal: Metal, extra = 0): number {
+  return prices[metal] / (1 - FEES.buy[metal] - extra);
 }
 
 /** Prix net d'un gramme à la revente par virement, hors frais fixe vers l'étranger. */
-export function sellPrice(prices: Prices, metal: Metal, speed: SaleSpeed = 'deferred'): number {
-  return prices[metal] * (1 - FEES.sale - (speed === 'immediate' ? FEES.immediateSpread : 0));
+export function sellPrice(prices: Prices, metal: Metal, speed: SaleSpeed = 'deferred', extra = 0): number {
+  return prices[metal] * (1 - FEES.sale - (speed === 'immediate' ? FEES.immediateSpread : 0) - extra);
+}
+
+/** Message d'erreur si un achat est sous le minimum (sur le total de l'opération), sinon null. */
+export function minOrderError(totalEur: number): string | null {
+  return totalEur + 1e-9 < FEES.minOrder ? `Montant minimum d’un achat : ${FEES.minOrder} €.` : null;
 }
 
 /** Valeur de revente d'un compte en euros (virement différé en France), par métal et au total. */
@@ -302,9 +307,9 @@ const SPEED_LABEL: Record<SaleSpeed, string> = {
 };
 
 /** Détail chiffré d'un achat, pour l'aperçu et l'opération. */
-export function quoteBuy(prices: Prices, metal: Metal, q: Quantity) {
-  const grams = toGrams(q, buyPrice(prices, metal));
-  const paid = grams * buyPrice(prices, metal);
+export function quoteBuy(prices: Prices, metal: Metal, q: Quantity, extra = 0) {
+  const grams = toGrams(q, buyPrice(prices, metal, extra));
+  const paid = grams * buyPrice(prices, metal, extra);
   return { grams, paid, fees: paid - grams * prices[metal] };
 }
 
@@ -321,16 +326,18 @@ export function buy(
   q: Quantity,
   now = new Date(),
   source: PaySource = 'card',
+  /** Supplément du week-end pour un achat fait tout de suite. */
+  extra = 0,
 ): Account {
   assertPositive(q.value, 'La quantité');
-  const { grams, paid, fees } = quoteBuy(prices, metal, q);
+  const { grams, paid, fees } = quoteBuy(prices, metal, q, extra);
   const cash = account.cashEur ?? 0;
   if (source === 'cash' && paid > cash + 0.005) {
     throw new LedgerError(
       `Solde du compte d’attente insuffisant : ${cash.toFixed(2).replace('.', ',')} € disponibles.`,
     );
   }
-  const label = `Achat ${METAL_OF[metal]}${source === 'cash' ? ' · compte d’attente' : ''}`;
+  const label = `Achat ${METAL_OF[metal]}${source === 'cash' ? ' · compte d’attente' : ''}${extra ? ' · week-end immédiat' : ''}`;
   let bought = apply(account, 'buy', { [metal]: grams }, paid, label, now, fees);
   if (source === 'cash') {
     const [tx, ...rest] = bought.transactions;
@@ -384,8 +391,9 @@ export function quoteSale(
   abroad = false,
   wallet?: Pick<Wallet, 'transactions'>,
   now = new Date(),
+  extra = 0,
 ) {
-  const net = sellPrice(prices, metal, speed);
+  const net = sellPrice(prices, metal, speed, extra);
   const fixed = abroad ? FEES.saleAbroadFixed : 0;
   // Saisie en euros = montant reçu, impôt déduit quand le compte est connu.
   const grams =
@@ -408,15 +416,16 @@ export function sell(
   q: Quantity,
   speed: SaleSpeed = 'deferred',
   now = new Date(),
+  extra = 0,
 ): Account {
   assertPositive(q.value, 'La quantité');
-  const { grams, received, fees, tax } = quoteSale(prices, metal, q, speed, false, account, now);
+  const { grams, received, fees, tax } = quoteSale(prices, metal, q, speed, false, account, now, extra);
   return apply(
     account,
     'sell',
     { [metal]: -grams },
     received,
-    `Vente ${METAL_OF[metal]} · ${SPEED_LABEL[speed]}`,
+    `Vente ${METAL_OF[metal]} · ${SPEED_LABEL[speed]}${extra ? ' · week-end immédiat' : ''}`,
     now,
     fees,
     tax,
@@ -431,11 +440,12 @@ export function quoteConvert(
   q: Quantity,
   wallet?: Pick<Wallet, 'transactions'>,
   now = new Date(),
+  extra = 0,
 ) {
   const grams = toGrams(q, prices[from]);
   const gross = grams * prices[from];
   // Échanger un métal contre un autre est une cession : l'impôt est retenu avant le rachat.
-  const cession = gross * (1 - FEES.conversion);
+  const cession = gross * (1 - FEES.conversion - extra);
   const tax = wallet ? saleTax(wallet, from, grams, cession, now) : null;
   const reinvested = cession - (tax?.tax ?? 0);
   const received = (reinvested * (1 - FEES.buy[to])) / prices[to];
@@ -450,16 +460,17 @@ export function convert(
   to: Metal,
   q: Quantity,
   now = new Date(),
+  extra = 0,
 ): Account {
   assertPositive(q.value, 'La quantité');
   if (from === to) throw new LedgerError('Choisissez deux métaux différents.');
-  const { grams, gross, received, fees, tax } = quoteConvert(prices, from, to, q, account, now);
+  const { grams, gross, received, fees, tax } = quoteConvert(prices, from, to, q, account, now, extra);
   return apply(
     account,
     'convert',
     { [from]: -grams, [to]: received },
     gross,
-    `${METAL_LABEL[from]} → ${METAL_LABEL[to]}`,
+    `${METAL_LABEL[from]} → ${METAL_LABEL[to]}${extra ? ' · week-end immédiat' : ''}`,
     now,
     fees,
     tax,
@@ -784,6 +795,7 @@ export const MOVEMENT_KINDS: ReadonlySet<TransactionKind> = new Set<TransactionK
   'family_out',
   'family_in',
   'cash_in',
+  'withdraw_physical',
 ]);
 
 /** Une opération de la liste ci-dessus, d'au moins 1 €, compte comme un mouvement. */
@@ -1107,4 +1119,17 @@ export function cardPay(account: Account, prices: Prices, merchant: string, amou
 /** Retrait au distributeur : le métal choisi est vendu au cours du moment, sans frais. */
 export function cardWithdraw(account: Account, prices: Prices, amount: number, now = new Date()): Account {
   return cardDebit(account, prices, 'card_withdrawal', amount, 'Carte · Retrait au distributeur', now);
+}
+
+/** Enregistre une opération (utilisé par les modules voisins : retrait physique). */
+export function applyTx<W extends Wallet>(
+  wallet: W,
+  kind: TransactionKind,
+  deltas: Partial<Holdings>,
+  eur: number,
+  label: string,
+  now: Date,
+  fees = 0,
+): W {
+  return apply(wallet, kind, deltas, eur, label, now, fees);
 }

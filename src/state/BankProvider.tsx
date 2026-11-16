@@ -5,7 +5,8 @@ import { applyDormancy, createAccount, recordBalance } from '../logic/ledger';
 import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
-import { marketStatus } from '../logic/market';
+import { isWeekendClosed, marketStatus } from '../logic/market';
+import { runPendingOrders } from '../logic/orders';
 import { runGiftPlans } from '../logic/childGiftPlan';
 import { runDipBot } from '../logic/dipBot';
 import { runDeclarationReminders } from '../logic/giftRecap';
@@ -142,9 +143,20 @@ export function BankProvider({ children }: { children: ReactNode }) {
               r.events.forEach((e) => notify(e.title, e.body));
             }
           }
+          // Le week-end, les achats automatiques (programme, bot, dons) attendent la réouverture : ils sont
+          // rattrapés lundi, au cours du moment, sans supplément.
+          const weekend = isWeekendClosed();
+          // Ordres passés le week-end : exécutés dès la réouverture.
+          const forOrders = accountRef.current;
+          if (!weekend && forOrders?.pendingOrders?.length) {
+            const prices = spotOnly(live.prices);
+            const o = runPendingOrders(applyDormancy(forOrders, prices), prices);
+            persist(recordBalance(o.account, prices));
+            o.notices.forEach((n) => notify(n.title, n.body));
+          }
           // Achats programmés dus : passés au cours réel qui vient d'arriver.
           const before = accountRef.current;
-          if (before?.plan?.active) {
+          if (!weekend && before?.plan?.active) {
             const prices = spotOnly(live.prices);
             const r = runPlan(applyDormancy(before, prices), prices);
             if (r.done || r.skipped) {
@@ -155,7 +167,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
           }
           // Bot d'achat sur baisse : au cours réel qui vient d'arriver, avec les relevés horaires (moyenne 30 j).
           const forDip = accountRef.current;
-          if (forDip?.dipBot?.active) {
+          if (!weekend && forDip?.dipBot?.active) {
             const prices = spotOnly(live.prices);
             const d = runDipBot(applyDormancy(forDip, prices), prices, hourly);
             if (d.account.transactions.length !== forDip.transactions.length || d.notices.length) {
@@ -172,7 +184,7 @@ export function BankProvider({ children }: { children: ReactNode }) {
           }
           // Dons mensuels aux enfants : rappel le jour prévu, ou don automatique.
           const forGifts = accountRef.current;
-          if (forGifts?.children.some((c) => c.giftPlan?.active)) {
+          if (!weekend && forGifts?.children.some((c) => c.giftPlan?.active)) {
             const prices = spotOnly(live.prices);
             const g = runGiftPlans(forGifts, prices);
             if (g.account !== forGifts) persist(recordBalance(g.account, prices));

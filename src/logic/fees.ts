@@ -21,6 +21,10 @@ export const FEES = {
   dormancyDaily: 0.0002,
   /** Un compte est inactif après ce nombre de mois sans mouvement. */
   dormancyAfterMonths: 6,
+  /** Montant minimum d'un achat, en euros, sur le total de l'opération (un achat réparti compte pour un). */
+  minOrder: 10,
+  /** Le week-end (marché fermé), supplément d'un achat, d'une vente ou d'une conversion faits tout de suite. */
+  weekendSpread: 0.005,
 } as const;
 
 /** Délai d'un virement différé (sans écart), en jours ouvrés. */
@@ -43,6 +47,15 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Gold Spot : conversion d’euros en grammes d’or', orvia: pct(FEES.buy.gold) },
       { label: 'Argent : conversion d’euros en grammes d’argent', orvia: pct(FEES.buy.silver) },
       { label: 'Platine : conversion d’euros en grammes de platine', orvia: pct(FEES.buy.platinum) },
+    ],
+  },
+  {
+    title: 'Règles d’achat',
+    rows: [
+      { label: 'Montant minimum d’un achat (total de l’opération)', orvia: `${FEES.minOrder} €` },
+      { label: 'Minimum de frais par opération', orvia: 'Aucun' },
+      { label: 'Week-end (marché fermé) : ordre au cours de la réouverture', orvia: 'Sans supplément' },
+      { label: 'Week-end : achat, vente ou conversion tout de suite', orvia: `+${pct(FEES.weekendSpread)}` },
     ],
   },
   {
@@ -69,6 +82,17 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
         label: 'Conversion d’un métal en un autre',
         orvia: `${pct(FEES.conversion)} + frais d’achat`,
       },
+    ],
+  },
+  {
+    title: 'Retrait physique (or uniquement)',
+    rows: [
+      { label: 'Lingotin 5 g (affinerie LBMA, numéro de série, certificat)', orvia: 'Fabrication ≈ 4,5 %' },
+      { label: 'Lingotin 10 g', orvia: 'Fabrication ≈ 3 %' },
+      { label: 'Lingotin 20 g', orvia: 'Fabrication ≈ 2,5 %' },
+      { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication ≈ 2 %' },
+      { label: 'Livraison assurée, remise contre signature', orvia: '19 € par envoi' },
+      { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
     ],
   },
   {

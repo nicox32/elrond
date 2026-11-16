@@ -69,6 +69,16 @@ export default function ProfileScreen() {
           border
         />
         <LinkRow
+          label="Mon coffre maison"
+          hint={
+            account.homeVault?.length
+              ? `${account.homeVault.length} lingotin(s) d’or chez vous`
+              : 'Retrait physique d’or en lingotins'
+          }
+          to="/coffre-maison"
+          border
+        />
+        <LinkRow
           label="Objectif retraite"
           hint={
             account.retirement
@@ -219,6 +229,7 @@ function LinkRow({
     | '/repartition'
     | '/fiscalite'
     | '/retraite'
+    | '/coffre-maison'
     | '/or-fractionne'
     | '/dev'
     | '/attente'

@@ -5,7 +5,8 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } fro
 import { AmountInput } from '../../components/AmountInput';
 import { MetalPicker } from '../../components/MetalPicker';
 import { MarketHours } from '../../components/MarketHours';
-import { marketStatus } from '../../logic/market';
+import { isWeekendClosed, marketStatus } from '../../logic/market';
+import { cancelOrder, describeOrder, placeOrder } from '../../logic/orders';
 import { PriceStatus } from '../../components/PriceStatus';
 import { Segmented } from '../../components/Segmented';
 import { SpeedPicker } from '../../components/SpeedPicker';
@@ -17,6 +18,7 @@ import {
   buyPrice,
   convert,
   LedgerError,
+  minOrderError,
   quoteBuy,
   quoteConvert,
   quoteSale,
@@ -50,7 +52,7 @@ export default function OperationsScreen() {
 
 function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initialMetal: Metal }) {
   const account = useAccount();
-  const { quote, commit } = useBank();
+  const { quote, commit, updateAccount } = useBank();
   const unit = account.settings.unit;
 
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -61,36 +63,66 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
   const [text, setText] = useState('');
   const [speed, setSpeed] = useState<SaleSpeed>('deferred');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // Week-end : ordre au cours de lundi (sans supplément) ou tout de suite (+0,5 %).
+  const weekend = isWeekendClosed();
+  const [when, setWhen] = useState<'monday' | 'now'>('monday');
+  const extra = weekend && when === 'now' ? FEES.weekendSpread : 0;
+  const deferred = weekend && when === 'monday';
+  const pending = account.pendingOrders ?? [];
 
   const value = parseAmount(text);
   const prices = quote.prices;
-  const unitPrice = mode === 'buy' ? buyPrice(prices, metal) : sellPrice(prices, metal, speed);
+  const unitPrice = mode === 'buy' ? buyPrice(prices, metal, extra) : sellPrice(prices, metal, speed, extra);
 
   // Aperçu chiffré, frais compris.
   const preview = useMemo(() => {
     if (!Number.isFinite(value) || value <= 0) return null;
     const q = { unit: amountUnit, value };
+    const later = deferred
+      ? ' Estimation au cours d’aujourd’hui : l’ordre passera lundi à la réouverture, au cours du moment.'
+      : '';
     if (mode === 'buy') {
-      const r = quoteBuy(prices, metal, q);
-      return `Vous achetez ${formatQty(metal, r.grams, unit)} pour ${formatEur(r.paid)}, dont ${formatEur(r.fees)} de frais (${pct(FEES.buy[metal])}).`;
+      const r = quoteBuy(prices, metal, q, extra);
+      return `Vous achetez ${formatQty(metal, r.grams, unit)} pour ${formatEur(r.paid)}, dont ${formatEur(r.fees)} de frais (${pct(FEES.buy[metal] + extra)}).${later}`;
     }
     if (mode === 'sell') {
-      const r = quoteSale(prices, metal, q, speed, false, account);
-      return `Vous vendez ${formatQty(metal, r.grams, unit)} et recevez ${formatEur(r.received)}, après ${formatEur(r.fees)} de frais.${r.tax ? ` ${describeTax(r.tax)}` : ''}`;
+      const r = quoteSale(prices, metal, q, speed, false, account, new Date(), extra);
+      return `Vous vendez ${formatQty(metal, r.grams, unit)} et recevez ${formatEur(r.received)}, après ${formatEur(r.fees)} de frais.${r.tax ? ` ${describeTax(r.tax)}` : ''}${later}`;
     }
-    const r = quoteConvert(prices, metal, target, q, account);
+    const r = quoteConvert(prices, metal, target, q, account, new Date(), extra);
     return `${formatQty(metal, r.grams, unit)} deviennent ${formatQty(target, r.received, unit)}, après ${formatEur(r.fees)} de frais (${pct(FEES.conversion)} + ${pct(FEES.buy[target])}).${r.tax ? ` Une conversion est une vente pour le fisc. ${describeTax(r.tax)}` : ''}`;
-  }, [value, amountUnit, mode, metal, target, prices, unit, speed, account]);
+  }, [value, amountUnit, mode, metal, target, prices, unit, speed, account, extra, deferred]);
 
   function submit() {
     const q = { unit: amountUnit, value };
     try {
+      if (mode === 'buy') {
+        const err = minOrderError(quoteBuy(prices, metal, q, extra).paid);
+        if (err) throw new LedgerError(err);
+      }
+      if (deferred) {
+        updateAccount((acc) =>
+          placeOrder(acc, {
+            kind: mode,
+            metal,
+            q,
+            ...(mode === 'convert' ? { target } : {}),
+            ...(mode === 'sell' ? { speed } : {}),
+          }),
+        );
+        setText('');
+        setMessage({
+          ok: true,
+          text: 'Ordre enregistré : il passera lundi à la réouverture du marché, au cours du moment.',
+        });
+        return;
+      }
       commit((acc, p) =>
         mode === 'buy'
-          ? buy(acc, p, metal, q)
+          ? buy(acc, p, metal, q, new Date(), 'card', extra)
           : mode === 'sell'
-            ? sell(acc, p, metal, q, speed)
-            : convert(acc, p, metal, target, q),
+            ? sell(acc, p, metal, q, speed, new Date(), extra)
+            : convert(acc, p, metal, target, q, new Date(), extra),
       );
       setText('');
       setMessage({ ok: true, text: 'Opération effectuée.' });
@@ -178,8 +210,8 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
         {preview && (
           <Text style={styles.preview}>
             {preview}
-            {!marketStatus().open && mode !== 'convert'
-              ? ` Marché ${marketStatus().reason === 'pause' ? 'en pause' : 'fermé'} : opération au dernier cours connu, celui affiché ici.`
+            {!marketStatus().open && !weekend && mode !== 'convert'
+              ? ' Marché en pause : opération au dernier cours connu, celui affiché ici.'
               : ''}
           </Text>
         )}
@@ -189,12 +221,45 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
           </Hint>
         )}
 
-        <Button title="Valider" onPress={submit} />
+        {weekend && (
+          <View style={styles.block}>
+            <Label>Marché fermé le week-end</Label>
+            <Segmented
+              value={when}
+              onChange={setWhen}
+              options={[
+                { value: 'monday', label: 'Au cours de lundi' },
+                { value: 'now', label: `Tout de suite (+${pct(FEES.weekendSpread)})` },
+              ]}
+            />
+            <Hint>
+              {when === 'monday'
+                ? 'Sans supplément : l’ordre passe à la réouverture du marché, au cours du moment.'
+                : `Au dernier cours du vendredi, avec ${pct(FEES.weekendSpread)} de supplément (le cours peut bouger d’ici lundi).`}
+            </Hint>
+          </View>
+        )}
+
+        <Button title={deferred ? 'Passer l’ordre pour lundi' : 'Valider'} onPress={submit} />
         {message && <Message {...message} />}
+
+        {pending.length > 0 && (
+          <View style={styles.pending} testID="pending-orders">
+            <Text style={styles.pendingTitle}>Ordres en attente de la réouverture ({pending.length})</Text>
+            {pending.map((o) => (
+              <View key={o.id} style={styles.pendingRow}>
+                <Text style={styles.pendingText}>{describeOrder(o, account)}</Text>
+                <Pressable onPress={() => updateAccount((a) => cancelOrder(a, o.id))} accessibilityRole="button">
+                  <Text style={ui.link}>Annuler</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
 
         <Hint>
           {mode === 'buy'
-            ? `Paiement par carte bancaire. Frais d’achat : ${pct(FEES.buy[metal])} du montant.`
+            ? `Paiement par carte bancaire. Frais d’achat : ${pct(FEES.buy[metal])} du montant. Achat minimum : ${FEES.minOrder} €.`
             : mode === 'sell'
               ? `Les euros sont versés sur votre compte bancaire en France. Frais de revente : ${pct(FEES.sale)}. L’impôt est calculé et retenu automatiquement, au régime le moins cher.`
               : `Frais de conversion : ${pct(FEES.conversion)} + frais d’achat du métal reçu.`}{' '}
@@ -221,6 +286,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   splitText: { color: colors.text, fontSize: 13, flex: 1 },
+  pending: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  pendingTitle: { color: colors.text, fontWeight: '700', fontSize: 14 },
+  pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pendingText: { color: colors.textMuted, fontSize: 13, flex: 1 },
   preview: {
     color: colors.text,
     backgroundColor: colors.goldSoft,

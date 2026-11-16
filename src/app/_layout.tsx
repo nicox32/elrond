@@ -70,6 +70,8 @@ function AppStack() {
       <Stack.Screen name="fiscalite" options={{ title: 'Plus-value et impôts' }} />
       <Stack.Screen name="cours/[metal]" options={{ title: 'Cours' }} />
       <Stack.Screen name="ratio" options={{ title: 'Ratios' }} />
+      <Stack.Screen name="retrait" options={{ title: 'Retrait physique' }} />
+      <Stack.Screen name="coffre-maison" options={{ title: 'Mon coffre maison' }} />
       <Stack.Screen name="retraite" options={{ title: 'Objectif retraite' }} />
       <Stack.Screen name="actualites" options={{ title: 'Actualités' }} />
       <Stack.Screen name="notifications" options={{ title: 'Notifications ntfy' }} />

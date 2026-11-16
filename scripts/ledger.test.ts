@@ -951,21 +951,23 @@ test('sauvegarde : export puis restauration à l’identique, fichiers étranger
   assert.throws(() => readBackup('{"app":"orvia","version":1,"account":null}'), /abîmée/);
 });
 
-test('achats programmés : 25 €/semaine sur 4 jours, rattrapage, compte d’attente insuffisant', async () => {
-  const { newPlan, dueRuns, runPlan, amountPerRun, nextRun } = await import('../src/logic/plan.ts');
+test('achats programmés : 25 €/semaine, au moins 10 € par achat, rattrapage, compte d’attente insuffisant', async () => {
+  const { newPlan, dueRuns, runPlan, amountPerRun, nextRun, planError } = await import('../src/logic/plan.ts');
   const p = { gold: 3800, silver: 45, platinum: 1000 };
   const start = new Date('2026-11-02T08:00:00'); // lundi
   let acc = createAccount('T', start);
-  acc = { ...acc, plan: newPlan(start) };
-  assert.equal(amountPerRun(acc.plan!), 6.25);
+  // 25 € répartis sur 4 jours = 6,25 € par achat : sous le minimum de 10 €.
+  assert.match(planError({ ...newPlan(start), days: [1, 3, 5, 0] }) ?? '', /au moins 10 €/);
+  acc = { ...acc, plan: { ...newPlan(start), days: [1, 4] } };
+  assert.equal(amountPerRun(acc.plan!), 12.5);
   assert.equal(nextRun(acc.plan!, start)!.getDay(), 1); // aujourd'hui 10 h
   const later = new Date('2026-11-09T12:00:00'); // lundi suivant
-  assert.equal(dueRuns(acc.plan!, later).length, 5); // lun, mer, ven, dim, lun
+  assert.equal(dueRuns(acc.plan!, later).length, 3); // lun, jeu, lun
   const r = runPlan(acc, p, later);
-  assert.equal(r.done, 5);
+  assert.equal(r.done, 3);
   close(
     r.account.transactions.reduce((s, t) => s + t.eur, 0),
-    31.25,
+    37.5,
     0.02,
   );
   assert.ok(r.account.transactions.every((t) => t.label?.includes('achat programmé')));
@@ -974,7 +976,7 @@ test('achats programmés : 25 €/semaine sur 4 jours, rattrapage, compte d’at
   const cash = { ...acc, plan: { ...acc.plan!, source: 'cash' as const } };
   const s = runPlan(cash, p, later);
   assert.equal(s.done, 0);
-  assert.equal(s.skipped, 5);
+  assert.equal(s.skipped, 3);
   assert.match(s.message!, /insuffisant/);
   assert.equal(dueRuns(s.account.plan!, later).length, 0);
   // En pause : rien.

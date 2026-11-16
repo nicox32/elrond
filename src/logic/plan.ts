@@ -23,7 +23,7 @@ export interface BuyPlan {
   lastResult?: { at: string; done: number; skipped: number; message?: string };
 }
 
-export const PLAN_LIMITS = { min: 5, max: 5000, catchUpDays: 31, hour: 10 } as const;
+export const PLAN_LIMITS = { min: 10, max: 5000, catchUpDays: 31, hour: 10 } as const;
 export const WEEKDAYS = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
 
 export function newPlan(now = new Date()): BuyPlan {
@@ -31,7 +31,8 @@ export function newPlan(now = new Date()): BuyPlan {
     active: true,
     amount: 25,
     frequency: 'weekly',
-    days: [1, 3, 5, 0],
+    // Un achat de 25 € le lundi (chaque achat doit faire au moins 10 €, et le marché est ouvert).
+    days: [1],
     dayOfMonth: 5,
     source: 'card',
     mode: 'target',
@@ -44,6 +45,8 @@ export function planError(plan: BuyPlan): string | null {
   if (plan.amount > PLAN_LIMITS.max) return `Montant maximum : ${PLAN_LIMITS.max} €.`;
   if (plan.frequency === 'weekly' && plan.days.length === 0) return 'Choisissez au moins un jour.';
   if (plan.frequency === 'monthly' && !(plan.dayOfMonth >= 1 && plan.dayOfMonth <= 28)) return 'Jour du mois : 1 à 28.';
+  if (amountPerRun(plan) < PLAN_LIMITS.min)
+    return `Chaque achat doit faire au moins ${PLAN_LIMITS.min} € : choisissez moins de jours ou un montant plus élevé.`;
   return null;
 }
 

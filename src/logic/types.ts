@@ -52,6 +52,8 @@ export type TransactionKind =
   | 'fee_dormancy'
   /** Frais de garde en coffre, prélevés en métal chaque mois. */
   | 'fee_custody'
+  /** Or retiré du coffre en lingotins, livré au titulaire (pas une vente). */
+  | 'withdraw_physical'
   /** Paiement chez un commerçant avec la carte Orvia. */
   | 'card_payment'
   /** Retrait au distributeur avec la carte Orvia. */
@@ -133,6 +135,41 @@ export interface QuarterSignature {
   path: string;
   w: number;
   h: number;
+}
+
+/** Ordre en attente de la réouverture du marché. */
+export interface PendingOrder {
+  id: string;
+  createdAt: string;
+  kind: 'buy' | 'sell' | 'convert' | 'split' | 'gift';
+  metal?: Metal;
+  target?: Metal;
+  q?: Quantity;
+  speed?: 'deferred' | 'immediate';
+  source?: 'card' | 'cash';
+  /** Achat réparti : euros par métal. */
+  amounts?: Partial<Record<Metal, number>>;
+  /** Don à un enfant. */
+  childId?: string;
+}
+
+/** Un lingotin d'or retiré du coffre Orvia. */
+export interface HomeBar {
+  id: string;
+  /** Produit : « g5 », « g10 », « g20 » ou « oz1 ». */
+  product: string;
+  grams: number;
+  orderedAt: string;
+  status: 'preparing' | 'received';
+  receivedAt?: string;
+  serial?: string;
+  /** Prix de revient du métal (achat d'origine, frais compris), pour l'impôt à la revente. */
+  cost: number;
+  /** Dates d'achat d'origine du métal (le plus ancien et le plus récent) : la durée de détention continue. */
+  acquiredFrom: string;
+  acquiredTo: string;
+  /** Opération de retrait correspondante. */
+  txId: string;
 }
 
 export interface RetirementGoal {
@@ -261,6 +298,10 @@ export interface Account extends Wallet {
   history2019Prices?: 'monthly';
   /** Objectif retraite : montant visé et date (ISO, jour). */
   retirement?: RetirementGoal;
+  /** Ordres passés le week-end, exécutés à la réouverture du marché, au cours du lundi. */
+  pendingOrders?: PendingOrder[];
+  /** Lingotins retirés du coffre et gardés chez soi. */
+  homeVault?: HomeBar[];
   /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
   ntfyTopic?: string;
   /** Compte d'attente : euros disponibles pour acheter des métaux. */

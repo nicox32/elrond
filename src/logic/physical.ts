@@ -1,0 +1,155 @@
+/**
+ * Retrait physique : de l'or du coffre livré en lingotins (affineries agréées LBMA, numéro de série et certificat),
+ * et registre « Mon coffre maison » des lingotins retirés. Or seulement : l'argent et le platine paieraient 20 % de
+ * TVA à la sortie du port franc. Ce n'est pas une vente : pas d'impôt, la durée de détention continue.
+ */
+import { applyTx, LedgerError, newId } from './ledger.ts';
+import { holdingLots } from './tax.ts';
+import type { Account, HomeBar, Prices } from './types.ts';
+
+export const OZ_GRAMS = 31.1034768;
+
+export interface BarProduct {
+  id: string;
+  label: string;
+  grams: number;
+  /** Surcoût de fabrication, en part de la valeur du métal (ordre de grandeur du marché). */
+  premium: number;
+}
+
+export const BAR_PRODUCTS: BarProduct[] = [
+  { id: 'g5', label: 'Lingotin 5 g', grams: 5, premium: 0.045 },
+  { id: 'g10', label: 'Lingotin 10 g', grams: 10, premium: 0.03 },
+  { id: 'g20', label: 'Lingotin 20 g', grams: 20, premium: 0.025 },
+  { id: 'oz1', label: 'Lingot 1 once (31,1 g)', grams: OZ_GRAMS, premium: 0.02 },
+];
+
+export const PHYSICAL = {
+  /** Livraison assurée, remise en main propre contre signature, par envoi. */
+  delivery: 19,
+  /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
+  vatSilverPlatinum: 0.2,
+  /** Délai indicatif de livraison, en jours ouvrés. */
+  delayDays: '5 à 10',
+} as const;
+
+export type BarOrder = Record<string, number>;
+
+export function productOf(id: string): BarProduct {
+  const p = BAR_PRODUCTS.find((x) => x.id === id);
+  if (!p) throw new LedgerError('Produit inconnu.');
+  return p;
+}
+
+/** Détail chiffré d'un retrait : grammes pris au coffre, surcoût de fabrication, livraison. */
+export function quoteWithdrawal(prices: Prices, order: BarOrder) {
+  const lines = BAR_PRODUCTS.filter((p) => (order[p.id] ?? 0) > 0).map((p) => {
+    const qty = Math.floor(order[p.id]);
+    const value = qty * p.grams * prices.gold;
+    return { product: p, qty, grams: qty * p.grams, value, premium: value * p.premium };
+  });
+  const grams = lines.reduce((s, l) => s + l.grams, 0);
+  const value = lines.reduce((s, l) => s + l.value, 0);
+  const premium = lines.reduce((s, l) => s + l.premium, 0);
+  const delivery = lines.length ? PHYSICAL.delivery : 0;
+  const fees = Math.round((premium + delivery) * 100) / 100;
+  return { lines, grams, value, premium, delivery, fees, feesPct: value ? fees / value : 0 };
+}
+
+/**
+ * Retire de l'or en lingotins. Les grammes sortent du coffre ; le surcoût et la livraison sont payés depuis le compte
+ * d'attente (payer en or serait une vente, donc imposée). Chaque lingotin entre au registre du coffre maison avec
+ * les dates et le prix d'achat d'origine du métal (premier entré, premier sorti).
+ */
+export function withdrawPhysical(account: Account, prices: Prices, order: BarOrder, now = new Date()): Account {
+  const q = quoteWithdrawal(prices, order);
+  if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
+  if (q.grams > account.holdings.gold + 1e-9) {
+    throw new LedgerError(
+      `Or insuffisant au coffre : ${account.holdings.gold.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g disponibles.`,
+    );
+  }
+  const cash = account.cashEur ?? 0;
+  if (q.fees > cash + 0.005) {
+    throw new LedgerError(
+      `Frais de ${q.fees.toFixed(2).replace('.', ',')} € à payer depuis le compte d’attente (${cash.toFixed(2).replace('.', ',')} € disponibles) : créditez-le d’abord.`,
+    );
+  }
+  // Lots d'origine consommés, du plus ancien au plus récent, lingotin par lingotin.
+  const lots = holdingLots(account).gold.map((l) => ({ ...l }));
+  const take = (grams: number) => {
+    let left = grams;
+    let cost = 0;
+    let from = '';
+    let to = '';
+    while (left > 1e-9 && lots.length) {
+      const lot = lots[0];
+      const used = Math.min(left, lot.grams);
+      cost += (lot.cost * used) / lot.grams;
+      from = from || lot.date;
+      to = lot.date;
+      lot.cost -= (lot.cost * used) / lot.grams;
+      lot.grams -= used;
+      left -= used;
+      if (lot.grams <= 1e-9) lots.shift();
+    }
+    return { cost, from: from || now.toISOString(), to: to || now.toISOString() };
+  };
+  const label = `Retrait physique · ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')}`;
+  let next = applyTx(account, 'withdraw_physical', { gold: -q.grams }, q.value, label, now, q.fees);
+  const [tx, ...rest] = next.transactions;
+  const bars: HomeBar[] = [];
+  for (const l of q.lines) {
+    for (let i = 0; i < l.qty; i++) {
+      const t = take(l.product.grams);
+      bars.push({
+        id: newId(),
+        product: l.product.id,
+        grams: l.product.grams,
+        orderedAt: now.toISOString(),
+        status: 'preparing',
+        cost: Math.round(t.cost * 100) / 100,
+        acquiredFrom: t.from,
+        acquiredTo: t.to,
+        txId: tx.id,
+      });
+    }
+  }
+  next = {
+    ...next,
+    cashEur: Math.round((cash - q.fees) * 100) / 100,
+    transactions: [{ ...tx, cash: -q.fees }, ...rest],
+    homeVault: [...(account.homeVault ?? []), ...bars],
+  };
+  return next;
+}
+
+/** Lingotin reçu : on note la date et son numéro de série (gravé sur le lingotin et son certificat). */
+export function receiveBar(account: Account, barId: string, serial: string, now = new Date()): Account {
+  const s = serial.trim().toUpperCase();
+  if (s.length < 3) throw new LedgerError('Indiquez le numéro de série gravé sur le lingotin.');
+  if (!(account.homeVault ?? []).some((b) => b.id === barId)) throw new LedgerError('Lingotin introuvable.');
+  return {
+    ...account,
+    homeVault: (account.homeVault ?? []).map((b) =>
+      b.id === barId ? { ...b, status: 'received', serial: s, receivedAt: b.receivedAt ?? now.toISOString() } : b,
+    ),
+  };
+}
+
+/** Lingotin revendu ou donné en dehors d'Orvia : on le retire du registre. */
+export function removeBar(account: Account, barId: string): Account {
+  return { ...account, homeVault: (account.homeVault ?? []).filter((b) => b.id !== barId) };
+}
+
+/** Total du coffre maison, valeur au cours de l'or (revente indicative, hors frais du comptoir). */
+export function homeVaultTotal(account: Pick<Account, 'homeVault'>, prices: Prices) {
+  const bars = account.homeVault ?? [];
+  const grams = bars.reduce((s, b) => s + b.grams, 0);
+  return { count: bars.length, grams, value: grams * prices.gold, cost: bars.reduce((s, b) => s + b.cost, 0) };
+}
+
+/** Coût d'un retrait d'argent ou de platine s'il était proposé : la TVA à la sortie, en euros. */
+export function vatIfWithdrawn(value: number): number {
+  return value * PHYSICAL.vatSilverPlatinum;
+}

@@ -17,6 +17,7 @@ const ICON: Record<TransactionKind, string> = {
   family_in: '↙',
   fee_dormancy: '!',
   fee_custody: '⌂',
+  withdraw_physical: '▭',
   card_payment: '▭',
   card_withdrawal: '€',
   referral_bonus: '★',

@@ -2,6 +2,7 @@
  * Don mensuel à un enfant : le jour prévu, l'appli rappelle le don (ou le fait seule, si vous l'avez choisi).
  * Un don = un achat de métal sur le compte du parent, aussitôt versé (gratuitement) sur le compte de l'enfant.
  */
+import { FEES } from './fees.ts';
 import { buy, fundChild, getChild, LedgerError, METAL_LABEL, replaceChildAccount } from './ledger.ts';
 import { type Account, type Metal, METALS, type Prices } from './types.ts';
 
@@ -35,7 +36,7 @@ export function newGiftPlan(): ChildGiftPlan {
 export const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 
 export function giftPlanError(p: ChildGiftPlan): string | null {
-  if (!(p.amount >= 5)) return 'Montant minimum : 5 €.';
+  if (!(p.amount >= FEES.minOrder)) return `Montant minimum : ${FEES.minOrder} €.`;
   if (p.amount > 5000) return 'Montant maximum : 5 000 €.';
   if (!(p.dayOfMonth >= 1 && p.dayOfMonth <= 28)) return 'Jour du mois : 1 à 28.';
   const total = METALS.reduce((s, m) => s + (p.share[m] || 0), 0);

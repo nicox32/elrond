@@ -1,3 +1,5 @@
+import { isWeekendClosed } from '../logic/market';
+import { placeOrder } from '../logic/orders';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
@@ -54,6 +56,12 @@ export function ChildGiftCard({ child }: { child: ChildAccount }) {
   };
   const give = () => {
     try {
+      if (isWeekendClosed()) {
+        // Week-end : le don passe lundi à la réouverture du marché, au cours du moment.
+        updateAccount((a) => placeOrder(a, { kind: 'gift', childId: child.id }));
+        setMsg({ ok: true, text: `Marché fermé : le don à ${child.name} sera versé lundi à la réouverture.` });
+        return;
+      }
       commit((a, prices) => giveMonthlyGift(a, prices, child.id));
       setMsg({ ok: true, text: `Don de ${MONTH(now)} versé à ${child.name}.` });
     } catch (e) {

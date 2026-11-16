@@ -3,7 +3,8 @@ import * as TaskManager from 'expo-task-manager';
 
 import { addEvents, addHourlyPoint, evaluateAlerts } from './logic/alerts';
 import { applyDormancy, recordBalance } from './logic/ledger';
-import { marketStatus } from './logic/market';
+import { isWeekendClosed, marketStatus } from './logic/market';
+import { runPendingOrders } from './logic/orders';
 import { giftDue, runGiftPlans } from './logic/childGiftPlan';
 import { runDipBot } from './logic/dipBot';
 import { runDeclarationReminders } from './logic/giftRecap';
@@ -33,8 +34,19 @@ TaskManager.defineTask(PRICE_TASK, async () => {
     const stored = await loadAccount();
     if (!stored) return BackgroundTask.BackgroundTaskResult.Success;
     let account = stored;
+    // Le week-end, rien ne s'exécute : programme, dons et ordres attendent la réouverture du marché.
+    const weekend = isWeekendClosed();
+    // Ordres passés le week-end : exécutés à la réouverture, même appli fermée.
+    if (!weekend && account.pendingOrders?.length) {
+      const live = await fetchLivePrices();
+      const prices = { gold: live.prices.gold, silver: live.prices.silver, platinum: live.prices.platinum };
+      const o = runPendingOrders(applyDormancy(account, prices), prices);
+      account = recordBalance(o.account, prices);
+      await Promise.all([saveAccount(account), saveQuote(live)]);
+      for (const n of o.notices) await notify(n.title, n.body);
+    }
     // Achats programmés dus, même appli fermée (au dernier cours réel).
-    if (account.plan && dueRuns(account.plan).length) {
+    if (!weekend && account.plan && dueRuns(account.plan).length) {
       const live = await fetchLivePrices();
       const prices = { gold: live.prices.gold, silver: live.prices.silver, platinum: live.prices.platinum };
       const r = runPlan(applyDormancy(account, prices), prices);
@@ -44,7 +56,7 @@ TaskManager.defineTask(PRICE_TASK, async () => {
       if (n) await notify(n.title, n.body);
     }
     // Dons mensuels aux enfants dus : rappel ou don automatique, même appli fermée.
-    if (account.children.some((c) => !c.transferredAt && giftDue(c.giftPlan))) {
+    if (!weekend && account.children.some((c) => !c.transferredAt && giftDue(c.giftPlan))) {
       const live = await fetchLivePrices();
       const prices = { gold: live.prices.gold, silver: live.prices.silver, platinum: live.prices.platinum };
       const g = runGiftPlans(applyDormancy(account, prices), prices);

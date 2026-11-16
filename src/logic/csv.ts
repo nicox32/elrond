@@ -30,6 +30,7 @@ export const KIND_TYPE: Record<TransactionKind, string> = {
   family_in: 'Reçu famille',
   fee_dormancy: 'Frais d’oxydation',
   fee_custody: 'Frais de garde',
+  withdraw_physical: 'Retrait physique',
   card_payment: 'Paiement carte',
   card_withdrawal: 'Retrait carte',
   referral_bonus: 'Parrainage',

@@ -72,6 +72,18 @@ export default function VaultScreen() {
           />
         </View>
       </View>
+      {metal === 'gold' ? (
+        <Button
+          title={`Retrait physique en lingotins${account.homeVault?.length ? ` · ${account.homeVault.length} chez vous` : ''}`}
+          variant="ghost"
+          onPress={() => router.push('/retrait')}
+        />
+      ) : (
+        <Hint>
+          Pas de retrait physique pour {metal === 'silver' ? 'l’argent' : 'le platine'} : 20 % de TVA seraient dus à la
+          sortie du port franc. Il reste au coffre et se revend en ligne.
+        </Hint>
+      )}
 
       <CustodyNote />
 

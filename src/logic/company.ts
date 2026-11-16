@@ -28,10 +28,11 @@ export interface CompanyReport {
     conversion: number;
     dormancy: number;
     custody: number;
+    physical: number;
     card: number;
     total: number;
   };
-  costs: { custody: number; kyc: number; loyalty: number; referral: number; total: number };
+  costs: { custody: number; kyc: number; loyalty: number; referral: number; physical: number; total: number };
   margin: number;
   marginPerYear: number;
   /** Clients comme celui-ci nécessaires pour couvrir les frais fixes. */
@@ -66,10 +67,18 @@ export function companyReport(
     conversion: sum((t) => (t.kind === 'convert' ? (t.fees ?? 0) : 0)),
     dormancy: sum((t) => (t.kind === 'fee_dormancy' ? t.eur : 0)),
     custody: sum((t) => (t.kind === 'fee_custody' ? t.eur : 0)),
+    physical: sum((t) => (t.kind === 'withdraw_physical' ? (t.fees ?? 0) : 0)),
     card: sum((t) => (t.kind === 'card_payment' ? t.eur * COMPANY.interchange : 0)),
     total: 0,
   };
-  revenue.total = revenue.buy + revenue.sale + revenue.conversion + revenue.dormancy + revenue.custody + revenue.card;
+  revenue.total =
+    revenue.buy +
+    revenue.sale +
+    revenue.conversion +
+    revenue.dormancy +
+    revenue.custody +
+    revenue.physical +
+    revenue.card;
 
   const assets = wallets.reduce((s, w) => s + accountValue(w, prices).total, 0);
   // Louis gagnés sur la période (échangés ou encore dus) : un coût pour la société.
@@ -81,9 +90,11 @@ export function companyReport(
     kyc: accountsOpened * COMPANY.kycPerAccount,
     loyalty: loyaltyCost,
     referral: sum((t) => (t.kind === 'referral_bonus' ? t.eur : 0)),
+    // Lingotins et transport assuré achetés au prix de gros : environ 80 % de ce que paie le client.
+    physical: sum((t) => (t.kind === 'withdraw_physical' ? (t.fees ?? 0) * 0.8 : 0)),
     total: 0,
   };
-  costs.total = costs.custody + costs.kyc + costs.loyalty + costs.referral;
+  costs.total = costs.custody + costs.kyc + costs.loyalty + costs.referral + costs.physical;
   const margin = revenue.total - costs.total;
   const marginPerYear = margin / years;
   return {

@@ -152,6 +152,7 @@ function CompanyDashboard() {
         <Row label="Frais de conversion" value={formatEur(r.revenue.conversion)} />
         <Row label="Frais d’oxydation (comptes inactifs)" value={formatEur(r.revenue.dormancy)} />
         <Row label="Frais de garde en coffre" value={formatEur(r.revenue.custody)} />
+        <Row label="Retraits physiques (fabrication et livraison)" value={formatEur(r.revenue.physical)} />
         <Row
           label={`Commission sur les paiements par carte (${pct(COMPANY.interchange)})`}
           value={formatEur(r.revenue.card)}
@@ -172,6 +173,7 @@ function CompanyDashboard() {
         />
         <Row label="Louis de fidélité gagnés" value={formatEur(r.costs.loyalty)} />
         <Row label="Bonus de parrainage" value={formatEur(r.costs.referral)} />
+        <Row label="Lingotins et livraison (achat estimé)" value={formatEur(r.costs.physical)} />
         <View style={styles.sep} />
         <Row label="Total des coûts" value={formatEur(r.costs.total)} strong />
       </Card>
