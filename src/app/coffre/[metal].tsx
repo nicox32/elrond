@@ -29,6 +29,11 @@ export default function VaultScreen() {
         }}
       />
       <PriceStatus />
+      <Button
+        title="Graphique du cours (5 jours à 20 ans)"
+        variant="ghost"
+        onPress={() => router.push({ pathname: '/cours/[metal]', params: { metal } })}
+      />
 
       <View style={[styles.hero, { borderColor: metalColor[metal] }]}>
         <Text style={[styles.metal, { color: metalColor[metal] }]}>{METAL_LABEL[metal]}</Text>

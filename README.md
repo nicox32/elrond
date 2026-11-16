@@ -162,6 +162,10 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Répartition** (« Répartition » sur l'écran du compte, l'écran Opérer ou le Profil) : objectif en % par métal
   (modèles 50/25/25, 60/20/20…), comparaison avec la répartition actuelle, et **achat réparti en euros** en un geste,
   « selon mes % » ou « vers mon objectif » (priorité aux métaux en retard, sans rien vendre) (`docs/repartition.png`).
+- **Graphiques de cours** (touchez un métal dans « Cours en direct », ou le bouton du coffre) : 5 jours à 20 ans,
+  au cours, au prix d'achat Orvia (frais compris) ou au prix de revente, par gramme ou par once ; **glissez le doigt
+  sur la courbe** pour lire la date et le prix. Page **Ratio or/argent** avec zones et moyenne sur 20 ans. Données :
+  `scripts/price-history.py`, publiées chaque soir dans la release « cours » par `cours-historiques.yml`.
 - **Export tableur** (Profil › Relevés) : toutes les opérations en CSV (« ; », virgule décimale, UTF-8) et un
   **modèle de tableur** `docs/modele-orvia.xlsx` (joint à chaque release) : onglet « Opérations » au format de l'export,
   onglet « Synthèse » (formules par métal et par année : grammes, prix moyen payé, frais, impôts, plus-value,

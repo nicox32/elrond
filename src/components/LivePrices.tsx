@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { type LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/format';
@@ -36,7 +37,13 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
         const trend = metalTrend(priceHistory, m, quote.prices);
         const up = trend.changePct >= 0;
         return (
-          <View key={m} style={[styles.row, i > 0 && styles.rowBorder]}>
+          <Pressable
+            key={m}
+            onPress={() => router.push({ pathname: '/cours/[metal]', params: { metal: m } })}
+            style={[styles.row, i > 0 && styles.rowBorder]}
+            accessibilityRole="button"
+            accessibilityHint="Graphique du cours sur 20 ans"
+          >
             <View style={[styles.symbol, { borderColor: metalColor[m] }]}>
               <Text style={[styles.symbolText, { color: metalColor[m] }]}>{metalSymbol[m]}</Text>
             </View>
@@ -51,12 +58,25 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
               <Text style={styles.price}>{formatUnitPrice(quote.prices[m], unit, m)}</Text>
               <Text style={styles.priceOther}>{formatUnitPrice(quote.prices[m], other)}</Text>
             </View>
-          </View>
+          </Pressable>
         );
       })}
 
+      <Pressable
+        onPress={() => router.push('/ratio')}
+        style={[styles.row, styles.rowBorder, { paddingVertical: 10 }]}
+        accessibilityRole="button"
+        testID="ratio-row"
+      >
+        <Text style={[styles.metal, { flex: 1 }]}>Ratio or/argent</Text>
+        <Text style={styles.price}>
+          {(quote.prices.gold / quote.prices.silver).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} ›
+        </Text>
+      </Pressable>
+
       <Text style={styles.footnote}>
-        Cours au comptant, convertis en euros. Variation et courbe : relevés faits par l’appli sur les dernières 24 h.
+        Cours au comptant, convertis en euros. Variation et courbe : dernières 24 h. Touchez un métal pour son graphique
+        sur 20 ans.
       </Text>
     </View>
   );
