@@ -139,6 +139,11 @@ function BarCard({
           ✓ Contrôlé par Orvia le {formatDate(controlledOn(bar)!)}
         </Text>
       ) : null}
+      {bar.ref ? (
+        <Text style={styles.serial} testID={`bar-ref-${bar.id}`}>
+          Réf. interne Orvia : {bar.ref}
+        </Text>
+      ) : null}
       {bar.serial ? (
         <Text style={styles.serial}>
           {p.coin ? 'Millésime' : 'N° de série'} : {bar.serial}
