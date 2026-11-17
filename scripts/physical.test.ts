@@ -217,3 +217,14 @@ test('prime vendeur d\u2019après la page du revendeur', () => {
   assert.equal(vendorPremiumFrom(100, null, 0), null);
   assert.equal(vendorPremiumFrom(300, null, 100), null); // écart absurde
 });
+
+test('inventaire imprimable : chaque objet porte la photo de son format', async () => {
+  const { homeVaultHtml } = await import('../src/logic/homeVaultDoc.ts');
+  const { BAR_PHOTOS } = await import('../src/logic/barPhotos.ts');
+  let a = creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 60 }), 900);
+  a = withdrawPhysical(a, p, { g5: 1, g20: 1, oz1: 1 });
+  const html = homeVaultHtml(a, p);
+  for (const id of ['g5', 'g20', 'oz1']) assert.ok(html.includes(BAR_PHOTOS[id]), `photo ${id}`);
+  assert.ok(!html.includes(BAR_PHOTOS.g10));
+  assert.equal(new Set(Object.values(BAR_PHOTOS)).size, 5); // cinq photos différentes
+});
