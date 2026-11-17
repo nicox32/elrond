@@ -27,6 +27,7 @@ import {
   undoableDeposits,
 } from '../../logic/childRules';
 import { formatDate, formatEur, formatPercent, formatQty, formatWeight, parseAmount } from '../../logic/format';
+import { barsOfChild, placeLabel, productOf } from '../../logic/physical';
 import { estimateTax } from '../../logic/tax';
 import {
   accountValue,
@@ -272,6 +273,18 @@ export default function ChildScreen() {
             Depuis ses 18 ans, ce compte lui appartient : vous ne pouvez plus y verser ni en retirer. Transférez-le pour
             que {name} y accède avec son propre compte Orvia (et sa propre pièce d’identité).
           </Text>
+          {barsOfChild(account, child.id).length > 0 && (
+            <Text style={styles.bannerText} testID="child-bars-handover">
+              Le verrouillage de ses lingotins est levé. À lui remettre avec leurs certificats :{' '}
+              {barsOfChild(account, child.id)
+                .map(
+                  (b) =>
+                    `${productOf(b.product).label.replace(/ \(.*/, '')} n° ${b.serial ?? 'à noter'} (${placeLabel(b)})`,
+                )
+                .join(' ; ')}
+              .
+            </Text>
+          )}
           <Button title={`Transférer le compte à ${name}`} onPress={transfer} />
         </View>
       )}
@@ -285,6 +298,15 @@ export default function ChildScreen() {
             {child.transferCode}
           </Text>
           <Hint>{name} saisit ce code dans son propre accès Orvia, après la vérification de son identité.</Hint>
+          {barsOfChild(account, child.id).length > 0 && (
+            <Hint>
+              Ses lingotins lui appartiennent : remettez-lui leurs certificats et leurs numéros de série (
+              {barsOfChild(account, child.id)
+                .map((b) => `${productOf(b.product).label.replace(/ \(.*/, '')} n° ${b.serial ?? 'à noter'}`)
+                .join(' ; ')}
+              ).
+            </Hint>
+          )}
         </View>
       )}
 
