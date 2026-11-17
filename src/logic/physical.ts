@@ -55,13 +55,25 @@ export function normalizeSerial(productId: string, input: string): string {
   return isPamp(productId) && !productOf(productId).coin ? s.replace(/[\s\-_.]/g, '') : s;
 }
 
-/** Message d'erreur si le numéro n'a pas le format du producteur, sinon null. */
+/** Un numéro d'essai : chiffres tous identiques, suite (123456, 654321) ou motif répété (121212). */
+export function looksFake(digits: string): boolean {
+  if (digits.length < 4) return false;
+  if (/^(\d)\1+$/.test(digits)) return true;
+  if (/^(\d\d)\1+$/.test(digits)) return true;
+  const steps = [...digits].slice(1).map((c, i) => (Number(c) - Number(digits[i]) + 10) % 10);
+  return steps.every((x) => x === 1) || steps.every((x) => x === 9);
+}
+
+/** Message d'erreur si le numéro n'a pas le format du producteur ou ressemble à un numéro d'essai, sinon null. */
 export function serialFormatError(productId: string, input: string): string | null {
   const p = productOf(productId);
   if (!isPamp(productId) || p.coin) return null;
-  return PAMP_SERIAL.test(normalizeSerial(productId, input))
-    ? null
-    : 'Un numéro PAMP s’écrit « C » suivi de 6 chiffres (ex. C841201).';
+  const s = normalizeSerial(productId, input);
+  if (!PAMP_SERIAL.test(s)) return 'Un numéro PAMP s’écrit « C » suivi de 6 chiffres (ex. C841201).';
+  if (looksFake(s.slice(1))) {
+    return 'Ce numéro ressemble à un numéro d’essai (123456, 111111…) : recopiez celui gravé sur le lingot.';
+  }
+  return null;
 }
 
 /** Fiche technique en une ligne : « PAMP Suisse · or 999,9 · 23,3 × 14 × 0,79 mm ». */

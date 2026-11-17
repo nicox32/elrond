@@ -23,21 +23,21 @@ test('stock : lots par quantité, au coffre de la société ou en coffre profess
 });
 
 test('stock : numéros de série connus, format PAMP, doublons refusés', () => {
-  assert.deepEqual(parseSerials('C123456\nC123457, C123458;  \n'), ['C123456', 'C123457', 'C123458']);
+  assert.deepEqual(parseSerials('C841201\nC386511, C558479;  \n'), ['C841201', 'C386511', 'C558479']);
   let a = base();
-  a = addStock(a, { product: 'g10', qty: 3, source: 'maison', serials: ['c123456', 'C 123457'] });
-  assert.deepEqual(a.stock![0].serials, ['C123456', 'C123457']); // le troisième sera noté à l'expédition
-  assert.throws(() => addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C123456'] }), /déjà/);
+  a = addStock(a, { product: 'g10', qty: 3, source: 'maison', serials: ['c841201', 'C 386511'] });
+  assert.deepEqual(a.stock![0].serials, ['C841201', 'C386511']); // le troisième sera noté à l'expédition
+  assert.throws(() => addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C841201'] }), /déjà/);
   assert.throws(
     () => addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C1', 'C2'] }),
     /format|PAMP|C/,
   );
   assert.throws(
-    () => addStock(a, { product: 'g10', qty: 1, source: 'maison', serials: ['C111111', 'C222222'] }),
+    () => addStock(a, { product: 'g10', qty: 1, source: 'maison', serials: ['C479203', 'C615837'] }),
     /trop/,
   );
   assert.throws(
-    () => addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C333333', 'C333333'] }),
+    () => addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C702914', 'C702914'] }),
     /déjà/,
   );
   // Les millésimes d'une pièce se répètent : pas de contrôle de doublon.
@@ -46,19 +46,19 @@ test('stock : numéros de série connus, format PAMP, doublons refusés', () => 
 
 test('stock : un retrait prend dans le stock de la société, puis le coffre professionnel, sinon commande', () => {
   let a = base();
-  a = addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C100001', 'C100002'] });
+  a = addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C204518', 'C319760'] });
   a = addStock(a, { product: 'g10', qty: 1, source: 'pro', vault: 'Gold Avenue' });
   a = withdrawPhysical(a, p, { g10: 4 }, new Date('2026-11-16T12:00:00'));
   const origins = a.homeVault!.map((b) => b.origin);
   assert.deepEqual(origins, ['maison', 'maison', 'pro', 'commande']);
-  assert.equal(a.homeVault![0].expectedSerial, 'C100001');
-  assert.equal(a.homeVault![1].expectedSerial, 'C100002');
+  assert.equal(a.homeVault![0].expectedSerial, 'C204518');
+  assert.equal(a.homeVault![1].expectedSerial, 'C319760');
   assert.equal(a.homeVault![2].expectedSerial, undefined);
   assert.deepEqual(stockCount(a, 'g10'), { maison: 0, pro: 0 });
   assert.ok(a.stockLog![0].kind === 'out' && a.stockLog![0].qty < 0);
   // Le numéro prévu est confirmé à la réception.
-  a = receiveBar(a, a.homeVault![0].id, 'C100001');
-  assert.equal(a.homeVault![0].serial, 'C100001');
+  a = receiveBar(a, a.homeVault![0].id, 'C204518');
+  assert.equal(a.homeVault![0].serial, 'C204518');
 });
 
 test('stock : sans stock, le retrait marche comme avant', () => {
@@ -69,7 +69,7 @@ test('stock : sans stock, le retrait marche comme avant', () => {
 });
 
 test('stock : inventaire, l’écart est noté au journal', () => {
-  let a = addStock(base(), { product: 'g20', qty: 10, source: 'maison', serials: ['C200001', 'C200002', 'C200003'] });
+  let a = addStock(base(), { product: 'g20', qty: 10, source: 'maison', serials: ['C410862', 'C526094', 'C638271'] });
   const id = a.stock![0].id;
   a = adjustStock(a, id, 8);
   assert.equal(a.stock![0].qty, 8);
@@ -79,4 +79,17 @@ test('stock : inventaire, l’écart est noté au journal', () => {
   assert.equal(a.stock![0].serials!.length, 2);
   assert.throws(() => adjustStock(a, id, -1));
   assert.equal(adjustStock(a, id, 2), a);
+});
+
+test('numéros de série : jamais un numéro d’essai (123456, 111111, 121212…)', async () => {
+  const { looksFake, serialFormatError } = await import('../src/logic/physical.ts');
+  for (const d of ['123456', '654321', '111111', '000000', '234567', '987654', '121212', '012345'])
+    assert.ok(looksFake(d), d);
+  for (const d of ['841201', '386511', '558479', '313395', '123457', '135791']) assert.ok(!looksFake(d), d);
+  assert.match(serialFormatError('g10', 'C123456')!, /essai/);
+  assert.match(serialFormatError('g10', 'C111111')!, /essai/);
+  assert.equal(serialFormatError('g10', 'C841201'), null);
+  const a = base();
+  assert.throws(() => addStock(a, { product: 'g10', qty: 1, source: 'maison', serials: ['C123456'] }), /essai/);
+  assert.equal(serialFormatError('nap20', '1910'), null); // un millésime n'est pas concerné
 });

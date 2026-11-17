@@ -168,7 +168,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           onChangeText={setSerials}
           multiline
           autoCapitalize="characters"
-          placeholder={coin ? '1910\n1912' : 'C123456\nC123457'}
+          placeholder={coin ? 'Un millésime par ligne' : 'C + 6 chiffres, un par ligne'}
           placeholderTextColor={colors.textMuted}
           style={[ui.input, { minHeight: 72, textAlignVertical: 'top' }]}
           accessibilityLabel="Numéros de série du lot"
