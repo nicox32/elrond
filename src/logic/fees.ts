@@ -99,6 +99,16 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
     ],
   },
   {
+    title: 'Carte Orvia',
+    rows: [
+      { label: 'Émission et tenue de la carte virtuelle', orvia: 'Gratuit' },
+      { label: 'Paiement par carte (revente du métal au cours du moment)', orvia: 'Gratuit' },
+      { label: 'Retrait au distributeur', orvia: 'Gratuit' },
+      { label: 'Plafond de paiements', orvia: '3 000 € / 30 jours' },
+      { label: 'Plafond de retraits', orvia: '500 € / 7 jours' },
+    ],
+  },
+  {
     title: 'Transferts et comptes',
     rows: [
       { label: 'Envoi de métal à un membre', orvia: 'Gratuit' },

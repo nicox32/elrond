@@ -72,7 +72,7 @@ export interface TaxYearLine {
 
 export interface TaxYearRecap {
   year: number;
-  /** Ventes, virements, conversions (et anciens paiements par carte) imposés (impôt retenu par Orvia). */
+  /** Ventes, virements, paiements par carte et conversions imposés (impôt retenu par Orvia). */
   taxed: TaxYearLine[];
   saleTotal: number;
   taxFlat: number;

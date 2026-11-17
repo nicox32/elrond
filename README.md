@@ -146,9 +146,9 @@ jamais dans Git (dossier `signing/` ignoré).
   `src/logic/shareView.ts`) : lien vers la version web, sans appli ni code, qui montre la valeur aux cours du moment,
   les coffres, les règles de protection et les derniers mouvements, sans aucune opération possible. Les données sont
   après le « # » du lien (jamais envoyées au serveur) ; c'est une photo du compte au moment du partage.
-- **Pas de carte de paiement** : la carte Orvia a été supprimée (chaque paiement vendait du métal, donc imposé) ;
-  pour sortir des euros, la vente par virement ; pour avoir l'or en main, le retrait en lingotins. Les anciens
-  paiements par carte restent dans l'historique.
+- **Carte Orvia** : carte de paiement virtuelle adossée aux métaux du compte ; chaque paiement
+  ou retrait vend le métal choisi au cours du moment, sans frais (c'est une cession : l'impôt est retenu) ; plafonds
+  de 3 000 € / 30 jours (paiements) et 500 € / 7 jours (retraits) ; gel en un geste (`docs/carte.png`).
 - **Parrainage** : un code par compte à partager ; le filleul reçoit 10 € en or à son premier achat
   d'au moins 50 € (`docs/parrainage.png`).
 - **Alertes de prix** (🔔 sur l'écran du compte) : seuil de prix, variation sur 24 h ou 7 jours, écart à la
@@ -199,7 +199,7 @@ jamais dans Git (dossier `signing/` ignoré).
   - **aucun frais avant 18 ans** ; à la majorité, le parent ne gère plus le compte et le **transfère à l'enfant**
     (code de rattachement) ; logique dans `src/logic/childRules.ts` (`docs/compte-enfant.png`).
 - **Frais d'oxydation** : un compte (principal, ou enfant devenu majeur) laissé 6 mois calendaires sans opération éligible
-  d'au moins 1 € (achat, crédit du compte d'attente, échange de métal, retrait physique, parrainage) est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
+  d'au moins 1 € (paiement ou retrait par carte, achat, crédit du compte d'attente, échange de métal, retrait physique, parrainage) est facturé 0,02 % du solde par jour sur ces 6 mois (environ 3,6 %), en métal ; chaque nouvelle
   période de 6 mois d'inactivité est facturée de même. L'appli prévient un mois avant (`docs/oxydation.png`).
 
 Sources des cours : [gold-api.com](https://gold-api.com) (métaux) et

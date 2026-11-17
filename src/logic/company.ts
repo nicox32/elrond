@@ -10,6 +10,8 @@ import { type Account, type Metal, METALS, type Prices, type Transaction } from 
 export const COMPANY = {
   /** Garde en port franc et assurance, par an, en part des stocks de chaque métal (l'argent, encombrant, coûte plus). */
   custodyYearly: { gold: 0.001, silver: 0.003, platinum: 0.0012 } as Record<Metal, number>,
+  /** Commission versée par le commerçant sur un paiement par carte (plafond européen d'une carte de débit). */
+  interchange: 0.002,
   /** Vérification d'identité et anti-blanchiment, par compte ouvert. */
   kycPerAccount: 3,
   /** Frais fixes d'une petite fintech (équipe, conformité, audit, appli), par an. */
@@ -27,6 +29,7 @@ export interface CompanyReport {
     dormancy: number;
     custody: number;
     physical: number;
+    card: number;
     total: number;
   };
   costs: { custody: number; kyc: number; loyalty: number; referral: number; physical: number; total: number };
@@ -65,10 +68,17 @@ export function companyReport(
     dormancy: sum((t) => (t.kind === 'fee_dormancy' ? t.eur : 0)),
     custody: sum((t) => (t.kind === 'fee_custody' ? t.eur : 0)),
     physical: sum((t) => (t.kind === 'withdraw_physical' ? (t.fees ?? 0) : 0)),
+    card: sum((t) => (t.kind === 'card_payment' ? t.eur * COMPANY.interchange : 0)),
     total: 0,
   };
   revenue.total =
-    revenue.buy + revenue.sale + revenue.conversion + revenue.dormancy + revenue.custody + revenue.physical;
+    revenue.buy +
+    revenue.sale +
+    revenue.conversion +
+    revenue.dormancy +
+    revenue.custody +
+    revenue.physical +
+    revenue.card;
 
   const assets = wallets.reduce((s, w) => s + accountValue(w, prices).total, 0);
   // Louis gagnés sur la période (échangés ou encore dus) : un coût pour la société.

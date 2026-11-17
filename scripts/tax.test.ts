@@ -86,7 +86,7 @@ test('impôt : le régime le moins cher est retenu, plus-value en euros et en %'
 });
 
 test('impôt retenu automatiquement à chaque cession, au régime le moins cher', async () => {
-  const { addBeneficiary, convert, transferToIban } = await import('../src/logic/ledger.ts');
+  const { addBeneficiary, cardPay, convert, issueCard, transferToIban } = await import('../src/logic/ledger.ts');
   const start = new Date('2021-06-01');
   const now = new Date('2026-11-02');
   const low = { gold: 100, silver: 1, platinum: 30 };
@@ -121,6 +121,12 @@ test('impôt retenu automatiquement à chaque cession, au régime le moins cher'
   const iban = transferToIban(withIban, high, 'gold', { unit: 'eur', value: 50 }, beneficiary, 'deferred', now);
   close(iban.transactions[0].eur, 50);
   assert.ok((iban.transactions[0].tax ?? 0) > 0);
+
+  // Carte : le commerçant reçoit le montant exact, un peu plus de métal est vendu pour l'impôt
+  const carded = cardPay(issueCard(acc), high, 'Boulangerie', 20, now);
+  const ctx = carded.transactions[0];
+  close(ctx.eur, 20);
+  close(-ctx.deltas.gold * 300 - (ctx.tax ?? 0), 20);
 
   // Conversion : cession du métal d'origine, l'impôt réduit le métal reçu
   const conv = convert(acc, high, 'gold', 'silver', { unit: 'g', value: 1 }, now).transactions[0];

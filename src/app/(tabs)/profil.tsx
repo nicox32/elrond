@@ -55,12 +55,18 @@ export default function ProfileScreen() {
 
       <Card style={{ paddingVertical: 4 }}>
         <LinkRow
+          label="Ma carte Orvia"
+          hint={account.card ? `•••• ${account.card.last4}${account.card.frozen ? ' · gelée' : ''}` : 'Gratuite'}
+          to="/carte"
+        />
+        <LinkRow
           label="Répartition"
           hint={(() => {
             const a = account.settings.allocation ?? { gold: 50, silver: 25, platinum: 25 };
             return `Or ${a.gold} % · argent ${a.silver} % · platine ${a.platinum} %`;
           })()}
           to="/repartition"
+          border
         />
         <LinkRow
           label="Mon coffre maison"
@@ -217,6 +223,7 @@ function LinkRow({
   to:
     | '/enfants'
     | '/tarifs'
+    | '/carte'
     | '/parrainage'
     | '/alertes'
     | '/repartition'

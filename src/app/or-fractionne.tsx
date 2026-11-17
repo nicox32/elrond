@@ -45,7 +45,7 @@ export default function FractionalGoldScreen() {
           comptes existe dans le coffre.
         </Benefit>
         <Benefit title="Disponible à tout moment">
-          Revendez, convertissez, envoyez à un proche ou recevez-le en lingotins, au cours du moment.
+          Revendez, convertissez, envoyez à un proche ou payez par carte, au cours du moment.
         </Benefit>
       </Card>
 

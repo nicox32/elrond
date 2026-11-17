@@ -27,14 +27,19 @@ const OPERATIONS = [
     text: 'Le métal est vendu pour envoyer des euros : même règle qu’une vente, même pour un petit montant. Il n’existe pas de franchise pour l’or, l’argent et le platine.',
   },
   {
-    title: 'Conversion entre métaux',
-    taxed: true,
-    text: 'Échanger un métal contre un autre est une vente du premier : l’impôt est retenu avant le rachat et réduit le métal reçu.',
-  },
-  {
     title: 'Retrait physique en lingotins',
     taxed: false,
     text: 'L’or reste à vous, livré chez vous : ce n’est pas une vente. Pas d’impôt, et sa durée de détention continue jusqu’à une revente éventuelle.',
+  },
+  {
+    title: 'Paiement ou retrait par carte',
+    taxed: true,
+    text: 'Chaque paiement vend du métal : c’est une cession. Orvia vend un peu plus de métal pour couvrir l’impôt, le commerçant reçoit le montant exact.',
+  },
+  {
+    title: 'Conversion entre métaux',
+    taxed: true,
+    text: 'Échanger un métal contre un autre est une vente du premier : l’impôt est retenu avant le rachat et réduit le métal reçu.',
   },
   {
     title: 'Virement de métal à un membre',

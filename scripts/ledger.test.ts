@@ -324,6 +324,37 @@ test('opérations qui évitent les frais : achat et échanges de louis, pas les 
   // 1 louis = 1 euro
 });
 
+test('carte Orvia : paiements et retraits gratuits, plafonds, gel, comptent comme mouvements', async () => {
+  const { issueCard, cardPay, cardWithdraw, setCardFrozen, setCardMetal, dormancyStatus, CARD } =
+    await import('../src/logic/ledger.ts');
+  const t0 = new Date('2026-03-01T12:00:00Z');
+  let acc = buy(createAccount('Nico', t0), prices, 'gold', { unit: 'g', value: 50 }, t0); // 5 000 € d'or
+  assert.throws(() => cardPay(acc, prices, 'Boulangerie', 5, t0), LedgerError); // pas encore de carte
+  acc = issueCard(acc, t0);
+  assert.match(acc.card!.last4, /^\d{4}$/);
+  assert.equal(acc.card!.expiry, '03/30');
+  const t1 = new Date('2026-05-01T12:00:00Z');
+  acc = cardPay(acc, prices, 'Boulangerie', 25, t1);
+  close(acc.holdings.gold, 50 - 0.25); // 25 € à 100 €/g, sans frais
+  assert.equal(acc.transactions[0].fees, undefined);
+  assert.equal(dormancyStatus(acc, t1).lastMovement.toISOString(), t1.toISOString()); // évite l'oxydation
+  acc = cardWithdraw(acc, prices, 100, t1);
+  close(acc.holdings.gold, 50 - 1.25);
+  // plafonds
+  assert.throws(() => cardWithdraw(acc, prices, CARD.withdrawalLimit7d, t1), LedgerError);
+  acc = cardWithdraw(acc, prices, 100, new Date('2026-05-09T12:00:00Z')); // 8 jours plus tard : nouveau plafond
+  assert.throws(() => cardPay(acc, prices, 'Voyage', 3000, t1), LedgerError);
+  // métal débité au choix
+  acc = buy(acc, prices, 'silver', { unit: 'g', value: 1000 }, t1);
+  acc = setCardMetal(acc, 'silver');
+  acc = cardPay(acc, prices, 'Café', 2, t1);
+  close(acc.holdings.silver, 1000 - 2);
+  // gel
+  acc = setCardFrozen(acc, true);
+  assert.throws(() => cardPay(acc, prices, 'Café', 2, t1), LedgerError);
+  assert.doesNotThrow(() => cardPay(setCardFrozen(acc, false), prices, 'Café', 2, t1));
+});
+
 test('parrainage : code saisi une fois, bonus de 10 LOU en or au premier achat d’au moins 50 €', async () => {
   const { enterSponsorCode, REFERRAL, dormancyStatus } = await import('../src/logic/ledger.ts');
   let acc = createAccount('Filleul');

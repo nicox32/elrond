@@ -81,7 +81,7 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
           const p = productPrice(b, quote.prices.gold, physFees.premiums[b.id]);
           return (
             <View key={b.id} style={styles.barsLine} testID={`bar-${b.id}`}>
-              <BarImage product={b.id} size={30} />
+              <BarImage product={b.id} size={40} />
               <Text style={styles.barsName} numberOfLines={1}>
                 {b.coin ? 'Napoléon 20 F' : b.id === 'oz1' ? 'Lingot 1 once' : `Lingotin ${b.grams} g`}
               </Text>
@@ -90,7 +90,7 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
             </View>
           );
         })}
-        <Text style={styles.priceOther}>
+        <Text style={[styles.priceOther, { marginTop: 4, lineHeight: 16 }]}>
           Fabrication ou prime incluse · livraison {physFees.delivery.toLocaleString('fr-FR')} €, offerte dès{' '}
           {physFees.freeFromGrams} g · touchez pour un retrait physique
         </Text>
@@ -173,12 +173,12 @@ const styles = StyleSheet.create({
   prices: { alignItems: 'flex-end', minWidth: 96 },
   price: { color: colors.text, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
   priceOther: { color: colors.textMuted, fontSize: 11, fontVariant: ['tabular-nums'] },
-  bars: { paddingVertical: 10, gap: 5 },
-  barsHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 2 },
-  barsCol: { color: colors.textMuted, fontSize: 10.5, width: 82, textAlign: 'right' },
-  barsLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  barsName: { color: colors.text, fontSize: 13.5, fontWeight: '600', flex: 1 },
-  barsVal: { color: colors.textMuted, fontSize: 13, width: 82, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  bars: { paddingVertical: 14, gap: 10 },
+  barsHead: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 4 },
+  barsCol: { color: colors.textMuted, fontSize: 10.5, width: 76, textAlign: 'right' },
+  barsLine: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  barsName: { color: colors.text, fontSize: 14, fontWeight: '600', flex: 1 },
+  barsVal: { color: colors.textMuted, fontSize: 13, width: 76, textAlign: 'right', fontVariant: ['tabular-nums'] },
   barsGold: { color: colors.text, fontWeight: '700' },
   footnote: { color: colors.textMuted, fontSize: 11, lineHeight: 15, marginTop: 4 },
 });

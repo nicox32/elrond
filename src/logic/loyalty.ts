@@ -8,7 +8,7 @@
  *   série de 12 mois consécutifs ;
  * - donner à ses enfants : 1 LOU pour chaque mois civil avec au moins 25 € versés sur un compte enfant ;
  * - ancienneté : 1 LOU à chaque anniversaire du compte, et 5 LOU de plus tous les 5 ans.
- * Rien n'est gagné sur les ventes, conversions, virements (qui vendent du métal), ni sur les
+ * Rien n'est gagné sur les ventes, conversions, virements, paiements par carte (qui vendent du métal), ni sur les
  * euros laissés dans le compte d'attente : c'est un compte d'épargne.
  *
  * 1 LOU s'échange contre 1 € de métal, sans frais, à partir de 10 LOU. Les points sont recalculés à partir de

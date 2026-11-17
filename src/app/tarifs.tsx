@@ -40,9 +40,9 @@ export default function FeesScreen() {
         </Text>
         <Text style={styles.para}>
           Pour éviter ces frais, il suffit de réaliser l’une des opérations suivantes à partir d’un euro : achat de
-          métal, crédit du compte d’attente, échange de métal (envoi à un membre, conversion, versement entre comptes de
-          la famille), retrait physique d’or ou parrainage. Les ventes, les virements vers un IBAN et les frais
-          eux-mêmes ne comptent pas.
+          métal, paiement ou retrait avec la carte Orvia, crédit du compte d’attente, échange de métal (envoi à un
+          membre, conversion, versement entre comptes de la famille), retrait physique d’or ou parrainage. Les ventes,
+          les virements vers un IBAN et les frais eux-mêmes ne comptent pas.
         </Text>
         <Text style={styles.para}>
           Si l’inactivité continue, chaque nouvelle période de {FEES.dormancyAfterMonths} mois est facturée de la même

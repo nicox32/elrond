@@ -175,6 +175,10 @@ function CompanyDashboard() {
         <Row label="Frais d’oxydation (comptes inactifs)" value={formatEur(r.revenue.dormancy)} />
         <Row label="Frais de garde en coffre" value={formatEur(r.revenue.custody)} />
         <Row label="Retraits physiques (fabrication et livraison)" value={formatEur(r.revenue.physical)} />
+        <Row
+          label={`Commission sur les paiements par carte (${pct(COMPANY.interchange)})`}
+          value={formatEur(r.revenue.card)}
+        />
         <View style={styles.sep} />
         <Row label="Total des revenus" value={formatEur(r.revenue.total)} strong />
       </Card>
