@@ -86,7 +86,13 @@ export const BAR_PRODUCTS: BarProduct[] = [
     premium: 0.025,
     spec: { producer: 'PAMP Suisse', purity: '999,9', lengthMm: 32, widthMm: 18, thicknessMm: 1.88, ref: 'ZAUFS00089' },
   },
-  { id: 'oz1', label: 'Lingot 1 once (31,1 g)', grams: OZ_GRAMS, premium: 0.02 },
+  {
+    id: 'oz1',
+    label: 'Lingot 1 once (31,1 g)',
+    grams: OZ_GRAMS,
+    premium: 0.02,
+    spec: { producer: 'PAMP Suisse', purity: '999,9', lengthMm: 41, widthMm: 24, thicknessMm: 1.66, ref: 'ZAUFS00115' },
+  },
   {
     id: 'nap20',
     label: 'Napoléon 20 F (5,81 g d’or fin)',

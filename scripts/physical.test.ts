@@ -137,7 +137,7 @@ test('fiche technique : lingotin 5 g PAMP Suisse et Napoléon, dans la fiche QR'
   assert.equal(specLine(productOf('nap20').spec), 'Monnaie de Paris · or 900 ‰ · Ø 21 mm');
   assert.equal(specLine(productOf('g10').spec), 'PAMP Suisse · or 999,9 · 26,5 × 15,8 × 1,25 mm');
   assert.equal(specLine(productOf('g20').spec), 'PAMP Suisse · or 999,9 · 32 × 18 × 1,88 mm');
-  assert.equal(specLine(productOf('oz1').spec), null);
+  assert.equal(specLine(productOf('oz1').spec), 'PAMP Suisse · or 999,9 · 41 × 24 × 1,66 mm');
   const a = withdrawPhysical(creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 10 }), 100), p, {
     g5: 1,
   });
