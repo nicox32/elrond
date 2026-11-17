@@ -79,7 +79,13 @@ export const BAR_PRODUCTS: BarProduct[] = [
       ref: 'ZAUFS00084',
     },
   },
-  { id: 'g20', label: 'Lingotin 20 g', grams: 20, premium: 0.025 },
+  {
+    id: 'g20',
+    label: 'Lingotin 20 g',
+    grams: 20,
+    premium: 0.025,
+    spec: { producer: 'PAMP Suisse', purity: '999,9', lengthMm: 32, widthMm: 18, thicknessMm: 1.88, ref: 'ZAUFS00089' },
+  },
   { id: 'oz1', label: 'Lingot 1 once (31,1 g)', grams: OZ_GRAMS, premium: 0.02 },
   {
     id: 'nap20',
