@@ -5,7 +5,7 @@
  */
 import { applyTx, LedgerError, newId } from './ledger.ts';
 import { holdingLots } from './tax.ts';
-import type { Account, HomeBar, Prices } from './types.ts';
+import type { Account, HomeBar, Prices, Settings } from './types.ts';
 
 export const OZ_GRAMS = 31.1034768;
 
@@ -19,6 +19,8 @@ export interface BarProduct {
   coin?: boolean;
   /** Fiche technique du produit livré (quand elle est connue). */
   spec?: BarSpec;
+  /** Prime payée au vendeur, en part de la valeur de l'or, quand elle est connue (relevé de prix). */
+  vendorPremium?: number;
 }
 
 export interface BarSpec {
@@ -81,7 +83,9 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'g5',
     label: 'Lingotin 5 g',
     grams: 5,
-    premium: 0.045,
+    // Prime payée au vendeur : 7,63 % (relevé du 17/11/2026) ; facturée 9 % au client, soit environ 1,4 point de marge.
+    premium: 0.09,
+    vendorPremium: 0.0763,
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
@@ -149,9 +153,9 @@ export const BAR_PRODUCTS: BarProduct[] = [
 ];
 
 /** Valeur d'un lingotin ou d'une pièce : son or au cours du moment, et le prix indicatif avec fabrication ou prime. */
-export function productPrice(p: BarProduct, goldEurPerGram: number) {
+export function productPrice(p: BarProduct, goldEurPerGram: number, premium = p.premium) {
   const metal = goldEurPerGram * p.grams;
-  return { metal, withPremium: metal * (1 + p.premium) };
+  return { metal, withPremium: metal * (1 + premium) };
 }
 
 /** Valeur d'un Napoléon : l'or qu'il contient au cours du moment, et le prix indicatif avec sa prime. */
@@ -172,6 +176,53 @@ export const PHYSICAL = {
 
 export type BarOrder = Record<string, number>;
 
+/** Frais du retrait physique en vigueur : valeurs de Société Orvia, sinon valeurs par défaut. */
+export interface PhysicalFees {
+  premiums: Record<string, number>;
+  /** Prime payée au vendeur, par produit (seulement ceux dont elle est connue). */
+  vendor: Record<string, number>;
+  delivery: number;
+  freeFromGrams: number;
+}
+
+export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
+  const s = settings?.physicalFees ?? {};
+  const premiums: Record<string, number> = {};
+  const vendor: Record<string, number> = {};
+  for (const p of BAR_PRODUCTS) {
+    premiums[p.id] = s.premiums?.[p.id] ?? p.premium;
+    const v = s.vendor?.[p.id] ?? p.vendorPremium;
+    if (v !== undefined) vendor[p.id] = v;
+  }
+  return {
+    premiums,
+    vendor,
+    delivery: s.delivery ?? PHYSICAL.delivery,
+    freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
+  };
+}
+
+/** Lignes de la grille « Retrait physique » des Tarifs, avec les frais en vigueur. */
+export function physicalFeeRows(fees: PhysicalFees): { label: string; orvia: string }[] {
+  const pct = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`;
+  const row = (id: string, label: string) => ({
+    label,
+    orvia: productOf(id).coin ? `Prime ≈ ${pct(fees.premiums[id])}, variable` : `Fabrication ${pct(fees.premiums[id])}`,
+  });
+  return [
+    row('g5', 'Lingotin 5 g (PAMP Suisse, numéro de série, certificat, VERISCAN)'),
+    row('g10', 'Lingotin 10 g'),
+    row('g20', 'Lingotin 20 g'),
+    row('oz1', 'Lingot 1 once (31,1 g)'),
+    row('nap20', 'Napoléon 20 F (5,81 g d’or fin)'),
+    {
+      label: 'Livraison assurée, remise contre signature',
+      orvia: `${fees.delivery.toLocaleString('fr-FR')} € par envoi, offerte dès ${fees.freeFromGrams.toLocaleString('fr-FR')} g`,
+    },
+    { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
+  ];
+}
+
 export function productOf(id: string): BarProduct {
   const p = BAR_PRODUCTS.find((x) => x.id === id);
   if (!p) throw new LedgerError('Produit inconnu.');
@@ -179,18 +230,31 @@ export function productOf(id: string): BarProduct {
 }
 
 /** Détail chiffré d'un retrait : grammes pris au coffre, surcoût de fabrication, livraison. */
-export function quoteWithdrawal(prices: Prices, order: BarOrder) {
+export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalFees = physicalFeesOf()) {
   const lines = BAR_PRODUCTS.filter((p) => (order[p.id] ?? 0) > 0).map((p) => {
     const qty = Math.floor(order[p.id]);
     const value = qty * p.grams * prices.gold;
-    return { product: p, qty, grams: qty * p.grams, value, premium: value * p.premium };
+    const v = fees.vendor[p.id];
+    return {
+      product: p,
+      qty,
+      grams: qty * p.grams,
+      value,
+      premium: value * (fees.premiums[p.id] ?? p.premium),
+      vendorCost: v === undefined ? undefined : value * v,
+    };
   });
   const grams = lines.reduce((s, l) => s + l.grams, 0);
   const value = lines.reduce((s, l) => s + l.value, 0);
   const premium = lines.reduce((s, l) => s + l.premium, 0);
-  const delivery = !lines.length || grams >= PHYSICAL.freeDeliveryFromGrams - 1e-9 ? 0 : PHYSICAL.delivery;
-  const fees = Math.round((premium + delivery) * 100) / 100;
-  return { lines, grams, value, premium, delivery, fees, feesPct: value ? fees / value : 0 };
+  const delivery = !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
+  const total = Math.round((premium + delivery) * 100) / 100;
+  // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) ; la livraison est répercutée.
+  const cost =
+    lines.length && lines.every((l) => l.vendorCost !== undefined)
+      ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0)
+      : undefined;
+  return { lines, grams, value, premium, delivery, fees: total, feesPct: value ? total / value : 0, cost };
 }
 
 /**
@@ -199,7 +263,7 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder) {
  * les dates et le prix d'achat d'origine du métal (premier entré, premier sorti).
  */
 export function withdrawPhysical(account: Account, prices: Prices, order: BarOrder, now = new Date()): Account {
-  const q = quoteWithdrawal(prices, order);
+  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings));
   if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
   if (q.grams > account.holdings.gold + 1e-9) {
     throw new LedgerError(
@@ -255,7 +319,14 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
   next = {
     ...next,
     cashEur: Math.round((cash - q.fees) * 100) / 100,
-    transactions: [{ ...tx, cash: -q.fees }, ...rest],
+    transactions: [
+      {
+        ...tx,
+        cash: -q.fees,
+        ...(q.cost !== undefined ? { costEur: Math.round((q.cost + q.delivery) * 100) / 100 } : {}),
+      },
+      ...rest,
+    ],
     homeVault: [...(account.homeVault ?? []), ...bars],
   };
   return next;

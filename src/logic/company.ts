@@ -86,7 +86,8 @@ export function companyReport(
     loyalty: loyaltyCost,
     referral: sum((t) => (t.kind === 'referral_bonus' ? t.eur : 0)),
     // Lingotins et transport assuré achetés au prix de gros : environ 80 % de ce que paie le client.
-    physical: sum((t) => (t.kind === 'withdraw_physical' ? (t.fees ?? 0) * 0.8 : 0)),
+    // Coût réel quand les primes du vendeur sont connues, sinon environ 80 % de ce que paie le client.
+    physical: sum((t) => (t.kind === 'withdraw_physical' ? (t.costEur ?? (t.fees ?? 0) * 0.8) : 0)),
     total: 0,
   };
   costs.total = costs.custody + costs.kyc + costs.loyalty + costs.referral + costs.physical;

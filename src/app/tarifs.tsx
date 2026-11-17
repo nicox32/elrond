@@ -3,9 +3,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ChildRules } from '../components/ChildRules';
 import { Card, Hint, Screen, SectionTitle } from '../components/ui';
 import { FEE_TABLE, FEES } from '../logic/fees';
+import { physicalFeeRows, physicalFeesOf } from '../logic/physical';
+import { useAccount } from '../state/BankProvider';
 import { colors } from '../theme';
 
 export default function FeesScreen() {
+  const account = useAccount();
   return (
     <Screen testID="screen-tarifs">
       <Hint>Tous les tarifs d’Orvia. Les frais sont calculés sur le cours réel du métal au moment de l’opération.</Hint>
@@ -14,7 +17,10 @@ export default function FeesScreen() {
         <View key={section.title} style={{ gap: 10 }}>
           <SectionTitle>{section.title}</SectionTitle>
           <Card style={{ paddingVertical: 4 }}>
-            {section.rows.map((row, i) => (
+            {(section.title.startsWith('Retrait physique')
+              ? physicalFeeRows(physicalFeesOf(account.settings))
+              : section.rows
+            ).map((row, i) => (
               <View key={row.label} style={[styles.row, i > 0 && styles.rowBorder]}>
                 <Text style={styles.label}>{row.label}</Text>
                 <Text style={styles.value}>{row.orvia}</Text>

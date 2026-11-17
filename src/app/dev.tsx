@@ -6,6 +6,7 @@ import { CodeConfirm } from '../components/CodeConfirm';
 import { ChildGifts2022 } from '../components/ChildGifts2022';
 import { History2019 } from '../components/History2019';
 import { History900 } from '../components/History900';
+import { PhysicalFeesEditor } from '../components/PhysicalFeesEditor';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { barSummary } from '../logic/barControl';
@@ -208,6 +209,7 @@ function CompanyDashboard() {
           testID="open-bar-control"
         />
       </Card>
+      <PhysicalFeesEditor />
       <History2019 />
       <ChildGifts2022 />
       <History900 />

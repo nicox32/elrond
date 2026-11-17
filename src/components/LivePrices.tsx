@@ -4,7 +4,7 @@ import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react
 import Svg, { Path } from 'react-native-svg';
 
 import { formatEur as formatEurShort, formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/format';
-import { BAR_PRODUCTS, productPrice } from '../logic/physical';
+import { BAR_PRODUCTS, physicalFeesOf, productPrice } from '../logic/physical';
 import { BarImage } from './BarImage';
 import { METAL_LABEL } from '../logic/ledger';
 import { metalTrend } from '../logic/priceHistory';
@@ -17,7 +17,8 @@ const SPARK_H = 30;
 
 /** Cours en direct de l'or, de l'argent et du platine, avec leur évolution sur 24 h. */
 export function LivePrices({ unit }: { unit: WeightUnit }) {
-  const { quote, priceHistory } = useBank();
+  const { quote, priceHistory, account } = useBank();
+  const physFees = physicalFeesOf(account?.settings);
   const live = quote.source === 'live';
   const market = marketStatus();
   const other: WeightUnit = unit === 'g' ? 'oz' : 'g';
@@ -77,7 +78,7 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
           <Text style={styles.barsCol}>avec frais</Text>
         </View>
         {BAR_PRODUCTS.map((b) => {
-          const p = productPrice(b, quote.prices.gold);
+          const p = productPrice(b, quote.prices.gold, physFees.premiums[b.id]);
           return (
             <View key={b.id} style={styles.barsLine} testID={`bar-${b.id}`}>
               <BarImage product={b.id} size={30} />
@@ -90,8 +91,8 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
           );
         })}
         <Text style={styles.priceOther}>
-          Fabrication 2 à 4,5 % (Napoléon : prime ≈ 6 %) · livraison 12 €, offerte dès 20 g · touchez pour un retrait
-          physique
+          Fabrication ou prime incluse · livraison {physFees.delivery.toLocaleString('fr-FR')} €, offerte dès{' '}
+          {physFees.freeFromGrams} g · touchez pour un retrait physique
         </Text>
       </Pressable>
 

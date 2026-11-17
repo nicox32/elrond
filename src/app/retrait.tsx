@@ -11,6 +11,7 @@ import {
   BAR_PRODUCTS,
   type BarOrder,
   PHYSICAL,
+  physicalFeesOf,
   quoteWithdrawal,
   specLine,
   VERISCAN_NOTE,
@@ -29,7 +30,8 @@ export default function WithdrawScreen() {
   const [order, setOrder] = useState<BarOrder>({});
   const [confirm, setConfirm] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
-  const q = quoteWithdrawal(quote.prices, order);
+  const fees = physicalFeesOf(account.settings);
+  const q = quoteWithdrawal(quote.prices, order, fees);
   const cash = account.cashEur ?? 0;
   const gold = account.holdings.gold;
   const tooMuch = q.grams > gold + 1e-9;
@@ -80,7 +82,7 @@ export default function WithdrawScreen() {
                 <Text style={styles.name}>{p.label}</Text>
                 <Text style={styles.sub}>
                   ≈ {formatEur(p.grams * quote.prices.gold)} ·{' '}
-                  {p.coin ? `prime ≈ ${pct(p.premium)}, variable` : `fabrication ≈ ${pct(p.premium)}`}
+                  {p.coin ? `prime ≈ ${pct(fees.premiums[p.id])}, variable` : `fabrication ${pct(fees.premiums[p.id])}`}
                   {p.id === 'g10' ? ' · conseillé' : p.coin ? ' · la pièce la plus facile à revendre en France' : ''}
                 </Text>
                 {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
@@ -119,7 +121,7 @@ export default function WithdrawScreen() {
             </Text>
           )}
           <Line
-            label={`Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${PHYSICAL.freeDeliveryFromGrams} g)` : ''}`}
+            label={`Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`}
             value={q.delivery ? formatEur(q.delivery) : 'Offerte'}
           />
           <View style={styles.sep} />

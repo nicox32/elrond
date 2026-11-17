@@ -80,6 +80,8 @@ export interface Transaction {
   eur: number;
   /** Frais facturés sur l'opération, en euros. */
   fees?: number;
+  /** Coût pour Orvia (retrait physique : lingotins achetés au vendeur et livraison), quand il est connu. */
+  costEur?: number;
   /** Valeur de chaque métal quand l'opération en touche plusieurs à la fois (frais de garde, d'oxydation). */
   eurByMetal?: Partial<Record<Metal, number>>;
   label: string;
@@ -121,6 +123,17 @@ export interface Settings {
   allocation?: Record<SpotMetal, number>;
   /** Tableau de bord Société Orvia : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
   devCodeHash?: string;
+  /** Frais du retrait physique réglables dans Société Orvia (absent = valeurs par défaut). */
+  physicalFees?: {
+    /** Fabrication ou prime facturée au client, par produit (« g5 », « g10 »…), en part de la valeur de l'or. */
+    premiums?: Record<string, number>;
+    /** Prime payée au vendeur, par produit : sert à calculer la marge et le coût dans Société Orvia. */
+    vendor?: Record<string, number>;
+    /** Livraison facturée par envoi, en euros. */
+    delivery?: number;
+    /** Livraison offerte à partir de ce poids d'or dans l'envoi (g). */
+    freeFromGrams?: number;
+  };
   /** Marges des contrôles de lingots (Société Orvia) : pesée en grammes, dimensions en millimètres. */
   barTolerance?: { weightG: number; dimMm: number };
   /** Mode discret : montants masqués sur l'accueil (œil à côté du solde). */
