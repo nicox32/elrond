@@ -288,3 +288,27 @@ test('compte enfant : or converti en lingotin gardé chez le revendeur, fabricat
   const f = fundChild(noBirth.account, p, noBirth.child.id, 'gold', { unit: 'g', value: 10 }, t0);
   assert.throws(() => convertChildToBars(f, p, noBirth.child.id, { g5: 1 }, true, t0), /date de naissance/);
 });
+
+test('stockage chez le revendeur : le seuil gratuit est propre à chaque client, enfants compris', async () => {
+  const { clientStorage, isAtReseller } = await import('../src/logic/storageLimit.ts');
+  const { convertChildToBars } = await import('../src/logic/physical.ts');
+  const { addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const t0 = new Date('2026-11-17T10:00:00');
+  let a = creditCash(buy(createAccount('T', new Date('2020-01-01')), p, 'gold', { unit: 'g', value: 80 }), 400);
+  const added = addChild(a, 'Théo', '2015-06-01', t0);
+  a = fundChild(added.account, p, added.child.id, 'gold', { unit: 'g', value: 20 }, t0);
+  // Un lingotin de l'enfant, gardé chez Gold Avenue ; un lingotin du titulaire, chez lui.
+  a = convertChildToBars(a, p, added.child.id, { g10: 1 }, false, t0);
+  a = withdrawPhysical(a, p, { g5: 1 }, t0);
+  const mine = a.homeVault!.find((b) => !b.ownerChildId)!;
+  assert.equal(isAtReseller(mine), false); // chez soi, pas chez le revendeur
+  const g = clientStorage(a, 100);
+  assert.equal(g.length, 1);
+  assert.equal(g[0].ownerChildId, added.child.id);
+  close(g[0].valueEur, 1000, 1e-6);
+  // Le même titulaire, avec un lingotin gardé chez Gold Avenue, a son propre seuil.
+  const stored = a.homeVault!.map((b) => (b.id === mine.id ? { ...b, placeNote: 'Gold Avenue (stockage)' } : b));
+  const two = clientStorage({ homeVault: stored }, 100);
+  assert.equal(two.length, 2);
+  close(two.find((x) => x.ownerChildId === null)!.valueEur, 500, 1e-6);
+});

@@ -96,6 +96,10 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Napoléon 20 F (5,81 g d’or fin)', orvia: 'Prime ≈ 7,5 %, variable' },
       { label: 'Livraison assurée, remise contre signature', orvia: '12 € par envoi, offerte dès 20 g' },
       { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
+      {
+        label: 'Lingotins gardés chez le revendeur (par client)',
+        orvia: 'Gratuit jusqu’à 10 000 CHF, puis 15 CHF/mois jusqu’à 40 000 CHF, puis 0,5 %/an (frais du revendeur)',
+      },
     ],
   },
   {

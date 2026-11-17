@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { PlaceEditor } from '../components/PlaceEditor';
+import { ResellerStorageCard } from '../components/ResellerStorageCard';
 import { Button, Card, Hint, Message, Screen, styles as ui } from '../components/ui';
 import { formatDate, formatEur, formatWeight } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
@@ -42,6 +43,7 @@ export default function HomeVaultScreen() {
           du comptoir à la revente)
         </Text>
       </Card>
+      <ResellerStorageCard />
       {bars.length === 0 ? (
         <Card style={{ gap: 10 }}>
           <Text style={styles.para}>Aucun lingotin chez vous pour l’instant.</Text>

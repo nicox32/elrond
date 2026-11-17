@@ -1,10 +1,11 @@
 // Stockage chez le revendeur (Gold Avenue) : grille en francs suisses, en vigueur depuis le 1er novembre 2026.
+// Elle s'applique à chaque CLIENT (et à chaque enfant, qui a son propre compte), pas à la société Orvia.
 //  - jusqu'à 10 000 CHF : gratuit ;
 //  - de 10 000 à 40 000 CHF : 15 CHF par mois ;
 //  - au-delà de 40 000 CHF : 0,5 % par an de la valeur stockée.
 // L'assurance (vol, dommages, perte) est incluse. À confirmer auprès du revendeur (les pages ne sont pas toutes à jour).
 import { BAR_PRODUCTS } from './physical.ts';
-import type { Account } from './types.ts';
+import type { Account, HomeBar } from './types.ts';
 
 export const STORAGE_LIMIT = { freeChf: 10_000, midChf: 40_000, midFeeChfPerMonth: 15, topRatePerYear: 0.005 } as const;
 /** Taux de repli (1 CHF en euros) quand le taux du jour n'est pas disponible. */
@@ -56,4 +57,30 @@ export function storageStatus(usedEur: number, chfToEur: number): StorageStatus 
     yearlyFeeEur,
     yearlyFeePct: usedEur > 0 ? (yearlyFeeEur / usedEur) * 100 : 0,
   };
+}
+
+/** Un lingotin ou une pièce gardé chez le revendeur (stockage sécurisé), et non à la maison ou en banque. */
+export function isAtReseller(bar: Pick<HomeBar, 'origin' | 'placeNote' | 'place'>): boolean {
+  return /gold avenue/i.test(bar.placeNote ?? '') || bar.origin === 'pro';
+}
+
+export interface ClientStorage {
+  /** Propriétaire : null pour le titulaire du compte, sinon l'identifiant de l'enfant. */
+  ownerChildId: string | null;
+  count: number;
+  valueEur: number;
+}
+
+/** Valeur de l'or gardé chez le revendeur, par propriétaire : le seuil gratuit est propre à chacun. */
+export function clientStorage(account: Pick<Account, 'homeVault'>, goldEurPerGram: number): ClientStorage[] {
+  const by = new Map<string | null, ClientStorage>();
+  for (const b of account.homeVault ?? []) {
+    if (!isAtReseller(b)) continue;
+    const key = b.ownerChildId ?? null;
+    const g = by.get(key) ?? { ownerChildId: key, count: 0, valueEur: 0 };
+    g.count += 1;
+    g.valueEur += b.grams * goldEurPerGram;
+    by.set(key, g);
+  }
+  return [...by.values()];
 }
