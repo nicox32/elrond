@@ -166,10 +166,13 @@ export default function AlertsScreen() {
       <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Alerte sur l’accueil</Text>
-          <Hint>Affiche la dernière alerte en haut de l’accueil. Vous pouvez aussi la masquer avec ✕.</Hint>
+          <Hint>
+            Désactivé : la notification vous prévient, l’accueil reste net. Activé, la dernière alerte s’affiche en haut
+            de l’accueil, masquable avec ✕.
+          </Hint>
         </View>
         <Switch
-          value={account.settings.homeAlerts !== false}
+          value={account.settings.homeAlerts === true}
           onValueChange={(v) => updateSettings({ homeAlerts: v })}
           trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
           accessibilityLabel="Afficher la dernière alerte sur l’accueil"

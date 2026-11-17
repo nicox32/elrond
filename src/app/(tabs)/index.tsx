@@ -46,7 +46,7 @@ export default function AccountScreen() {
   const unit = account.settings.unit;
   // Alerte de l'accueil : masquable d'un geste (✕) ou pour de bon dans l'écran Alertes.
   const seenAt = account.settings.homeAlertSeenAt;
-  const showAlerts = account.settings.homeAlerts !== false;
+  const showAlerts = account.settings.homeAlerts === true;
   const last = account.alertEvents?.[0];
   const ev = last && (!seenAt || last.date > seenAt) ? last : undefined;
   const hideAlerts = () => updateSettings({ homeAlertSeenAt: new Date().toISOString() });
