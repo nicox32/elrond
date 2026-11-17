@@ -12,6 +12,7 @@ import {
   PHYSICAL,
   quoteWithdrawal,
   specLine,
+  VERISCAN_NOTE,
   vatIfWithdrawn,
   withdrawPhysical,
 } from '../logic/physical';
@@ -62,6 +63,7 @@ export default function WithdrawScreen() {
         certificat) ou en Napoléons 20 F. Ce n’est pas une vente : pas d’impôt, et la durée de détention de votre or
         continue.
       </Hint>
+      <Hint>Lingots PAMP Suisse : {VERISCAN_NOTE}</Hint>
       <Text style={styles.avail}>
         Or au coffre : <Text style={{ color: metalColor.gold }}>{formatWeight(gold, 'g', 'gold')}</Text> · compte
         d’attente : {formatEur(cash)}

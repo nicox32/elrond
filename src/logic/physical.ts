@@ -32,7 +32,13 @@ export interface BarSpec {
   diameterMm?: number;
   /** Référence du produit chez le fournisseur. */
   ref?: string;
+  /** Lingot PAMP : numéro de série et authenticité vérifiables par numérisation (technologie VERISCAN de PAMP). */
+  veriscan?: boolean;
 }
+
+/** Mention affichée pour les lingots vérifiables avec VERISCAN. */
+export const VERISCAN_NOTE =
+  'Authenticité et numéro de série vérifiables par numérisation avec la technologie VERISCAN de PAMP (voir le site de l’affinerie).';
 
 const mm = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
@@ -57,6 +63,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     grams: 5,
     premium: 0.045,
     spec: {
+      veriscan: true,
       producer: 'PAMP Suisse',
       purity: '999,9',
       lengthMm: 23.3,
@@ -71,6 +78,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     grams: 10,
     premium: 0.03,
     spec: {
+      veriscan: true,
       producer: 'PAMP Suisse',
       purity: '999,9',
       lengthMm: 26.5,
@@ -84,14 +92,30 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Lingotin 20 g',
     grams: 20,
     premium: 0.025,
-    spec: { producer: 'PAMP Suisse', purity: '999,9', lengthMm: 32, widthMm: 18, thicknessMm: 1.88, ref: 'ZAUFS00089' },
+    spec: {
+      veriscan: true,
+      producer: 'PAMP Suisse',
+      purity: '999,9',
+      lengthMm: 32,
+      widthMm: 18,
+      thicknessMm: 1.88,
+      ref: 'ZAUFS00089',
+    },
   },
   {
     id: 'oz1',
     label: 'Lingot 1 once (31,1 g)',
     grams: OZ_GRAMS,
     premium: 0.02,
-    spec: { producer: 'PAMP Suisse', purity: '999,9', lengthMm: 41, widthMm: 24, thicknessMm: 1.66, ref: 'ZAUFS00115' },
+    spec: {
+      veriscan: true,
+      producer: 'PAMP Suisse',
+      purity: '999,9',
+      lengthMm: 41,
+      widthMm: 24,
+      thicknessMm: 1.66,
+      ref: 'ZAUFS00115',
+    },
   },
   {
     id: 'nap20',

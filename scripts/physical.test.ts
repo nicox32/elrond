@@ -142,4 +142,6 @@ test('fiche technique : lingotin 5 g PAMP Suisse et Napoléon, dans la fiche QR'
     g5: 1,
   });
   assert.match(barQrText(a.homeVault![0]), /PAMP Suisse · or 999,9 · 23,3 × 14 × 0,79 mm/);
+  assert.match(barQrText(a.homeVault![0]), /à vérifier avec PAMP VERISCAN/);
+  assert.equal(productOf('nap20').spec?.veriscan, undefined);
 });

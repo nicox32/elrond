@@ -89,7 +89,7 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
   {
     title: 'Retrait physique (or uniquement)',
     rows: [
-      { label: 'Lingotin 5 g (affinerie LBMA, numéro de série, certificat)', orvia: 'Fabrication ≈ 4,5 %' },
+      { label: 'Lingotin 5 g (PAMP Suisse, numéro de série, certificat, VERISCAN)', orvia: 'Fabrication ≈ 4,5 %' },
       { label: 'Lingotin 10 g', orvia: 'Fabrication ≈ 3 %' },
       { label: 'Lingotin 20 g', orvia: 'Fabrication ≈ 2,5 %' },
       { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication ≈ 2 %' },

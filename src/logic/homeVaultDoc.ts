@@ -26,6 +26,7 @@ export function barQrText(b: HomeBar): string {
     `Or acheté du ${d(b.acquiredFrom)} au ${d(b.acquiredTo)}`,
     `Prix de revient : ${formatEur(b.cost)}`,
     `Exonéré de plus-value en ${exemptYear(b)}`,
+    ...(p.spec?.veriscan ? ['Authenticité : à vérifier avec PAMP VERISCAN.'] : []),
     'Fiche d’inventaire, pas un certificat d’authenticité.',
   ].join('\n');
 }
@@ -40,7 +41,7 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
       return `<tr>
         <td style="width:110px">${qrSvg(barQrText(b), 100)}</td>
         <td><b>${esc(p.label)}</b><br/>${b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin<br/>
-          ${specLine(p.spec) ? `<span class="muted">${esc(specLine(p.spec)!)}</span><br/>` : ''}
+          ${specLine(p.spec) ? `<span class="muted">${esc(specLine(p.spec)!)}${p.spec?.veriscan ? ' · VERISCAN' : ''}</span><br/>` : ''}
           ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b></td>
         <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}</td>
         <td>Acheté du ${d(b.acquiredFrom)}<br/>au ${d(b.acquiredTo)}<br/>exonéré en ${exemptYear(b)}</td>
@@ -56,6 +57,6 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
   <p class="sub">Lingotins et pièces d’or retirés du coffre Orvia · ${total.count} objet${total.count > 1 ? 's' : ''}, ${total.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin, ≈ ${formatEur(total.value)} au cours du ${d(now.toISOString())}</p>
   <table><thead><tr><th>QR code</th><th>Objet</th><th>Retrait</th><th>Or d’origine</th><th class="num">Prix de revient</th><th class="num">Valeur de l’or</th></tr></thead>
   <tbody>${rows || '<tr><td colspan="6" class="muted">Aucun lingotin ni pièce chez vous.</td></tr>'}</tbody></table>
-  <div class="foot">Fiche d’inventaire éditée par l’application Orvia, à garder avec vos papiers (succession, assurance habitation, revente). Chaque QR code reprend la fiche de l’objet et se lit avec n’importe quel téléphone. Ce document n’est pas un certificat d’authenticité : seuls le numéro gravé et le certificat de l’affinerie le sont. Prix de revient et dates d’achat d’origine : à présenter pour l’impôt en cas de revente.</div>
+  <div class="foot">Fiche d’inventaire éditée par l’application Orvia, à garder avec vos papiers (succession, assurance habitation, revente). Chaque QR code reprend la fiche de l’objet et se lit avec n’importe quel téléphone. Ce document n’est pas un certificat d’authenticité : seuls le numéro gravé et le certificat de l’affinerie le sont ; les lingots PAMP se vérifient aussi par numérisation avec la technologie VERISCAN de l’affinerie. Prix de revient et dates d’achat d’origine : à présenter pour l’impôt en cas de revente.</div>
   </body></html>`;
 }

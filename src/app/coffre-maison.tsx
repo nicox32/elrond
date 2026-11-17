@@ -87,7 +87,12 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
       </View>
-      {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
+      {specLine(p.spec) ? (
+        <Text style={styles.sub}>
+          {specLine(p.spec)}
+          {p.spec?.veriscan ? ' · vérifiable avec VERISCAN' : ''}
+        </Text>
+      ) : null}
       <Text style={styles.sub}>
         Commandé le {formatDate(bar.orderedAt)}
         {bar.receivedAt ? ` · reçu le ${formatDate(bar.receivedAt)}` : ''}
