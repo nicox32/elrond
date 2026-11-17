@@ -121,6 +121,8 @@ export interface Settings {
   allocation?: Record<SpotMetal, number>;
   /** Tableau de bord Société Orvia : empreinte salée de son code d'accès (le code lui-même n'est pas gardé). */
   devCodeHash?: string;
+  /** Marges des contrôles de lingots (Société Orvia) : pesée en grammes, dimensions en millimètres. */
+  barTolerance?: { weightG: number; dimMm: number };
   /** Mode discret : montants masqués sur l'accueil (œil à côté du solde). */
   discreet?: boolean;
   /** Frais de garde en coffre appliqués (réglage de la société ; absent = oui). */
@@ -170,6 +172,24 @@ export interface HomeBar {
   acquiredTo: string;
   /** Opération de retrait correspondante. */
   txId: string;
+  /** Poids de référence mesuré à la réception (g) : sert aux recontrôles par pesée. */
+  weightRef?: number;
+  /** Contrôles faits sur cet objet (réception, recontrôles, levée d'anomalie), du plus ancien au plus récent. */
+  checks?: BarCheck[];
+}
+
+/** Un contrôle d'un lingotin ou d'une pièce (base interne, Société Orvia). */
+export interface BarCheck {
+  date: string;
+  kind: 'reception' | 'recheck' | 'resolved';
+  /** Poids mesuré (g). */
+  weight?: number;
+  /** Dimensions mesurées (mm). */
+  measures?: { length?: number; width?: number; thickness?: number; diameter?: number };
+  ok: boolean;
+  /** Vérifications non conformes. */
+  failed?: string[];
+  note?: string;
 }
 
 export interface RetirementGoal {

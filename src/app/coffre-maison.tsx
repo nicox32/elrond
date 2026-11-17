@@ -5,6 +5,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { Button, Card, Hint, Message, Screen, styles as ui } from '../components/ui';
 import { formatDate, formatEur, formatWeight } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
+import { controlledOn } from '../logic/barControl';
 import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
 import { homeVaultTotal, productOf, receiveBar, removeBar, specLine } from '../logic/physical';
 import { exportPdf } from '../pdf';
@@ -102,6 +103,11 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
         {new Date(bar.acquiredTo).toLocaleDateString('fr-FR')} · prix de revient {formatEur(bar.cost)} · exonéré de
         plus-value en {exemptYear(bar)}
       </Text>
+      {controlledOn(bar) ? (
+        <Text style={styles.controlled} testID="controlled">
+          ✓ Contrôlé par Orvia le {formatDate(controlledOn(bar)!)}
+        </Text>
+      ) : null}
       {bar.serial ? (
         <Text style={styles.serial}>
           {p.coin ? 'Millésime' : 'N° de série'} : {bar.serial}
@@ -169,6 +175,7 @@ const styles = StyleSheet.create({
   ok: { color: colors.up, backgroundColor: 'rgba(46,204,113,0.15)' },
   wait: { color: colors.warning, backgroundColor: 'rgba(241,196,15,0.15)' },
   serial: { color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  controlled: { color: colors.up, fontSize: 13, fontWeight: '700' },
   qr: { alignItems: 'center', gap: 8, paddingVertical: 6 },
   remove: { color: colors.textMuted, fontSize: 12.5, textDecorationLine: 'underline' },
 });

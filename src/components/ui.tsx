@@ -193,7 +193,12 @@ export function Banner({
       {icon ? <Text style={styles.bannerIcon}>{icon}</Text> : null}
       <View style={{ flex: 1, gap: 3 }}>
         {title ? <Text style={[styles.bannerTitle, { color: t.title }]}>{title}</Text> : null}
-        {typeof children === 'string' ? <Text style={styles.bannerText}>{children}</Text> : children}
+        {typeof children === 'string' ||
+        (Array.isArray(children) && children.every((c) => typeof c === 'string' || typeof c === 'number')) ? (
+          <Text style={styles.bannerText}>{children}</Text>
+        ) : (
+          children
+        )}
       </View>
       {onPress ? <Text style={styles.chevron}>›</Text> : null}
     </>

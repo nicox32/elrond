@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
+import { BarControl } from '../components/BarControl';
 import { CodeConfirm } from '../components/CodeConfirm';
 import { ChildGifts2022 } from '../components/ChildGifts2022';
 import { History2019 } from '../components/History2019';
 import { History900 } from '../components/History900';
 import { PinConfirm } from '../components/PinConfirm';
-import { Button, Card, Hint, KeyValue, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
+import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
+import { barSummary } from '../logic/barControl';
 import { resetVaults } from '../logic/ledger';
 import { COMPANY, type CompanyPeriod, companyReport } from '../logic/company';
 import { formatEur } from '../logic/format';
@@ -101,8 +103,17 @@ function CompanyDashboard() {
   const { quote, updateAccount, updateSettings } = useBank();
   const [vaultConfirm, setVaultConfirm] = useState(false);
   const [period, setPeriod] = useState<CompanyPeriod>('year');
+  const [view, setView] = useState<'dashboard' | 'bars'>('dashboard');
   const r = companyReport(account, quote.prices, period);
   const years = r.years.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+
+  if (view === 'bars') {
+    return (
+      <Screen testID="screen-controle-lingots">
+        <BarControl onBack={() => setView('dashboard')} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen testID="screen-dev">
@@ -185,6 +196,18 @@ function CompanyDashboard() {
 
       <SectionTitle>Outils du compte</SectionTitle>
       <Hint>Réservés à la société : reprises d’historique et remise à zéro des coffres du compte principal.</Hint>
+      <Card style={{ paddingVertical: 4 }}>
+        <ListRow
+          first
+          title="Contrôle des lingots"
+          subtitle={(() => {
+            const sm = barSummary(account);
+            return `${sm.total} objet${sm.total > 1 ? 's' : ''} · ${sm.todo} à contrôler · ${sm.anomalies} anomalie${sm.anomalies > 1 ? 's' : ''}`;
+          })()}
+          onPress={() => setView('bars')}
+          testID="open-bar-control"
+        />
+      </Card>
       <History2019 />
       <ChildGifts2022 />
       <History900 />

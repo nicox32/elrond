@@ -245,7 +245,18 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
 export function receiveBar(account: Account, barId: string, serial: string, now = new Date()): Account {
   const s = serial.trim().toUpperCase();
   if (s.length < 3) throw new LedgerError('Indiquez le numéro de série du lingotin, ou le millésime de la pièce.');
-  if (!(account.homeVault ?? []).some((b) => b.id === barId)) throw new LedgerError('Lingotin introuvable.');
+  const bar = (account.homeVault ?? []).find((b) => b.id === barId);
+  if (!bar) throw new LedgerError('Lingotin introuvable.');
+  // Un numéro de série ne peut désigner qu'un lingot (les millésimes d'une pièce, eux, se répètent).
+  const key = (x: string) => x.replace(/[\s\-_.]/g, '').toUpperCase();
+  if (
+    !productOf(bar.product).coin &&
+    (account.homeVault ?? []).some(
+      (b) => b.id !== barId && !productOf(b.product).coin && b.serial && key(b.serial) === key(s),
+    )
+  ) {
+    throw new LedgerError('Ce numéro de série est déjà dans la base pour un autre lingot.');
+  }
   return {
     ...account,
     homeVault: (account.homeVault ?? []).map((b) =>

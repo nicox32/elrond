@@ -169,6 +169,10 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Règles d'achat** : minimum 10 € sur le total de l'opération, aucun minimum de frais. Le week-end (marché fermé),
   ordre au cours de la réouverture sans supplément, ou tout de suite avec 0,5 % ; programme, bot et dons attendent
   lundi.
+- **Contrôle des lingots** (Société Orvia, derrière le code) : base interne des lingotins et pièces du coffre maison.
+  Contrôle à la réception (scellé, numéro de série comparé à la carte d'essai, pesée, dimensions, VERISCAN fait),
+  poids de référence, recontrôle par pesée, anomalies, recherche par numéro de série, doublons refusés, marges
+  réglables. Le client voit seulement « Contrôlé par Orvia le … » (aussi dans la fiche QR et l'inventaire PDF).
 - **Graphiques de cours** (touchez un métal dans « Cours en direct », ou le bouton du coffre) : 5 jours à 20 ans,
   au cours, au prix d'achat Orvia (frais compris) ou au prix de revente, par gramme ou par once ; **glissez le doigt
   sur la courbe** pour lire la date et le prix. Page **Ratio or/argent** avec zones et moyenne sur 20 ans. Données :

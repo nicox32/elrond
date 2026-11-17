@@ -4,6 +4,7 @@
  * l'authenticité d'un lingotin.
  */
 import { formatEur } from './format.ts';
+import { controlledOn } from './barControl.ts';
 import { homeVaultTotal, productOf, specLine } from './physical.ts';
 import { qrSvg } from './qr.ts';
 import { docHead, esc, STYLE_A } from './statement.ts';
@@ -26,6 +27,11 @@ export function barQrText(b: HomeBar): string {
     `Or acheté du ${d(b.acquiredFrom)} au ${d(b.acquiredTo)}`,
     `Prix de revient : ${formatEur(b.cost)}`,
     `Exonéré de plus-value en ${exemptYear(b)}`,
+    ...(controlledOn(b)
+      ? [
+          `Contrôlé par Orvia le ${d(controlledOn(b)!)}${b.weightRef ? ` · poids de référence ${b.weightRef.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g` : ''}`,
+        ]
+      : []),
     ...(p.spec?.veriscan ? ['Authenticité : à vérifier avec PAMP VERISCAN.'] : []),
     'Fiche d’inventaire, pas un certificat d’authenticité.',
   ].join('\n');
@@ -43,7 +49,7 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
         <td><b>${esc(p.label)}</b><br/>${b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin<br/>
           ${specLine(p.spec) ? `<span class="muted">${esc(specLine(p.spec)!)}${p.spec?.veriscan ? ' · VERISCAN' : ''}</span><br/>` : ''}
           ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b></td>
-        <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}</td>
+        <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}${controlledOn(b) ? `<br/><b>✓ contrôlé le ${d(controlledOn(b)!)}</b>` : ''}</td>
         <td>Acheté du ${d(b.acquiredFrom)}<br/>au ${d(b.acquiredTo)}<br/>exonéré en ${exemptYear(b)}</td>
         <td class="num">${formatEur(b.cost)}</td>
         <td class="num">${formatEur(b.grams * prices.gold)}</td>
