@@ -95,23 +95,6 @@ async function usdToEur(fetchFn: Fetch, now: Date): Promise<number> {
   return rate;
 }
 
-/** Taux franc suisse → euro (pour le seuil de stockage gratuit du revendeur), avec une source de secours. */
-export async function fetchChfToEur(fetchFn: Fetch = fetch): Promise<number> {
-  const sources: [string, (d: any) => unknown][] = [
-    ['https://api.frankfurter.dev/v1/latest?base=CHF&symbols=EUR', (d) => d?.rates?.EUR],
-    ['https://open.er-api.com/v6/latest/CHF', (d) => d?.rates?.EUR],
-  ];
-  let lastError: unknown;
-  for (const [url, pick] of sources) {
-    try {
-      return positive(pick(await getJson(fetchFn, url)));
-    } catch (e) {
-      lastError = e;
-    }
-  }
-  throw lastError;
-}
-
 /** Convertit un cours en dollars par once en euros par gramme. */
 export function usdOunceToEurGram(usdPerOunce: number, usdToEur: number): number {
   return (usdPerOunce * usdToEur) / TROY_OUNCE;

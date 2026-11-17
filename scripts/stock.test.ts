@@ -226,21 +226,21 @@ test('stock : supprimer un lot (trace au journal) ou effacer tout le stock', asy
   assert.equal(c.holdings.gold, a.holdings.gold);
 });
 
-test('stockage chez le revendeur : seuil gratuit en francs suisses converti en euros, part utilisée', async () => {
+test('stockage chez le revendeur : seuil gratuit de 10 000 €, part utilisée par le stock chez le pro', async () => {
   const { proStockValue, storageStatus, STORAGE_LIMIT } = await import('../src/logic/storageLimit.ts');
   let a = addStock(base(), { product: 'g10', qty: 3, source: 'pro', vault: 'Gold Avenue' });
   a = addStock(a, { product: 'g5', qty: 2, source: 'pro' });
   a = addStock(a, { product: 'g20', qty: 5, source: 'maison' }); // chez soi : pas compté
   close(proStockValue(a, 100), (3 * 10 + 2 * 5) * 100, 1e-6);
-  assert.equal(STORAGE_LIMIT.freeChf, 10_000);
-  const s = storageStatus(4000, 1.075);
-  close(s.limitEur, 10750, 1e-6);
-  close(s.leftEur, 6750, 1e-6);
+  assert.equal(STORAGE_LIMIT.freeEur, 10_000);
+  const s = storageStatus(4000);
+  assert.equal(s.limitEur, 10_000);
+  close(s.leftEur, 6000, 1e-6);
   assert.equal(s.over, false);
   assert.equal(s.monthlyFeeEur, 0);
-  close(s.share, 4000 / 10750, 1e-9);
-  const o = storageStatus(12000, 1.075);
+  close(s.share, 0.4, 1e-9);
+  const o = storageStatus(12000);
   assert.equal(o.over, true);
-  close(o.monthlyFeeEur, 8 * 1.075, 1e-9);
+  assert.equal(o.monthlyFeeEur, 8);
   assert.equal(o.share, 1);
 });
