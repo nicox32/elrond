@@ -60,7 +60,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
       );
       setMsg({
         ok: true,
-        text: `${n} × ${shortName(product).toLowerCase()} ajouté${n > 1 ? 's' : ''} au stock (${SOURCE_LABEL[source].toLowerCase()}).`,
+        text: `${n} × ${shortName(product).toLowerCase()} ajouté${n > 1 ? 's' : ''} au stock : ${SOURCE_LABEL[source]}.`,
       });
       setSerials('');
       setNote('');
@@ -178,7 +178,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           value={cost}
           onChangeText={setCost}
           keyboardType="decimal-pad"
-          placeholder="Prix payé par pièce, métal compris (facultatif)"
+          placeholder="Prix payé par pièce, métal compris"
           placeholderTextColor={colors.textMuted}
           style={ui.input}
           accessibilityLabel="Prix payé par exemplaire"
@@ -266,12 +266,14 @@ export function StockManager({ onBack }: { onBack: () => void }) {
                 style={[ui.input, { flex: 1, minWidth: 0 }]}
                 accessibilityLabel="Nombre compté"
               />
-              <Button
-                title="Noter"
-                variant="ghost"
-                onPress={() => recount(l)}
-                disabled={!Number.isFinite(parseAmount(counts[l.id] ?? ''))}
-              />
+              <View style={{ minWidth: 96 }}>
+                <Button
+                  title="Noter"
+                  variant="ghost"
+                  onPress={() => recount(l)}
+                  disabled={!Number.isFinite(parseAmount(counts[l.id] ?? ''))}
+                />
+              </View>
             </View>
             {l.qty === 0 && (
               <Button
@@ -294,7 +296,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
               {m.kind === 'in' ? 'entrée' : m.kind === 'out' ? 'sortie client' : 'inventaire'}
             </Text>
             <Text style={ui.hint}>
-              {formatDate(m.date)} · {SOURCE_LABEL[m.source].toLowerCase()}
+              {formatDate(m.date)} · {SOURCE_LABEL[m.source]}
               {m.note ? ` · ${m.note}` : ''}
             </Text>
           </View>
