@@ -19,11 +19,12 @@ import {
 } from '../logic/barControl';
 import { formatDate, parseAmount } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
-import { productOf, specLine } from '../logic/physical';
+import { placeLabel, productOf, setBarPlace, specLine } from '../logic/physical';
 import type { HomeBar } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { BarImage } from './BarImage';
+import { PlaceEditor } from './PlaceEditor';
 import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, Label, ListRow, Message, SectionTitle, styles as ui } from './ui';
 
@@ -127,6 +128,7 @@ export function BarControl({ onBack }: { onBack: () => void }) {
           onControl={() => setMode('control')}
           onRecheck={() => setMode('recheck')}
           onResolve={(note) => updateAccount((a) => resolveAnomaly(a, bar.id, note))}
+          onPlace={(place, note) => updateAccount((a) => setBarPlace(a, bar.id, place, note))}
         />
       </>
     );
@@ -183,7 +185,7 @@ export function BarControl({ onBack }: { onBack: () => void }) {
               first={i === 0}
               left={<BarImage product={b.product} size={40} />}
               title={`${label(b)} · ${b.serial ?? 'n° à noter'}`}
-              subtitle={subtitle(b)}
+              subtitle={`${subtitle(b)} · ${placeLabel(b)}`}
               right={<Pill state={barState(b)} />}
               onPress={() => setSelected(b.id)}
               testID={`bar-row-${b.id}`}
@@ -253,11 +255,13 @@ function Detail({
   onControl,
   onRecheck,
   onResolve,
+  onPlace,
 }: {
   bar: HomeBar;
   onControl: () => void;
   onRecheck: () => void;
   onResolve: (note: string) => void;
+  onPlace: (place: import('../logic/physical').BarPlace, note?: string) => void;
 }) {
   const p = productOf(bar.product);
   const state = barState(bar);
@@ -288,6 +292,7 @@ function Detail({
         {bar.expectedSerial && !bar.serial ? (
           <KeyValue label="N° prévu par le stock" value={bar.expectedSerial} />
         ) : null}
+        <PlaceEditor bar={bar} onChange={onPlace} title="Lieu de stockage (chez le client, banque…)" />
         <KeyValue label="Poids attendu" value={`${g(expectedWeight(bar))} g`} />
         <KeyValue label="Poids de référence" value={bar.weightRef ? `${g(bar.weightRef)} g` : '—'} />
         <KeyValue label="Commandé le" value={formatDate(bar.orderedAt)} />

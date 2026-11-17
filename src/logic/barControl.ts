@@ -4,7 +4,7 @@
  * réception, pas qu'il était authentique au départ (pour cela : VERISCAN de l'affinerie et carte d'essai).
  */
 import { LedgerError } from './ledger.ts';
-import { normalizeSerial, productOf, serialFormatError } from './physical.ts';
+import { normalizeSerial, placeLabel, productOf, serialFormatError } from './physical.ts';
 import type { Account, BarCheck, HomeBar } from './types.ts';
 
 export const DEFAULT_TOLERANCE = { weightG: 0.05, dimMm: 0.2 } as const;
@@ -170,11 +170,15 @@ export function barSummary(account: Pick<Account, 'homeVault'>) {
   };
 }
 
-/** Recherche par numéro de série ou référence interne (espaces, tirets et casse ignorés). */
+/** Recherche par numéro de série, référence interne ou lieu de garde (espaces, tirets et casse ignorés). */
 export function searchBars(account: Pick<Account, 'homeVault'>, query: string): HomeBar[] {
   const q = norm(query);
   const bars = account.homeVault ?? [];
-  return q ? bars.filter((b) => norm(b.serial ?? '').includes(q) || norm(b.ref ?? '').includes(q)) : bars;
+  return q
+    ? bars.filter(
+        (b) => norm(b.serial ?? '').includes(q) || norm(b.ref ?? '').includes(q) || norm(placeLabel(b)).includes(q),
+      )
+    : bars;
 }
 
 /** Numéros de série (hors pièces, dont les millésimes se répètent) présents plus d'une fois dans la base. */

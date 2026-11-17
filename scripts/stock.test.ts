@@ -173,3 +173,13 @@ test('lieu de garde d’un lingotin : chez vous, coffre en banque, ailleurs', as
   assert.match(g.children[0].transactions[0].label, /coffre en banque/);
   assert.equal(g.homeVault![0].ownerChildId, added.child.id);
 });
+
+test('contrôle des lingots : on retrouve un lingotin par son lieu de garde', async () => {
+  const { setBarPlace } = await import('../src/logic/physical.ts');
+  const { searchBars } = await import('../src/logic/barControl.ts');
+  let a = withdrawPhysical(base(), p, { g5: 1, g10: 1 }, new Date('2026-11-16T12:00:00'));
+  a = setBarPlace(a, a.homeVault![0].id, 'banque', 'Banque Dupont');
+  assert.equal(searchBars(a, 'dupont').length, 1);
+  assert.equal(searchBars(a, 'banque').length, 1);
+  assert.equal(searchBars(a, 'chez vous').length, 1);
+});

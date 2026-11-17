@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { PlaceEditor } from '../components/PlaceEditor';
 import { Button, Card, Hint, Message, Screen, styles as ui } from '../components/ui';
 import { formatDate, formatEur, formatWeight } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
@@ -10,8 +11,6 @@ import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
 import {
   type BarPlace,
   homeVaultTotal,
-  PLACE_LABEL,
-  placeLabel,
   productOf,
   receiveBar,
   removeBar,
@@ -91,7 +90,6 @@ function BarCard({
   onRemove: () => void;
   onPlace: (place: BarPlace, note?: string) => void;
 }) {
-  const [note, setNote] = useState(bar.placeNote ?? '');
   const [serial, setSerial] = useState(bar.serial ?? '');
   const [showQr, setShowQr] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -115,33 +113,7 @@ function BarCard({
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
       </View>
-      <View style={styles.places} testID={`place-${bar.id}`}>
-        {(Object.keys(PLACE_LABEL) as BarPlace[]).map((k) => (
-          <Pressable
-            key={k}
-            onPress={() => onPlace(k, k === (bar.place ?? 'maison') ? note : '')}
-            style={[styles.chip, k === (bar.place ?? 'maison') && styles.chipOn]}
-            accessibilityRole="button"
-            accessibilityState={{ selected: k === (bar.place ?? 'maison') }}
-          >
-            <Text style={[styles.chipText, k === (bar.place ?? 'maison') && { color: colors.gold }]}>
-              {PLACE_LABEL[k]}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      {(bar.place ?? 'maison') !== 'maison' || bar.placeNote ? (
-        <TextInput
-          value={note}
-          onChangeText={setNote}
-          onEndEditing={() => onPlace(bar.place ?? 'maison', note)}
-          placeholder={bar.place === 'banque' ? 'Banque et agence (facultatif)' : 'Où il est gardé'}
-          placeholderTextColor={colors.textMuted}
-          style={ui.input}
-          accessibilityLabel="Précision du lieu"
-        />
-      ) : null}
-      <Text style={styles.sub}>Gardé : {placeLabel(bar)}</Text>
+      <PlaceEditor bar={bar} onChange={onPlace} title="Où il est gardé" />
       {owner || bar.ownerChildId ? (
         <Text style={styles.controlled} testID="bar-owner">
           Appartient à {owner ?? 'un enfant'} (don du {bar.giftedAt ? formatDate(bar.giftedAt) : ''})
@@ -238,16 +210,5 @@ const styles = StyleSheet.create({
   serial: { color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
   controlled: { color: colors.up, fontSize: 13, fontWeight: '700' },
   qr: { alignItems: 'center', gap: 8, paddingVertical: 6 },
-  places: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    backgroundColor: colors.surfaceAlt,
-  },
-  chipOn: { borderColor: colors.gold },
-  chipText: { color: colors.text, fontSize: 12.5, fontWeight: '600' },
   remove: { color: colors.textMuted, fontSize: 12.5, textDecorationLine: 'underline' },
 });
