@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatDate, formatEur, parseAmount } from '../logic/format';
-import { proStockValue, storageStatus } from '../logic/storageLimit';
+import { fetchChfToEur } from '../logic/prices';
+import { CHF_EUR_FALLBACK, proStockValue, STORAGE_LIMIT, storageStatus } from '../logic/storageLimit';
 import { LedgerError } from '../logic/ledger';
 import { BAR_PRODUCTS, productOf } from '../logic/physical';
 import {
@@ -42,7 +43,17 @@ const shortName = (id: string) => productOf(id).label.replace(/ \(.*/, '');
 export function StockManager({ onBack }: { onBack: () => void }) {
   const account = useAccount();
   const { updateAccount, quote } = useBank();
-  const storage = storageStatus(proStockValue(account, quote.prices.gold));
+  const [chfEur, setChfEur] = useState<{ rate: number; live: boolean }>({ rate: CHF_EUR_FALLBACK, live: false });
+  useEffect(() => {
+    let on = true;
+    fetchChfToEur()
+      .then((rate) => on && setChfEur({ rate, live: true }))
+      .catch(() => undefined);
+    return () => {
+      on = false;
+    };
+  }, []);
+  const storage = storageStatus(proStockValue(account, quote.prices.gold), chfEur.rate);
   const [product, setProduct] = useState(BAR_PRODUCTS[1].id);
   const [qty, setQty] = useState('10');
   const [source, setSource] = useState<'maison' | 'pro'>('maison');
@@ -120,17 +131,28 @@ export function StockManager({ onBack }: { onBack: () => void }) {
 
       <SectionTitle>Stockage chez le revendeur</SectionTitle>
       <Card style={{ gap: 6 }}>
-        <KeyValue label="Stockage gratuit jusqu’à" value={formatEur(storage.limitEur)} />
-        <KeyValue label="Votre stock chez le pro (valeur de l’or)" value={formatEur(storage.usedEur)} />
+        <KeyValue
+          label={`Stockage gratuit jusqu’à ${STORAGE_LIMIT.freeChf.toLocaleString('fr-FR')} CHF`}
+          value={`≈ ${formatEur(storage.limitEur)}`}
+        />
+        <KeyValue
+          label="Votre stock chez le pro (valeur de l’or)"
+          value={`${formatEur(storage.usedEur)} ≈ ${Math.round(storage.usedChf).toLocaleString('fr-FR')} CHF`}
+        />
         <View style={styles.meter}>
           <View style={[styles.meterFill, { flex: Math.max(0.0001, storage.share) }]} />
           <View style={{ flex: Math.max(0.0001, 1 - storage.share) }} />
         </View>
         <Text style={ui.hint}>
-          {storage.over
-            ? `Seuil dépassé : environ ${formatEur(storage.monthlyFeeEur)} par mois selon la page du revendeur.`
-            : `Il reste environ ${formatEur(storage.leftEur)} de stockage gratuit.`}{' '}
-          Conditions à confirmer auprès du revendeur.
+          {storage.tier === 'free'
+            ? `Il reste environ ${formatEur(storage.leftEur)} de stockage gratuit.`
+            : `Au-delà du seuil : environ ${formatEur(storage.yearlyFeeEur)} par an (${storage.yearlyFeePct.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} % de votre stock).`}
+        </Text>
+        <Text style={ui.hint}>
+          Grille depuis le 1er novembre 2026 : gratuit jusqu’à {STORAGE_LIMIT.freeChf.toLocaleString('fr-FR')} CHF, puis{' '}
+          {STORAGE_LIMIT.midFeeChfPerMonth} CHF par mois jusqu’à {STORAGE_LIMIT.midChf.toLocaleString('fr-FR')} CHF,
+          puis 0,5 % par an. Assurance comprise. Taux {chfEur.live ? 'du jour' : 'approximatif'} : 1 CHF ={' '}
+          {chfEur.rate.toFixed(3).replace('.', ',')} €.
         </Text>
       </Card>
 
