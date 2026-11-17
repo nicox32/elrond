@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { formatDate, parseAmount } from '../logic/format';
+import { formatDate, formatEur, parseAmount } from '../logic/format';
+import { fetchChfToEur } from '../logic/prices';
+import { CHF_EUR_FALLBACK, proStockValue, STORAGE_LIMIT, storageStatus } from '../logic/storageLimit';
 import { LedgerError } from '../logic/ledger';
 import { BAR_PRODUCTS, productOf } from '../logic/physical';
 import {
@@ -40,7 +42,18 @@ const shortName = (id: string) => productOf(id).label.replace(/ \(.*/, '');
 /** Société Orvia › Stock : lots de lingotins et de pièces (x1, x10, x100…), chez Orvia ou chez un pro (revendeur). */
 export function StockManager({ onBack }: { onBack: () => void }) {
   const account = useAccount();
-  const { updateAccount } = useBank();
+  const { updateAccount, quote } = useBank();
+  const [chfEur, setChfEur] = useState<{ rate: number; live: boolean }>({ rate: CHF_EUR_FALLBACK, live: false });
+  useEffect(() => {
+    let on = true;
+    fetchChfToEur()
+      .then((rate) => on && setChfEur({ rate, live: true }))
+      .catch(() => undefined);
+    return () => {
+      on = false;
+    };
+  }, []);
+  const storage = storageStatus(proStockValue(account, quote.prices.gold), chfEur.rate);
   const [product, setProduct] = useState(BAR_PRODUCTS[1].id);
   const [qty, setQty] = useState('10');
   const [source, setSource] = useState<'maison' | 'pro'>('maison');
@@ -115,6 +128,26 @@ export function StockManager({ onBack }: { onBack: () => void }) {
         Quand un client retire de l’or, l’appli prend d’abord dans le stock d’Orvia, puis chez le pro (revendeur) ; sans
         stock, il faut commander chez le revendeur.
       </Hint>
+
+      <SectionTitle>Stockage chez le revendeur</SectionTitle>
+      <Card style={{ gap: 6 }}>
+        <KeyValue
+          label={`Seuil gratuit : ${STORAGE_LIMIT.freeChf.toLocaleString('fr-FR')} CHF`}
+          value={`≈ ${formatEur(storage.limitEur)}`}
+        />
+        <KeyValue label="Votre stock chez le pro (valeur de l’or)" value={formatEur(storage.usedEur)} />
+        <View style={styles.meter}>
+          <View style={[styles.meterFill, { flex: Math.max(0.0001, storage.share) }]} />
+          <View style={{ flex: Math.max(0.0001, 1 - storage.share) }} />
+        </View>
+        <Text style={ui.hint}>
+          {storage.over
+            ? `Seuil dépassé : environ ${formatEur(storage.monthlyFeeEur)} par mois (${STORAGE_LIMIT.feeChfPerMonth} CHF).`
+            : `Il reste environ ${formatEur(storage.leftEur)} de stockage gratuit.`}{' '}
+          Taux {chfEur.live ? 'du jour' : 'approximatif'} : 1 CHF = {chfEur.rate.toFixed(3).replace('.', ',')} €.
+          Conditions à confirmer auprès du revendeur.
+        </Text>
+      </Card>
 
       <SectionTitle>En stock</SectionTitle>
       <Card style={{ gap: 8 }}>
@@ -345,6 +378,8 @@ const styles = StyleSheet.create({
   sumRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   name: { color: colors.text, fontSize: 14, fontWeight: '600' },
   sum: { color: colors.text, fontSize: 14, fontWeight: '700', marginLeft: 'auto' },
+  meter: { flexDirection: 'row', height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: colors.surfaceAlt },
+  meterFill: { backgroundColor: colors.gold },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
     borderWidth: 1,
