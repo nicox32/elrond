@@ -313,6 +313,8 @@ export const MANUAL_BUY_ALERTS: (Pick<PriceAlert, 'metal' | 'kind' | 'value'> & 
   { metal: 'silver', kind: 'ratioAbove', value: 90 },
   { metal: 'silver', kind: 'ratioBelow', value: 65 },
   { metal: 'platinum', kind: 'ratioAbove', value: 2.9 },
+  { metal: 'platinum', kind: 'ratioAbove', value: 3.2 },
+  { metal: 'platinum', kind: 'ratioBelow', value: 2.3 },
   { metal: 'platinum', kind: 'ratioBelow', value: 2 },
 ];
 

@@ -1357,15 +1357,15 @@ test('alertes de ratio : or/argent et or/platine, pour les achats manuels, compr
   assert.match(r.events[0].title, /^Alerte argent · Ratio or\/argent au-dessus de 85$/);
   assert.match(r.events[0].body, /86,69.*achat manuel d’argent/);
   assert.equal(metalOfServerTitle(r.events[0].title), 'silver');
-  // Platine à 60 €/g : ratio 1,88 → « or/platine sous 2 ».
+  // Platine à 60 €/g : ratio 1,88 → « or/platine sous 2,3 » et « sous 2 ».
   const r2 = evaluateAlerts(alerts, live(112.7, 1.5, 60), [], new Date('2026-11-16T20:00:00Z'));
   assert.deepEqual(
     r2.events.map((e) => e.title),
-    ['Alerte platine · Ratio or/platine sous 2'],
+    ['Alerte platine · Ratio or/platine sous 2,3', 'Alerte platine · Ratio or/platine sous 2'],
   );
   // Le serveur lit ces alertes et refuse un ratio sur l'or.
   const cfg = parseConfig({ alerts: [...MANUAL_BUY_ALERTS, { metal: 'gold', kind: 'ratioAbove', value: 80 }] });
   assert.equal(cfg.length, MANUAL_BUY_ALERTS.length);
   const json = JSON.parse(readFileSync(new URL('../server/alerts.json', import.meta.url), 'utf8'));
-  assert.equal(parseConfig(json).filter((c) => c.kind.startsWith('ratio')).length, 5);
+  assert.equal(parseConfig(json).filter((c) => c.kind.startsWith('ratio')).length, 7);
 });
