@@ -63,8 +63,8 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
   ${docHead(account)}
   <h1>Inventaire du coffre maison</h1>
   <p class="sub">Lingotins et pièces d’or retirés du coffre Orvia · ${total.count} objet${total.count > 1 ? 's' : ''}, ${total.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin, ≈ ${formatEur(total.value)} au cours du ${d(now.toISOString())}</p>
-  <table><thead><tr><th>QR code</th><th>Photo</th><th>Objet</th><th>Retrait</th><th>Or d’origine</th><th class="num">Prix de revient</th><th class="num">Valeur de l’or</th></tr></thead>
+  <table><thead><tr><th>QR code</th><th>Photo du modèle</th><th>Objet</th><th>Retrait</th><th>Or d’origine</th><th class="num">Prix de revient</th><th class="num">Valeur de l’or</th></tr></thead>
   <tbody>${rows || '<tr><td colspan="7" class="muted">Aucun lingotin ni pièce chez vous.</td></tr>'}</tbody></table>
-  <div class="foot">Fiche d’inventaire éditée par l’application Orvia, à garder avec vos papiers (succession, assurance habitation, revente). Chaque QR code reprend la fiche de l’objet et se lit avec n’importe quel téléphone. Ce document n’est pas un certificat d’authenticité : seuls le numéro gravé et le certificat de l’affinerie le sont ; les lingots PAMP se vérifient aussi par numérisation avec la technologie VERISCAN de l’affinerie. Prix de revient et dates d’achat d’origine : à présenter pour l’impôt en cas de revente.</div>
+  <div class="foot">La photo montre le modèle du format, pas votre exemplaire : le numéro visible dessus n’est pas le vôtre. Fiche d’inventaire éditée par l’application Orvia, à garder avec vos papiers (succession, assurance habitation, revente). Chaque QR code reprend la fiche de l’objet et se lit avec n’importe quel téléphone. Ce document n’est pas un certificat d’authenticité : seuls le numéro gravé et le certificat de l’affinerie le sont ; les lingots PAMP se vérifient aussi par numérisation avec la technologie VERISCAN de l’affinerie. Prix de revient et dates d’achat d’origine : à présenter pour l’impôt en cas de revente.</div>
   </body></html>`;
 }
