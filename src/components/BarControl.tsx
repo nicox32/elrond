@@ -277,9 +277,9 @@ function Detail({
             label="Origine"
             value={
               bar.origin === 'maison'
-                ? 'Stock de la société'
+                ? 'Stock Orvia'
                 : bar.origin === 'pro'
-                  ? 'Coffre professionnel'
+                  ? 'Stock du pro (revendeur)'
                   : 'Commande chez le revendeur'
             }
           />

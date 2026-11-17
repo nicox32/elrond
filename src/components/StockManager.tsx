@@ -13,10 +13,10 @@ import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, Label, Message, SectionTitle, styles as ui } from './ui';
 
 const QUICK = [1, 10, 50, 100];
-const SOURCE_LABEL = { maison: 'Chez la société', pro: 'Coffre professionnel' } as const;
+const SOURCE_LABEL = { maison: 'Orvia', pro: 'Pro (revendeur)' } as const;
 const shortName = (id: string) => productOf(id).label.replace(/ \(.*/, '');
 
-/** Société Orvia › Stock : lots de lingotins et de pièces (x1, x10, x100…), chez la société ou en coffre pro. */
+/** Société Orvia › Stock : lots de lingotins et de pièces (x1, x10, x100…), chez Orvia ou chez un pro (revendeur). */
 export function StockManager({ onBack }: { onBack: () => void }) {
   const account = useAccount();
   const { updateAccount } = useBank();
@@ -75,9 +75,9 @@ export function StockManager({ onBack }: { onBack: () => void }) {
     <>
       <Button title="← Société Orvia" variant="ghost" onPress={onBack} />
       <Hint>
-        Le stock des lingotins et pièces que la société détient, par lot. Quand un client retire de l’or, l’appli prend
-        d’abord dans le stock de la société, puis dans le coffre professionnel ; sans stock, il faut commander chez le
-        revendeur.
+        Le stock des lingotins et pièces, par lot : chez Orvia, ou chez un pro (revendeur) qui les garde pour vous.
+        Quand un client retire de l’or, l’appli prend d’abord dans le stock d’Orvia, puis chez le pro (revendeur) ; sans
+        stock, il faut commander chez le revendeur.
       </Hint>
 
       <SectionTitle>En stock</SectionTitle>
@@ -89,7 +89,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
               <BarImage product={b.id} size={34} />
               <Text style={styles.name}>{shortName(b.id)}</Text>
               <Text style={[styles.sum, !r?.total && { color: colors.textMuted }]}>
-                {r?.total ? `${r.total}${r.pro ? ` (dont ${r.pro} en coffre pro)` : ''}` : 'aucun'}
+                {r?.total ? `${r.total}${r.pro ? ` (dont ${r.pro} chez le pro)` : ''}` : 'aucun'}
               </Text>
             </View>
           );
@@ -137,18 +137,18 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           value={source}
           onChange={setSource}
           options={[
-            { value: 'maison', label: 'Chez la société' },
-            { value: 'pro', label: 'Coffre pro' },
+            { value: 'maison', label: 'Orvia' },
+            { value: 'pro', label: 'Pro (revendeur)' },
           ]}
         />
         {source === 'pro' && (
           <TextInput
             value={vault}
             onChangeText={setVault}
-            placeholder="Nom du coffre (ex. Gold Avenue)"
+            placeholder="Nom du revendeur (ex. Gold Avenue)"
             placeholderTextColor={colors.textMuted}
             style={ui.input}
-            accessibilityLabel="Nom du coffre professionnel"
+            accessibilityLabel="Nom du pro (revendeur)"
           />
         )}
         <TextInput
@@ -208,7 +208,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
             </View>
             <KeyValue
               label="Lieu"
-              value={l.source === 'pro' ? `Coffre pro${l.vault ? ` · ${l.vault}` : ''}` : 'Chez la société'}
+              value={l.source === 'pro' ? `Pro (revendeur)${l.vault ? ` · ${l.vault}` : ''}` : 'Orvia'}
             />
             <KeyValue label="Entré le" value={formatDate(l.addedAt)} />
             {l.serials?.length ? <KeyValue label="N° connus restants" value={String(l.serials.length)} /> : null}
