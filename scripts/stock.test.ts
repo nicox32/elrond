@@ -205,3 +205,22 @@ test('lot déjà créé : on y colle la liste de numéros du revendeur, ils sort
   const w = withdrawPhysical(a, p, { g5: 1 });
   assert.equal(w.homeVault![0].expectedSerial, 'C841201');
 });
+
+test('stock : supprimer un lot (trace au journal) ou effacer tout le stock', async () => {
+  const { removeLot, clearStock } = await import('../src/logic/stock.ts');
+  let a = addStock(base(), { product: 'g5', qty: 10, source: 'pro', vault: 'Gold Avenue' });
+  a = addStock(a, { product: 'g10', qty: 10, source: 'maison' });
+  const [l5, l10] = a.stock!;
+  const r = removeLot(a, l5.id);
+  assert.equal(r.stock!.length, 1);
+  assert.equal(r.stock![0].id, l10.id);
+  assert.equal(r.stockLog![0].note, 'Lot supprimé');
+  assert.equal(r.stockLog![0].qty, -10);
+  assert.equal(removeLot(a, 'inconnu'), a);
+  const c = clearStock(a);
+  assert.equal(c.stock, undefined);
+  assert.equal(c.stockLog, undefined);
+  assert.equal(stockSummary(c).length, 0);
+  // Le compte et ses lingotins ne sont pas touchés.
+  assert.equal(c.holdings.gold, a.holdings.gold);
+});

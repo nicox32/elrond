@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatDate, parseAmount } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
@@ -8,6 +8,7 @@ import {
   addSerialsToLot,
   addStock,
   adjustStock,
+  clearStock,
   MAX_BATCH,
   parseSerials,
   removeLot,
@@ -21,6 +22,18 @@ import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, Label, Message, SectionTitle, styles as ui } from './ui';
 
 const QUICK = [1, 10, 50, 100];
+
+/** Demande une confirmation avant une suppression (fenêtre du navigateur sur le web, alerte sur le téléphone). */
+function confirmAction(text: string, onYes: () => void) {
+  if (Platform.OS === 'web') {
+    if (window.confirm(text)) onYes();
+  } else {
+    Alert.alert('Confirmer', text, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: onYes },
+    ]);
+  }
+}
 const SOURCE_LABEL = { maison: 'Orvia', pro: 'Pro (revendeur)' } as const;
 const shortName = (id: string) => productOf(id).label.replace(/ \(.*/, '');
 
@@ -275,15 +288,36 @@ export function StockManager({ onBack }: { onBack: () => void }) {
                 />
               </View>
             </View>
-            {l.qty === 0 && (
-              <Button
-                title="Retirer ce lot vide"
-                variant="ghost"
-                onPress={() => updateAccount((a) => removeLot(a, l.id))}
-              />
-            )}
+            <Button
+              title={l.qty === 0 ? 'Retirer ce lot vide' : 'Supprimer ce lot'}
+              variant="ghost"
+              onPress={() =>
+                confirmAction(
+                  l.qty === 0
+                    ? 'Retirer ce lot vide ?'
+                    : `Supprimer ce lot de ${l.qty} exemplaire${l.qty > 1 ? 's' : ''} ?`,
+                  () => updateAccount((a) => removeLot(a, l.id)),
+                )
+              }
+            />
           </Card>
         ))
+      )}
+
+      {(account.stock ?? []).length > 0 && (
+        <Button
+          title="Effacer tout le stock et son journal"
+          variant="danger"
+          onPress={() =>
+            confirmAction(
+              'Effacer tous les lots et le journal du stock ? Les lingotins déjà donnés à vos clients ne changent pas.',
+              () => {
+                updateAccount((a) => clearStock(a));
+                setMsg({ ok: true, text: 'Stock effacé.' });
+              },
+            )
+          }
+        />
       )}
 
       <SectionTitle>Journal</SectionTitle>

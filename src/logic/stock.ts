@@ -168,8 +168,30 @@ export function addSerialsToLot(account: Account, lotId: string, serials: string
 }
 
 /** Supprime un lot vide ou entré par erreur. */
-export function removeLot(account: Account, lotId: string): Account {
-  return { ...account, stock: (account.stock ?? []).filter((l) => l.id !== lotId) };
+export function removeLot(account: Account, lotId: string, now = new Date()): Account {
+  const lot = (account.stock ?? []).find((l) => l.id === lotId);
+  if (!lot) return account;
+  // Un lot supprimé avec des exemplaires restants laisse une trace au journal.
+  const log =
+    lot.qty > 0
+      ? pushLog(account, {
+          id: newId(),
+          date: now.toISOString(),
+          kind: 'adjust',
+          product: lot.product,
+          qty: -lot.qty,
+          source: lot.source,
+          lotId: lot.id,
+          note: 'Lot supprimé',
+        })
+      : account.stockLog;
+  return { ...account, stock: (account.stock ?? []).filter((l) => l.id !== lotId), stockLog: log };
+}
+
+/** Efface tout le stock et son journal (remise à zéro, par exemple après des essais). */
+export function clearStock(account: Account): Account {
+  const { stock: _stock, stockLog: _log, ...rest } = account;
+  return rest as Account;
 }
 
 export interface StockSummaryRow {
