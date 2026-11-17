@@ -199,6 +199,10 @@ export interface HomeBar {
   lotId?: string;
   /** Numéro de série prévu par le stock (à confirmer à la réception). */
   expectedSerial?: string;
+  /** Où il est gardé : chez vous (défaut), dans un coffre en banque, ou ailleurs (précisé dans placeNote). */
+  place?: 'maison' | 'banque' | 'autre';
+  /** Précision du lieu : nom de la banque, adresse, proche… */
+  placeNote?: string;
   /** Enfant propriétaire du lingotin (don : l'objet reste chez le parent, seule la propriété est cédée). */
   ownerChildId?: string;
   giftedAt?: string;

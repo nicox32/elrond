@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatDate, formatEur } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
-import { barsOfChild, giveBarToChild, productOf } from '../logic/physical';
+import { type BarPlace, barsOfChild, giveBarToChild, PLACE_LABEL, placeLabel, productOf } from '../logic/physical';
 import type { ChildAccount, HomeBar } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { BarImage } from './BarImage';
 import { PinConfirm } from './PinConfirm';
-import { Banner, Button, Card, Hint, KeyValue, Message } from './ui';
+import { Banner, Button, Card, Hint, KeyValue, Message, styles as ui } from './ui';
 
 const name = (b: HomeBar) => productOf(b.product).label.replace(/ \(.*/, '');
 
@@ -19,6 +19,8 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
   const { quote, commit } = useBank();
   const [picked, setPicked] = useState<HomeBar | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [place, setPlace] = useState<BarPlace | null>(null);
+  const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const owned = barsOfChild(account, child.id);
   const free = (account.homeVault ?? []).filter((b) => !b.ownerChildId && b.status === 'received' && b.serial);
@@ -30,10 +32,15 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
     setPicked(null);
     setConfirm(false);
     try {
-      commit((a, p) => giveBarToChild(a, p, bar.id, child.id));
+      commit((a, p) =>
+        giveBarToChild(a, p, bar.id, child.id, new Date(), {
+          place: place ?? bar.place ?? 'maison',
+          note: place ? note : bar.placeNote,
+        }),
+      );
       setMsg({
         ok: true,
-        text: `${name(bar)} donné à ${child.name}. Il reste chez vous ; le don est inscrit dans ses dons (formulaire 2735).`,
+        text: `${name(bar)} donné à ${child.name}. Gardé : ${placeLabel({ place: place ?? bar.place, placeNote: place ? note : bar.placeNote }).toLowerCase()}. Le don est inscrit dans ses dons (formulaire 2735).`,
       });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Don impossible.' });
@@ -43,8 +50,9 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
   return (
     <>
       <Hint>
-        Le lingotin reste chez vous : seule sa propriété, son numéro de série, est cédée à {child.name}. Le don est
-        compté à la valeur de l’or du jour dans ses dons et dans l’abattement de 100 000 € (formulaire 2735).
+        Le lingotin reste où il est (chez vous, ou dans un coffre en banque) : seule sa propriété, son numéro de série,
+        est cédée à {child.name}. Le don est compté à la valeur de l’or du jour dans ses dons et dans l’abattement de
+        100 000 € (formulaire 2735).
       </Hint>
 
       {owned.length > 0 && (
@@ -58,7 +66,7 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
                   {productOf(b.product).coin ? 'Millésime' : 'N°'} {b.serial}
                 </Text>
                 <Text style={styles.sub}>
-                  Donné le {b.giftedAt ? formatDate(b.giftedAt) : ''} · {formatEur(b.giftValue ?? 0)}
+                  Donné le {b.giftedAt ? formatDate(b.giftedAt) : ''} · {formatEur(b.giftValue ?? 0)} · {placeLabel(b)}
                 </Text>
               </View>
             </View>
@@ -92,10 +100,45 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
               <Button
                 title={picked?.id === b.id ? 'Choisi ✓' : 'Choisir'}
                 variant="ghost"
-                onPress={() => setPicked(picked?.id === b.id ? null : b)}
+                onPress={() => {
+                  setPicked(picked?.id === b.id ? null : b);
+                  setPlace(null);
+                  setNote(b.placeNote ?? '');
+                }}
               />
             </View>
           ))}
+          {picked && (
+            <View style={{ gap: 6 }}>
+              <Text style={styles.sub}>Où est gardé ce lingotin ?</Text>
+              <View style={styles.chips}>
+                {(Object.keys(PLACE_LABEL) as BarPlace[]).map((k) => {
+                  const on = (place ?? picked.place ?? 'maison') === k;
+                  return (
+                    <Pressable
+                      key={k}
+                      onPress={() => setPlace(k)}
+                      style={[styles.chip, on && styles.chipOn]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                    >
+                      <Text style={[styles.chipText, on && { color: colors.gold }]}>{PLACE_LABEL[k]}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {(place ?? picked.place ?? 'maison') !== 'maison' && (
+                <TextInput
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder="Précision : banque et agence, ou lieu (facultatif)"
+                  placeholderTextColor={colors.textMuted}
+                  style={ui.input}
+                  accessibilityLabel="Précision du lieu de garde"
+                />
+              )}
+            </View>
+          )}
           <Button
             title={picked ? `Donner ce lingotin à ${child.name}` : 'Choisissez un lingotin'}
             onPress={() => setConfirm(true)}
@@ -109,7 +152,7 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
         visible={confirm}
         summary={
           picked
-            ? `Donner ${name(picked)} (${picked.serial}) à ${child.name} : ≈ ${formatEur(picked.grams * quote.prices.gold)} à la valeur de l’or du jour. Il reste chez vous.`
+            ? `Donner ${name(picked)} (${picked.serial}) à ${child.name} : ≈ ${formatEur(picked.grams * quote.prices.gold)} à la valeur de l’or du jour. Lieu de garde : ${placeLabel({ place: place ?? picked.place, placeNote: place ? note : picked.placeNote }).toLowerCase()}.`
             : ''
         }
         onConfirm={give}
@@ -121,6 +164,17 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, padding: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    backgroundColor: colors.surfaceAlt,
+  },
+  chipOn: { borderColor: colors.gold },
+  chipText: { color: colors.text, fontSize: 12.5, fontWeight: '600' },
   picked: { backgroundColor: colors.surfaceAlt },
   name: { color: colors.text, fontSize: 14.5, fontWeight: '700' },
   sub: { color: colors.textMuted, fontSize: 12.5 },

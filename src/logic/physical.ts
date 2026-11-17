@@ -446,7 +446,7 @@ export function receiveBar(account: Account, barId: string, serial: string, now 
 }
 
 /**
- * Don d'un lingotin ou d'une pièce à un enfant. L'objet reste chez le parent : seule la propriété (son numéro)
+ * Don d'un lingotin ou d'une pièce à un enfant. L'objet reste où il est (chez le parent, ou dans un coffre en banque) : seule la propriété (son numéro)
  * est cédée à l'enfant. Le don est inscrit à la valeur de l'or du jour dans les dons de l'enfant (formulaire 2735,
  * abattement de 100 000 €) ; l'enfant garde les dates d'achat d'origine de l'or (22 ans).
  */
@@ -456,6 +456,7 @@ export function giveBarToChild(
   barId: string,
   childId: string,
   now = new Date(),
+  where?: { place: BarPlace; note?: string },
 ): Account {
   const bar = (account.homeVault ?? []).find((b) => b.id === barId);
   if (!bar) throw new LedgerError('Lingotin introuvable.');
@@ -472,16 +473,46 @@ export function giveBarToChild(
   }
   const p = productOf(bar.product);
   const value = bar.grams * prices.gold;
-  const label = `Don du ${p.label.replace(/ \(.*/, '').toLowerCase()} · ${p.coin ? 'millésime' : 'n°'} ${bar.serial} (reste chez ${account.holder})`;
+  const label = `Don du ${p.label.replace(/ \(.*/, '').toLowerCase()} · ${p.coin ? 'millésime' : 'n°'} ${bar.serial} (gardé : ${placeLabel(where ? { place: where.place, placeNote: where.note } : bar).toLowerCase()})`;
   const credited = applyTx(child, 'gift_bar', {}, value, label, now);
   const parent = replaceChildAccount(account, credited);
+  const placed = where ? setBarPlace(parent, barId, where.place, where.note) : parent;
   return {
-    ...parent,
-    homeVault: (parent.homeVault ?? []).map((b) =>
+    ...placed,
+    homeVault: (placed.homeVault ?? []).map((b) =>
       b.id === barId
         ? { ...b, ownerChildId: childId, giftedAt: now.toISOString(), giftValue: Math.round(value * 100) / 100 }
         : b,
     ),
+  };
+}
+
+export type BarPlace = NonNullable<HomeBar['place']>;
+export const PLACE_LABEL: Record<BarPlace, string> = {
+  maison: 'Chez vous',
+  banque: 'Coffre en banque',
+  autre: 'Autre lieu',
+};
+
+/** Lieu où est gardé l'objet, en clair : « Chez vous », « Coffre en banque · Crédit X »… */
+export function placeLabel(b: Pick<HomeBar, 'place' | 'placeNote'>): string {
+  const base = PLACE_LABEL[b.place ?? 'maison'];
+  const note = b.placeNote?.trim();
+  if (!note) return base;
+  return b.place === 'autre' ? note : `${base} · ${note}`;
+}
+
+/** Change le lieu de garde d'un lingotin ou d'une pièce (chez vous, coffre en banque, ailleurs). */
+export function setBarPlace(account: Account, barId: string, place: BarPlace, note?: string): Account {
+  if (!(account.homeVault ?? []).some((b) => b.id === barId)) throw new LedgerError('Lingotin introuvable.');
+  const clean = note?.trim().slice(0, 80);
+  return {
+    ...account,
+    homeVault: (account.homeVault ?? []).map((b) => {
+      if (b.id !== barId) return b;
+      const { placeNote: _old, ...rest } = b;
+      return { ...rest, place, ...(clean ? { placeNote: clean } : {}) };
+    }),
   };
 }
 

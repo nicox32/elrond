@@ -7,7 +7,17 @@ import { formatDate, formatEur, formatWeight } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
 import { controlledOn } from '../logic/barControl';
 import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
-import { homeVaultTotal, productOf, receiveBar, removeBar, specLine } from '../logic/physical';
+import {
+  type BarPlace,
+  homeVaultTotal,
+  PLACE_LABEL,
+  placeLabel,
+  productOf,
+  receiveBar,
+  removeBar,
+  setBarPlace,
+  specLine,
+} from '../logic/physical';
 import { exportPdf } from '../pdf';
 import { BarImage } from '../components/BarImage';
 import { QrCode } from '../components/QrCode';
@@ -44,6 +54,7 @@ export default function HomeVaultScreen() {
             owner={b.ownerChildId ? account.children.find((c) => c.id === b.ownerChildId)?.name : undefined}
             onReceive={(serial) => updateAccount((a) => receiveBar(a, b.id, serial))}
             onRemove={() => updateAccount((a) => removeBar(a, b.id))}
+            onPlace={(place, note) => updateAccount((a) => setBarPlace(a, b.id, place, note))}
           />
         ))
       )}
@@ -72,12 +83,15 @@ function BarCard({
   owner,
   onReceive,
   onRemove,
+  onPlace,
 }: {
   bar: HomeBar;
   owner?: string;
   onReceive: (s: string) => void;
   onRemove: () => void;
+  onPlace: (place: BarPlace, note?: string) => void;
 }) {
+  const [note, setNote] = useState(bar.placeNote ?? '');
   const [serial, setSerial] = useState(bar.serial ?? '');
   const [showQr, setShowQr] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -101,9 +115,36 @@ function BarCard({
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
       </View>
+      <View style={styles.places} testID={`place-${bar.id}`}>
+        {(Object.keys(PLACE_LABEL) as BarPlace[]).map((k) => (
+          <Pressable
+            key={k}
+            onPress={() => onPlace(k, k === (bar.place ?? 'maison') ? note : '')}
+            style={[styles.chip, k === (bar.place ?? 'maison') && styles.chipOn]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: k === (bar.place ?? 'maison') }}
+          >
+            <Text style={[styles.chipText, k === (bar.place ?? 'maison') && { color: colors.gold }]}>
+              {PLACE_LABEL[k]}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      {(bar.place ?? 'maison') !== 'maison' || bar.placeNote ? (
+        <TextInput
+          value={note}
+          onChangeText={setNote}
+          onEndEditing={() => onPlace(bar.place ?? 'maison', note)}
+          placeholder={bar.place === 'banque' ? 'Banque et agence (facultatif)' : 'Où il est gardé'}
+          placeholderTextColor={colors.textMuted}
+          style={ui.input}
+          accessibilityLabel="Précision du lieu"
+        />
+      ) : null}
+      <Text style={styles.sub}>Gardé : {placeLabel(bar)}</Text>
       {owner || bar.ownerChildId ? (
         <Text style={styles.controlled} testID="bar-owner">
-          Appartient à {owner ?? 'un enfant'} (don du {bar.giftedAt ? formatDate(bar.giftedAt) : ''}) · gardé chez vous
+          Appartient à {owner ?? 'un enfant'} (don du {bar.giftedAt ? formatDate(bar.giftedAt) : ''})
         </Text>
       ) : null}
       {specLine(p.spec) ? (
@@ -197,5 +238,16 @@ const styles = StyleSheet.create({
   serial: { color: colors.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
   controlled: { color: colors.up, fontSize: 13, fontWeight: '700' },
   qr: { alignItems: 'center', gap: 8, paddingVertical: 6 },
+  places: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    backgroundColor: colors.surfaceAlt,
+  },
+  chipOn: { borderColor: colors.gold },
+  chipText: { color: colors.text, fontSize: 12.5, fontWeight: '600' },
   remove: { color: colors.textMuted, fontSize: 12.5, textDecorationLine: 'underline' },
 });

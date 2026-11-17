@@ -147,3 +147,29 @@ test('don d’un lingotin à un enfant : il reste chez le parent, seule la propr
   // L'enfant garde les dates d'achat d'origine (22 ans).
   assert.equal(barsOfChild(g, childId)[0].acquiredFrom, b10.acquiredFrom);
 });
+
+test('lieu de garde d’un lingotin : chez vous, coffre en banque, ailleurs', async () => {
+  const { giveBarToChild, setBarPlace, placeLabel, PLACE_LABEL } = await import('../src/logic/physical.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const { barQrText } = await import('../src/logic/homeVaultDoc.ts');
+  let a = withdrawPhysical(base(), p, { g10: 1 }, new Date('2026-11-16T12:00:00'));
+  const id = a.homeVault![0].id;
+  a = receiveBar(a, id, 'C841201');
+  assert.equal(placeLabel(a.homeVault![0]), 'Chez vous');
+  assert.deepEqual(Object.values(PLACE_LABEL), ['Chez vous', 'Coffre en banque', 'Autre lieu']);
+  a = setBarPlace(a, id, 'banque', 'Banque Dupont, agence centre');
+  assert.equal(placeLabel(a.homeVault![0]), 'Coffre en banque · Banque Dupont, agence centre');
+  assert.match(barQrText(a.homeVault![0]), /Lieu de garde : Coffre en banque/);
+  a = setBarPlace(a, id, 'autre', 'chez ma mère');
+  assert.equal(placeLabel(a.homeVault![0]), 'chez ma mère');
+  assert.throws(() => setBarPlace(a, 'x', 'maison'));
+  // Au moment du don, on choisit où il est gardé.
+  const added = addChild(a, 'Théo', '2015-06-01');
+  const g = giveBarToChild(added.account, p, id, added.child.id, new Date('2026-11-17T10:00:00'), {
+    place: 'banque',
+    note: 'Banque Dupont',
+  });
+  assert.equal(placeLabel(g.homeVault![0]), 'Coffre en banque · Banque Dupont');
+  assert.match(g.children[0].transactions[0].label, /coffre en banque/);
+  assert.equal(g.homeVault![0].ownerChildId, added.child.id);
+});

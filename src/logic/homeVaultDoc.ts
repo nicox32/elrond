@@ -6,7 +6,7 @@
 import { BAR_PHOTOS } from './barPhotos.ts';
 import { formatEur } from './format.ts';
 import { controlledOn } from './barControl.ts';
-import { homeVaultTotal, productOf, specLine } from './physical.ts';
+import { homeVaultTotal, placeLabel, productOf, specLine } from './physical.ts';
 import { qrSvg } from './qr.ts';
 import { docHead, esc, STYLE_A } from './statement.ts';
 import type { Account, HomeBar, Prices } from './types.ts';
@@ -24,9 +24,8 @@ export function barQrText(b: HomeBar, ownerName?: string): string {
     `${p.label} · ${grams} g d’or fin`,
     ...(specLine(p.spec) ? [specLine(p.spec)!] : []),
     ...(b.ref ? [`Réf. interne Orvia : ${b.ref}`] : []),
-    ...(b.ownerChildId
-      ? [`Propriété de ${ownerName ?? 'un enfant'} (don du ${d(b.giftedAt ?? b.orderedAt)}), gardé chez le parent`]
-      : []),
+    `Lieu de garde : ${placeLabel(b)}`,
+    ...(b.ownerChildId ? [`Propriété de ${ownerName ?? 'un enfant'} (don du ${d(b.giftedAt ?? b.orderedAt)})`] : []),
     b.serial ? `${p.coin ? 'Millésime' : 'N° de série'} : ${b.serial}` : 'N° de série : à noter à réception',
     `Retiré du coffre Orvia le ${d(b.orderedAt)}${b.receivedAt ? ` · reçu le ${d(b.receivedAt)}` : ''}`,
     `Or acheté du ${d(b.acquiredFrom)} au ${d(b.acquiredTo)}`,
@@ -55,7 +54,7 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
         <td style="width:70px">${BAR_PHOTOS[b.product] ? `<img src="${BAR_PHOTOS[b.product]}" width="64" height="64" alt="${esc(p.label)}" style="border-radius:6px"/>` : ''}</td>
         <td><b>${esc(p.label)}</b><br/>${b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin<br/>
           ${specLine(p.spec) ? `<span class="muted">${esc(specLine(p.spec)!)}${p.spec?.veriscan ? ' · VERISCAN' : ''}</span><br/>` : ''}
-          ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b>${b.ref ? `<br/><span class="muted">Réf. interne Orvia : ${esc(b.ref)}</span>` : ''}${b.ownerChildId ? `<br/><b>Propriété de ${esc(ownerOf(b))}</b> <span class="muted">(don du ${d(b.giftedAt ?? b.orderedAt)}, gardé chez le parent)</span>` : ''}</td>
+          ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b>${b.ref ? `<br/><span class="muted">Réf. interne Orvia : ${esc(b.ref)}</span>` : ''}${b.ownerChildId ? `<br/><b>Propriété de ${esc(ownerOf(b))}</b> <span class="muted">(don du ${d(b.giftedAt ?? b.orderedAt)})</span>` : ''}<br/><span class="muted">Lieu : ${esc(placeLabel(b))}</span></td>
         <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}${controlledOn(b) ? `<br/><b>✓ contrôlé le ${d(controlledOn(b)!)}</b>` : ''}</td>
         <td>Acheté du ${d(b.acquiredFrom)}<br/>au ${d(b.acquiredTo)}<br/>exonéré en ${exemptYear(b)}</td>
         <td class="num">${formatEur(b.cost)}</td>
