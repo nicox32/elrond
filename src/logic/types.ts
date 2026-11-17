@@ -205,6 +205,8 @@ export interface HomeBar {
   place?: 'maison' | 'banque' | 'autre';
   /** Précision du lieu : nom de la banque, adresse, proche… */
   placeNote?: string;
+  /** Sécurité maximale : ni déplacé ni vendu avant cette date (la majorité de l'enfant), ISO. */
+  lockedUntil?: string;
   /** Enfant propriétaire du lingotin (don : l'objet reste chez le parent, seule la propriété est cédée). */
   ownerChildId?: string;
   giftedAt?: string;

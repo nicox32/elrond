@@ -251,3 +251,40 @@ test('stockage chez le revendeur : grille en francs suisses depuis le 1er novemb
   close(top.yearlyFeeEur, 60_000 * 0.005 * rate, 1e-6);
   assert.equal(storageStatus(40_000 * rate, rate).tier, 'mid');
 });
+
+test('compte enfant : or converti en lingotin gardé chez le revendeur, fabrication payée par le parent', async () => {
+  const { convertChildToBars, barsOfChild, isLocked, setBarPlace, removeBar, CHILD_STORAGE_NOTE } =
+    await import('../src/logic/physical.ts');
+  const { addChild, fundChild, getChild } = await import('../src/logic/ledger.ts');
+  const t0 = new Date('2026-11-17T10:00:00');
+  let a = creditCash(buy(createAccount('T', new Date('2020-01-01')), p, 'gold', { unit: 'g', value: 50 }), 300);
+  const added = addChild(a, 'Théo', '2015-06-01', t0);
+  a = fundChild(added.account, p, added.child.id, 'gold', { unit: 'g', value: 20 }, t0);
+  const id = added.child.id;
+  const cash = a.cashEur ?? 0;
+  // Standard : gardé chez Gold Avenue, jamais livré.
+  const s = convertChildToBars(a, p, id, { g5: 1 }, false, t0);
+  const bar = barsOfChild(s, id)[0];
+  assert.equal(bar.ownerChildId, id);
+  assert.equal(bar.placeNote, CHILD_STORAGE_NOTE);
+  assert.equal(bar.lockedUntil, undefined);
+  close(getChild(s, id).holdings.gold, 15, 1e-9); // 5 g retirés de l'or de l'enfant
+  assert.equal(s.holdings.gold, a.holdings.gold); // pas de l'or du parent
+  // Fabrication seule (pas de livraison), payée depuis le compte d'attente du parent : 11 % de 500 €.
+  close(cash - (s.cashEur ?? 0), 55, 0.01);
+  assert.ok(!/livraison/i.test(s.transactions[0].label));
+  // Sécurité maximale : verrouillé jusqu'à la majorité (1er juin 2033).
+  const l = convertChildToBars(a, p, id, { g5: 1 }, true, t0);
+  const locked = barsOfChild(l, id)[0];
+  assert.equal(locked.lockedUntil!.slice(0, 4), '2033');
+  assert.equal(isLocked(locked, t0), true);
+  assert.equal(isLocked(locked, new Date('2033-07-01')), false);
+  assert.throws(() => setBarPlace(l, locked.id, 'maison', undefined, t0), /Sécurité maximale/);
+  assert.throws(() => removeBar(l, locked.id), /enfant/);
+  // Refus : pas assez d'or chez l'enfant, compte d'attente vide, pas de date de naissance pour le verrou.
+  assert.throws(() => convertChildToBars(a, p, id, { oz1: 1 }, false, t0), /Or insuffisant/);
+  assert.throws(() => convertChildToBars({ ...a, cashEur: 1 }, p, id, { g5: 1 }, false, t0), /compte d’attente/);
+  const noBirth = addChild(a, 'Léa', undefined, t0);
+  const f = fundChild(noBirth.account, p, noBirth.child.id, 'gold', { unit: 'g', value: 10 }, t0);
+  assert.throws(() => convertChildToBars(f, p, noBirth.child.id, { g5: 1 }, true, t0), /date de naissance/);
+});

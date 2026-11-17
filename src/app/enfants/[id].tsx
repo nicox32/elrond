@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AmountInput } from '../../components/AmountInput';
+import { ChildBarConvert } from '../../components/ChildBarConvert';
 import { ChildBarGifts } from '../../components/ChildBarGifts';
 import { ChildGiftCard } from '../../components/ChildGiftCard';
 import { ChildRules } from '../../components/ChildRules';
@@ -526,6 +527,8 @@ export default function ChildScreen() {
           <ChildGiftCard child={child} />
           <SectionTitle>Dons de lingotins</SectionTitle>
           <ChildBarGifts child={child} />
+          <SectionTitle>Convertir son or en lingotin</SectionTitle>
+          <ChildBarConvert child={child} />
         </>
       )}
 

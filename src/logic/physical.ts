@@ -503,8 +503,18 @@ export function placeLabel(b: Pick<HomeBar, 'place' | 'placeNote'>): string {
 }
 
 /** Change le lieu de garde d'un lingotin ou d'une pièce (chez vous, coffre en banque, ailleurs). */
-export function setBarPlace(account: Account, barId: string, place: BarPlace, note?: string): Account {
-  if (!(account.homeVault ?? []).some((b) => b.id === barId)) throw new LedgerError('Lingotin introuvable.');
+export function setBarPlace(
+  account: Account,
+  barId: string,
+  place: BarPlace,
+  note?: string,
+  now = new Date(),
+): Account {
+  const found = (account.homeVault ?? []).find((b) => b.id === barId);
+  if (!found) throw new LedgerError('Lingotin introuvable.');
+  if (isLocked(found, now) && (place !== (found.place ?? 'maison') || (note ?? '') !== (found.placeNote ?? ''))) {
+    throw new LedgerError('Sécurité maximale : ce lingotin ne peut pas être déplacé avant la majorité de l’enfant.');
+  }
   const clean = note?.trim().slice(0, 80);
   return {
     ...account,
@@ -514,6 +524,119 @@ export function setBarPlace(account: Account, barId: string, place: BarPlace, no
       return { ...rest, place, ...(clean ? { placeNote: clean } : {}) };
     }),
   };
+}
+
+/** Un lingotin en sécurité maximale est verrouillé jusqu'à la majorité de l'enfant. */
+export function isLocked(bar: Pick<HomeBar, 'lockedUntil'>, now = new Date()): boolean {
+  return !!bar.lockedUntil && now.getTime() < new Date(bar.lockedUntil).getTime();
+}
+
+export const CHILD_STORAGE_NOTE = 'Gold Avenue (stockage sécurisé)';
+
+/**
+ * Convertit de l'or du compte d'un enfant en lingotins ou pièces, au nom de l'enfant et gardés uniquement chez le
+ * revendeur (jamais livrés). Les grammes sortent de l'or de l'enfant ; seule la fabrication est payée, par le parent,
+ * depuis son compte d'attente (jamais sur l'or de l'enfant). En « sécurité maximale », le lingotin est verrouillé
+ * jusqu'à la majorité de l'enfant : pas de déplacement, ni de vente.
+ */
+export function convertChildToBars(
+  account: Account,
+  prices: Prices,
+  childId: string,
+  order: BarOrder,
+  lock: boolean,
+  now = new Date(),
+): Account {
+  const child = getChild(account, childId);
+  if (child.transferredAt) throw new LedgerError(`Le compte de ${child.name} lui a été transféré.`);
+  const majority = child.birthDate ? majorityDate(child.birthDate) : null;
+  if (majority && majority.getTime() <= now.getTime()) {
+    throw new LedgerError(`${child.name} est majeur : son compte lui est transféré.`);
+  }
+  if (lock && !majority) {
+    throw new LedgerError('La sécurité maximale demande la date de naissance de l’enfant : renseignez-la d’abord.');
+  }
+  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings));
+  if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
+  if (q.grams > child.holdings.gold + 1e-9) {
+    throw new LedgerError(
+      `Or insuffisant sur le compte de ${child.name} : ${child.holdings.gold.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g disponibles.`,
+    );
+  }
+  // Gardé chez le revendeur, jamais livré : seule la fabrication est payée (pas de livraison).
+  const fee = Math.round(q.premium * 100) / 100;
+  const cash = account.cashEur ?? 0;
+  if (fee > cash + 0.005) {
+    throw new LedgerError(
+      `Fabrication de ${fee.toFixed(2).replace('.', ',')} € à payer depuis votre compte d’attente (${cash.toFixed(2).replace('.', ',')} € disponibles) : créditez-le d’abord.`,
+    );
+  }
+  const lots = holdingLots(child).gold.map((l) => ({ ...l }));
+  const take = (grams: number) => {
+    let left = grams;
+    let cost = 0;
+    let from = '';
+    let to = '';
+    while (left > 1e-9 && lots.length) {
+      const lot = lots[0];
+      const used = Math.min(left, lot.grams);
+      cost += (lot.cost * used) / lot.grams;
+      from = from || lot.date;
+      to = lot.date;
+      lot.cost -= (lot.cost * used) / lot.grams;
+      lot.grams -= used;
+      left -= used;
+      if (lot.grams <= 1e-9) lots.shift();
+    }
+    return { cost, from: from || now.toISOString(), to: to || now.toISOString() };
+  };
+  const names = q.lines.map((l) => `${l.qty} × ${l.product.label.replace(/ \(.*/, '').toLowerCase()}`).join(', ');
+  const childTx = applyTx(
+    child,
+    'withdraw_physical',
+    { gold: -q.grams },
+    q.value,
+    `Lingotin(s) au nom de ${child.name} · ${names}${lock ? ' · sécurité maximale' : ''}`,
+    now,
+  );
+  const txId = childTx.transactions[0].id;
+  const usedRefs = new Set<string>((account.homeVault ?? []).flatMap((b) => (b.ref ? [b.ref] : [])));
+  const bars: HomeBar[] = [];
+  for (const l of q.lines) {
+    for (let i = 0; i < l.qty; i++) {
+      const t = take(l.product.grams);
+      bars.push({
+        id: newId(),
+        product: l.product.id,
+        grams: l.product.grams,
+        orderedAt: now.toISOString(),
+        status: 'preparing',
+        cost: Math.round(t.cost * 100) / 100,
+        acquiredFrom: t.from,
+        acquiredTo: t.to,
+        txId,
+        origin: 'commande',
+        ref: newRef(usedRefs),
+        ownerChildId: child.id,
+        giftedAt: now.toISOString(),
+        giftValue: Math.round(l.product.grams * prices.gold * 100) / 100,
+        place: 'autre',
+        placeNote: CHILD_STORAGE_NOTE,
+        ...(lock && majority ? { lockedUntil: majority.toISOString() } : {}),
+      });
+    }
+  }
+  let parent = replaceChildAccount(account, childTx);
+  if (fee > 0) {
+    parent = applyTx(parent, 'cash_out', {}, fee, `Fabrication des lingotins de ${child.name} (offerte)`, now);
+    const [tx, ...rest] = parent.transactions;
+    parent = {
+      ...parent,
+      cashEur: Math.round((cash - fee) * 100) / 100,
+      transactions: [{ ...tx, cash: -fee }, ...rest],
+    };
+  }
+  return { ...parent, homeVault: [...(parent.homeVault ?? []), ...bars] };
 }
 
 /** Lingotins et pièces qui appartiennent à un enfant (gardés chez le parent). */

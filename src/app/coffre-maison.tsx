@@ -11,6 +11,8 @@ import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
 import {
   type BarPlace,
   homeVaultTotal,
+  isLocked,
+  placeLabel,
   productOf,
   receiveBar,
   removeBar,
@@ -117,7 +119,14 @@ function BarCard({
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
       </View>
-      <PlaceEditor bar={bar} onChange={onPlace} title="Où il est gardé" />
+      {isLocked(bar) ? (
+        <Text style={styles.controlled} testID={`bar-lock-${bar.id}`}>
+          🔒 Sécurité maximale : verrouillé jusqu’au {new Date(bar.lockedUntil!).toLocaleDateString('fr-FR')} ·{' '}
+          {placeLabel(bar)}
+        </Text>
+      ) : (
+        <PlaceEditor bar={bar} onChange={onPlace} title="Où il est gardé" />
+      )}
       {owner || bar.ownerChildId ? (
         <Text style={styles.controlled} testID="bar-owner">
           Appartient à {owner ?? 'un enfant'} (don du {bar.giftedAt ? formatDate(bar.giftedAt) : ''})

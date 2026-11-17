@@ -67,6 +67,7 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
                 </Text>
                 <Text style={styles.sub}>
                   Donné le {b.giftedAt ? formatDate(b.giftedAt) : ''} · {formatEur(b.giftValue ?? 0)} · {placeLabel(b)}
+                  {b.lockedUntil ? ` · 🔒 jusqu’au ${new Date(b.lockedUntil).toLocaleDateString('fr-FR')}` : ''}
                 </Text>
               </View>
             </View>
