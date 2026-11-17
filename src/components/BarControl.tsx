@@ -284,6 +284,7 @@ function Detail({
             }
           />
         ) : null}
+        {bar.ref ? <KeyValue label="Réf. interne Orvia" value={bar.ref} /> : null}
         {bar.expectedSerial && !bar.serial ? (
           <KeyValue label="N° prévu par le stock" value={bar.expectedSerial} />
         ) : null}

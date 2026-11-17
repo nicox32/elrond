@@ -1,7 +1,7 @@
 // Société Orvia : stock de lingotins et de pièces. Les lots sont créés par quantité (x1, x10, x100…) ; un retrait
 // client prend d'abord dans le stock de la société, puis dans le coffre professionnel, sinon il faut commander.
 import { LedgerError, newId } from './ledger.ts';
-import { normalizeSerial, productOf, serialFormatError } from './physical.ts';
+import { newRef, normalizeSerial, productOf, serialFormatError } from './physical.ts';
 import type { Account, StockLot, StockMove } from './types.ts';
 
 export const MAX_BATCH = 10000;
@@ -43,7 +43,12 @@ function pushLog(account: Account, move: StockMove): StockMove[] {
 }
 
 /** Entre un lot en stock : plusieurs exemplaires d'un même format, au même endroit. */
-export function addStock(account: Account, input: StockInput, now = new Date()): Account {
+export function addStock(
+  account: Account,
+  input: StockInput,
+  now = new Date(),
+  random: () => number = Math.random,
+): Account {
   const product = productOf(input.product);
   if (!Number.isInteger(input.qty) || input.qty < 1 || input.qty > MAX_BATCH) {
     throw new LedgerError(`La quantité doit être un nombre entier entre 1 et ${MAX_BATCH}.`);
@@ -67,6 +72,12 @@ export function addStock(account: Account, input: StockInput, now = new Date()):
       serials.push(s);
     }
   }
+  // Une référence interne aléatoire par exemplaire : jamais une suite, jamais le numéro gravé de l'affinerie.
+  const taken = new Set<string>([
+    ...(account.homeVault ?? []).flatMap((b) => (b.ref ? [b.ref] : [])),
+    ...(account.stock ?? []).flatMap((l) => l.refs ?? []),
+  ]);
+  const refs = Array.from({ length: input.qty }, () => newRef(taken, random));
   const lot: StockLot = {
     id: newId(),
     product: product.id,
@@ -77,6 +88,7 @@ export function addStock(account: Account, input: StockInput, now = new Date()):
     ...(input.source === 'pro' && input.vault?.trim() ? { vault: input.vault.trim() } : {}),
     ...(input.unitCost !== undefined && Number.isFinite(input.unitCost) ? { unitCost: input.unitCost } : {}),
     ...(serials.length ? { serials } : {}),
+    refs,
     ...(input.note?.trim() ? { note: input.note.trim() } : {}),
   };
   const move: StockMove = {
@@ -102,6 +114,7 @@ export function adjustStock(account: Account, lotId: string, counted: number, no
   const diff = counted - lot.qty;
   if (diff === 0) return account;
   const serials = lot.serials && lot.serials.length > counted ? lot.serials.slice(0, counted) : lot.serials;
+  const refs = lot.refs && lot.refs.length > counted ? lot.refs.slice(0, counted) : lot.refs;
   const move: StockMove = {
     id: newId(),
     date: now.toISOString(),
@@ -115,7 +128,7 @@ export function adjustStock(account: Account, lotId: string, counted: number, no
   return {
     ...account,
     stock: (account.stock ?? []).map((l) =>
-      l.id === lotId ? { ...l, qty: counted, ...(serials ? { serials } : {}) } : l,
+      l.id === lotId ? { ...l, qty: counted, ...(serials ? { serials } : {}), ...(refs ? { refs } : {}) } : l,
     ),
     stockLog: pushLog(account, move),
   };

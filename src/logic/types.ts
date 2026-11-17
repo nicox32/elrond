@@ -197,6 +197,8 @@ export interface HomeBar {
   lotId?: string;
   /** Numéro de série prévu par le stock (à confirmer à la réception). */
   expectedSerial?: string;
+  /** Référence interne Orvia, tirée au hasard (jamais le numéro gravé par l'affinerie). */
+  ref?: string;
 }
 
 /** Un lot de lingotins ou de pièces en stock : plusieurs exemplaires du même format, au même endroit. */
@@ -216,6 +218,8 @@ export interface StockLot {
   unitCost?: number;
   /** Numéros de série connus et pas encore attribués, dans l'ordre de sortie. */
   serials?: string[];
+  /** Références internes Orvia (aléatoires) des exemplaires restants, dans l'ordre de sortie. */
+  refs?: string[];
   note?: string;
 }
 

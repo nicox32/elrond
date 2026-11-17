@@ -170,11 +170,11 @@ export function barSummary(account: Pick<Account, 'homeVault'>) {
   };
 }
 
-/** Recherche par numéro de série (espaces, tirets et casse ignorés). */
+/** Recherche par numéro de série ou référence interne (espaces, tirets et casse ignorés). */
 export function searchBars(account: Pick<Account, 'homeVault'>, query: string): HomeBar[] {
   const q = norm(query);
   const bars = account.homeVault ?? [];
-  return q ? bars.filter((b) => norm(b.serial ?? '').includes(q)) : bars;
+  return q ? bars.filter((b) => norm(b.serial ?? '').includes(q) || norm(b.ref ?? '').includes(q)) : bars;
 }
 
 /** Numéros de série (hors pièces, dont les millésimes se répètent) présents plus d'une fois dans la base. */

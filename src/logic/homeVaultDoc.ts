@@ -23,6 +23,7 @@ export function barQrText(b: HomeBar): string {
     'ORVIA · Coffre maison',
     `${p.label} · ${grams} g d’or fin`,
     ...(specLine(p.spec) ? [specLine(p.spec)!] : []),
+    ...(b.ref ? [`Réf. interne Orvia : ${b.ref}`] : []),
     b.serial ? `${p.coin ? 'Millésime' : 'N° de série'} : ${b.serial}` : 'N° de série : à noter à réception',
     `Retiré du coffre Orvia le ${d(b.orderedAt)}${b.receivedAt ? ` · reçu le ${d(b.receivedAt)}` : ''}`,
     `Or acheté du ${d(b.acquiredFrom)} au ${d(b.acquiredTo)}`,
@@ -50,7 +51,7 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
         <td style="width:70px">${BAR_PHOTOS[b.product] ? `<img src="${BAR_PHOTOS[b.product]}" width="64" height="64" alt="${esc(p.label)}" style="border-radius:6px"/>` : ''}</td>
         <td><b>${esc(p.label)}</b><br/>${b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin<br/>
           ${specLine(p.spec) ? `<span class="muted">${esc(specLine(p.spec)!)}${p.spec?.veriscan ? ' · VERISCAN' : ''}</span><br/>` : ''}
-          ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b></td>
+          ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b>${b.ref ? `<br/><span class="muted">Réf. interne Orvia : ${esc(b.ref)}</span>` : ''}</td>
         <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}${controlledOn(b) ? `<br/><b>✓ contrôlé le ${d(controlledOn(b)!)}</b>` : ''}</td>
         <td>Acheté du ${d(b.acquiredFrom)}<br/>au ${d(b.acquiredTo)}<br/>exonéré en ${exemptYear(b)}</td>
         <td class="num">${formatEur(b.cost)}</td>

@@ -93,3 +93,20 @@ test('numéros de série : jamais un numéro d’essai (123456, 111111, 121212�
   assert.throws(() => addStock(a, { product: 'g10', qty: 1, source: 'maison', serials: ['C123456'] }), /essai/);
   assert.equal(serialFormatError('nap20', '1910'), null); // un millésime n'est pas concerné
 });
+
+test('références internes Orvia : une par exemplaire, toujours aléatoires et uniques', () => {
+  let a = addStock(base(), { product: 'g10', qty: 100, source: 'maison' });
+  const refs = a.stock![0].refs!;
+  assert.equal(refs.length, 100);
+  assert.equal(new Set(refs).size, 100);
+  for (const r of refs) assert.match(r, /^OV-[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/);
+  // Deux tirages différents ne donnent pas les mêmes références.
+  const b = addStock(base(), { product: 'g10', qty: 100, source: 'maison' });
+  assert.notDeepEqual(b.stock![0].refs, refs);
+  // Le retrait prend la référence du stock ; une commande reçoit la sienne.
+  a = withdrawPhysical(a, p, { g10: 1 });
+  assert.equal(a.homeVault![0].ref, refs[0]);
+  assert.equal(a.stock![0].refs!.length, 99);
+  const c = withdrawPhysical(base(), p, { g5: 1 });
+  assert.match(c.homeVault![0].ref!, /^OV-/);
+});

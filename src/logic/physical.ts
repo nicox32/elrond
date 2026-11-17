@@ -55,6 +55,21 @@ export function normalizeSerial(productId: string, input: string): string {
   return isPamp(productId) && !productOf(productId).coin ? s.replace(/[\s\-_.]/g, '') : s;
 }
 
+const REF_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+/** Référence interne Orvia, toujours aléatoire : « OV-XXXX-XXXX » (jamais le numéro gravé par l'affinerie). */
+export function newRef(taken: Set<string> = new Set(), random: () => number = Math.random): string {
+  for (;;) {
+    let r = '';
+    for (let i = 0; i < 8; i++) r += REF_ALPHABET[Math.floor(random() * REF_ALPHABET.length)];
+    const ref = `OV-${r.slice(0, 4)}-${r.slice(4)}`;
+    if (!taken.has(ref)) {
+      taken.add(ref);
+      return ref;
+    }
+  }
+}
+
 /** Un numéro d'essai : chiffres tous identiques, suite (123456, 654321) ou motif répété (121212). */
 export function looksFake(digits: string): boolean {
   if (digits.length < 4) return false;
@@ -345,6 +360,10 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
     }
   }
   // Sortie du stock : d'abord ce que la société a chez elle, puis le coffre professionnel, sinon commande.
+  const usedRefs = new Set<string>([
+    ...(account.homeVault ?? []).flatMap((b) => (b.ref ? [b.ref] : [])),
+    ...(account.stock ?? []).flatMap((l) => l.refs ?? []),
+  ]);
   let stockLots = [...(account.stock ?? [])];
   const moves: StockMove[] = [];
   for (const bar of bars) {
@@ -353,14 +372,19 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
       stockLots.find((l) => l.product === bar.product && l.source === 'pro' && l.qty > 0);
     if (!lot) {
       bar.origin = 'commande';
+      bar.ref = newRef(usedRefs);
       continue;
     }
     const [serial, ...restSerials] = lot.serials ?? [];
+    const [ref, ...restRefs] = lot.refs ?? [];
+    bar.ref = ref ?? newRef(usedRefs);
     bar.origin = lot.source;
     bar.lotId = lot.id;
     if (serial) bar.expectedSerial = serial;
     stockLots = stockLots.map((l) =>
-      l.id === lot.id ? { ...l, qty: l.qty - 1, ...(serial ? { serials: restSerials } : {}) } : l,
+      l.id === lot.id
+        ? { ...l, qty: l.qty - 1, ...(serial ? { serials: restSerials } : {}), ...(ref ? { refs: restRefs } : {}) }
+        : l,
     );
     const last = moves[moves.length - 1];
     if (last && last.lotId === lot.id) last.qty -= 1;
