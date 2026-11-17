@@ -242,7 +242,7 @@ export default function AllocationScreen() {
           disabled={!preview || preview.lines.length === 0 || (source === 'cash' && amount > cash + 0.005)}
         />
         {message && <Message {...message} />}
-        <Hint>Un achat par métal, chacun avec ses frais (or 2,5 %, argent 6,3 %, platine 4,5 %).</Hint>
+        <Hint>Un achat par métal, chacun avec ses frais (or 2,8 %, argent 6,8 %, platine 4,5 %).</Hint>
       </Screen>
     </KeyboardAvoidingView>
   );

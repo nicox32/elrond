@@ -4,11 +4,11 @@ import type { Metal } from './types.ts';
  * Grille tarifaire d'Orvia : frais d'achat modérés et garde en coffre transparente, prélevée en métal chaque mois.
  * Les frais suivent la place prise au coffre et la liquidité de chaque métal : l'or et le platine, denses, sont peu
  * encombrants (garde 0,15 % et 0,2 % par an) ; l'argent, environ 80 fois plus volumineux à valeur égale, coûte plus
- * cher à stocker et à négocier (achat 6,3 %, garde 0,4 % par an).
+ * cher à stocker et à négocier (achat 6,8 %, garde 0,4 % par an).
  */
 export const FEES = {
   /** Frais de gestion à l'achat, en part du montant payé. */
-  buy: { gold: 0.025, silver: 0.063, platinum: 0.045 } as Record<Metal, number>,
+  buy: { gold: 0.028, silver: 0.068, platinum: 0.045 } as Record<Metal, number>,
   /** Garde en coffre, par an, en part du métal détenu ; prélevée en métal chaque mois (1/12). */
   custodyYearly: { gold: 0.0015, silver: 0.004, platinum: 0.002 } as Record<Metal, number>,
   /** Frais de gestion sur revente par virement vers un compte bancaire : aucune commission de revente. */
@@ -16,7 +16,7 @@ export const FEES = {
   /** Supplément fixe pour un virement vers un compte bancaire hors de France. */
   saleAbroadFixed: 30,
   /** Écart supplémentaire pour un virement immédiat (aucun en différé). */
-  immediateSpread: 0.01,
+  immediateSpread: 0.028,
   /** Frais de gestion sur la revente lors d'une conversion (s'ajoutent aux frais d'achat du métal reçu). */
   conversion: 0.008,
   /** Frais d'oxydation : part du solde facturée par jour d'une période de 6 mois sans mouvement. */

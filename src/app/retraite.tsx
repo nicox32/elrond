@@ -112,7 +112,7 @@ export default function RetirementScreen() {
                   À mettre de côté : <Text style={styles.strong}>{formatEur(st.monthly)} par mois</Text>
                 </Text>
                 <Text style={styles.muted}>
-                  Hors frais d’achat (2,5 % sur l’or). Sans nouveau versement, votre épargne vaudrait{' '}
+                  Hors frais d’achat (2,8 % sur l’or). Sans nouveau versement, votre épargne vaudrait{' '}
                   {formatEur(st.projectedWithoutSaving)} à cette date
                   {Number(growth) > 0 ? ` avec ${Number(growth) * 100} % de hausse par an` : ' au cours d’aujourd’hui'}.
                 </Text>

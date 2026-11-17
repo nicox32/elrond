@@ -19,7 +19,7 @@ test('export CSV : en-tête du modèle, « ; », virgule décimale, une ligne pa
   assert.equal(lines[0], CSV_COLUMNS.join(';'));
   assert.equal(
     lines[1],
-    '05/01/2026;2026;Compte principal;Achat de Gold Spot;Achat;Gold Spot;0,975000;100,0000;100,00;2,50;;',
+    '05/01/2026;2026;Compte principal;Achat de Gold Spot;Achat;Gold Spot;0,972000;100,0000;100,00;2,80;;',
   );
   const custody = lines.filter((l) => l.includes(';Frais de garde;'));
   assert.equal(custody.length, 2);

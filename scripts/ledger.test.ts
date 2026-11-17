@@ -27,9 +27,9 @@ const VALID_IBAN = 'FR76 3000 6000 0112 3456 7890 189';
 
 test('achat en euros, en grammes et en onces : frais en part du montant payé', () => {
   let acc = buy(createAccount('Test'), prices, 'gold', { unit: 'eur', value: 1000 });
-  close(acc.holdings.gold, (1000 * (1 - FEES.buy.gold)) / 100); // 2,5 % → 9,75 g
+  close(acc.holdings.gold, (1000 * (1 - FEES.buy.gold)) / 100); // 2,8 % → 9,72 g
   close(acc.transactions[0].eur, 1000, 0.01);
-  close(acc.transactions[0].fees ?? 0, 25, 0.01);
+  close(acc.transactions[0].fees ?? 0, 1000 * FEES.buy.gold, 0.01);
 
   acc = buy(createAccount('Test'), prices, 'silver', { unit: 'g', value: 50 });
   close(acc.holdings.silver, 50);
@@ -39,13 +39,13 @@ test('achat en euros, en grammes et en onces : frais en part du montant payé', 
   close(acc.holdings.platinum, TROY_OUNCE);
 });
 
-test('revente : aucune commission en différé, 1 % en immédiat', () => {
+test('revente : aucune commission en différé, 2,8 % en immédiat', () => {
   const start = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
   let acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'deferred');
   close(acc.transactions[0].eur, 100, 0.01);
   close(acc.transactions[0].fees ?? 0, 0, 0.01);
   acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'immediate');
-  close(acc.transactions[0].eur, 100 * (1 - 0.01), 0.01);
+  close(acc.transactions[0].eur, 100 * (1 - FEES.immediateSpread), 0.01);
   // saisie en euros = montant reçu
   acc = sell(start, prices, 'gold', { unit: 'eur', value: 100 }, 'deferred');
   close(acc.holdings.gold, 9);
@@ -100,7 +100,7 @@ test('virement SEPA : vend le métal, IBAN vérifié, frais fixe vers l’étran
   // Étranger (Belgique), immédiat : saisie en euros = montant reçu, + 30 € de frais fixe
   const be = addBeneficiary(account, 'iban', 'Zoé', 'BE68539007547034');
   acc = transferToIban(be.account, prices, 'gold', { unit: 'eur', value: 100 }, be.beneficiary, 'immediate');
-  close(acc.holdings.gold, 10 - 130 / (100 * (1 - 0.01)));
+  close(acc.holdings.gold, 10 - 130 / (100 * (1 - FEES.immediateSpread)));
   close(acc.transactions[0].eur, 100, 0.01);
   // trop faible pour couvrir les 30 €
   assert.throws(
@@ -698,14 +698,14 @@ test('relevés PDF : opérations de la période, soldes de début et de fin, avi
   assert.match(last, /Achat d’argent · compte d’attente/);
   assert.doesNotMatch(last, /Vente/); // novembre : hors période
   assert.match(last, /1 opération</);
-  assert.match(last, /Frais d’achat<\/div><div class="v">6,30/); // 6,3 % de 100 € d'argent
+  assert.match(last, /Frais d’achat<\/div><div class="v">6,80/); // 6,8 % de 100 € d'argent
   // Ligne détaillée : grammes, prix au gramme (hors frais), frais d'achat
-  assert.match(last, /\+ 93,700\u00a0g/);
+  assert.match(last, /\+ 93,200\u00a0g/);
   assert.match(last, /1,000\u00a0€\/g/);
-  // Soldes : 2 g d'or au 1er octobre, prix moyen payé pour l'argent frais compris (100 € / 93,7 g)
+  // Soldes : 2 g d'or au 1er octobre, prix moyen payé pour l'argent frais compris (100 € / 93,2 g)
   assert.match(last, /Au 01 octobre 2026/);
   assert.match(last, /2,000\u00a0g/);
-  assert.match(last, /1,067\u00a0€\/g/);
+  assert.match(last, /1,073\u00a0€\/g/);
   // Adresse du titulaire sur le relevé, et sur celui d'un compte enfant (représenté par le parent)
   const withAddr = {
     ...acc,
@@ -816,7 +816,7 @@ test('tableau de bord Société Orvia : revenus des frais, coûts estimés, seui
   acc = buy(acc, p, 'gold', { unit: 'eur', value: 500 }, new Date('2026-02-10'));
   acc = sell(acc, p, 'gold', { unit: 'g', value: 1 }, 'deferred', new Date('2026-03-10'));
   const r = companyReport(acc, p, 'year', new Date('2026-11-01'));
-  close(r.revenue.buy, 1000 * 0.063 + 500 * 0.025, 0.02);
+  close(r.revenue.buy, 1000 * FEES.buy.silver + 500 * FEES.buy.gold, 0.02);
   close(r.revenue.sale, 100 * FEES.sale, 0.02);
   assert.ok(r.costs.custody > 0 && r.costs.kyc === COMPANY.kycPerAccount);
   close(r.margin, r.revenue.total - r.costs.total, 0.02);
@@ -879,11 +879,11 @@ test('épargne depuis 2019 : 25 € par semaine en 4 achats, 50/25/25, frais com
   );
   close(
     acc.transactions.reduce((s, t) => s + (t.fees ?? 0), 0),
-    403.5,
+    431.8,
     1,
   );
-  close(acc.holdings.gold, 83.94, 0.05);
-  close(acc.holdings.silver, 3334.7, 1);
+  close(acc.holdings.gold, 83.68, 0.05);
+  close(acc.holdings.silver, 3316.7, 1);
   close(acc.holdings.platinum, 81.98, 0.05);
   assert.equal(acc.history2019Prices, 'monthly');
   assert.ok(acc.transactions.every((t) => t.origin === 'history2019'));
@@ -1125,8 +1125,8 @@ test('don mensuel à l’enfant : rappel une fois, don en un geste, automatique,
   // Don en un geste : 50 € achetés sur le compte du parent, tout versé à l'enfant.
   a = giveMonthlyGift(r.account, p, r0.child.id, day);
   const c = a.children[0];
-  close(c.holdings.gold, (40 * (1 - 0.025)) / 110, 1e-6);
-  close(c.holdings.silver, (10 * (1 - 0.063)) / 1.4, 1e-6);
+  close(c.holdings.gold, (40 * (1 - FEES.buy.gold)) / 110, 1e-6);
+  close(c.holdings.silver, (10 * (1 - FEES.buy.silver)) / 1.4, 1e-6);
   close(a.holdings.gold, 0, 1e-9);
   assert.equal(giftDue(c.giftPlan, day), false);
   assert.ok(a.transactions.some((t) => t.label.includes('don à Théo')));

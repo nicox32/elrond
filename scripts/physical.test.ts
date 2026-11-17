@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { buy, createAccount, creditCash, LedgerError, minOrderError, quoteBuy, sell } from '../src/logic/ledger.ts';
+import { FEES } from '../src/logic/fees.ts';
 import { isWeekendClosed } from '../src/logic/market.ts';
 import { cancelOrder, placeOrder, runPendingOrders } from '../src/logic/orders.ts';
 import {
@@ -42,7 +43,7 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   const bars = w.homeVault!;
   assert.equal(bars[0].grams, 5);
   assert.equal(bars[0].acquiredTo.slice(0, 4), '2020');
-  close(bars[0].cost, (5 * 100) / (1 - 0.025), 0.01); // prix de revient d'origine, frais compris
+  close(bars[0].cost, (5 * 100) / (1 - FEES.buy.gold), 0.01); // prix de revient d'origine, frais compris
   assert.equal(bars[1].acquiredFrom.slice(0, 4), '2020');
   assert.equal(bars[1].acquiredTo.slice(0, 4), '2024');
   assert.equal(bars[2].acquiredFrom.slice(0, 4), '2024');
@@ -86,7 +87,7 @@ test('minimum d’achat 10 € sur le total, supplément du week-end, ordres pas
   assert.match(r.notices[1].body, /Vente/);
   // L'ordre passe au cours de lundi.
   const silverBuy = r.account.transactions.find((t) => t.label.startsWith('Achat d’argent') && t.eur === 20)!;
-  close(silverBuy.deltas.silver, (20 * (1 - 0.063)) / 1.02, 1e-5);
+  close(silverBuy.deltas.silver, (20 * (1 - FEES.buy.silver)) / 1.02, 1e-5);
   // Une vente immédiate du week-end porte le supplément dans son libellé.
   const s = sell(a, p, 'gold', { unit: 'g', value: 1 }, 'deferred', new Date(), 0.005);
   assert.match(s.transactions[0].label, /week-end immédiat/);

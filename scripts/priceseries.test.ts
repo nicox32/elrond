@@ -43,7 +43,7 @@ test('historique des cours : 20 ans livrés avec l’appli, relevés de l’appl
 });
 
 test('tarif Orvia : achat frais compris, revente sans commission ; zones du ratio', () => {
-  assert.equal(Math.round(applyMode(100, 'gold', 'buy') * 100) / 100, 102.56);
+  assert.equal(Math.round(applyMode(100, 'gold', 'buy') * 100) / 100, 102.88);
   assert.equal(applyMode(100, 'gold', 'sell'), 100);
   assert.equal(applyMode(100, 'gold', 'spot'), 100);
   assert.equal(ratioZone(82).tone, 'silver');
