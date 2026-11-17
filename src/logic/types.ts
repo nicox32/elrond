@@ -131,6 +131,8 @@ export interface Settings {
     vendor?: Record<string, number>;
     /** Livraison facturée par envoi, en euros. */
     delivery?: number;
+    /** Livraison payée au vendeur par commande, en euros (sert au coût dans Société Orvia). */
+    vendorDelivery?: number;
     /** Livraison offerte à partir de ce poids d'or dans l'envoi (g). */
     freeFromGrams?: number;
   };

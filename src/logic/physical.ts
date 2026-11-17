@@ -83,9 +83,10 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'g5',
     label: 'Lingotin 5 g',
     grams: 5,
-    // Prime payée au vendeur : 7,63 % (relevé du 17/11/2026) ; facturée 9 % au client, soit environ 1,4 point de marge.
-    premium: 0.09,
-    vendorPremium: 0.0763,
+    // Relevé du 18/11/2026 : 621,01 € TTC pour 1 lingotin + 7 € de livraison. Les frais du vendeur (8,91 % du prix)
+    // font 9,78 % de la valeur de l'or ; facturée 11 % au client, soit environ 1,2 point de marge (≈ 7 €).
+    premium: 0.11,
+    vendorPremium: 0.0978,
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
@@ -168,6 +169,8 @@ export const PHYSICAL = {
   delivery: 12,
   /** … offerte à partir de ce poids d'or dans le même envoi (inciter à grouper les retraits). */
   freeDeliveryFromGrams: 20,
+  /** Livraison payée au vendeur, par commande (relevé du 18/11/2026). */
+  vendorDelivery: 7,
   /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
   vatSilverPlatinum: 0.2,
   /** Délai indicatif de livraison, en jours ouvrés. */
@@ -182,6 +185,8 @@ export interface PhysicalFees {
   /** Prime payée au vendeur, par produit (seulement ceux dont elle est connue). */
   vendor: Record<string, number>;
   delivery: number;
+  /** Livraison payée au vendeur, par commande. */
+  vendorDelivery: number;
   freeFromGrams: number;
 }
 
@@ -198,6 +203,7 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
     premiums,
     vendor,
     delivery: s.delivery ?? PHYSICAL.delivery,
+    vendorDelivery: s.vendorDelivery ?? PHYSICAL.vendorDelivery,
     freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
   };
 }
@@ -249,10 +255,10 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
   const premium = lines.reduce((s, l) => s + l.premium, 0);
   const delivery = !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
   const total = Math.round((premium + delivery) * 100) / 100;
-  // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) ; la livraison est répercutée.
+  // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) et sa livraison, par commande.
   const cost =
     lines.length && lines.every((l) => l.vendorCost !== undefined)
-      ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0)
+      ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0) + fees.vendorDelivery
       : undefined;
   return { lines, grams, value, premium, delivery, fees: total, feesPct: value ? total / value : 0, cost };
 }
@@ -323,7 +329,7 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
       {
         ...tx,
         cash: -q.fees,
-        ...(q.cost !== undefined ? { costEur: Math.round((q.cost + q.delivery) * 100) / 100 } : {}),
+        ...(q.cost !== undefined ? { costEur: Math.round(q.cost * 100) / 100 } : {}),
       },
       ...rest,
     ],

@@ -24,6 +24,7 @@ export function PhysicalFeesEditor() {
   );
   const [delivery, setDelivery] = useState(String(fees.delivery).replace('.', ','));
   const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
+  const [vDelivery, setVDelivery] = useState(String(fees.vendorDelivery).replace('.', ','));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const valid =
@@ -35,7 +36,9 @@ export function PhysicalFeesEditor() {
     parseAmount(delivery) >= 0 &&
     parseAmount(delivery) <= 200 &&
     parseAmount(free) >= 0 &&
-    parseAmount(free) <= 1000;
+    parseAmount(free) <= 1000 &&
+    parseAmount(vDelivery) >= 0 &&
+    parseAmount(vDelivery) <= 200;
 
   function save() {
     const prem: Record<string, number> = {};
@@ -45,7 +48,13 @@ export function PhysicalFeesEditor() {
       if (vendor[p.id].trim()) vend[p.id] = toRate(vendor[p.id]);
     }
     updateSettings({
-      physicalFees: { premiums: prem, vendor: vend, delivery: parseAmount(delivery), freeFromGrams: parseAmount(free) },
+      physicalFees: {
+        premiums: prem,
+        vendor: vend,
+        delivery: parseAmount(delivery),
+        vendorDelivery: parseAmount(vDelivery),
+        freeFromGrams: parseAmount(free),
+      },
     });
     setMsg({
       ok: true,
@@ -59,6 +68,7 @@ export function PhysicalFeesEditor() {
     setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(physicalFeesOf().vendor[p.id])])));
     setDelivery(String(PHYSICAL.delivery));
     setFree(String(PHYSICAL.freeDeliveryFromGrams));
+    setVDelivery(String(PHYSICAL.vendorDelivery));
     setMsg({ ok: true, text: 'Valeurs par défaut rétablies.' });
   }
 
@@ -135,6 +145,20 @@ export function PhysicalFeesEditor() {
             accessibilityLabel="Livraison offerte dès"
           />
         </View>
+      </View>
+      <View style={{ gap: 5 }}>
+        <Label>Livraison payée au vendeur, par commande (€)</Label>
+        <TextInput
+          value={vDelivery}
+          onChangeText={setVDelivery}
+          keyboardType="decimal-pad"
+          style={ui.input}
+          accessibilityLabel="Livraison payée au vendeur"
+        />
+        <Hint>
+          Comptée dans votre coût : avec 12 € facturés au client et 7 € payés au vendeur, la livraison laisse 5 € de
+          marge (rien si elle est offerte).
+        </Hint>
       </View>
       <Button title="Enregistrer les frais" onPress={save} disabled={!valid} />
       <Button title="Rétablir les valeurs par défaut" variant="ghost" onPress={reset} />
