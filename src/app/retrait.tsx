@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { BarImage } from '../components/BarImage';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { formatEur, formatWeight } from '../logic/format';
@@ -74,6 +75,7 @@ export default function WithdrawScreen() {
           const n = order[p.id] ?? 0;
           return (
             <View key={p.id} style={[styles.row, i > 0 && styles.border]}>
+              <BarImage product={p.id} size={58} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{p.label}</Text>
                 <Text style={styles.sub}>

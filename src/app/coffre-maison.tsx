@@ -9,6 +9,7 @@ import { controlledOn } from '../logic/barControl';
 import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
 import { homeVaultTotal, productOf, receiveBar, removeBar, specLine } from '../logic/physical';
 import { exportPdf } from '../pdf';
+import { BarImage } from '../components/BarImage';
 import { QrCode } from '../components/QrCode';
 import type { HomeBar } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
@@ -83,7 +84,8 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
   return (
     <Card style={{ gap: 6, borderColor: bar.status === 'received' ? metalColor.gold : colors.border }}>
       <View style={styles.head}>
-        <Text style={styles.name}>{p.label}</Text>
+        <BarImage product={bar.product} size={46} />
+        <Text style={[styles.name, { flex: 1, marginLeft: 10 }]}>{p.label}</Text>
         <Text style={[styles.badge, bar.status === 'received' ? styles.ok : styles.wait]}>
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
@@ -120,7 +122,7 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
               setSerial(t);
               setMsg(null);
             }}
-            placeholder={p.coin ? 'Millésime de la pièce (ex. 1910)' : 'Numéro de série gravé sur le lingotin'}
+            placeholder={p.coin ? 'Millésime de la pièce (ex. 1910)' : 'N° gravé sur le lingotin (ex. C841201)'}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="characters"
             style={ui.input}

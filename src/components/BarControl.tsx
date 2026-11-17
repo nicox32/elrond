@@ -23,6 +23,7 @@ import { productOf, specLine } from '../logic/physical';
 import type { HomeBar } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
+import { BarImage } from './BarImage';
 import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, Label, ListRow, Message, SectionTitle, styles as ui } from './ui';
 
@@ -180,6 +181,7 @@ export function BarControl({ onBack }: { onBack: () => void }) {
             <ListRow
               key={b.id}
               first={i === 0}
+              left={<BarImage product={b.product} size={40} />}
               title={`${label(b)} · ${b.serial ?? 'n° à noter'}`}
               subtitle={subtitle(b)}
               right={<Pill state={barState(b)} />}
@@ -264,7 +266,8 @@ function Detail({
     <>
       <Card style={{ gap: 6 }}>
         <View style={styles.head}>
-          <Text style={styles.name}>{label(bar)}</Text>
+          <BarImage product={bar.product} size={64} />
+          <Text style={[styles.name, { flex: 1, marginLeft: 12 }]}>{label(bar)}</Text>
           <Pill state={state} />
         </View>
         {specLine(p.spec) ? <Text style={ui.hint}>{specLine(p.spec)}</Text> : null}
@@ -361,8 +364,15 @@ function ControlForm({ bar, onDone, onCancel }: { bar: HomeBar; onDone: () => vo
       <Card style={{ gap: 12 }}>
         <Check on={sealed} onChange={setSealed} title="Emballage et scellé intacts" />
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Field label={p.coin ? 'Millésime' : 'N° de série du lingotin'} value={serialBar} onChange={setSerialBar} />
-          {!p.coin ? <Field label="N° de la carte d’essai" value={serialCard} onChange={setSerialCard} /> : null}
+          <Field label={p.coin ? 'Millésime' : 'N° gravé sur le lingotin'} value={serialBar} onChange={setSerialBar} />
+          {!p.coin ? (
+            <Field
+              label="Certificate Number (carte)"
+              value={serialCard}
+              onChange={setSerialCard}
+              placeholder="ex. C841201"
+            />
+          ) : null}
         </View>
         <Field
           label={`Poids mesuré (g) · attendu ${g(expectedWeight(bar))} g`}

@@ -72,7 +72,7 @@ export function evaluateControl(bar: HomeBar, input: ControlInput, tol: Toleranc
     const same = sb.length >= 3 && sb === sc;
     lines.push({
       key: 'serial',
-      label: 'Numéro de série = carte d’essai',
+      label: 'N° gravé = Certificate Number de la carte',
       ok: same,
       detail:
         !sb || !sc

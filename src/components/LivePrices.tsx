@@ -5,6 +5,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { formatEur as formatEurShort, formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/format';
 import { BAR_PRODUCTS, productPrice } from '../logic/physical';
+import { BarImage } from './BarImage';
 import { METAL_LABEL } from '../logic/ledger';
 import { metalTrend } from '../logic/priceHistory';
 import { METALS, type WeightUnit } from '../logic/types';
@@ -13,7 +14,6 @@ import { LIVE_REFRESH_MS, useBank } from '../state/BankProvider';
 import { colors, metalColor, metalSymbol } from '../theme';
 
 const SPARK_H = 30;
-const pctShort = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`;
 
 /** Cours en direct de l'or, de l'argent et du platine, avec leur évolution sur 24 h. */
 export function LivePrices({ unit }: { unit: WeightUnit }) {
@@ -80,19 +80,19 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
           const p = productPrice(b, quote.prices.gold);
           return (
             <View key={b.id} style={styles.barsLine} testID={`bar-${b.id}`}>
+              <BarImage product={b.id} size={30} />
               <Text style={styles.barsName} numberOfLines={1}>
                 {b.coin ? 'Napoléon 20 F' : b.id === 'oz1' ? 'Lingot 1 once' : `Lingotin ${b.grams} g`}
-                <Text style={styles.priceOther}>
-                  {'  '}
-                  {b.coin ? `prime ${pctShort(b.premium)}` : `fab. ${pctShort(b.premium)}`}
-                </Text>
               </Text>
               <Text style={styles.barsVal}>{formatEurShort(p.metal)}</Text>
               <Text style={[styles.barsVal, styles.barsGold]}>{formatEurShort(p.withPremium)}</Text>
             </View>
           );
         })}
-        <Text style={styles.priceOther}>Livraison 12 €, offerte dès 20 g · touchez pour un retrait physique</Text>
+        <Text style={styles.priceOther}>
+          Fabrication 2 à 4,5 % (Napoléon : prime ≈ 6 %) · livraison 12 €, offerte dès 20 g · touchez pour un retrait
+          physique
+        </Text>
       </Pressable>
 
       <Pressable
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   bars: { paddingVertical: 10, gap: 5 },
   barsHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 2 },
   barsCol: { color: colors.textMuted, fontSize: 10.5, width: 82, textAlign: 'right' },
-  barsLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  barsLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   barsName: { color: colors.text, fontSize: 13.5, fontWeight: '600', flex: 1 },
   barsVal: { color: colors.textMuted, fontSize: 13, width: 82, textAlign: 'right', fontVariant: ['tabular-nums'] },
   barsGold: { color: colors.text, fontWeight: '700' },
