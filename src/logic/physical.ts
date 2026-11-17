@@ -42,6 +42,26 @@ export const VERISCAN_NOTE =
 
 const mm = (n: number) => n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 
+/** Les numéros de certificat PAMP s'écrivent toujours « C » suivi de 6 chiffres (ex. C841201). */
+export const PAMP_SERIAL = /^C\d{6}$/;
+
+const isPamp = (productId: string) => productOf(productId).spec?.producer === 'PAMP Suisse';
+
+/** Numéro tel qu'il est gravé : majuscules, sans espace ni tiret pour un lingot PAMP (« c 841-201 » → « C841201 »). */
+export function normalizeSerial(productId: string, input: string): string {
+  const s = input.trim().toUpperCase();
+  return isPamp(productId) && !productOf(productId).coin ? s.replace(/[\s\-_.]/g, '') : s;
+}
+
+/** Message d'erreur si le numéro n'a pas le format du producteur, sinon null. */
+export function serialFormatError(productId: string, input: string): string | null {
+  const p = productOf(productId);
+  if (!isPamp(productId) || p.coin) return null;
+  return PAMP_SERIAL.test(normalizeSerial(productId, input))
+    ? null
+    : 'Un numéro PAMP s’écrit « C » suivi de 6 chiffres (ex. C841201).';
+}
+
 /** Fiche technique en une ligne : « PAMP Suisse · or 999,9 · 23,3 × 14 × 0,79 mm ». */
 export function specLine(s: BarSpec | undefined): string | null {
   if (!s) return null;
@@ -243,10 +263,13 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
 
 /** Lingotin reçu : on note la date et son numéro de série (gravé sur le lingotin et son certificat). */
 export function receiveBar(account: Account, barId: string, serial: string, now = new Date()): Account {
-  const s = serial.trim().toUpperCase();
+  const found = (account.homeVault ?? []).find((b) => b.id === barId);
+  const s = found ? normalizeSerial(found.product, serial) : serial.trim().toUpperCase();
   if (s.length < 3) throw new LedgerError('Indiquez le numéro de série du lingotin, ou le millésime de la pièce.');
   const bar = (account.homeVault ?? []).find((b) => b.id === barId);
   if (!bar) throw new LedgerError('Lingotin introuvable.');
+  const formatError = serialFormatError(bar.product, s);
+  if (formatError) throw new LedgerError(formatError);
   // Un numéro de série ne peut désigner qu'un lingot (les millésimes d'une pièce, eux, se répètent).
   const key = (x: string) => x.replace(/[\s\-_.]/g, '').toUpperCase();
   if (

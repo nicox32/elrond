@@ -4,7 +4,7 @@
  * réception, pas qu'il était authentique au départ (pour cela : VERISCAN de l'affinerie et carte d'essai).
  */
 import { LedgerError } from './ledger.ts';
-import { productOf } from './physical.ts';
+import { normalizeSerial, productOf, serialFormatError } from './physical.ts';
 import type { Account, BarCheck, HomeBar } from './types.ts';
 
 export const DEFAULT_TOLERANCE = { weightG: 0.05, dimMm: 0.2 } as const;
@@ -70,6 +70,15 @@ export function evaluateControl(bar: HomeBar, input: ControlInput, tol: Toleranc
   } else {
     const sc = norm(input.serialCard ?? '');
     const same = sb.length >= 3 && sb === sc;
+    const fmtError = serialFormatError(bar.product, input.serialBar);
+    if (p.spec?.producer === 'PAMP Suisse') {
+      lines.push({
+        key: 'format',
+        label: 'Format du numéro (C + 6 chiffres)',
+        ok: !fmtError,
+        detail: fmtError ?? 'Conforme au format PAMP',
+      });
+    }
     lines.push({
       key: 'serial',
       label: 'N° gravé = Certificate Number de la carte',
@@ -199,7 +208,7 @@ export function recordControl(account: Account, barId: string, input: ControlInp
   const bar = (account.homeVault ?? []).find((b) => b.id === barId);
   if (!bar) throw new LedgerError('Lingotin introuvable.');
   const p = productOf(bar.product);
-  const serial = input.serialBar.trim().toUpperCase();
+  const serial = normalizeSerial(bar.product, input.serialBar);
   if (serial.length < 3) throw new LedgerError(p.coin ? 'Indiquez le millésime.' : 'Indiquez le numéro de série.');
   if (!p.coin && serialTaken(account, serial, barId)) {
     throw new LedgerError('Ce numéro de série est déjà dans la base pour un autre lingot.');

@@ -35,8 +35,8 @@ function withBars() {
 }
 const ok5 = {
   sealed: true,
-  serialBar: 'VC-482917',
-  serialCard: 'vc 482917',
+  serialBar: 'C482917',
+  serialCard: 'c 482-917',
   weight: 5.01,
   length: 23.3,
   width: 14,
@@ -56,18 +56,14 @@ test('contrôle à la réception : série = carte d’essai, pesée, dimensions,
     JSON.stringify(good),
   );
   // Numéro différent de la carte, poids hors marge, dimension hors marge, VERISCAN non fait.
-  const bad = evaluateControl(
-    bar5,
-    { ...ok5, serialCard: 'VC-000000', weight: 4.9, width: 14.5, veriscan: false },
-    tol,
-  );
+  const bad = evaluateControl(bar5, { ...ok5, serialCard: 'C000000', weight: 4.9, width: 14.5, veriscan: false }, tol);
   assert.deepEqual(
     bad.filter((l) => !l.ok).map((l) => l.key),
     ['serial', 'weight', 'dims', 'veriscan'],
   );
   const r = recordControl(a, bar5.id, ok5, new Date('2026-11-21T12:00:00'));
   const done = r.homeVault!.find((b) => b.id === bar5.id)!;
-  assert.equal(done.serial, 'VC-482917');
+  assert.equal(done.serial, 'C482917'); // « C482917 » normalisé
   assert.equal(done.weightRef, 5.01);
   assert.equal(done.status, 'received');
   assert.equal(barState(done), 'ok');
@@ -78,7 +74,7 @@ test('contrôle à la réception : série = carte d’essai, pesée, dimensions,
   const an = recordControl(
     a,
     b10.id,
-    { ...ok5, serialBar: 'VC-1', weight: 10, serialCard: 'VC-1', length: 26.5, width: 15.8, thickness: 1.25 },
+    { ...ok5, serialBar: 'C000001', weight: 10, serialCard: 'C000001', length: 26.5, width: 15.8, thickness: 1.25 },
     new Date(),
   );
   assert.equal(barState(an.homeVault!.find((b) => b.id === b10.id)!), 'ok');
@@ -88,7 +84,7 @@ test('base : recherche par numéro, doublons refusés, pièces à millésime ré
   let a = withBars();
   const [b5, b10, coin] = a.homeVault!;
   a = recordControl(a, b5.id, ok5, new Date());
-  assert.equal(searchBars(a, 'vc 482917').length, 1);
+  assert.equal(searchBars(a, 'c 482917').length, 1);
   assert.equal(searchBars(a, 'zz').length, 0);
   assert.equal(searchBars(a, '').length, 3);
   assert.throws(
@@ -96,18 +92,19 @@ test('base : recherche par numéro, doublons refusés, pièces à millésime ré
       recordControl(a, b10.id, {
         ...ok5,
         weight: 10,
-        serialCard: 'VC-482917',
+        serialCard: 'C482917',
         length: 26.5,
         width: 15.8,
         thickness: 1.25,
       }),
     /déjà dans la base/,
   );
-  assert.throws(() => receiveBar(a, b10.id, 'vc482917'), /déjà dans la base/);
+  assert.throws(() => receiveBar(a, b10.id, 'c482917'), /déjà dans la base/);
   assert.equal(duplicateSerials(a).length, 0);
   // Pièce : millésime accepté même s'il se répète.
   a = receiveBar(a, coin.id, '1912');
-  assert.doesNotThrow(() => receiveBar(a, b10.id, '1912'));
+  assert.throws(() => receiveBar(a, b10.id, '1912'), /« C » suivi de 6 chiffres/); // numéro PAMP mal formé
+  assert.doesNotThrow(() => receiveBar(a, b10.id, 'c 100-200'));
   assert.throws(() => recordControl(a, b5.id, { ...ok5, serialBar: ' ', serialCard: ' ' }), LedgerError);
   const s = barSummary(a);
   assert.deepEqual(s, { total: 3, todo: 2, anomalies: 0 });
@@ -122,8 +119,8 @@ test('recontrôle par pesée : écart hors marge = anomalie, levée après véri
     b.id,
     {
       sealed: true,
-      serialBar: 'VC-9',
-      serialCard: 'VC-9',
+      serialBar: 'C000009',
+      serialCard: 'C000009',
       weight: 10.01,
       length: 26.5,
       width: 15.8,
@@ -158,4 +155,20 @@ test('pièce : poids brut 6,45 g, marge d’usure, pas de carte d’essai', () =
   assert.ok(!lines.some((l) => l.key === 'veriscan'));
   const worn = evaluateControl(coin, { sealed: true, serialBar: '1912', weight: 6.2, diameter: 21 }, toleranceOf(a));
   assert.equal(worn.find((l) => l.key === 'weight')!.ok, false);
+});
+
+test('numéro PAMP : « C » + 6 chiffres, normalisé, vérifié au contrôle', async () => {
+  const { normalizeSerial, serialFormatError } = await import('../src/logic/physical.ts');
+  assert.equal(normalizeSerial('g5', ' c 841-201 '), 'C841201');
+  assert.equal(serialFormatError('g5', 'C841201'), null);
+  assert.match(serialFormatError('g5', 'C84120') ?? '', /6 chiffres/);
+  assert.match(serialFormatError('g10', 'VC-482915') ?? '', /« C » suivi de 6 chiffres/);
+  assert.equal(serialFormatError('nap20', '1912'), null); // une pièce : millésime
+  const a = withBars();
+  const bar5 = a.homeVault!.find((b) => b.grams === 5)!;
+  const lines = evaluateControl(bar5, { ...ok5, serialBar: 'C84120', serialCard: 'C84120' }, toleranceOf(a));
+  assert.equal(lines.find((l) => l.key === 'format')!.ok, false);
+  assert.equal(lines.find((l) => l.key === 'serial')!.ok, true);
+  const bad = recordControl(a, bar5.id, { ...ok5, serialBar: 'C84120', serialCard: 'C84120' }, new Date());
+  assert.equal(barState(bad.homeVault!.find((b) => b.id === bar5.id)!), 'anomaly'); // enregistré comme anomalie
 });

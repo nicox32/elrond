@@ -45,8 +45,8 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
     holdingLots(w).gold.reduce((s, l) => s + l.grams, 0),
     7,
   );
-  const r = receiveBar(w, bars[0].id, ' ab-123456 ');
-  assert.equal(r.homeVault![0].serial, 'AB-123456');
+  const r = receiveBar(w, bars[0].id, ' c 841-201 ');
+  assert.equal(r.homeVault![0].serial, 'C841201');
   assert.equal(r.homeVault![0].status, 'received');
   assert.throws(() => receiveBar(w, bars[0].id, ' '), LedgerError);
   assert.deepEqual(homeVaultTotal(r, p).grams, 25);
@@ -116,10 +116,10 @@ test('coffre maison : fiche QR de chaque objet et inventaire imprimable', async 
     100,
   );
   a = withdrawPhysical(a, p, { g10: 1, nap20: 1 }, new Date('2026-11-16T12:00:00'));
-  a = receiveBar(a, a.homeVault![0].id, 'ab123456', new Date('2026-11-20T12:00:00'));
+  a = receiveBar(a, a.homeVault![0].id, 'c 841-201', new Date('2026-11-20T12:00:00'));
   const text = barQrText(a.homeVault![0]);
   assert.match(text, /Lingotin 10 g/);
-  assert.match(text, /N° de série : AB123456/);
+  assert.match(text, /N° de série : C841201/);
   assert.match(text, /Exonéré de plus-value en 2041/);
   assert.match(text, /pas un certificat d’authenticité/);
   assert.match(barQrText(a.homeVault![1]), /Millésime : à noter|N° de série : à noter/);
