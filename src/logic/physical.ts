@@ -137,8 +137,10 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'oz1',
     label: 'Lingot 1 once (31,1 g)',
     grams: OZ_GRAMS,
-    // Provisoire : prime vendeur non relevée (probablement autour de 6 %). 2 % vendait certainement à perte.
-    premium: 0.065,
+    // Relevé du 18/11/2026 (détail du prix) : valeur métal 3 508,47 €, frais 182,03 € = 5,19 % ; 7 € de livraison.
+    // Facturée 6 % : environ 0,8 point de marge (≈ 28 €), moins les 7 € de livraison offerte dès 20 g.
+    premium: 0.06,
+    vendorPremium: 0.0519,
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',

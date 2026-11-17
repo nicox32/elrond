@@ -163,7 +163,8 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   // Coût inconnu si un format sans prime vendeur : pas de coût calculé.
   assert.equal(def.vendor.g10, 0.064);
   assert.equal(def.vendor.g20, 0.0653);
-  assert.equal(quoteWithdrawal(p, { g5: 1, oz1: 1 }, def).cost, undefined); // 1 once : prime vendeur inconnue
+  assert.equal(def.vendor.oz1, 0.0519);
+  assert.equal(quoteWithdrawal(p, { g5: 1, nap20: 1 }, def).cost, undefined); // Napoléon : prime vendeur inconnue
   close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0978 + 10 * 100 * 0.064 + 7, 1e-9);
   // Réglages de Société Orvia : fabrication, livraison, seuil.
   const custom = physicalFeesOf({
