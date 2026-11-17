@@ -161,7 +161,9 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   close(q5.fees, 55 + 12, 0.01);
   close(q5.cost!, 5 * 100 * 0.0978 + 7, 1e-9); // lingotin payé au vendeur + sa livraison
   // Coût inconnu si un format sans prime vendeur : pas de coût calculé.
-  assert.equal(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost, undefined);
+  assert.equal(def.vendor.g10, 0.064);
+  assert.equal(quoteWithdrawal(p, { g5: 1, g20: 1 }, def).cost, undefined); // 20 g : prime vendeur inconnue
+  close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0978 + 10 * 100 * 0.064 + 7, 1e-9);
   // Réglages de Société Orvia : fabrication, livraison, seuil.
   const custom = physicalFeesOf({
     physicalFees: { premiums: { g5: 0.08 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },

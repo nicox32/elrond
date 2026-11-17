@@ -101,9 +101,10 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'g10',
     label: 'Lingotin 10 g',
     grams: 10,
-    // Relevé du 18/11/2026 : le vendeur affiche +4,80 % sur la valeur de l'or (tableau de prix), mais le total au
-    // paiement du 5 g était environ 2 points plus haut que ce tableau : prime vendeur non fixée, fabrication à 7 %.
+    // Relevé du 18/11/2026 : 1 lingotin 1 199,83 € à la commande (+ 7 € de livraison) pour 1 127,83 € d'or, soit
+    // 6,4 % de prime (le tableau de prix du vendeur affichait +4,80 %). Facturée 7 % au client : ≈ 0,6 point (≈ 7 €).
     premium: 0.07,
+    vendorPremium: 0.064,
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
