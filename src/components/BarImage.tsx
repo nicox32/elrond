@@ -2,12 +2,13 @@ import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-n
 
 import { colors } from '../theme';
 
-/** Photos produit des lingotins (emballage PAMP Suisse). Pas de photo pour le Napoléon : un repère « 20 F ». */
+/** Photos produit des lingotins (emballage PAMP Suisse). Photo du Napoléon : coq de Chaplain. */
 const IMAGES: Record<string, ImageSourcePropType> = {
   g5: require('../../assets/bars/g5.jpg'),
   g10: require('../../assets/bars/g10.jpg'),
   g20: require('../../assets/bars/g20.jpg'),
   oz1: require('../../assets/bars/oz1.jpg'),
+  nap20: require('../../assets/bars/nap20.jpg'),
 };
 
 /** Vignette d'un produit : sa photo sur fond blanc (l'emballage est blanc), ou le repère de la pièce. */
