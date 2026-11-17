@@ -272,6 +272,21 @@ function Detail({
         </View>
         {specLine(p.spec) ? <Text style={ui.hint}>{specLine(p.spec)}</Text> : null}
         <KeyValue label={p.coin ? 'Millésime' : 'N° de série'} value={bar.serial ?? 'à noter à réception'} />
+        {bar.origin ? (
+          <KeyValue
+            label="Origine"
+            value={
+              bar.origin === 'maison'
+                ? 'Stock de la société'
+                : bar.origin === 'pro'
+                  ? 'Coffre professionnel'
+                  : 'Commande chez le revendeur'
+            }
+          />
+        ) : null}
+        {bar.expectedSerial && !bar.serial ? (
+          <KeyValue label="N° prévu par le stock" value={bar.expectedSerial} />
+        ) : null}
         <KeyValue label="Poids attendu" value={`${g(expectedWeight(bar))} g`} />
         <KeyValue label="Poids de référence" value={bar.weightRef ? `${g(bar.weightRef)} g` : '—'} />
         <KeyValue label="Commandé le" value={formatDate(bar.orderedAt)} />
@@ -323,7 +338,7 @@ function ControlForm({ bar, onDone, onCancel }: { bar: HomeBar; onDone: () => vo
   const p = productOf(bar.product);
   const spec = p.spec;
   const [sealed, setSealed] = useState(false);
-  const [serialBar, setSerialBar] = useState(bar.serial ?? '');
+  const [serialBar, setSerialBar] = useState(bar.serial ?? bar.expectedSerial ?? '');
   const [serialCard, setSerialCard] = useState('');
   const [weight, setWeight] = useState('');
   const [length, setLength] = useState('');

@@ -191,6 +191,45 @@ export interface HomeBar {
   weightRef?: number;
   /** Contrôles faits sur cet objet (réception, recontrôles, levée d'anomalie), du plus ancien au plus récent. */
   checks?: BarCheck[];
+  /** D'où vient l'objet : stock de la société, coffre professionnel, ou commande chez le revendeur. */
+  origin?: 'maison' | 'pro' | 'commande';
+  /** Lot du stock dans lequel il a été pris. */
+  lotId?: string;
+  /** Numéro de série prévu par le stock (à confirmer à la réception). */
+  expectedSerial?: string;
+}
+
+/** Un lot de lingotins ou de pièces en stock : plusieurs exemplaires du même format, au même endroit. */
+export interface StockLot {
+  id: string;
+  /** Produit : « g5 », « g10 », « g20 », « oz1 » ou « nap20 ». */
+  product: string;
+  /** « maison » : chez la société ; « pro » : coffre professionnel (expédié à la demande). */
+  source: 'maison' | 'pro';
+  /** Exemplaires restants et exemplaires entrés. */
+  qty: number;
+  qtyInitial: number;
+  addedAt: string;
+  /** Nom du coffre professionnel. */
+  vault?: string;
+  /** Prix payé au vendeur par exemplaire, métal compris (€). Information : n'entre pas dans les comptes. */
+  unitCost?: number;
+  /** Numéros de série connus et pas encore attribués, dans l'ordre de sortie. */
+  serials?: string[];
+  note?: string;
+}
+
+/** Un mouvement du stock : entrée, sortie vers un client, ou ajustement à l'inventaire. */
+export interface StockMove {
+  id: string;
+  date: string;
+  kind: 'in' | 'out' | 'adjust';
+  product: string;
+  /** Quantité (positive pour une entrée, négative pour une sortie ou une perte). */
+  qty: number;
+  source: 'maison' | 'pro';
+  lotId?: string;
+  note?: string;
 }
 
 /** Un contrôle d'un lingotin ou d'une pièce (base interne, Société Orvia). */
@@ -323,6 +362,9 @@ export interface Account extends Wallet {
   pendingOrders?: PendingOrder[];
   /** Lingotins retirés du coffre et gardés chez soi. */
   homeVault?: HomeBar[];
+  /** Stock de lingotins et de pièces de la société (Société Orvia), et son journal. */
+  stock?: StockLot[];
+  stockLog?: StockMove[];
   /** Canal ntfy secret pour les alertes 24 h/24 envoyées par le serveur. */
   ntfyTopic?: string;
   /** Compte d'attente : euros disponibles pour acheter des métaux. */

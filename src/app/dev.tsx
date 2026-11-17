@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { BarControl } from '../components/BarControl';
+import { StockManager } from '../components/StockManager';
 import { CodeConfirm } from '../components/CodeConfirm';
 import { ChildGifts2022 } from '../components/ChildGifts2022';
 import { History2019 } from '../components/History2019';
 import { History900 } from '../components/History900';
+import { stockSummary } from '../logic/stock';
 import { PhysicalFeesEditor } from '../components/PhysicalFeesEditor';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
@@ -104,9 +106,17 @@ function CompanyDashboard() {
   const { quote, updateAccount, updateSettings } = useBank();
   const [vaultConfirm, setVaultConfirm] = useState(false);
   const [period, setPeriod] = useState<CompanyPeriod>('year');
-  const [view, setView] = useState<'dashboard' | 'bars'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'bars' | 'stock'>('dashboard');
   const r = companyReport(account, quote.prices, period);
   const years = r.years.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+
+  if (view === 'stock') {
+    return (
+      <Screen testID="screen-stock">
+        <StockManager onBack={() => setView('dashboard')} />
+      </Screen>
+    );
+  }
 
   if (view === 'bars') {
     return (
@@ -207,6 +217,16 @@ function CompanyDashboard() {
           })()}
           onPress={() => setView('bars')}
           testID="open-bar-control"
+        />
+        <ListRow
+          title="Stock de lingots et pièces"
+          subtitle={(() => {
+            const rows = stockSummary(account);
+            const total = rows.reduce((t, r) => t + r.total, 0);
+            return total ? `${total} exemplaire${total > 1 ? 's' : ''} en stock` : 'Aucun lot · retraits commandés';
+          })()}
+          onPress={() => setView('stock')}
+          testID="open-stock"
         />
       </Card>
       <PhysicalFeesEditor />

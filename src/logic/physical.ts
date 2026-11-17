@@ -5,7 +5,7 @@
  */
 import { applyTx, LedgerError, newId } from './ledger.ts';
 import { holdingLots } from './tax.ts';
-import type { Account, HomeBar, Prices, Settings } from './types.ts';
+import type { Account, HomeBar, Prices, Settings, StockMove } from './types.ts';
 
 export const OZ_GRAMS = 31.1034768;
 
@@ -332,8 +332,42 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
       });
     }
   }
+  // Sortie du stock : d'abord ce que la société a chez elle, puis le coffre professionnel, sinon commande.
+  let stockLots = [...(account.stock ?? [])];
+  const moves: StockMove[] = [];
+  for (const bar of bars) {
+    const lot =
+      stockLots.find((l) => l.product === bar.product && l.source === 'maison' && l.qty > 0) ??
+      stockLots.find((l) => l.product === bar.product && l.source === 'pro' && l.qty > 0);
+    if (!lot) {
+      bar.origin = 'commande';
+      continue;
+    }
+    const [serial, ...restSerials] = lot.serials ?? [];
+    bar.origin = lot.source;
+    bar.lotId = lot.id;
+    if (serial) bar.expectedSerial = serial;
+    stockLots = stockLots.map((l) =>
+      l.id === lot.id ? { ...l, qty: l.qty - 1, ...(serial ? { serials: restSerials } : {}) } : l,
+    );
+    const last = moves[moves.length - 1];
+    if (last && last.lotId === lot.id) last.qty -= 1;
+    else {
+      moves.push({
+        id: newId(),
+        date: now.toISOString(),
+        kind: 'out',
+        product: bar.product,
+        qty: -1,
+        source: lot.source,
+        lotId: lot.id,
+        note: `Retrait client · ${label}`,
+      });
+    }
+  }
   next = {
     ...next,
+    ...(moves.length ? { stock: stockLots, stockLog: [...moves, ...(account.stockLog ?? [])].slice(0, 500) } : {}),
     cashEur: Math.round((cash - q.fees) * 100) / 100,
     transactions: [
       {
