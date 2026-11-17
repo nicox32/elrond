@@ -39,15 +39,15 @@ test('achat en euros, en grammes et en onces : frais en part du montant payé', 
   close(acc.holdings.platinum, TROY_OUNCE);
 });
 
-test('revente : 0,8 % en différé, 0,8 % + 1 % en immédiat', () => {
+test('revente : aucune commission en différé, 1 % en immédiat', () => {
   const start = buy(createAccount('Test'), prices, 'gold', { unit: 'g', value: 10 });
   let acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'deferred');
-  close(acc.transactions[0].eur, 100 * (1 - 0.008), 0.01);
-  close(acc.transactions[0].fees ?? 0, 0.8, 0.01);
+  close(acc.transactions[0].eur, 100, 0.01);
+  close(acc.transactions[0].fees ?? 0, 0, 0.01);
   acc = sell(start, prices, 'gold', { unit: 'g', value: 1 }, 'immediate');
-  close(acc.transactions[0].eur, 100 * (1 - 0.008 - 0.01), 0.01);
+  close(acc.transactions[0].eur, 100 * (1 - 0.01), 0.01);
   // saisie en euros = montant reçu
-  acc = sell(start, prices, 'gold', { unit: 'eur', value: 99.2 }, 'deferred');
+  acc = sell(start, prices, 'gold', { unit: 'eur', value: 100 }, 'deferred');
   close(acc.holdings.gold, 9);
   // tout revendre
   const value = accountValue(start, prices).total;
@@ -94,13 +94,13 @@ test('virement SEPA : vend le métal, IBAN vérifié, frais fixe vers l’étran
   assert.throws(() => addBeneficiary(start, 'iban', 'Bob', 'FR00 1234'), LedgerError);
   const { account, beneficiary } = addBeneficiary(start, 'iban', 'Bob', VALID_IBAN.replace(/ /g, ''));
   assert.equal(beneficiary.identifier, VALID_IBAN);
-  // France, différé : Bob reçoit 198,40 € pour 2 g
+  // France, différé : Bob reçoit 200 € pour 2 g (aucune commission)
   let acc = transferToIban(account, prices, 'gold', { unit: 'g', value: 2 }, beneficiary, 'deferred');
-  close(acc.transactions[0].eur, 198.4, 0.01);
+  close(acc.transactions[0].eur, 200, 0.01);
   // Étranger (Belgique), immédiat : saisie en euros = montant reçu, + 30 € de frais fixe
   const be = addBeneficiary(account, 'iban', 'Zoé', 'BE68539007547034');
   acc = transferToIban(be.account, prices, 'gold', { unit: 'eur', value: 100 }, be.beneficiary, 'immediate');
-  close(acc.holdings.gold, 10 - 130 / (100 * (1 - 0.018)));
+  close(acc.holdings.gold, 10 - 130 / (100 * (1 - 0.01)));
   close(acc.transactions[0].eur, 100, 0.01);
   // trop faible pour couvrir les 30 €
   assert.throws(

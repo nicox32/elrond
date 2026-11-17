@@ -67,7 +67,7 @@ export default function MetalPriceScreen() {
           ? `Cours au comptant de ${METAL_LABEL[metal] === 'Gold Spot' ? 'l’or' : METAL_LABEL[metal].toLowerCase()}, converti en euros.`
           : mode === 'buy'
             ? `Prix payé pour 1 ${unit === 'g' ? 'gramme' : 'once'} chez Orvia, frais d’achat de ${pct(FEES.buy[metal])} compris.`
-            : `Prix reçu pour 1 ${unit === 'g' ? 'gramme' : 'once'} revendu par virement différé, frais de ${pct(FEES.sale)} déduits (avant impôt).`}{' '}
+            : `Prix reçu pour 1 ${unit === 'g' ? 'gramme' : 'once'} revendu par virement différé, sans commission de revente (avant impôt).`}{' '}
         Historique quotidien sur 20 ans (une valeur par semaine avant les 2 dernières années), puis les relevés de
         l’appli. Mis à jour le {new Date(updated).toLocaleDateString('fr-FR')}.
       </Hint>

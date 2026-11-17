@@ -261,7 +261,7 @@ function OperationForm({ initialMode, initialMetal }: { initialMode: Mode; initi
           {mode === 'buy'
             ? `Paiement par carte bancaire. Frais d’achat : ${pct(FEES.buy[metal])} du montant. Achat minimum : ${FEES.minOrder} €.`
             : mode === 'sell'
-              ? `Les euros sont versés sur votre compte bancaire en France. Frais de revente : ${pct(FEES.sale)}. L’impôt est calculé et retenu automatiquement, au régime le moins cher.`
+              ? `Les euros sont versés sur votre compte bancaire en France. Revente sans commission. L’impôt est calculé et retenu automatiquement, au régime le moins cher.`
               : `Frais de conversion : ${pct(FEES.conversion)} + frais d’achat du métal reçu.`}{' '}
           1 once troy = 31,1035 g.
         </Hint>

@@ -11,8 +11,8 @@ export const FEES = {
   buy: { gold: 0.025, silver: 0.063, platinum: 0.045 } as Record<Metal, number>,
   /** Garde en coffre, par an, en part du métal détenu ; prélevée en métal chaque mois (1/12). */
   custodyYearly: { gold: 0.0012, silver: 0.004, platinum: 0.002 } as Record<Metal, number>,
-  /** Frais de gestion sur revente par virement vers un compte bancaire. */
-  sale: 0.008,
+  /** Frais de gestion sur revente par virement vers un compte bancaire : aucune commission de revente. */
+  sale: 0,
   /** Supplément fixe pour un virement vers un compte bancaire hors de France. */
   saleAbroadFixed: 30,
   /** Écart supplémentaire pour un virement immédiat (aucun en différé). */
@@ -73,10 +73,10 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
   {
     title: 'Revente de métaux précieux',
     rows: [
-      { label: 'Virement vers un compte bancaire en France', orvia: pct(FEES.sale) },
+      { label: 'Virement vers un compte bancaire en France', orvia: 'Gratuit (0 % de commission de revente)' },
       {
         label: 'Virement vers un compte bancaire à l’étranger',
-        orvia: `${pct(FEES.sale)} + ${FEES.saleAbroadFixed} €`,
+        orvia: `${FEES.saleAbroadFixed} € de frais fixes`,
       },
       { label: 'Écart en virement immédiat', orvia: pct(FEES.immediateSpread) },
       { label: `Écart en virement différé (${DEFERRED_DAYS} jours ouvrés)`, orvia: 'Aucun' },
