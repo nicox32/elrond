@@ -61,9 +61,9 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   close(rep.revenue.physical, q.fees, 0.01);
 });
 
-test('minimum d’achat 10 € sur le total, supplément du week-end, ordres passés lundi', () => {
-  assert.match(minOrderError(9.99) ?? '', /10 €/);
-  assert.equal(minOrderError(10), null);
+test('minimum d’achat 5 € sur le total, supplément du week-end, ordres passés lundi', () => {
+  assert.match(minOrderError(4.99) ?? '', /5 €/);
+  assert.equal(minOrderError(5), null);
   // Supplément immédiat du week-end : 0,5 % de plus sur les frais.
   const normal = quoteBuy(p, 'gold', { unit: 'eur', value: 100 });
   const weekend = quoteBuy(p, 'gold', { unit: 'eur', value: 100 }, 0.005);
@@ -72,7 +72,7 @@ test('minimum d’achat 10 € sur le total, supplément du week-end, ordres pas
   assert.equal(isWeekendClosed(new Date('2026-11-14T12:00:00')), true);
   assert.equal(isWeekendClosed(new Date('2026-11-16T10:00:00')), false);
   let a = buy(createAccount('T', new Date('2026-11-01')), p, 'gold', { unit: 'g', value: 10 });
-  assert.throws(() => placeOrder(a, { kind: 'buy', metal: 'gold', q: { unit: 'eur', value: 5 } }), /minimum/);
+  assert.throws(() => placeOrder(a, { kind: 'buy', metal: 'gold', q: { unit: 'eur', value: 4 } }), /minimum/);
   a = placeOrder(a, { kind: 'buy', metal: 'silver', q: { unit: 'eur', value: 20 } });
   a = placeOrder(a, { kind: 'split', amounts: { gold: 15, silver: 5 } }); // 5 € d'argent : permis dans un achat de 20 €
   a = placeOrder(a, { kind: 'sell', metal: 'gold', q: { unit: 'g', value: 100 } }); // trop : refusé lundi

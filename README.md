@@ -167,7 +167,7 @@ jamais dans Git (dossier `signing/` ignoré).
   (frais client et prime du vendeur par format, marge calculée, livraison), payées depuis le compte d'attente (pas une vente, pas
   d'impôt, la durée de détention continue). Registre « Mon coffre maison » : numéro de série, prix et dates d'achat
   d'origine. Argent et platine non retirables (20 % de TVA à la sortie du port franc).
-- **Règles d'achat** : minimum 10 € sur le total de l'opération, aucun minimum de frais. Le week-end (marché fermé),
+- **Règles d'achat** : minimum 5 € sur le total de l'opération, aucun minimum de frais. Le week-end (marché fermé),
   ordre au cours de la réouverture sans supplément, ou tout de suite avec 0,5 % ; programme, bot et dons attendent
   lundi.
 - **Contrôle des lingots** (Société Orvia, derrière le code) : base interne des lingotins et pièces du coffre maison.

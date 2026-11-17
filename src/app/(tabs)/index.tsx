@@ -12,6 +12,7 @@ import { HomeNews } from '../../components/HomeNews';
 import { HomeNtfyBanner } from '../../components/HomeNtfyBanner';
 import { UpdateBanner } from '../../components/UpdateBanner';
 import { Banner, Card, ListRow, Screen, SectionTitle, styles as ui, Title } from '../../components/ui';
+import { FEES } from '../../logic/fees';
 import { formatEur, formatPercent, formatUnitPrice, formatWeight } from '../../logic/format';
 import { accountValue, METAL_LABEL, REFERRAL } from '../../logic/ledger';
 import { formatLou, loyalty } from '../../logic/loyalty';
@@ -67,6 +68,11 @@ export default function AccountScreen() {
   return (
     <Screen testID="screen-compte">
       <Title>Bonjour {account.holder}</Title>
+      <Text style={styles.tagline} testID="tagline">
+        Or, argent et platine dès {FEES.minOrder} €, à toute heure et tous les jours de l’année : en une fois ou chaque
+        semaine, puis en lingotins quand vous le voulez. Les ordres du week-end sont exécutés à la réouverture du
+        marché.
+      </Text>
       <UpdateBanner />
       <PriceStatus />
       <DormancyNotice wallet={account} />
@@ -350,6 +356,7 @@ const styles = StyleSheet.create({
   sub: { color: colors.textMuted, fontSize: 11 },
   alertClose: { position: 'absolute', top: 8, right: 10, padding: 4 },
   alertCloseText: { color: colors.textMuted, fontSize: 16, fontWeight: '700' },
+  tagline: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17, marginTop: -6 },
   tiles: { flexDirection: 'row', gap: 10, marginTop: 12 },
   tile: { flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12 },
   tileLabel: { color: colors.textMuted, fontSize: 11.5 },

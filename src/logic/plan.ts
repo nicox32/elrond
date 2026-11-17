@@ -31,7 +31,7 @@ export function newPlan(now = new Date()): BuyPlan {
     active: true,
     amount: 25,
     frequency: 'weekly',
-    // Un achat de 25 € le lundi (chaque achat doit faire au moins 10 €, et le marché est ouvert).
+    // Un achat de 25 € le lundi (chaque achat doit faire au moins 5 €, et le marché est ouvert).
     days: [1],
     dayOfMonth: 5,
     source: 'card',
