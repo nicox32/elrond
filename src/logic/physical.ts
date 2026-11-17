@@ -102,8 +102,8 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Lingotin 10 g',
     grams: 10,
     // Relevé du 18/11/2026 : 1 lingotin 1 199,83 € à la commande (+ 7 € de livraison) pour 1 127,83 € d'or, soit
-    // 6,4 % de prime (le tableau de prix du vendeur affichait +4,80 %). Facturée 7 % au client : ≈ 0,6 point (≈ 7 €).
-    premium: 0.07,
+    // 6,4 % de prime (le tableau de prix du vendeur affichait +4,80 %). Facturée 7,5 % au client : ≈ 1,1 point (≈ 12 €).
+    premium: 0.075,
     vendorPremium: 0.064,
     spec: {
       veriscan: true,
@@ -119,7 +119,10 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'g20',
     label: 'Lingotin 20 g',
     grams: 20,
-    premium: 0.025,
+    // Relevé du 18/11/2026 (détail du prix) : valeur métal 2 259,61 €, frais 147,57 € = 6,53 % ; 7 € de livraison.
+    // Facturée 7,5 % : environ 1 point de marge (≈ 22 €), la livraison étant offerte dès 20 g (7 € à votre charge).
+    premium: 0.075,
+    vendorPremium: 0.0653,
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
@@ -134,7 +137,8 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'oz1',
     label: 'Lingot 1 once (31,1 g)',
     grams: OZ_GRAMS,
-    premium: 0.02,
+    // Provisoire : prime vendeur non relevée (probablement autour de 6 %). 2 % vendait certainement à perte.
+    premium: 0.065,
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',

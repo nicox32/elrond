@@ -90,9 +90,9 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
     title: 'Retrait physique (or uniquement)',
     rows: [
       { label: 'Lingotin 5 g (PAMP Suisse, numéro de série, certificat, VERISCAN)', orvia: 'Fabrication 11 %' },
-      { label: 'Lingotin 10 g', orvia: 'Fabrication 7 %' },
-      { label: 'Lingotin 20 g', orvia: 'Fabrication 2,5 %' },
-      { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication 2 %' },
+      { label: 'Lingotin 10 g', orvia: 'Fabrication 7,5 %' },
+      { label: 'Lingotin 20 g', orvia: 'Fabrication 7,5 %' },
+      { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication 6,5 %' },
       { label: 'Napoléon 20 F (5,81 g d’or fin)', orvia: 'Prime ≈ 6 %, variable' },
       { label: 'Livraison assurée, remise contre signature', orvia: '12 € par envoi, offerte dès 20 g' },
       { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
