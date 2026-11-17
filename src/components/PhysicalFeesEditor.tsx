@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
-import { BAR_PRODUCTS, physicalFeesOf, PHYSICAL } from '../logic/physical';
+import { BAR_PRODUCTS, physicalFeesOf, PHYSICAL, vendorPremiumFrom } from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
@@ -26,6 +26,15 @@ export function PhysicalFeesEditor() {
   const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
   const [vDelivery, setVDelivery] = useState(String(fees.vendorDelivery).replace('.', ','));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [calcId, setCalcId] = useState(BAR_PRODUCTS[BAR_PRODUCTS.length - 1].id);
+  const [calcPrice, setCalcPrice] = useState('');
+  const [calcFees, setCalcFees] = useState('');
+  const calcProduct = BAR_PRODUCTS.find((p) => p.id === calcId) ?? BAR_PRODUCTS[0];
+  const calcRate = vendorPremiumFrom(
+    parseAmount(calcPrice),
+    calcFees.trim() ? parseAmount(calcFees) : null,
+    calcProduct.grams * quote.prices.gold,
+  );
 
   const valid =
     BAR_PRODUCTS.every((p) => {
@@ -160,6 +169,73 @@ export function PhysicalFeesEditor() {
           marge (rien si elle est offerte).
         </Hint>
       </View>
+      <View style={styles.calc}>
+        <Text style={styles.title}>Calculateur de prime vendeur</Text>
+        <Hint>
+          Sur la page du revendeur, choisissez « Livrer en France » et relevez le prix. Si elle affiche les frais en
+          euros, saisissez-les aussi : le calcul est exact. Sinon, il compare le prix à la valeur de l’or du moment.
+        </Hint>
+        <View style={styles.chips}>
+          {BAR_PRODUCTS.map((p) => (
+            <Pressable
+              key={p.id}
+              onPress={() => setCalcId(p.id)}
+              style={[styles.chip, p.id === calcId && styles.chipOn]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: p.id === calcId }}
+            >
+              <Text style={[styles.chipText, p.id === calcId && { color: colors.gold }]}>
+                {p.label
+                  .replace(/ \(.*/, '')
+                  .replace('Lingotin ', '')
+                  .replace('Lingot ', '')
+                  .replace('Napoléon 20 F', 'Napoléon')}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Label>Prix du site (€)</Label>
+            <TextInput
+              value={calcPrice}
+              onChangeText={setCalcPrice}
+              keyboardType="decimal-pad"
+              placeholder="698,91"
+              placeholderTextColor={colors.textMuted}
+              style={ui.input}
+              accessibilityLabel="Prix du site"
+            />
+          </View>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Label>Frais du site (€)</Label>
+            <TextInput
+              value={calcFees}
+              onChangeText={setCalcFees}
+              keyboardType="decimal-pad"
+              placeholder="42,83 (facultatif)"
+              placeholderTextColor={colors.textMuted}
+              style={ui.input}
+              accessibilityLabel="Frais du site"
+            />
+          </View>
+        </View>
+        <Text style={styles.result} testID="calc-result">
+          {calcRate === null
+            ? 'Saisissez le prix pour calculer.'
+            : `Prime vendeur : ${toText(calcRate)} % de la valeur de l’or`}
+        </Text>
+        <Button
+          title={`Mettre dans Vendeur % (${calcProduct.label.replace(/ \(.*/, '')})`}
+          variant="ghost"
+          disabled={calcRate === null}
+          onPress={() => {
+            if (calcRate === null) return;
+            setVendor((x) => ({ ...x, [calcId]: toText(calcRate) }));
+            setMsg({ ok: true, text: 'Valeur placée dans la colonne Vendeur %. Enregistrez pour la garder.' });
+          }}
+        />
+      </View>
       <Button title="Enregistrer les frais" onPress={save} disabled={!valid} />
       <Button title="Rétablir les valeurs par défaut" variant="ghost" onPress={reset} />
       {msg ? <Message {...msg} /> : null}
@@ -182,5 +258,18 @@ const styles = StyleSheet.create({
   line: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { color: colors.text, fontSize: 14, fontWeight: '600' },
   input: { flexGrow: 1, flexBasis: 0, minWidth: 0, paddingVertical: 9, paddingHorizontal: 10, fontSize: 15 },
+  calc: { gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.surfaceAlt,
+  },
+  chipOn: { borderColor: colors.gold },
+  chipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  result: { color: colors.text, fontSize: 14, fontWeight: '700' },
   margin: { color: colors.textMuted, fontSize: 12 },
 });

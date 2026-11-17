@@ -4,7 +4,13 @@ import { test } from 'node:test';
 import { buy, createAccount, creditCash, LedgerError, minOrderError, quoteBuy, sell } from '../src/logic/ledger.ts';
 import { isWeekendClosed } from '../src/logic/market.ts';
 import { cancelOrder, placeOrder, runPendingOrders } from '../src/logic/orders.ts';
-import { homeVaultTotal, quoteWithdrawal, receiveBar, withdrawPhysical } from '../src/logic/physical.ts';
+import {
+  homeVaultTotal,
+  quoteWithdrawal,
+  receiveBar,
+  vendorPremiumFrom,
+  withdrawPhysical,
+} from '../src/logic/physical.ts';
 import { holdingLots } from '../src/logic/tax.ts';
 import { companyReport } from '../src/logic/company.ts';
 
@@ -201,4 +207,13 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   const rows = physicalFeeRows(physicalFeesOf(a.settings));
   assert.equal(rows[0].orvia, 'Fabrication 10 %');
   assert.match(rows[5].orvia, /12 € par envoi, offerte dès 20 g/);
+});
+
+test('prime vendeur d\u2019après la page du revendeur', () => {
+  close(vendorPremiumFrom(698.91, 42.83, 0)!, 0.0653, 1e-4); // avec les frais en euros
+  close(vendorPremiumFrom(698.91, null, 656.08)!, 0.0653, 1e-4); // sans les frais : prix ÷ valeur de l'or − 1
+  assert.equal(vendorPremiumFrom(0, null, 100), null);
+  assert.equal(vendorPremiumFrom(100, 150, 100), null); // frais supérieurs au prix
+  assert.equal(vendorPremiumFrom(100, null, 0), null);
+  assert.equal(vendorPremiumFrom(300, null, 100), null); // écart absurde
 });

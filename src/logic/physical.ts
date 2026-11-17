@@ -391,3 +391,21 @@ export function homeVaultTotal(account: Pick<Account, 'homeVault'>, prices: Pric
 export function vatIfWithdrawn(value: number): number {
   return value * PHYSICAL.vatSilverPlatinum;
 }
+
+/**
+ * Prime du vendeur en % de la valeur de l'or, d'après sa page de prix.
+ * Avec les frais en euros : frais ÷ (prix − frais). Sans eux : prix ÷ valeur de l'or − 1.
+ * Le prix s'entend livraison comprise dans le pays, hors frais de port. Renvoie null si le calcul est impossible.
+ */
+export function vendorPremiumFrom(price: number, fees: number | null, metalValue: number): number | null {
+  if (!(price > 0)) return null;
+  let rate: number;
+  if (fees !== null && Number.isFinite(fees)) {
+    if (fees < 0 || fees >= price) return null;
+    rate = fees / (price - fees);
+  } else {
+    if (!(metalValue > 0)) return null;
+    rate = price / metalValue - 1;
+  }
+  return Number.isFinite(rate) && rate >= -0.5 && rate <= 0.5 ? rate : null;
+}
