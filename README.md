@@ -186,7 +186,7 @@ jamais dans Git (dossier `signing/` ignoré).
   (écran Plus-value et impôts), **changer son code**, **mode discret** (œil à côté du solde) et **bandeau de mise à
   jour** sur Android quand une version plus récente est publiée.
 - **Grille tarifaire** (voir `src/logic/fees.ts` et l'écran Tarifs, `docs/tarifs.png`) :
-  achat 2,5 % (or), 6,3 % (argent), 4,5 % (platine) ; garde en coffre 0,12 %/an (or), 0,4 %/an (argent), 0,2 %/an (platine),
+  achat 2,5 % (or), 6,3 % (argent), 4,5 % (platine) ; garde en coffre 0,15 %/an (or), 0,4 %/an (argent), 0,2 %/an (platine),
   prélevée en métal chaque mois (comptes enfants exonérés jusqu’à 18 ans) ; revente par virement sans commission (30 € de frais fixes hors de France) ;
   écart de 1 % en virement immédiat, aucun en différé (J+2) ; conversion 0,8 % + frais d'achat ;
   envois et réceptions entre membres gratuits.

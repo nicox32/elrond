@@ -23,8 +23,8 @@ test('export CSV : en-tête du modèle, « ; », virgule décimale, une ligne pa
   );
   const custody = lines.filter((l) => l.includes(';Frais de garde;'));
   assert.equal(custody.length, 2);
-  // Montant = valeur du métal prélevé (0,12 %/12 de 97,5 € d'or), pas de frais en plus.
-  assert.match(custody[0], /;Frais de garde;Gold Spot;-0,0000\d\d;;0,01;;;$/);
+  // Montant = valeur du métal prélevé (0,15 %/12 de 97,5 € d'or), pas de frais en plus.
+  assert.match(custody[0], /;Frais de garde;Gold Spot;-0,000\d{3};;0,01;;;$/);
   const conv = lines.filter((l) => l.includes(';Conversion;'));
   assert.equal(conv.length, 2);
   assert.ok(lines.every((l) => l.split(';').length === CSV_COLUMNS.length));

@@ -160,7 +160,7 @@ export default function WithdrawScreen() {
         </Text>
       </Card>
       <Hint>
-        Gardez l’essentiel au coffre : la garde y coûte 0,12 % par an pour l’or, et la revente est sans commission. Chez
+        Gardez l’essentiel au coffre : la garde y coûte 0,15 % par an pour l’or, et la revente est sans commission. Chez
         vous, pensez à l’assurance habitation et à la discrétion.
       </Hint>
 

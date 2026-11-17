@@ -1343,7 +1343,7 @@ test('dons : trimestres à signer, signature reprise dans le récapitulatif PDF'
   assert.doesNotMatch(giftRecapHtml(a, c, 'lastQuarter', now), /Signé dans l’application/);
 });
 
-test('garde en coffre : 0,12 %/an or, 0,4 %/an argent et platine, en métal chaque mois, jamais rétroactive', async () => {
+test('garde en coffre : 0,15 %/an or, 0,4 %/an argent et platine, en métal chaque mois, jamais rétroactive', async () => {
   const { applyDormancy, addChild, fundChild } = await import('../src/logic/ledger.ts');
   const t0 = new Date('2026-03-15T12:00:00');
   let acc = buy(createAccount('Test', t0), prices, 'gold', { unit: 'g', value: 100 }, t0);
@@ -1356,7 +1356,7 @@ test('garde en coffre : 0,12 %/an or, 0,4 %/an argent et platine, en métal chaq
   assert.equal(applyDormancy(acc, prices, t0), acc);
   // 3 mois plus tard (avril, mai, juin) : 3/12 du taux annuel, en métal.
   const later = applyDormancy(acc, prices, new Date('2026-06-02T12:00:00'));
-  close(later.holdings.gold, 90 * (1 - 0.0012 / 12) ** 3, 1e-5);
+  close(later.holdings.gold, 90 * (1 - 0.0015 / 12) ** 3, 1e-5);
   close(later.holdings.silver, 1000 * (1 - 0.004 / 12) ** 3, 1e-5);
   assert.equal(later.transactions.filter((t) => t.kind === 'fee_custody').length, 3);
   close(later.children[0].holdings.gold, 10); // enfant mineur : exonéré
