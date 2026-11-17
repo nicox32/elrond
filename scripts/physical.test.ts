@@ -228,3 +228,25 @@ test('inventaire imprimable : chaque objet porte la photo de son format', async 
   assert.ok(!html.includes(BAR_PHOTOS.g10));
   assert.equal(new Set(Object.values(BAR_PHOTOS)).size, 5); // cinq photos différentes
 });
+
+test('solde : retirer un lingotin ne fait pas baisser le total (le physique est compté)', async () => {
+  const { accountValue, physicalValue, recordBalance } = await import('../src/logic/ledger.ts');
+  const { giveBarToChild } = await import('../src/logic/physical.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const t0 = new Date('2026-11-16T10:00:00');
+  let a = creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 20 }, t0), 500);
+  a = recordBalance(a, p, t0);
+  const before = a.balanceHistory[a.balanceHistory.length - 1].total;
+  a = withdrawPhysical(a, p, { g5: 1 }, new Date('2026-11-16T12:00:00'));
+  const after = recordBalance(a, p, new Date('2026-11-17T12:00:00')).balanceHistory.at(-1)!.total;
+  // 5 g d'or sont sortis du coffre mais comptés au physique : le total est inchangé au cours près (revente 0,8 %).
+  const numeric = accountValue(a, p).total;
+  close(physicalValue(a, p), 5 * 100);
+  close(after, numeric + 500, 1e-6);
+  assert.ok(Math.abs(after - before) < 5 * 100 * 0.01 + 1, `${after} vs ${before}`);
+  // Un lingotin donné à un enfant n'est plus compté chez le parent.
+  const withChild = addChild(a, 'Théo', '2015-06-01');
+  let b = receiveBar(withChild.account, withChild.account.homeVault![0].id, 'C204518');
+  b = giveBarToChild(b, p, b.homeVault![0].id, withChild.child.id, new Date('2026-11-17T13:00:00'));
+  assert.equal(physicalValue(b, p), 0);
+});

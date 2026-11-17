@@ -54,6 +54,9 @@ export default function AccountScreen() {
     ...homeVaultTotal(account, quote.prices),
     preparing: (account.homeVault ?? []).filter((b) => b.status === 'preparing').length,
   };
+  // Plus-value latente : métal numérique et lingotins gardés chez soi (leur or, au prix d'achat d'origine).
+  const gainAll = tax.gain + (home.value - home.cost);
+  const gainAllPct = tax.cost + home.cost > 0 ? (gainAll / (tax.cost + home.cost)) * 100 : 0;
 
   return (
     <Screen testID="screen-compte">
@@ -75,21 +78,43 @@ export default function AccountScreen() {
             <Text style={styles.eye}>{discreet ? '◡ Afficher' : '◉ Masquer'}</Text>
           </Pressable>
         </View>
-        <Text style={styles.balance}>{eur(total)}</Text>
-        <Text style={styles.sub}>Valeur de revente au cours actuel</Text>
+        <Text style={styles.balance}>{eur(total + home.value)}</Text>
+        <Text style={styles.sub}>
+          {home.count > 0 ? 'Numérique + physique, au cours actuel' : 'Valeur de revente au cours actuel'}
+        </Text>
+        {home.count > 0 && (
+          <View style={styles.tiles} testID="balance-tiles">
+            <Pressable style={styles.tile} onPress={() => router.push('/repartition')} accessibilityRole="button">
+              <Text style={styles.tileLabel}>
+                <Text style={{ color: colors.gold }}>● </Text>Numérique
+              </Text>
+              <Text style={styles.tileValue}>{eur(total)}</Text>
+              <Text style={styles.tileSub}>au coffre Orvia</Text>
+            </Pressable>
+            <Pressable style={styles.tile} onPress={() => router.push('/coffre-maison')} accessibilityRole="button">
+              <Text style={styles.tileLabel}>
+                <Text style={{ color: colors.text }}>● </Text>Physique
+              </Text>
+              <Text style={styles.tileValue}>{eur(home.value)}</Text>
+              <Text style={styles.tileSub}>
+                {home.count} lingotin{home.count > 1 ? 's' : ''} ou pièce{home.count > 1 ? 's' : ''}
+              </Text>
+            </Pressable>
+          </View>
+        )}
         <Pressable onPress={() => router.push('/fidelite')} accessibilityRole="link">
           <Text style={styles.loyalty}>★ {formatLou(loyalty(account).balance)} de fidélité ›</Text>
         </Pressable>
-        {tax.cost > 0 && (
-          <Text style={[styles.gain, { color: tax.gain >= 0 ? colors.up : colors.down }]}>
-            {tax.gain >= 0 ? 'Plus-value latente' : 'Moins-value latente'} : {tax.gain >= 0 ? '+' : '−'}
-            {eur(Math.abs(tax.gain))} ({formatPercent(tax.gainPercent)})
+        {tax.cost + home.cost > 0 && (
+          <Text style={[styles.gain, { color: gainAll >= 0 ? colors.up : colors.down }]}>
+            {gainAll >= 0 ? 'Plus-value latente' : 'Moins-value latente'} : {gainAll >= 0 ? '+' : '−'}
+            {eur(Math.abs(gainAll))} ({formatPercent(gainAllPct)})
           </Text>
         )}
         {tax.cost > 0 && (
           <Pressable onPress={() => router.push('/fiscalite')} accessibilityRole="button" style={styles.taxRow}>
             <Text style={styles.taxText}>
-              Après impôt : {tax.netGain >= 0 ? '+' : '−'}
+              Après impôt{home.count > 0 ? ' (num.)' : ''} : {tax.netGain >= 0 ? '+' : '−'}
               {eur(Math.abs(tax.netGain))} ({formatPercent(tax.netGainPercent)})
             </Text>
             <Text style={styles.taxLink}>Détail ›</Text>
@@ -294,6 +319,11 @@ const styles = StyleSheet.create({
   eye: { color: colors.gold, fontSize: 12.5, fontWeight: '700' },
   balance: { color: colors.text, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'] },
   sub: { color: colors.textMuted, fontSize: 11 },
+  tiles: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  tile: { flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12 },
+  tileLabel: { color: colors.textMuted, fontSize: 11.5 },
+  tileValue: { color: colors.text, fontSize: 16.5, fontWeight: '800', marginTop: 2, fontVariant: ['tabular-nums'] },
+  tileSub: { color: colors.textMuted, fontSize: 11 },
   gain: { fontSize: 13, fontWeight: '700', marginTop: 6, fontVariant: ['tabular-nums'] },
   split: {
     flexDirection: 'row',

@@ -616,11 +616,17 @@ export function unrealizedGain(account: Wallet, prices: Prices) {
   return { invested, gain, percent: invested > 0 ? (gain / invested) * 100 : 0 };
 }
 
+/** Valeur au cours de l'or des lingotins et pièces retirés du coffre et encore à soi (hors ceux donnés à un enfant). */
+export function physicalValue(account: Pick<Account, 'homeVault'>, prices: Prices): number {
+  return (account.homeVault ?? []).reduce((s, b) => (b.ownerChildId ? s : s + b.grams * prices.gold), 0);
+}
+
 /** Enregistre la valeur du compte pour le graphique d'évolution du solde. */
 export function recordBalance(account: Account, prices: Prices, now = new Date()): Account {
   const point: BalancePoint = {
     date: now.toISOString(),
-    total: round(accountValue(account, prices).total, 2),
+    // Le métal retiré en lingotins reste à soi : le solde ne baisse pas quand on le retire.
+    total: round(accountValue(account, prices).total + physicalValue(account, prices), 2),
   };
   const history = [...account.balanceHistory];
   const last = history[history.length - 1];
