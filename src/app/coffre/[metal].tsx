@@ -78,8 +78,8 @@ export default function VaultScreen() {
           <ListRow
             title="Retrait physique"
             subtitle={
-              account.homeVault?.length
-                ? `Lingotins ou Napoléons · ${account.homeVault.length} chez vous`
+              account.homeVault?.filter((b) => !b.ownerChildId).length
+                ? `Lingotins ou Napoléons · ${account.homeVault.filter((b) => !b.ownerChildId).length} chez vous`
                 : 'Lingotins ou Napoléons livrés chez vous'
             }
             onPress={() => router.push('/retrait')}

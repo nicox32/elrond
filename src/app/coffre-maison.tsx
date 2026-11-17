@@ -41,6 +41,7 @@ export default function HomeVaultScreen() {
           <BarCard
             key={b.id}
             bar={b}
+            owner={b.ownerChildId ? account.children.find((c) => c.id === b.ownerChildId)?.name : undefined}
             onReceive={(serial) => updateAccount((a) => receiveBar(a, b.id, serial))}
             onRemove={() => updateAccount((a) => removeBar(a, b.id))}
           />
@@ -66,7 +67,17 @@ export default function HomeVaultScreen() {
   );
 }
 
-function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: string) => void; onRemove: () => void }) {
+function BarCard({
+  bar,
+  owner,
+  onReceive,
+  onRemove,
+}: {
+  bar: HomeBar;
+  owner?: string;
+  onReceive: (s: string) => void;
+  onRemove: () => void;
+}) {
   const [serial, setSerial] = useState(bar.serial ?? '');
   const [showQr, setShowQr] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -90,6 +101,11 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
       </View>
+      {owner || bar.ownerChildId ? (
+        <Text style={styles.controlled} testID="bar-owner">
+          Appartient à {owner ?? 'un enfant'} (don du {bar.giftedAt ? formatDate(bar.giftedAt) : ''}) · gardé chez vous
+        </Text>
+      ) : null}
       {specLine(p.spec) ? (
         <Text style={styles.sub}>
           {specLine(p.spec)}
@@ -146,16 +162,18 @@ function BarCard({ bar, onReceive, onRemove }: { bar: HomeBar; onReceive: (s: st
       </Pressable>
       {showQr && (
         <View style={styles.qr} testID="bar-qr">
-          <QrCode value={barQrText(bar)} size={200} />
+          <QrCode value={barQrText(bar, owner)} size={200} />
           <Text style={styles.sub}>
             Se lit avec n’importe quel téléphone : objet, {p.coin ? 'millésime' : 'numéro de série'}, dates, prix de
             revient. À imprimer et ranger avec le certificat. Fiche d’inventaire, pas un certificat d’authenticité.
           </Text>
         </View>
       )}
-      <Pressable onPress={confirmRemove} accessibilityRole="button">
-        <Text style={styles.remove}>Revendu ou donné : retirer du registre</Text>
-      </Pressable>
+      {!bar.ownerChildId && (
+        <Pressable onPress={confirmRemove} accessibilityRole="button">
+          <Text style={styles.remove}>Revendu ou donné : retirer du registre</Text>
+        </Pressable>
+      )}
     </Card>
   );
 }

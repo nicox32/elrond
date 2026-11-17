@@ -16,7 +16,7 @@ const grams = (g: number) =>
   `${g.toLocaleString('fr-FR', { minimumFractionDigits: g >= 100 ? 1 : 3, maximumFractionDigits: g >= 100 ? 1 : 3 })} g`;
 
 /** Versements reçus par l'enfant (dons, versements du parent). */
-const isDeposit = (kind: string) => kind === 'family_in';
+const isDeposit = (kind: string) => kind === 'family_in' || kind === 'gift_bar';
 
 export function childStatementHtml(account: Account, child: ChildAccount, prices: Prices, now = new Date()): string {
   const value = accountValue(child, prices);

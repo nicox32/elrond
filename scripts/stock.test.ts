@@ -110,3 +110,40 @@ test('références internes Orvia : une par exemplaire, toujours aléatoires et 
   const c = withdrawPhysical(base(), p, { g5: 1 });
   assert.match(c.homeVault![0].ref!, /^OV-/);
 });
+
+test('don d’un lingotin à un enfant : il reste chez le parent, seule la propriété change', async () => {
+  const { giveBarToChild, barsOfChild, homeVaultTotal, removeBar } = await import('../src/logic/physical.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const { childGifts, allowanceUsed } = await import('../src/logic/giftRecap.ts');
+  let a = withdrawPhysical(base(), p, { g10: 1, g5: 1 }, new Date('2026-11-16T12:00:00'));
+  const added = addChild(a, 'Théo', '2015-06-01');
+  a = added.account;
+  const childId = added.child.id;
+  const b10 = a.homeVault!.find((b) => b.product === 'g10')!;
+  const b5 = a.homeVault!.find((b) => b.product === 'g5')!;
+  // Un lingotin pas encore reçu (sans numéro) ne peut pas être donné : c'est le numéro qui est cédé.
+  assert.throws(() => giveBarToChild(a, p, b10.id, childId), /reçu/);
+  a = receiveBar(a, b10.id, 'C841201');
+  a = receiveBar(a, b5.id, 'C386511');
+  const before = homeVaultTotal(a, p);
+  const g = giveBarToChild(a, p, b10.id, childId, new Date('2026-11-17T10:00:00'));
+  // L'objet reste dans le coffre maison du parent, au nom de l'enfant.
+  assert.equal(g.homeVault!.length, 2);
+  assert.equal(barsOfChild(g, childId).length, 1);
+  assert.equal(barsOfChild(g, childId)[0].serial, 'C841201');
+  assert.equal(barsOfChild(g, childId)[0].giftValue, 1000);
+  // Il sort des totaux du parent.
+  assert.equal(homeVaultTotal(g, p).count, before.count - 1);
+  // Le don est inscrit à la valeur de l'or du jour dans les dons de l'enfant, sans déplacer de métal.
+  const child = g.children[0];
+  const gifts = childGifts(child);
+  assert.equal(gifts.length, 1);
+  assert.equal(gifts[0].value, 1000);
+  assert.equal(child.holdings.gold, 0);
+  assert.equal(allowanceUsed(child, new Date('2026-11-17')).used, 1000);
+  // Pas deux fois, et pas de retrait du registre d'un lingotin qui appartient à l'enfant.
+  assert.throws(() => giveBarToChild(g, p, b10.id, childId), /déjà/);
+  assert.throws(() => removeBar(g, b10.id), /enfant/);
+  // L'enfant garde les dates d'achat d'origine (22 ans).
+  assert.equal(barsOfChild(g, childId)[0].acquiredFrom, b10.acquiredFrom);
+});

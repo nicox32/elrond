@@ -796,6 +796,7 @@ export const MOVEMENT_KINDS: ReadonlySet<TransactionKind> = new Set<TransactionK
   'transfer_member',
   'family_out',
   'family_in',
+  'gift_bar',
   'cash_in',
   'withdraw_physical',
 ]);

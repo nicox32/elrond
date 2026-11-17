@@ -15,6 +15,7 @@ const ICON: Record<TransactionKind, string> = {
   transfer_iban: '↗',
   family_out: '↘',
   family_in: '↙',
+  gift_bar: '🎁',
   fee_dormancy: '!',
   fee_custody: '⌂',
   withdraw_physical: '▭',
@@ -52,6 +53,7 @@ export function TransactionRow({
   const incoming =
     tx.kind === 'buy' ||
     tx.kind === 'family_in' ||
+    tx.kind === 'gift_bar' ||
     tx.kind === 'referral_bonus' ||
     tx.kind === 'cash_in' ||
     tx.kind === 'loyalty_redeem';

@@ -62,7 +62,7 @@ export function giftPeriodRange(period: GiftPeriod, now = new Date()): { from: D
 export function childGifts(child: Pick<ChildAccount, 'transactions'>, from?: Date, to?: Date): Gift[] {
   const byDay = new Map<string, Gift>();
   for (const t of child.transactions) {
-    if (t.kind !== 'family_in' || t.reversed) continue;
+    if ((t.kind !== 'family_in' && t.kind !== 'gift_bar') || t.reversed) continue;
     const d = new Date(t.date);
     if ((from && d < from) || (to && d >= to)) continue;
     const day = t.date.slice(0, 10);

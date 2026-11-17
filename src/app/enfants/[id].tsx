@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AmountInput } from '../../components/AmountInput';
+import { ChildBarGifts } from '../../components/ChildBarGifts';
 import { ChildGiftCard } from '../../components/ChildGiftCard';
 import { ChildRules } from '../../components/ChildRules';
 import { GiftRecapCard } from '../../components/GiftRecapCard';
@@ -523,6 +524,8 @@ export default function ChildScreen() {
         <>
           <SectionTitle>Don mensuel</SectionTitle>
           <ChildGiftCard child={child} />
+          <SectionTitle>Dons de lingotins</SectionTitle>
+          <ChildBarGifts child={child} />
         </>
       )}
 

@@ -28,6 +28,7 @@ export const KIND_TYPE: Record<TransactionKind, string> = {
   transfer_iban: 'Vente',
   family_out: 'Versement famille',
   family_in: 'Reçu famille',
+  gift_bar: 'Don de lingotin',
   fee_dormancy: 'Frais d’oxydation',
   fee_custody: 'Frais de garde',
   withdraw_physical: 'Retrait physique',

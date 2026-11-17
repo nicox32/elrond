@@ -65,8 +65,8 @@ export default function ProfileScreen() {
         <LinkRow
           label="Mon coffre maison"
           hint={
-            account.homeVault?.length
-              ? `${account.homeVault.length} lingotin(s) d’or chez vous`
+            account.homeVault?.filter((b) => !b.ownerChildId).length
+              ? `${account.homeVault.filter((b) => !b.ownerChildId).length} lingotin(s) d’or chez vous`
               : 'Retrait physique d’or en lingotins'
           }
           to="/coffre-maison"

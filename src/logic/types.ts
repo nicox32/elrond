@@ -48,6 +48,8 @@ export type TransactionKind =
   | 'family_out'
   /** Métal reçu d'un autre compte de la famille. */
   | 'family_in'
+  /** Lingotin donné à un enfant : reste chez le parent, seule la propriété change (pas de métal déplacé). */
+  | 'gift_bar'
   /** Frais d'oxydation prélevés sur un compte inactif. */
   | 'fee_dormancy'
   /** Frais de garde en coffre, prélevés en métal chaque mois. */
@@ -197,6 +199,11 @@ export interface HomeBar {
   lotId?: string;
   /** Numéro de série prévu par le stock (à confirmer à la réception). */
   expectedSerial?: string;
+  /** Enfant propriétaire du lingotin (don : l'objet reste chez le parent, seule la propriété est cédée). */
+  ownerChildId?: string;
+  giftedAt?: string;
+  /** Valeur de l'or au jour du don (€). */
+  giftValue?: number;
   /** Référence interne Orvia, tirée au hasard (jamais le numéro gravé par l'affinerie). */
   ref?: string;
 }

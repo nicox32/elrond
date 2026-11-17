@@ -124,7 +124,7 @@ export function taxYearRecap(account: Account, year: number): TaxYearRecap {
   const gifts = account.children
     .map((c) => ({
       name: c.name,
-      eur: c.transactions.filter((t) => inYear(t) && t.kind === 'family_in').reduce((s, t) => s + t.eur, 0),
+      eur: c.transactions.filter((t) => inYear(t) && (t.kind === 'family_in' || t.kind === 'gift_bar')).reduce((s, t) => s + t.eur, 0),
     }))
     .filter((g) => g.eur > 0);
   return {

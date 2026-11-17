@@ -3,7 +3,7 @@
  * et registre « Mon coffre maison » des lingotins retirés. Or seulement : l'argent et le platine paieraient 20 % de
  * TVA à la sortie du port franc. Ce n'est pas une vente : pas d'impôt, la durée de détention continue.
  */
-import { applyTx, LedgerError, newId } from './ledger.ts';
+import { applyTx, getChild, LedgerError, majorityDate, newId, replaceChildAccount } from './ledger.ts';
 import { holdingLots } from './tax.ts';
 import type { Account, HomeBar, Prices, Settings, StockMove } from './types.ts';
 
@@ -445,14 +445,62 @@ export function receiveBar(account: Account, barId: string, serial: string, now 
   };
 }
 
+/**
+ * Don d'un lingotin ou d'une pièce à un enfant. L'objet reste chez le parent : seule la propriété (son numéro)
+ * est cédée à l'enfant. Le don est inscrit à la valeur de l'or du jour dans les dons de l'enfant (formulaire 2735,
+ * abattement de 100 000 €) ; l'enfant garde les dates d'achat d'origine de l'or (22 ans).
+ */
+export function giveBarToChild(
+  account: Account,
+  prices: Prices,
+  barId: string,
+  childId: string,
+  now = new Date(),
+): Account {
+  const bar = (account.homeVault ?? []).find((b) => b.id === barId);
+  if (!bar) throw new LedgerError('Lingotin introuvable.');
+  if (bar.ownerChildId) throw new LedgerError('Ce lingotin appartient déjà à un enfant.');
+  if (bar.status !== 'received' || !bar.serial) {
+    throw new LedgerError(
+      'Le lingotin doit être reçu, avec son numéro noté, avant d’être donné : c’est ce numéro qui est cédé.',
+    );
+  }
+  const child = getChild(account, childId);
+  if (child.transferredAt) throw new LedgerError(`Le compte de ${child.name} lui a été transféré.`);
+  if (child.birthDate && majorityDate(child.birthDate).getTime() <= now.getTime()) {
+    throw new LedgerError(`${child.name} est majeur : un don à un majeur se fait autrement.`);
+  }
+  const p = productOf(bar.product);
+  const value = bar.grams * prices.gold;
+  const label = `Don du ${p.label.replace(/ \(.*/, '').toLowerCase()} · ${p.coin ? 'millésime' : 'n°'} ${bar.serial} (reste chez ${account.holder})`;
+  const credited = applyTx(child, 'gift_bar', {}, value, label, now);
+  const parent = replaceChildAccount(account, credited);
+  return {
+    ...parent,
+    homeVault: (parent.homeVault ?? []).map((b) =>
+      b.id === barId
+        ? { ...b, ownerChildId: childId, giftedAt: now.toISOString(), giftValue: Math.round(value * 100) / 100 }
+        : b,
+    ),
+  };
+}
+
+/** Lingotins et pièces qui appartiennent à un enfant (gardés chez le parent). */
+export function barsOfChild(account: Pick<Account, 'homeVault'>, childId: string): HomeBar[] {
+  return (account.homeVault ?? []).filter((b) => b.ownerChildId === childId);
+}
+
 /** Lingotin revendu ou donné en dehors d'Orvia : on le retire du registre. */
 export function removeBar(account: Account, barId: string): Account {
+  const owned = (account.homeVault ?? []).find((b) => b.id === barId)?.ownerChildId;
+  if (owned) throw new LedgerError('Ce lingotin appartient à un enfant : il ne peut pas être retiré du registre.');
   return { ...account, homeVault: (account.homeVault ?? []).filter((b) => b.id !== barId) };
 }
 
 /** Total du coffre maison, valeur au cours de l'or (revente indicative, hors frais du comptoir). */
 export function homeVaultTotal(account: Pick<Account, 'homeVault'>, prices: Prices) {
-  const bars = account.homeVault ?? [];
+  // Les lingotins donnés à un enfant restent chez vous mais ne sont plus à vous.
+  const bars = (account.homeVault ?? []).filter((b) => !b.ownerChildId);
   const grams = bars.reduce((s, b) => s + b.grams, 0);
   return { count: bars.length, grams, value: grams * prices.gold, cost: bars.reduce((s, b) => s + b.cost, 0) };
 }
