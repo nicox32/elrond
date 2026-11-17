@@ -4,7 +4,7 @@ import { type LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react
 import Svg, { Path } from 'react-native-svg';
 
 import { formatEur as formatEurShort, formatPercent, formatTimeWithSeconds, formatUnitPrice } from '../logic/format';
-import { BAR_PRODUCTS, physicalFeesOf, productPrice } from '../logic/physical';
+import { BAR_PRODUCTS, napoleonPrice, physicalFeesOf, productPrice } from '../logic/physical';
 import { BarImage } from './BarImage';
 import { METAL_LABEL } from '../logic/ledger';
 import { metalTrend } from '../logic/priceHistory';
@@ -65,6 +65,8 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
         );
       })}
 
+      <NapoleonRow />
+
       <Pressable
         onPress={() => router.push('/retrait')}
         style={[styles.bars, styles.rowBorder]}
@@ -113,6 +115,38 @@ export function LivePrices({ unit }: { unit: WeightUnit }) {
         sur 20 ans. Lingotins et pièce : valeur de leur or, et prix indicatif avec fabrication ou prime.
       </Text>
     </View>
+  );
+}
+
+/** Napoléon 20 F : la valeur de son or en direct (la prime, variable, n'est pas un cours) et la variation de l'or. */
+function NapoleonRow() {
+  const { quote, priceHistory } = useBank();
+  const trend = metalTrend(priceHistory, 'gold', quote.prices);
+  const up = trend.changePct >= 0;
+  const value = napoleonPrice(quote.prices.gold).metal;
+  return (
+    <Pressable
+      onPress={() => router.push('/retrait')}
+      style={[styles.row, styles.rowBorder]}
+      accessibilityRole="button"
+      accessibilityHint="Retrait physique d’or"
+      testID="napoleon-row"
+    >
+      <View style={[styles.symbol, { borderColor: metalColor.gold }]}>
+        <Text style={[styles.symbolText, { color: metalColor.gold, fontSize: 11 }]}>20F</Text>
+      </View>
+      <View style={styles.name}>
+        <Text style={styles.metal}>Napoléon</Text>
+        <Text style={[styles.change, { color: up ? colors.up : colors.down }]}>
+          {trend.values.length > 1 ? formatPercent(trend.changePct) : '—'}
+        </Text>
+      </View>
+      <Sparkline values={trend.values} color={metalColor.gold} />
+      <View style={styles.prices}>
+        <Text style={styles.price}>{formatEurShort(value)}</Text>
+        <Text style={styles.priceOther}>valeur de l’or · prime variable</Text>
+      </View>
+    </Pressable>
   );
 }
 

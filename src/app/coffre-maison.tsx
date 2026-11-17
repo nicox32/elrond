@@ -50,6 +50,7 @@ export default function HomeVaultScreen() {
           <BarCard
             key={b.id}
             bar={b}
+            goldPrice={quote.prices.gold}
             owner={b.ownerChildId ? account.children.find((c) => c.id === b.ownerChildId)?.name : undefined}
             onReceive={(serial) => updateAccount((a) => receiveBar(a, b.id, serial))}
             onRemove={() => updateAccount((a) => removeBar(a, b.id))}
@@ -80,12 +81,14 @@ export default function HomeVaultScreen() {
 function BarCard({
   bar,
   owner,
+  goldPrice,
   onReceive,
   onRemove,
   onPlace,
 }: {
   bar: HomeBar;
   owner?: string;
+  goldPrice: number;
   onReceive: (s: string) => void;
   onRemove: () => void;
   onPlace: (place: BarPlace, note?: string) => void;
@@ -94,6 +97,7 @@ function BarCard({
   const [showQr, setShowQr] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const p = productOf(bar.product);
+  const gain = bar.grams * goldPrice - bar.cost;
   const confirmRemove = () => {
     const text = 'Retirer ce lingotin du registre (revendu ou donné en dehors d’Orvia) ?';
     if (Platform.OS === 'web') {
@@ -133,6 +137,14 @@ function BarCard({
         Or acheté entre le {new Date(bar.acquiredFrom).toLocaleDateString('fr-FR')} et le{' '}
         {new Date(bar.acquiredTo).toLocaleDateString('fr-FR')} · prix de revient {formatEur(bar.cost)} · exonéré de
         plus-value en {exemptYear(bar)}
+      </Text>
+      <Text
+        style={[styles.sub, { color: gain >= 0 ? colors.up : colors.down, fontWeight: '700' }]}
+        testID={`bar-gain-${bar.id}`}
+      >
+        {gain >= 0 ? 'Plus-value latente' : 'Moins-value latente'} de l’or : {gain >= 0 ? '+' : '−'}
+        {formatEur(Math.abs(gain))}{' '}
+        <Text style={{ color: colors.textMuted, fontWeight: '400' }}>(sans prime ni frais)</Text>
       </Text>
       {controlledOn(bar) ? (
         <Text style={styles.controlled} testID="controlled">
