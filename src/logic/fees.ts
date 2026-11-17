@@ -24,7 +24,7 @@ export const FEES = {
   /** Un compte est inactif après ce nombre de mois sans mouvement. */
   dormancyAfterMonths: 6,
   /** Montant minimum d'un achat, en euros, sur le total de l'opération (un achat réparti compte pour un). */
-  minOrder: 5,
+  minOrder: 10,
   /** Le week-end (marché fermé), supplément d'un achat, d'une vente ou d'une conversion faits tout de suite. */
   weekendSpread: 0.005,
 } as const;

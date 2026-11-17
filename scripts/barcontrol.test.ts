@@ -85,7 +85,7 @@ test('base : recherche par numéro, doublons refusés, pièces à millésime ré
   const [b5, b10, coin] = a.homeVault!;
   a = recordControl(a, b5.id, ok5, new Date());
   assert.equal(searchBars(a, 'c 482917').length, 1);
-  assert.equal(searchBars(a, 'zz').length, 0);
+  assert.equal(searchBars(a, 'çç').length, 0);
   assert.equal(searchBars(a, '').length, 3);
   assert.throws(
     () =>
