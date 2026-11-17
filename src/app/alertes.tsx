@@ -46,7 +46,7 @@ const KIND: Record<Family, Record<Direction, AlertKind>> = {
 
 export default function AlertsScreen() {
   const account = useAccount();
-  const { quote, updateAccount } = useBank();
+  const { quote, updateAccount, updateSettings } = useBank();
   const unit = account.settings.unit;
   const alerts = account.alerts ?? [];
   const events = account.alertEvents ?? [];
@@ -162,6 +162,20 @@ export default function AlertsScreen() {
         Choisissez vos conditions : l’appli vous prévient quand elles sont remplies. Ce ne sont pas des conseils
         d’investissement, la décision d’acheter ou de vendre vous appartient.
       </Hint>
+
+      <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>Alerte sur l’accueil</Text>
+          <Hint>Affiche la dernière alerte en haut de l’accueil. Vous pouvez aussi la masquer avec ✕.</Hint>
+        </View>
+        <Switch
+          value={account.settings.homeAlerts !== false}
+          onValueChange={(v) => updateSettings({ homeAlerts: v })}
+          trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
+          accessibilityLabel="Afficher la dernière alerte sur l’accueil"
+          testID="home-alerts-switch"
+        />
+      </Card>
 
       {permission !== 'granted' && (
         <Card style={{ gap: 8 }}>

@@ -142,6 +142,10 @@ export interface Settings {
   barTolerance?: { weightG: number; dimMm: number };
   /** Délai passé en arrière-plan avant de redemander le code, en secondes (absent = 5 minutes ; 0 = tout de suite). */
   lockDelaySec?: number;
+  /** Afficher la dernière alerte sur l'accueil (absent = oui). */
+  homeAlerts?: boolean;
+  /** Alertes de l'accueil déjà masquées : celles datées d'avant cet instant (ISO) ne s'affichent plus. */
+  homeAlertSeenAt?: string;
   /** Mode discret : montants masqués sur l'accueil (œil à côté du solde). */
   discreet?: boolean;
   /** Frais de garde en coffre appliqués (réglage de la société ; absent = oui). */

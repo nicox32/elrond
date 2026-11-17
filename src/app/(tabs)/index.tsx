@@ -44,6 +44,12 @@ export default function AccountScreen() {
   const account = useAccount();
   const { quote, updateSettings } = useBank();
   const unit = account.settings.unit;
+  // Alerte de l'accueil : masquable d'un geste (✕) ou pour de bon dans l'écran Alertes.
+  const seenAt = account.settings.homeAlertSeenAt;
+  const showAlerts = account.settings.homeAlerts !== false;
+  const last = account.alertEvents?.[0];
+  const ev = last && (!seenAt || last.date > seenAt) ? last : undefined;
+  const hideAlerts = () => updateSettings({ homeAlertSeenAt: new Date().toISOString() });
   const discreet = !!account.settings.discreet;
   /** Montant affiché, ou masqué en mode discret. */
   const eur = (n: number) => (discreet ? '•••• €' : formatEur(n));
@@ -151,12 +157,35 @@ export default function AccountScreen() {
       >
         Cours en direct
       </SectionTitle>
-      {account.alertEvents?.[0] && (
-        <Banner tone="gold" icon="🔔" title={account.alertEvents[0].title} onPress={() => router.push('/alertes')}>
-          {account.alertEvents[0].body}
-        </Banner>
+      {showAlerts && ev && (
+        <View>
+          <Banner
+            tone="gold"
+            icon="🔔"
+            title={ev.title}
+            onPress={() => {
+              hideAlerts();
+              router.push('/alertes');
+            }}
+            testID="home-alert"
+          >
+            {ev.body}
+          </Banner>
+          <Pressable
+            onPress={hideAlerts}
+            hitSlop={10}
+            style={styles.alertClose}
+            accessibilityRole="button"
+            accessibilityLabel="Masquer cette alerte"
+            testID="home-alert-close"
+          >
+            <Text style={styles.alertCloseText}>✕</Text>
+          </Pressable>
+        </View>
       )}
-      <HomeNtfyBanner topic={account.ntfyTopic} after={account.alertEvents?.[0]?.date} />
+      {showAlerts && (
+        <HomeNtfyBanner topic={account.ntfyTopic} after={[ev?.date, seenAt].filter(Boolean).sort().pop()} />
+      )}
       <LivePrices unit={unit} />
 
       <SectionTitle>Évolution du solde</SectionTitle>
@@ -319,6 +348,8 @@ const styles = StyleSheet.create({
   eye: { color: colors.gold, fontSize: 12.5, fontWeight: '700' },
   balance: { color: colors.text, fontSize: 34, fontWeight: '800', fontVariant: ['tabular-nums'] },
   sub: { color: colors.textMuted, fontSize: 11 },
+  alertClose: { position: 'absolute', top: 8, right: 10, padding: 4 },
+  alertCloseText: { color: colors.textMuted, fontSize: 16, fontWeight: '700' },
   tiles: { flexDirection: 'row', gap: 10, marginTop: 12 },
   tile: { flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12 },
   tileLabel: { color: colors.textMuted, fontSize: 11.5 },
