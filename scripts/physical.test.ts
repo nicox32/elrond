@@ -90,7 +90,7 @@ test('Napoléon 20 F : 5,806 g d’or fin, prime indicative, millésime au coffr
   const { napoleonPrice } = await import('../src/logic/physical.ts');
   const n = napoleonPrice(100);
   close(n.metal, 580.6);
-  close(n.withPremium, 580.6 * 1.06);
+  close(n.withPremium, 580.6 * 1.075);
   // 4 Napoléons = 23,2 g d'or : livraison offerte (dès 20 g).
   const q = quoteWithdrawal(p, { nap20: 4 });
   close(q.grams, 23.224);
@@ -164,8 +164,8 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   assert.equal(def.vendor.g10, 0.064);
   assert.equal(def.vendor.g20, 0.0653);
   assert.equal(def.vendor.oz1, 0.0519);
-  assert.equal(def.vendor.nap20, 0.0444);
-  close(quoteWithdrawal(p, { nap20: 1 }, def).cost!, 5.806 * 100 * 0.0444 + 7, 0.01);
+  assert.equal(def.vendor.nap20, 0.0653);
+  close(quoteWithdrawal(p, { nap20: 1 }, def).cost!, 5.806 * 100 * 0.0653 + 7, 0.01);
   close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0978 + 10 * 100 * 0.064 + 7, 1e-9);
   // Réglages de Société Orvia : fabrication, livraison, seuil.
   const custom = physicalFeesOf({

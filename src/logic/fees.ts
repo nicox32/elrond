@@ -93,7 +93,7 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Lingotin 10 g', orvia: 'Fabrication 7,5 %' },
       { label: 'Lingotin 20 g', orvia: 'Fabrication 7,5 %' },
       { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication 6 %' },
-      { label: 'Napoléon 20 F (5,81 g d’or fin)', orvia: 'Prime ≈ 6 %, variable' },
+      { label: 'Napoléon 20 F (5,81 g d’or fin)', orvia: 'Prime ≈ 7,5 %, variable' },
       { label: 'Livraison assurée, remise contre signature', orvia: '12 € par envoi, offerte dès 20 g' },
       { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
     ],

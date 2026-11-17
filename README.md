@@ -163,7 +163,7 @@ jamais dans Git (dossier `signing/` ignoré).
   (modèles 50/25/25, 60/20/20…), comparaison avec la répartition actuelle, et **achat réparti en euros** en un geste,
   « selon mes % » ou « vers mon objectif » (priorité aux métaux en retard, sans rien vendre) (`docs/repartition.png`).
 - **Retrait physique d'or** (coffre Gold Spot, ou Profil › Mon coffre maison) : lingotins LBMA de 5 g, 10 g, 20 g
-  et 1 once, ou Napoléon 20 F (5,81 g, prime ≈ 6 % variable) ; fabrication 6 à 11 % selon le format et livraison assurée 12 € (offerte dès 20 g), **réglables dans Société Orvia**
+  et 1 once, ou Napoléon 20 F (5,81 g, prime ≈ 7,5 % variable) ; fabrication 6 à 11 % selon le format et livraison assurée 12 € (offerte dès 20 g), **réglables dans Société Orvia**
   (frais client et prime du vendeur par format, marge calculée, livraison), payées depuis le compte d'attente (pas une vente, pas
   d'impôt, la durée de détention continue). Registre « Mon coffre maison » : numéro de série, prix et dates d'achat
   d'origine. Argent et platine non retirables (20 % de TVA à la sortie du port franc).

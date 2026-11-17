@@ -155,8 +155,8 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'nap20',
     label: 'Napoléon 20 F (5,81 g d’or fin)',
     grams: NAPOLEON_FINE_GRAMS,
-    premium: 0.06,
-    vendorPremium: 0.0444, // relevé chez le revendeur : 685,21 € pour environ 656 € d’or
+    premium: 0.075,
+    vendorPremium: 0.0653, // relevé du 18/11/2026 livré en France : 698,91 € dont 42,83 € de frais (6,53 % de l’or), + 7 € de livraison
     coin: true,
     // Pièce de 6,45 g à 900 ‰, frappée en France (Monnaie de Paris) de 1803 à 1914.
     spec: { producer: 'Monnaie de Paris', purity: '900 ‰', diameterMm: 21 },
