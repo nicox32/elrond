@@ -6,6 +6,7 @@ import { addEvents, addHourlyPoint, evaluateAlerts } from '../logic/alerts';
 import { addPricePoint, type PricePoint } from '../logic/priceHistory';
 import { notify } from '../notifications';
 import { isWeekendClosed, marketStatus } from '../logic/market';
+import { lockDelayOf, shouldLock } from '../logic/lock';
 import { runPendingOrders } from '../logic/orders';
 import { runGiftPlans } from '../logic/childGiftPlan';
 import { runDipBot } from '../logic/dipBot';
@@ -271,12 +272,18 @@ export function BankProvider({ children }: { children: ReactNode }) {
   }, [loading, refreshPrices]);
 
   // Retour dans l'appli : nouveaux cours et code demandé. Fermeture : on enregistre le solde.
+  // Le code n'est redemandé qu'après le délai choisi en arrière-plan (réglage de sécurité du profil).
+  const leftAt = useRef<number | null>(null);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        if (shouldLock(leftAt.current, Date.now(), lockDelayOf(accountRef.current?.settings))) setLocked(true);
+        leftAt.current = null;
         refreshPrices();
       } else if (state === 'background') {
-        setLocked(true);
+        leftAt.current = Date.now();
+        // Sans délai : verrouillé dès la sortie, comme avant.
+        if (lockDelayOf(accountRef.current?.settings) <= 0) setLocked(true);
         snapshot();
         refreshPrices();
       }

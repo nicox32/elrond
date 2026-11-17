@@ -8,6 +8,7 @@ import { BackupCard } from '../../components/BackupCard';
 import { ChangePinCard } from '../../components/ChangePinCard';
 import { CsvExportCard } from '../../components/CsvExportCard';
 import { Segmented } from '../../components/Segmented';
+import { LOCK_DELAYS, lockDelayOf } from '../../logic/lock';
 import { Button, Card, Hint, Label, ListRow, Screen, SectionTitle, Title } from '../../components/ui';
 import { formatDate, formatEur as formatEurShort } from '../../logic/format';
 import { loyalty } from '../../logic/loyalty';
@@ -188,6 +189,16 @@ export default function ProfileScreen() {
           trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
         />
       </Card>
+      <Label>Redemander le code après</Label>
+      <Segmented
+        value={String(lockDelayOf(account.settings))}
+        onChange={(v) => updateSettings({ lockDelaySec: Number(v) })}
+        options={LOCK_DELAYS.map((d) => ({ value: String(d.value), label: d.label }))}
+      />
+      <Hint>
+        Temps passé dans une autre appli (le site d’un revendeur, par exemple) avant que le code soit redemandé. Si
+        l’appli est fermée par le téléphone, le code est toujours demandé.
+      </Hint>
       <ChangePinCard />
       <Card style={styles.switchRow}>
         <View style={{ flex: 1 }}>
@@ -200,7 +211,10 @@ export default function ProfileScreen() {
           trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
         />
       </Card>
-      <Hint>Le code à 4 chiffres est demandé à chaque ouverture de l’appli et pour valider chaque virement.</Hint>
+      <Hint>
+        Le code à 4 chiffres est demandé à l’ouverture de l’appli, après le délai choisi ci-dessus, et pour valider
+        chaque virement.
+      </Hint>
 
       <SectionTitle>Compte</SectionTitle>
       <Hint>Cours réels de l’or, de l’argent et du platine au comptant, convertis en euros.</Hint>

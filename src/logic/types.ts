@@ -140,6 +140,8 @@ export interface Settings {
   };
   /** Marges des contrôles de lingots (Société Orvia) : pesée en grammes, dimensions en millimètres. */
   barTolerance?: { weightG: number; dimMm: number };
+  /** Délai passé en arrière-plan avant de redemander le code, en secondes (absent = 5 minutes ; 0 = tout de suite). */
+  lockDelaySec?: number;
   /** Mode discret : montants masqués sur l'accueil (œil à côté du solde). */
   discreet?: boolean;
   /** Frais de garde en coffre appliqués (réglage de la société ; absent = oui). */
