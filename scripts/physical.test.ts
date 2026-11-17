@@ -17,18 +17,18 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   a = buy(a, p, 'gold', { unit: 'g', value: 20 }, new Date('2024-06-01T12:00:00'));
   const q = quoteWithdrawal(p, { g10: 2, g5: 1 });
   assert.equal(q.grams, 25);
-  close(q.premium, 10 * 100 * 0.03 * 2 + 5 * 100 * 0.11);
-  close(q.fees, 60 + 55, 0.01); // 25 g : livraison offerte (dès 20 g)
-  close(quoteWithdrawal(p, { g10: 1 }).fees, 30 + 12, 0.01); // 10 g seul : livraison 12 €
+  close(q.premium, 10 * 100 * 0.07 * 2 + 5 * 100 * 0.11);
+  close(q.fees, 140 + 55, 0.01); // 25 g : livraison offerte (dès 20 g)
+  close(quoteWithdrawal(p, { g10: 1 }).fees, 70 + 12, 0.01); // 10 g seul : livraison 12 €
   // Frais à payer depuis le compte d'attente : vide → refusé (payer en or serait une vente imposée).
   assert.throws(() => withdrawPhysical(a, p, { g10: 2, g5: 1 }), LedgerError);
-  a = creditCash(a, 150);
+  a = creditCash(a, 250);
   // Plus d'or que disponible : refusé.
   assert.throws(() => withdrawPhysical(a, p, { oz1: 2 }), /Or insuffisant/);
   const now = new Date('2026-11-16T12:00:00');
   const w = withdrawPhysical(a, p, { g10: 2, g5: 1 }, now);
   close(w.holdings.gold, 7);
-  close(w.cashEur!, 150 - q.fees, 0.01);
+  close(w.cashEur!, 250 - q.fees, 0.01);
   assert.equal(w.transactions[0].kind, 'withdraw_physical');
   assert.equal(w.transactions[0].tax, undefined); // pas une vente
   assert.equal(w.homeVault!.length, 3);
@@ -113,7 +113,7 @@ test('coffre maison : fiche QR de chaque objet et inventaire imprimable', async 
       { unit: 'g', value: 30 },
       new Date('2019-03-04T12:00:00'),
     ),
-    100,
+    300,
   );
   a = withdrawPhysical(a, p, { g10: 1, nap20: 1 }, new Date('2026-11-16T12:00:00'));
   a = receiveBar(a, a.homeVault![0].id, 'c 841-201', new Date('2026-11-20T12:00:00'));
@@ -167,7 +167,7 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
     physicalFees: { premiums: { g5: 0.08 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },
   });
   assert.equal(custom.premiums.g5, 0.08);
-  assert.equal(custom.premiums.g10, 0.03); // inchangé
+  assert.equal(custom.premiums.g10, 0.07); // inchangé
   assert.equal(custom.vendor.g5, 0.0978); // valeur par défaut gardée
   assert.equal(custom.vendor.g10, 0.05);
   const q = quoteWithdrawal(p, { g10: 2 }, custom); // 20 g : livraison offerte seulement dès 50 g

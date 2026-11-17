@@ -101,7 +101,9 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'g10',
     label: 'Lingotin 10 g',
     grams: 10,
-    premium: 0.03,
+    // Relevé du 18/11/2026 : le vendeur affiche +4,80 % sur la valeur de l'or (tableau de prix), mais le total au
+    // paiement du 5 g était environ 2 points plus haut que ce tableau : prime vendeur non fixée, fabrication à 7 %.
+    premium: 0.07,
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
