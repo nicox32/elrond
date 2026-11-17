@@ -124,7 +124,9 @@ export function taxYearRecap(account: Account, year: number): TaxYearRecap {
   const gifts = account.children
     .map((c) => ({
       name: c.name,
-      eur: c.transactions.filter((t) => inYear(t) && (t.kind === 'family_in' || t.kind === 'gift_bar')).reduce((s, t) => s + t.eur, 0),
+      eur: c.transactions
+        .filter((t) => inYear(t) && (t.kind === 'family_in' || t.kind === 'gift_bar'))
+        .reduce((s, t) => s + t.eur, 0),
     }))
     .filter((g) => g.eur > 0);
   return {
@@ -196,7 +198,7 @@ export function taxYearHtml(account: Account, year: number, prices: Prices, now 
   ${
     r.gifts.length
       ? `<h2>Dons aux enfants</h2><table><tbody>${r.gifts.map((g) => `<tr><td>${esc(g.name)}</td><td class="num">${formatEur(g.eur)}</td></tr>`).join('')}</tbody></table>
-  <p class="muted">Dons manuels : à déclarer (formulaire 2735) ; abattement de 100 000 € par parent et par enfant tous les 15 ans.</p>`
+  <p class="muted">Dons manuels : à déclarer en ligne sur impots.gouv.fr (obligatoire depuis le 1er janvier 2026) ; abattement de 100 000 € par parent et par enfant tous les 15 ans.</p>`
       : ''
   }
   <h2>Calendrier d’exonération (22 ans de détention)</h2>

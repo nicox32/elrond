@@ -61,7 +61,7 @@ export function GiftRecapCard({ child }: { child: ChildAccount }) {
 
   return (
     <Card style={{ gap: 10 }}>
-      <Text style={styles.title}>Déclaration des dons (formulaire 2735)</Text>
+      <Text style={styles.title}>Déclaration des dons (en ligne)</Text>
       <View style={styles.allowance}>
         <Text style={styles.allowanceText}>
           Abattement sur 15 ans : {formatEur(allowance.used)} utilisés sur {formatEur(100_000)}

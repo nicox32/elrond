@@ -11,7 +11,7 @@ export function ChildRules({ name, compact }: { name: string; compact?: boolean 
     `Aucun frais avant ses 18 ans. À sa majorité, le compte devient celui de ${name} et lui est transféré.`,
   ];
   const extra = [
-    'Dons à un enfant : jusqu’à 100 000 € par parent sans droits, tous les 15 ans (formulaire 2735 pour déclarer un don).',
+    'Dons à un enfant : jusqu’à 100 000 € par parent sans droits, tous les 15 ans (à déclarer en ligne sur impots.gouv.fr).',
   ];
   return (
     <View style={styles.box}>

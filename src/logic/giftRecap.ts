@@ -158,7 +158,7 @@ export function giftRecapHtml(account: Account, child: ChildAccount, period: Gif
     <div class="meta">Édité le ${day(now)}<br/>Membre ${esc(account.memberId)}</div>
   </div>
   <h1>Récapitulatif des dons manuels — ${esc(label)}</h1>
-  <p class="sub">Pour la déclaration de don manuel (formulaire 2735 ou en ligne sur impots.gouv.fr).</p>
+  <p class="sub">Pour la déclaration de don manuel (en ligne sur impots.gouv.fr, obligatoire depuis le 1er janvier 2026 ; formulaire papier 2735 seulement en cas de dispense).</p>
 
   <div class="grid">
     <div class="box"><div class="k">Donateur</div><div class="v">${esc(account.holder)}</div>parent de l’enfant</div>
@@ -211,7 +211,7 @@ export function runDeclarationReminders(account: Account, now = new Date()) {
     const total = gifts.reduce((s, g) => s + g.value, 0);
     notices.push({
       title: `Dons à ${c.name} : à signer et déclarer`,
-      body: `${gifts.length} don${gifts.length > 1 ? 's' : ''} au ${quarterLabel(prevKey)} (${formatEur(total)}). Signez le récapitulatif dans son compte, puis déclarez-le (formulaire 2735).`,
+      body: `${gifts.length} don${gifts.length > 1 ? 's' : ''} au ${quarterLabel(prevKey)} (${formatEur(total)}). Signez le récapitulatif dans son compte, puis déclarez-le en ligne sur impots.gouv.fr.`,
     });
     changed = true;
     return { ...c, declarationRemindedFor: prevKey };

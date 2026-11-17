@@ -1248,7 +1248,7 @@ test('dons : récapitulatif 2735 par trimestre, abattement 15 ans, rappel une fo
   assert.match(html, /3 dons/);
   assert.match(html, /150,00\s€/);
   assert.match(html, /représentant légal/);
-  assert.match(html, /formulaire 2735/);
+  assert.match(html, /obligatoire depuis le 1er janvier 2026/);
   // Rappel au début du 4e trimestre pour le 3e, une seule fois ; rien si déjà déclaré.
   const r = runDeclarationReminders(a, now);
   assert.equal(r.notices.length, 1);

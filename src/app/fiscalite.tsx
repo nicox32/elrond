@@ -44,12 +44,12 @@ const OPERATIONS = [
   {
     title: 'Virement de métal à un membre',
     taxed: false,
-    text: 'Le métal change de main sans être vendu : pas d’impôt sur la plus-value. Si c’est un cadeau, c’est un don : petit cadeau d’anniversaire ou de fêtes (présent d’usage, raisonnable par rapport à vos revenus) sans formalité ; sinon droits de donation après abattement (100 000 € par parent et par enfant, 31 865 € par grand-parent et petit-enfant, 15 932 € entre frères et sœurs, 7 967 € pour un neveu ou une nièce, tous les 15 ans ; aucun abattement entre personnes non parentes) et déclaration du don (formulaire 2735 ou en ligne). S’il paie un achat entre particuliers, c’est une cession imposable à déclarer vous-même.',
+    text: 'Le métal change de main sans être vendu : pas d’impôt sur la plus-value. Si c’est un cadeau, c’est un don : petit cadeau d’anniversaire ou de fêtes (présent d’usage, raisonnable par rapport à vos revenus) sans formalité ; sinon droits de donation après abattement (100 000 € par parent et par enfant, 31 865 € par grand-parent et petit-enfant, 15 932 € entre frères et sœurs, 7 967 € pour un neveu ou une nièce, tous les 15 ans ; aucun abattement entre personnes non parentes) et déclaration du don en ligne (obligatoire depuis le 1er janvier 2026). S’il paie un achat entre particuliers, c’est une cession imposable à déclarer vous-même.',
   },
   {
     title: 'Versement sur un compte enfant',
     taxed: false,
-    text: 'C’est un don à votre enfant : pas d’impôt sur la plus-value, abattement de 100 000 € par parent tous les 15 ans. Au-delà d’un présent d’usage, déclarez le don (formulaire 2735 ou en ligne).',
+    text: 'C’est un don à votre enfant : pas d’impôt sur la plus-value, abattement de 100 000 € par parent tous les 15 ans. Au-delà d’un présent d’usage, déclarez le don en ligne (obligatoire depuis le 1er janvier 2026).',
   },
 ];
 
@@ -192,10 +192,10 @@ export default function TaxScreen() {
           ans. Le compte de l’enfant montre la part déjà utilisée.
         </Bullet>
         <Bullet>
-          <Text style={styles.bold}>Déclarez vos dons</Text> (formulaire 2735 ou en ligne sur impots.gouv.fr) : ce n’est
-          pas obligatoire tant que le don n’est pas révélé au fisc, mais cela lui donne une date certaine et évite toute
-          contestation. Le plus simple : regrouper les dons et les déclarer chaque trimestre. Orvia vous le rappelle et
-          prépare le récapitulatif (compte de l’enfant → Déclaration des dons).
+          <Text style={styles.bold}>Déclarez vos dons</Text> (en ligne sur impots.gouv.fr, obligatoire depuis le 1er
+          janvier 2026) : ce n’est pas obligatoire tant que le don n’est pas révélé au fisc, mais cela lui donne une
+          date certaine et évite toute contestation. Le plus simple : regrouper les dons et les déclarer chaque
+          trimestre. Orvia vous le rappelle et prépare le récapitulatif (compte de l’enfant → Déclaration des dons).
         </Bullet>
         <Bullet>
           <Text style={styles.bold}>Le don est irrévocable</Text> : vous ne pouvez plus reprendre ce métal ni l’utiliser

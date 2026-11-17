@@ -40,7 +40,7 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
       );
       setMsg({
         ok: true,
-        text: `${name(bar)} donné à ${child.name}. Gardé : ${placeLabel({ place: place ?? bar.place, placeNote: place ? note : bar.placeNote }).toLowerCase()}. Le don est inscrit dans ses dons (formulaire 2735).`,
+        text: `${name(bar)} donné à ${child.name}. Gardé : ${placeLabel({ place: place ?? bar.place, placeNote: place ? note : bar.placeNote }).toLowerCase()}. Le don est inscrit dans ses dons, à déclarer en ligne.`,
       });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Don impossible.' });
@@ -52,7 +52,7 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
       <Hint>
         Le lingotin reste où il est (chez vous, ou dans un coffre en banque) : seule sa propriété, son numéro de série,
         est cédée à {child.name}. Le don est compté à la valeur de l’or du jour dans ses dons et dans l’abattement de
-        100 000 € (formulaire 2735).
+        100 000 € (déclaration en ligne).
       </Hint>
 
       {owned.length > 0 && (
