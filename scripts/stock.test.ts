@@ -183,3 +183,25 @@ test('contrôle des lingots : on retrouve un lingotin par son lieu de garde', as
   assert.equal(searchBars(a, 'banque').length, 1);
   assert.equal(searchBars(a, 'chez vous').length, 1);
 });
+
+test('lot déjà créé : on y colle la liste de numéros du revendeur, ils sortent avec les exemplaires', async () => {
+  const { addSerialsToLot } = await import('../src/logic/stock.ts');
+  let a = addStock(base(), { product: 'g5', qty: 3, source: 'pro', vault: 'Gold Avenue' });
+  const id = a.stock![0].id;
+  a = addSerialsToLot(a, id, parseSerials('C841201\nC386511'));
+  assert.deepEqual(a.stock![0].serials, ['C841201', 'C386511']);
+  a = addSerialsToLot(a, id, ['C558479']);
+  assert.equal(a.stock![0].serials!.length, 3);
+  assert.throws(() => addSerialsToLot(a, id, ['C313395']), /plus que/); // lot complet
+  assert.throws(
+    () => addSerialsToLot(addStock(a, { product: 'g5', qty: 2, source: 'pro' }), a.stock![0].id, ['C123456']),
+    /essai|plus que/,
+  );
+  const b = addStock(base(), { product: 'g5', qty: 5, source: 'pro' });
+  assert.throws(() => addSerialsToLot(b, b.stock![0].id, ['C123456']), /essai/);
+  assert.throws(() => addSerialsToLot(b, b.stock![0].id, ['C841201', 'C841201']), /déjà/);
+  assert.throws(() => addSerialsToLot(b, b.stock![0].id, []), /au moins un/);
+  // Le retrait emporte le premier numéro du lot.
+  const w = withdrawPhysical(a, p, { g5: 1 });
+  assert.equal(w.homeVault![0].expectedSerial, 'C841201');
+});

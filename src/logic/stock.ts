@@ -134,6 +134,39 @@ export function adjustStock(account: Account, lotId: string, counted: number, no
   };
 }
 
+/**
+ * Ajoute à un lot déjà créé les numéros de série envoyés par le revendeur (liste collée). Ils sortent dans l'ordre
+ * avec les exemplaires du lot : le numéro prévu est alors déjà dans la fiche quand le lingotin arrive.
+ */
+export function addSerialsToLot(account: Account, lotId: string, serials: string[]): Account {
+  const lot = (account.stock ?? []).find((l) => l.id === lotId);
+  if (!lot) throw new LedgerError('Lot introuvable.');
+  const product = productOf(lot.product);
+  const known = lot.serials ?? [];
+  if (!serials.length) throw new LedgerError('Collez au moins un numéro.');
+  if (known.length + serials.length > lot.qty) {
+    throw new LedgerError(
+      `Ce lot n’a plus que ${lot.qty} exemplaire${lot.qty > 1 ? 's' : ''} pour ${known.length + serials.length} numéros.`,
+    );
+  }
+  const taken = knownSerials(account);
+  const added: string[] = [];
+  for (const raw of serials) {
+    const s = normalizeSerial(product.id, raw);
+    const err = serialFormatError(product.id, s);
+    if (err) throw new LedgerError(`${raw} : ${err}`);
+    if (!product.coin) {
+      if (taken.has(key(s))) throw new LedgerError(`Le numéro ${s} est déjà dans la base.`);
+      taken.add(key(s));
+    }
+    added.push(s);
+  }
+  return {
+    ...account,
+    stock: (account.stock ?? []).map((l) => (l.id === lotId ? { ...l, serials: [...known, ...added] } : l)),
+  };
+}
+
 /** Supprime un lot vide ou entré par erreur. */
 export function removeLot(account: Account, lotId: string): Account {
   return { ...account, stock: (account.stock ?? []).filter((l) => l.id !== lotId) };

@@ -4,7 +4,15 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { formatDate, parseAmount } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
 import { BAR_PRODUCTS, productOf } from '../logic/physical';
-import { addStock, adjustStock, MAX_BATCH, parseSerials, removeLot, stockSummary } from '../logic/stock';
+import {
+  addSerialsToLot,
+  addStock,
+  adjustStock,
+  MAX_BATCH,
+  parseSerials,
+  removeLot,
+  stockSummary,
+} from '../logic/stock';
 import type { StockLot } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
@@ -29,6 +37,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [counts, setCounts] = useState<Record<string, string>>({});
+  const [lotSerials, setLotSerials] = useState<Record<string, string>>({});
 
   const lots = (account.stock ?? []).filter((l) => l.qty > 0 || (l.serials?.length ?? 0) > 0);
   const summary = stockSummary(account);
@@ -55,6 +64,20 @@ export function StockManager({ onBack }: { onBack: () => void }) {
       });
       setSerials('');
       setNote('');
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Ajout impossible.' });
+    }
+  }
+
+  function addSerials(lot: StockLot) {
+    const list = parseSerials(lotSerials[lot.id] ?? '');
+    try {
+      updateAccount((a) => addSerialsToLot(a, lot.id, list));
+      setLotSerials((c) => ({ ...c, [lot.id]: '' }));
+      setMsg({
+        ok: true,
+        text: `${list.length} numéro${list.length > 1 ? 's' : ''} ajouté${list.length > 1 ? 's' : ''} au lot.`,
+      });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Ajout impossible.' });
     }
@@ -213,6 +236,26 @@ export function StockManager({ onBack }: { onBack: () => void }) {
             <KeyValue label="Entré le" value={formatDate(l.addedAt)} />
             {l.serials?.length ? <KeyValue label="N° connus restants" value={String(l.serials.length)} /> : null}
             {l.note ? <Text style={ui.hint}>{l.note}</Text> : null}
+            {l.qty > (l.serials?.length ?? 0) && (
+              <View style={{ gap: 6 }}>
+                <TextInput
+                  value={lotSerials[l.id] ?? ''}
+                  onChangeText={(t) => setLotSerials((c) => ({ ...c, [l.id]: t }))}
+                  multiline
+                  autoCapitalize="characters"
+                  placeholder="Collez ici la liste des numéros du revendeur (un par ligne)"
+                  placeholderTextColor={colors.textMuted}
+                  style={[ui.input, { minHeight: 56, textAlignVertical: 'top' }]}
+                  accessibilityLabel="Numéros de série à ajouter au lot"
+                />
+                <Button
+                  title="Ajouter ces numéros au lot"
+                  variant="ghost"
+                  onPress={() => addSerials(l)}
+                  disabled={!parseSerials(lotSerials[l.id] ?? '').length}
+                />
+              </View>
+            )}
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <TextInput
                 value={counts[l.id] ?? ''}
