@@ -61,7 +61,7 @@ export function storageStatus(usedEur: number, chfToEur: number): StorageStatus 
 
 /** Un lingotin ou une pièce gardé chez le revendeur (stockage sécurisé), et non à la maison ou en banque. */
 export function isAtReseller(bar: Pick<HomeBar, 'origin' | 'placeNote' | 'place'>): boolean {
-  return /gold avenue/i.test(bar.placeNote ?? '') || bar.origin === 'pro';
+  return /gold avenue|godot/i.test(bar.placeNote ?? '') || bar.origin === 'pro';
 }
 
 export interface ClientStorage {

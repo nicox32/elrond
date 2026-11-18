@@ -27,6 +27,7 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
   const { quote, commit } = useBank();
   const [order, setOrder] = useState<BarOrder>({});
   const [mode, setMode] = useState<Mode>('standard');
+  const firstName = child.name.split(' ')[0];
   const [confirm, setConfirm] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const q = quoteWithdrawal(quote.prices, order, physicalFeesOf(account.settings));
@@ -49,7 +50,7 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
       setOrder({});
       setMsg({
         ok: true,
-        text: `Lingotin(s) enregistré(s) au nom de ${child.name}, gardés chez Gold Avenue.${mode === 'locked' ? ` Verrouillés jusqu’au ${majority ? majority.toLocaleDateString('fr-FR') : 'la majorité'}.` : ''}`,
+        text: `Lingotin(s) enregistré(s) au nom de ${child.name}, gardés chez le revendeur (Godot & Fils).${mode === 'locked' ? ` Verrouillés jusqu’au ${majority ? majority.toLocaleDateString('fr-FR') : 'la majorité'}.` : ''}`,
       });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Conversion impossible.' });
@@ -60,8 +61,8 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
     <>
       <Hint>
         Transformez de l’or de {child.name} en lingotins ou en pièce. Ils restent{' '}
-        <Text style={styles.b}>uniquement chez Gold Avenue</Text>, au nom de {child.name} : jamais livrés. Il y a{' '}
-        {formatWeight(gold, 'g', 'gold')} d’or sur son compte.
+        <Text style={styles.b}>uniquement chez le revendeur (Godot & Fils)</Text>, au nom de {child.name} : jamais
+        livrés. Il y a {formatWeight(gold, 'g', 'gold')} d’or sur son compte.
       </Hint>
       <Card style={{ paddingVertical: 4 }}>
         {BAR_PRODUCTS.map((p, i) => {
@@ -90,14 +91,14 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
         value={mode}
         onChange={setMode}
         options={[
-          { value: 'standard', label: 'Standard' },
+          { value: 'standard', label: `Au nom de ${firstName}` },
           { value: 'locked', label: '🔒 Sécurité maximale' },
         ]}
       />
       <Hint>
         {mode === 'locked'
           ? `Sécurité maximale : le lingotin est verrouillé jusqu’aux 18 ans de ${child.name}${majority ? ` (${majority.toLocaleDateString('fr-FR')})` : ''}. Il ne peut être ni déplacé ni vendu avant, par personne.`
-          : `Standard : le lingotin reste chez Gold Avenue, au nom de ${child.name}. Il suit les règles du compte enfant.`}
+          : `Au nom de ${firstName} : le lingotin reste chez le revendeur (Godot & Fils), au nom de ${child.name}. Il suit les règles du compte enfant : les parents le gèrent jusqu’à la majorité.`}
       </Hint>
 
       {q.lines.length > 0 && (
@@ -127,8 +128,7 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
       {msg && <Message {...msg} />}
       {q.lines.length === 0 && (
         <Banner icon="ℹ️">
-          Gardé uniquement chez Gold Avenue ({CHILD_STORAGE_NOTE.toLowerCase()}). Choisissez ce que vous voulez
-          convertir.
+          Gardé uniquement chez le revendeur ({CHILD_STORAGE_NOTE}). Choisissez ce que vous voulez convertir.
         </Banner>
       )}
 

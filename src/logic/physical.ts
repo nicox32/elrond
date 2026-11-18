@@ -610,7 +610,7 @@ export function isLocked(bar: Pick<HomeBar, 'lockedUntil'>, now = new Date()): b
   return !!bar.lockedUntil && now.getTime() < new Date(bar.lockedUntil).getTime();
 }
 
-export const CHILD_STORAGE_NOTE = 'Gold Avenue (stockage sécurisé)';
+export const CHILD_STORAGE_NOTE = 'Godot & Fils, stockage sécurisé';
 
 /**
  * Convertit de l'or du compte d'un enfant en lingotins ou pièces, au nom de l'enfant et gardés uniquement chez le
