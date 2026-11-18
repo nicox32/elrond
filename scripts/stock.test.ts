@@ -267,6 +267,7 @@ test('compte enfant : or converti en lingotin gardé chez le revendeur, fabricat
   const bar = barsOfChild(s, id)[0];
   assert.equal(bar.ownerChildId, id);
   assert.equal(bar.placeNote, CHILD_STORAGE_NOTE);
+  assert.equal(bar.vault, true); // gardé en coffre chez Godot & Fils : mêmes étapes et même coût de garde
   assert.equal(bar.lockedUntil, undefined);
   close(getChild(s, id).holdings.gold, 15, 1e-9); // 5 g retirés de l'or de l'enfant
   assert.equal(s.holdings.gold, a.holdings.gold); // pas de l'or du parent

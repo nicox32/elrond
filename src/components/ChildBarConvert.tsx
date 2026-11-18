@@ -96,6 +96,10 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
         ]}
       />
       <Hint>
+        Suivi dans « Mon coffre maison » : commandé, en fabrication, en route vers le coffre, puis entré au coffre chez
+        Godot & Fils (8 jours environ).
+      </Hint>
+      <Hint>
         {mode === 'locked'
           ? `Sécurité maximale : le lingotin est verrouillé jusqu’aux 18 ans de ${child.name}${majority ? ` (${majority.toLocaleDateString('fr-FR')})` : ''}. Il ne peut être ni déplacé ni vendu avant, par personne.`
           : `Au nom de ${firstName} : le lingotin reste chez le revendeur (Godot & Fils), au nom de ${child.name}. Il suit les règles du compte enfant : les parents le gèrent jusqu’à la majorité.`}

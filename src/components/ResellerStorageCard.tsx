@@ -31,9 +31,9 @@ export function ResellerStorageCard() {
           );
         })}
         <Hint>
-          Gardés en coffre sécurisé chez Godot & Fils, au nom de chaque client, assurés. Aucun frais à part : la garde
-          est celle du tarif Orvia (
-          {(FEES.custodyYearly.gold * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} % par an pour l’or).
+          Gardés en coffre sécurisé chez Godot & Fils, au nom de chaque client, assurés. La garde est à la charge
+          d’Orvia pour l’instant ; pour un enfant, elle l’est jusqu’à ses 18 ans, puis il la paie (
+          {(FEES.custodyYearly.gold * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} % par an, en or).
         </Hint>
       </Card>
     </>

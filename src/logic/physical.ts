@@ -704,6 +704,7 @@ export function convertChildToBars(
         giftValue: Math.round(l.product.grams * prices.gold * 100) / 100,
         place: 'autre',
         placeNote: CHILD_STORAGE_NOTE,
+        vault: true,
         ...(lock && majority ? { lockedUntil: majority.toISOString() } : {}),
       });
     }
