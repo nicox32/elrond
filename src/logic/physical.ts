@@ -208,7 +208,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Napoléon 20 F (5,81 g d’or fin)',
     grams: NAPOLEON_FINE_GRAMS,
     premium: 0.075,
-    vendorPremium: 0.0505, // Godot & Fils, 18/11/2026 : 683,50 € pour 649,21 € d'or
+    vendorPremium: 0.0485, // Godot & Fils, 18/11/2026 : prime affichée par le revendeur
     vendorTiers: [
       { from: 10, off: 0.0015 },
       { from: 50, off: 0.0023 },
