@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { type BarPlace, PLACE_LABEL, placeLabel } from '../logic/physical';
+import { type BarPlace, isLocked, PLACE_LABEL, placeLabel } from '../logic/physical';
 import type { HomeBar } from '../logic/types';
 import { colors } from '../theme';
 import { styles as ui } from './ui';
@@ -12,12 +12,24 @@ export function PlaceEditor({
   onChange,
   title = 'Lieu de garde',
 }: {
-  bar: Pick<HomeBar, 'id' | 'place' | 'placeNote'>;
+  bar: Pick<HomeBar, 'id' | 'place' | 'placeNote' | 'lockedUntil'>;
   onChange: (place: BarPlace, note?: string) => void;
   title?: string;
 }) {
   const [note, setNote] = useState(bar.placeNote ?? '');
   const current: BarPlace = bar.place ?? 'maison';
+  if (isLocked(bar)) {
+    return (
+      <View style={{ gap: 6 }} testID={`place-${bar.id}`}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.sub}>Gardé : {placeLabel(bar)}</Text>
+        <Text style={styles.sub}>
+          🔒 Sécurité maximale : le lieu ne peut pas être changé avant le{' '}
+          {new Date(bar.lockedUntil!).toLocaleDateString('fr-FR')} (majorité de l’enfant).
+        </Text>
+      </View>
+    );
+  }
   return (
     <View style={{ gap: 6 }} testID={`place-${bar.id}`}>
       <Text style={styles.title}>{title}</Text>
