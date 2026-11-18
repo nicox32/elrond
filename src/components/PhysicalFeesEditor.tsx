@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
 import { BAR_PRODUCTS, physicalFeesOf, PHYSICAL, vendorPremiumFrom } from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
+
+const PREMIUM_CALCULATOR_URL = 'https://lingot-dor.fr/calculateur-prime-or';
 
 const toText = (n: number | undefined) =>
   n === undefined ? '' : (Math.round(n * 10000) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
@@ -177,6 +179,14 @@ export function PhysicalFeesEditor() {
       </View>
       <View style={styles.calc}>
         <Text style={styles.title}>Calculateur de prime vendeur</Text>
+        <Pressable
+          onPress={() => Linking.openURL(PREMIUM_CALCULATOR_URL).catch(() => {})}
+          accessibilityRole="link"
+          accessibilityLabel="Ouvrir le calculateur de prime de lingot-dor.fr"
+          testID="premium-calculator-link"
+        >
+          <Text style={styles.link}>Calculateur de prime en ligne (lingot-dor.fr) ›</Text>
+        </Pressable>
         <Hint>
           Sur la page du revendeur, choisissez « Livrer en France » et relevez le prix. Si elle affiche les frais en
           euros, saisissez-les aussi : le calcul est exact. Sinon, il compare le prix à la valeur de l’or du moment.
@@ -264,6 +274,7 @@ const styles = StyleSheet.create({
   line: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { color: colors.text, fontSize: 14, fontWeight: '600' },
   input: { flexGrow: 1, flexBasis: 0, minWidth: 0, paddingVertical: 9, paddingHorizontal: 10, fontSize: 15 },
+  link: { color: colors.gold, fontSize: 13, fontWeight: '600' },
   calc: { gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
