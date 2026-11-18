@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
-import { BAR_PRODUCTS, physicalFeesOf, PHYSICAL, vendorPremiumFrom } from '../logic/physical';
+import { BAR_PRODUCTS, normalizeDeliveryTiers, physicalFeesOf, PHYSICAL, vendorPremiumFrom } from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
@@ -26,7 +26,12 @@ export function PhysicalFeesEditor() {
   );
   const [delivery, setDelivery] = useState(String(fees.delivery).replace('.', ','));
   const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
-  const [vDelivery, setVDelivery] = useState(String(fees.vendorDelivery).replace('.', ','));
+  const [tiers, setTiers] = useState<{ from: string; cost: string }[]>(() =>
+    fees.vendorDeliveryTiers.map((t) => ({
+      from: String(t.fromEur).replace('.', ','),
+      cost: String(t.cost).replace('.', ','),
+    })),
+  );
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [calcId, setCalcId] = useState(BAR_PRODUCTS[BAR_PRODUCTS.length - 1].id);
   const [calcPrice, setCalcPrice] = useState('');
@@ -48,8 +53,7 @@ export function PhysicalFeesEditor() {
     parseAmount(delivery) <= 200 &&
     parseAmount(free) >= 0 &&
     parseAmount(free) <= 1000 &&
-    parseAmount(vDelivery) >= 0 &&
-    parseAmount(vDelivery) <= 200;
+    tiers.every((t) => parseAmount(t.cost) >= 0 && parseAmount(t.cost) <= 500 && parseAmount(t.from) >= 0);
 
   function save() {
     const prem: Record<string, number> = {};
@@ -63,7 +67,10 @@ export function PhysicalFeesEditor() {
         premiums: prem,
         vendor: vend,
         delivery: parseAmount(delivery),
-        vendorDelivery: parseAmount(vDelivery),
+        vendorDeliveryTiers: normalizeDeliveryTiers(
+          tiers.map((t) => ({ fromEur: parseAmount(t.from), cost: parseAmount(t.cost) })),
+          PHYSICAL.vendorDelivery,
+        ),
         freeFromGrams: parseAmount(free),
       },
     });
@@ -79,7 +86,12 @@ export function PhysicalFeesEditor() {
     setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(physicalFeesOf().vendor[p.id])])));
     setDelivery(String(PHYSICAL.delivery));
     setFree(String(PHYSICAL.freeDeliveryFromGrams));
-    setVDelivery(String(PHYSICAL.vendorDelivery));
+    setTiers(
+      physicalFeesOf().vendorDeliveryTiers.map((t) => ({
+        from: String(t.fromEur).replace('.', ','),
+        cost: String(t.cost).replace('.', ','),
+      })),
+    );
     setMsg({ ok: true, text: 'Valeurs par défaut rétablies.' });
   }
 
@@ -167,18 +179,52 @@ export function PhysicalFeesEditor() {
           />
         </View>
       </View>
-      <View style={{ gap: 5 }}>
-        <Label>Livraison payée au vendeur, par commande (€)</Label>
-        <TextInput
-          value={vDelivery}
-          onChangeText={setVDelivery}
-          keyboardType="decimal-pad"
-          style={ui.input}
-          accessibilityLabel="Livraison payée au vendeur"
-        />
+      <View style={{ gap: 6 }} testID="vendor-delivery-tiers">
+        <Label>Livraison payée au vendeur, selon la valeur de la commande</Label>
+        {tiers.map((t, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <TextInput
+              value={i === 0 ? '0' : t.from}
+              editable={i > 0}
+              onChangeText={(v) => setTiers((all) => all.map((x, j) => (j === i ? { ...x, from: v } : x)))}
+              keyboardType="decimal-pad"
+              placeholder="À partir de (€)"
+              placeholderTextColor={colors.textMuted}
+              style={[ui.input, { flex: 1 }, i === 0 && { opacity: 0.6 }]}
+              accessibilityLabel={`Palier ${i + 1} : à partir de (euros)`}
+            />
+            <TextInput
+              value={t.cost}
+              onChangeText={(v) => setTiers((all) => all.map((x, j) => (j === i ? { ...x, cost: v } : x)))}
+              keyboardType="decimal-pad"
+              placeholder="Coût (€)"
+              placeholderTextColor={colors.textMuted}
+              style={[ui.input, { flex: 1 }]}
+              accessibilityLabel={`Palier ${i + 1} : coût de la livraison (euros)`}
+            />
+            {i > 0 ? (
+              <Pressable
+                onPress={() => setTiers((all) => all.filter((_, j) => j !== i))}
+                accessibilityLabel={`Retirer le palier ${i + 1}`}
+              >
+                <Text style={ui.link}>✕</Text>
+              </Pressable>
+            ) : (
+              <View style={{ width: 16 }} />
+            )}
+          </View>
+        ))}
+        <Pressable
+          onPress={() => setTiers((all) => [...all, { from: '', cost: '' }])}
+          accessibilityRole="button"
+          testID="add-delivery-tier"
+        >
+          <Text style={ui.link}>+ Ajouter un palier</Text>
+        </Pressable>
         <Hint>
-          Comptée dans votre coût : avec 12 € facturés au client et 7 € payés au vendeur, la livraison laisse 5 € de
-          marge (rien si elle est offerte).
+          Chaque ligne : à partir de ce montant de commande (l’or et sa prime payés au vendeur), la livraison vous coûte
+          tant. Avec 12 € facturés au client, elle laisse la différence de marge (rien si elle est offerte ou en
+          agence).
         </Hint>
       </View>
       <View style={styles.calc}>

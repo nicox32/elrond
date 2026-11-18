@@ -257,7 +257,29 @@ export interface PhysicalFees {
   delivery: number;
   /** Livraison payée au vendeur, par commande. */
   vendorDelivery: number;
+  /** Livraison payée au vendeur par palier de valeur de commande (le premier palier commence à 0 €). */
+  vendorDeliveryTiers: { fromEur: number; cost: number }[];
   freeFromGrams: number;
+}
+
+/** Paliers triés, sans doublon, dont le premier commence à 0 € ; à défaut, un seul palier au coût fixe. */
+export function normalizeDeliveryTiers(
+  raw: { fromEur: number; cost: number }[] | undefined,
+  flat: number,
+): { fromEur: number; cost: number }[] {
+  const clean = (raw ?? [])
+    .filter((t) => Number.isFinite(t.fromEur) && Number.isFinite(t.cost) && t.fromEur >= 0 && t.cost >= 0)
+    .sort((a, b) => a.fromEur - b.fromEur)
+    .filter((t, i, all) => i === 0 || t.fromEur !== all[i - 1].fromEur);
+  if (!clean.length) return [{ fromEur: 0, cost: flat }];
+  return clean[0].fromEur > 0 ? [{ fromEur: 0, cost: clean[0].cost }, ...clean] : clean;
+}
+
+/** Livraison payée au vendeur pour une commande de cette valeur (en euros) : le dernier palier atteint. */
+export function vendorDeliveryCost(goodsEur: number, fees: Pick<PhysicalFees, 'vendorDeliveryTiers'>): number {
+  let cost = fees.vendorDeliveryTiers[0].cost;
+  for (const t of fees.vendorDeliveryTiers) if (goodsEur >= t.fromEur) cost = t.cost;
+  return cost;
 }
 
 export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
@@ -269,11 +291,14 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
     const v = s.vendor?.[p.id] ?? p.vendorPremium;
     if (v !== undefined) vendor[p.id] = v;
   }
+  const flat = s.vendorDelivery ?? PHYSICAL.vendorDelivery;
+  const tiers = normalizeDeliveryTiers(s.vendorDeliveryTiers, flat);
   return {
     premiums,
     vendor,
     delivery: s.delivery ?? PHYSICAL.delivery,
-    vendorDelivery: s.vendorDelivery ?? PHYSICAL.vendorDelivery,
+    vendorDelivery: tiers[0].cost,
+    vendorDeliveryTiers: tiers,
     freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
   };
 }
@@ -341,6 +366,8 @@ export function quoteWithdrawal(
   });
   const grams = lines.reduce((s, l) => s + l.grams, 0);
   const value = lines.reduce((s, l) => s + l.value, 0);
+  // Valeur de la commande chez le revendeur : l'or et sa prime. Elle fixe le coût de la livraison payée au vendeur.
+  const goodsEur = lines.reduce((s, l) => s + l.value + (l.vendorCost ?? 0), 0);
   const premium = lines.reduce((s, l) => s + l.premium, 0);
   const vendorDiscount = lines.reduce((s, l) => s + l.vendorDiscount, 0);
   const clientDiscount = lines.reduce((s, l) => s + l.clientDiscount, 0);
@@ -349,7 +376,7 @@ export function quoteWithdrawal(
   // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) et sa livraison, par commande.
   const cost =
     lines.length && lines.every((l) => l.vendorCost !== undefined)
-      ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0) + (pickup ? 0 : fees.vendorDelivery)
+      ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0) + (pickup ? 0 : vendorDeliveryCost(goodsEur, fees))
       : undefined;
   return {
     lines,

@@ -13,6 +13,8 @@ import {
   vendorPremiumFrom,
   vendorTierOff,
   fabricationProgress,
+  normalizeDeliveryTiers,
+  vendorDeliveryCost,
   requestVaultExit,
   confirmVaultExit,
   GODOT_AGENCIES,
@@ -434,4 +436,56 @@ test('retrait d’un lingotin gardé en coffre : à domicile (12 €) ou en agen
   // Un lingotin d'enfant n'est jamais livré.
   const child = { ...acc, homeVault: acc.homeVault!.map((b) => (b.id === b5 ? { ...b, ownerChildId: 'c1' } : b)) };
   assert.throws(() => requestVaultExit(child, b5, 'home', undefined, t0), /enfant/);
+});
+
+test('livraison payée au vendeur : selon la valeur de la commande, par paliers réglables', () => {
+  // Par défaut : 7 € pour toute commande.
+  const def = physicalFeesOf();
+  assert.deepEqual(def.vendorDeliveryTiers, [{ fromEur: 0, cost: 7 }]);
+  assert.equal(vendorDeliveryCost(50_000, def), 7);
+  // Paliers : 7 € jusqu'à 1 000 €, 12 € dès 1 000 €, 20 € dès 5 000 €.
+  const custom = physicalFeesOf({
+    physicalFees: {
+      vendorDeliveryTiers: [
+        { fromEur: 5000, cost: 20 },
+        { fromEur: 0, cost: 7 },
+        { fromEur: 1000, cost: 12 },
+      ],
+    },
+  });
+  assert.deepEqual(
+    custom.vendorDeliveryTiers.map((t) => t.fromEur),
+    [0, 1000, 5000],
+  ); // triés
+  assert.equal(vendorDeliveryCost(999.99, custom), 7);
+  assert.equal(vendorDeliveryCost(1000, custom), 12);
+  assert.equal(vendorDeliveryCost(4999, custom), 12);
+  assert.equal(vendorDeliveryCost(5000, custom), 20);
+  // Un premier palier qui ne commence pas à 0 : il couvre aussi les petites commandes.
+  assert.equal(normalizeDeliveryTiers([{ fromEur: 500, cost: 9 }], 7)[0].fromEur, 0);
+  assert.equal(normalizeDeliveryTiers([], 7)[0].cost, 7);
+  assert.equal(
+    normalizeDeliveryTiers(
+      [
+        { fromEur: -1, cost: 3 },
+        { fromEur: 10, cost: Number.NaN },
+      ],
+      7,
+    )[0].cost,
+    7,
+  );
+  // Dans la commande : un 5 g (≈ 545 € chez le revendeur) coûte 7 €, quatre 10 g (> 1 000 €) coûtent 12 €.
+  const small = quoteWithdrawal(p, { g5: 1 }, custom);
+  const big = quoteWithdrawal(p, { g10: 4 }, custom);
+  const goods = (q: ReturnType<typeof quoteWithdrawal>) =>
+    q.lines.reduce((t, l) => t + l.value + (l.vendorCost ?? 0), 0);
+  assert.ok(goods(small) < 1000 && goods(big) >= 1000);
+  close(small.cost! - small.lines[0].vendorCost!, 7, 1e-9);
+  close(big.cost! - big.lines.reduce((t, l) => t + (l.vendorCost ?? 0), 0), 12, 1e-9);
+  // Retrait en agence : aucune livraison.
+  close(
+    quoteWithdrawal(p, { g10: 4 }, custom, true).cost! - big.lines.reduce((t, l) => t + (l.vendorCost ?? 0), 0),
+    0,
+    1e-9,
+  );
 });
