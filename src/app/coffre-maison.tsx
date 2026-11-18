@@ -128,9 +128,9 @@ function BarCard({
           🔒 Sécurité maximale : verrouillé jusqu’au {new Date(bar.lockedUntil!).toLocaleDateString('fr-FR')} ·{' '}
           {placeLabel(bar)}
         </Text>
-      ) : (
+      ) : bar.status === 'received' ? (
         <PlaceEditor bar={bar} onChange={onPlace} title="Où il est gardé" />
-      )}
+      ) : null}
       {owner || bar.ownerChildId ? (
         <Text style={styles.controlled} testID="bar-owner">
           Appartient à {owner ?? 'un enfant'} (don du {bar.giftedAt ? formatDate(bar.giftedAt) : ''})
