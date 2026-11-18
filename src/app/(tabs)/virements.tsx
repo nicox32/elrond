@@ -125,7 +125,7 @@ export default function TransfersScreen() {
 
         <Card style={{ gap: 6 }}>
           <Label>Pour recevoir du métal ou des euros</Label>
-          <Info label="Mon identifiant membre" value={account.memberId} />
+          <Info label="Mon n° de membre" value={account.memberId} />
           <Info label="Mon IBAN" value={account.iban} />
         </Card>
 

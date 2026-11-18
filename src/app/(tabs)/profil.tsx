@@ -49,7 +49,7 @@ export default function ProfileScreen() {
 
       <Card style={{ gap: 10 }}>
         <Row label="Titulaire" value={account.holder} />
-        <Row label="Identifiant membre" value={account.memberId} />
+        <Row label="N° de membre" value={account.memberId} />
         <Row label="IBAN" value={account.iban} />
         <Row label="Compte ouvert le" value={formatDate(account.createdAt)} />
       </Card>
