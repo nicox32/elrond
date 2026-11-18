@@ -2,7 +2,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { formatEur } from '../logic/format';
 import { insuranceStatus } from '../logic/stock';
-import type { Account } from '../logic/types';
 import { colors } from '../theme';
 import { useAccount, useBank } from '../state/BankProvider';
 
@@ -13,7 +12,7 @@ import { useAccount, useBank } from '../state/BankProvider';
 export function InsuranceMeter({ extraEur = 0, compact = false }: { extraEur?: number; compact?: boolean }) {
   const account = useAccount();
   const { quote } = useBank();
-  const st = insuranceStatus(account as Pick<Account, 'stock' | 'settings'>, quote.prices.gold);
+  const st = insuranceStatus(account, quote.prices.gold);
   const after = st.value + Math.max(0, extraEur);
   const share = st.cap > 0 ? after / st.cap : 1;
   const color = share > 1 ? colors.down : share >= 0.8 ? colors.warning : colors.gold;

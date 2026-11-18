@@ -2,7 +2,7 @@
 // client prend d'abord dans le stock de la société, puis dans le coffre professionnel, sinon il faut commander.
 import { LedgerError, newId } from './ledger.ts';
 import { newRef, normalizeSerial, physicalFeesOf, productOf, serialFormatError } from './physical.ts';
-import type { Account, StockLot, StockMove } from './types.ts';
+import type { Account, HomeBar, StockLot, StockMove } from './types.ts';
 
 export const MAX_BATCH = 10000;
 const LOG_LIMIT = 500;
@@ -228,33 +228,50 @@ export function stockCount(account: Pick<Account, 'stock'>, product: string): { 
 /** Plafond par défaut de l'assurance du stock de lingotins et de pièces. */
 export const INSURANCE_CAP_EUR = 250_000;
 
+/** Valeur d'un lingotin du coffre maison : son or au cours du jour plus la prime de base du revendeur. */
+function barInsuredValue(b: HomeBar, goldEurPerGram: number, fees: ReturnType<typeof physicalFeesOf>): number {
+  return b.grams * goldEurPerGram * (1 + (fees.vendor[b.product] ?? 0));
+}
+
+type InsuredAccount = Pick<Account, 'stock' | 'settings'> & Partial<Pick<Account, 'homeVault'>>;
+
 /**
- * Valeur assurée du stock : chaque exemplaire à son prix payé quand il est connu, sinon la valeur de son or au cours du
- * jour plus la prime de base du revendeur.
+ * Détail de la valeur assurée : le stock (chaque exemplaire à son prix payé quand il est connu, sinon la valeur de son
+ * or au cours du jour plus la prime de base), les lingotins en route vers un client, et ceux déjà remis aux clients.
+ * Les lingotins encore gardés au coffre sécurisé ne comptent pas.
  */
-export function stockInsuredValue(account: Pick<Account, 'stock' | 'settings'>, goldEurPerGram: number): number {
+export function insuredBreakdown(account: InsuredAccount, goldEurPerGram: number) {
   const fees = physicalFeesOf(account.settings);
-  return (account.stock ?? [])
+  const stock = (account.stock ?? [])
     .filter((l) => l.qty > 0)
     .reduce((s, l) => {
       const p = productOf(l.product);
       const unit = l.unitCost ?? p.grams * goldEurPerGram * (1 + (fees.vendor[l.product] ?? 0));
       return s + l.qty * unit;
     }, 0);
+  let transit = 0;
+  let delivered = 0;
+  for (const b of account.homeVault ?? []) {
+    if (b.vault && !b.exitedAt) continue;
+    const v = barInsuredValue(b, goldEurPerGram, fees);
+    if (b.status === 'received') delivered += v;
+    else transit += v;
+  }
+  return { stock, transit, delivered, total: stock + transit + delivered };
 }
 
-export function insuranceStatus(account: Pick<Account, 'stock' | 'settings'>, goldEurPerGram: number) {
+export function stockInsuredValue(account: InsuredAccount, goldEurPerGram: number): number {
+  return insuredBreakdown(account, goldEurPerGram).total;
+}
+
+export function insuranceStatus(account: InsuredAccount, goldEurPerGram: number) {
   const cap = account.settings.insuranceCapEur ?? INSURANCE_CAP_EUR;
   const value = stockInsuredValue(account, goldEurPerGram);
   return { cap, value, left: Math.max(0, cap - value), share: cap > 0 ? value / cap : 1 };
 }
 
 /** Refuse l'entrée d'un lot qui ferait dépasser le plafond de l'assurance. */
-export function assertInsuranceRoom(
-  account: Pick<Account, 'stock' | 'settings'>,
-  goldEurPerGram: number,
-  addedEur: number,
-): void {
+export function assertInsuranceRoom(account: InsuredAccount, goldEurPerGram: number, addedEur: number): void {
   const st = insuranceStatus(account, goldEurPerGram);
   if (st.value + addedEur > st.cap + 0.005) {
     const eur = (n: number) => Math.round(n).toLocaleString('fr-FR');
