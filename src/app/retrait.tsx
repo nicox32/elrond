@@ -40,6 +40,28 @@ export default function WithdrawScreen() {
   const tooMuch = q.grams > gold + 1e-9;
   const noCash = q.fees > cash + 0.005;
 
+  const missingGrams = Math.max(0, q.grams - gold);
+  const summary = `${q.pieces} ${q.pieces > 1 ? 'lingotins' : 'lingotin'} · ${pickup ? 'retrait en agence' : 'livraison à domicile'} · ${formatEur(q.fees)} de frais`;
+  // Un seul bouton d'action : il dit ce qui manque et y mène, plutôt que de rester grisé.
+  const cta: { title: string; action: 'none' | 'buy' | 'credit' | 'order'; disabled?: boolean; hint?: string } = !q
+    .lines.length
+    ? { title: 'Choisissez un lingotin', action: 'none', disabled: true }
+    : pickup && agency.trim().length < 2
+      ? { title: 'Choisissez l’agence de retrait', action: 'none', disabled: true }
+      : tooMuch
+        ? {
+            title: `Acheter ${formatWeight(missingGrams, 'g', 'gold')} d’or`,
+            action: 'buy',
+            hint: 'Il manque de l’or au coffre pour cette commande.',
+          }
+        : noCash
+          ? {
+              title: `Créditer le compte d’attente de ${formatEur(q.fees - cash)}`,
+              action: 'credit',
+              hint: 'Les frais se paient depuis le compte d’attente, pas avec votre or.',
+            }
+          : { title: `Commander · ${formatEur(q.fees)}`, action: 'order' };
+
   const set = (id: string, n: number) => {
     setOrder((o) => ({ ...o, [id]: Math.max(0, n) }));
     setMessage(null);
@@ -66,144 +88,166 @@ export default function WithdrawScreen() {
   const ptValue = 31.1035 * quote.prices.platinum;
 
   return (
-    <Screen testID="screen-retrait">
-      <Hint>
-        Recevez une partie de votre Gold Spot en lingotins d’or 999,9 d’affineries agréées LBMA (numéro de série et
-        certificat) ou en Napoléons 20 F. Ce n’est pas une vente : pas d’impôt, et la durée de détention de votre or
-        continue.
-      </Hint>
-      <Hint>Lingots PAMP Suisse : {VERISCAN_NOTE}</Hint>
-      <Text style={styles.avail}>
-        Or au coffre : <Text style={{ color: metalColor.gold }}>{formatWeight(gold, 'g', 'gold')}</Text> · compte
-        d’attente : {formatEur(cash)}
-      </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <Screen testID="screen-retrait">
+        <Hint>
+          Recevez une partie de votre Gold Spot en lingotins d’or 999,9 d’affineries agréées LBMA (numéro de série et
+          certificat) ou en Napoléons 20 F. Ce n’est pas une vente : pas d’impôt, et la durée de détention de votre or
+          continue.
+        </Hint>
+        <Hint>Lingots PAMP Suisse : {VERISCAN_NOTE}</Hint>
+        <Text style={styles.avail}>
+          Or au coffre : <Text style={{ color: metalColor.gold }}>{formatWeight(gold, 'g', 'gold')}</Text> · compte
+          d’attente : {formatEur(cash)}
+        </Text>
 
-      <Card style={{ paddingVertical: 4 }}>
-        {BAR_PRODUCTS.map((p, i) => {
-          const n = order[p.id] ?? 0;
-          return (
-            <View key={p.id} style={[styles.row, i > 0 && styles.border]}>
-              <BarImage product={p.id} size={58} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{p.label}</Text>
-                <Text style={styles.sub}>
-                  ≈ {formatEur(p.grams * quote.prices.gold)} ·{' '}
-                  {p.coin ? `prime ≈ ${pct(fees.premiums[p.id])}, variable` : `fabrication ${pct(fees.premiums[p.id])}`}
-                  {` · ${formatEur(quote.prices.gold * fees.premiums[p.id])}/g`}
-                  {p.id === 'g10' ? ' · conseillé' : p.coin ? ' · la pièce la plus facile à revendre en France' : ''}
+        <Card style={{ paddingVertical: 4 }}>
+          {BAR_PRODUCTS.map((p, i) => {
+            const n = order[p.id] ?? 0;
+            return (
+              <View key={p.id} style={[styles.row, i > 0 && styles.border]}>
+                <BarImage product={p.id} size={58} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{p.label}</Text>
+                  <Text style={styles.sub}>
+                    ≈ {formatEur(p.grams * quote.prices.gold)} ·{' '}
+                    {p.coin
+                      ? `prime ≈ ${pct(fees.premiums[p.id])}, variable`
+                      : `fabrication ${pct(fees.premiums[p.id])}`}
+                    {` · ${formatEur(quote.prices.gold * fees.premiums[p.id])}/g`}
+                    {p.id === 'g10' ? ' · conseillé' : p.coin ? ' · la pièce la plus facile à revendre en France' : ''}
+                  </Text>
+                  {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
+                </View>
+                <Pressable
+                  onPress={() => set(p.id, n - 1)}
+                  style={styles.step}
+                  accessibilityLabel={`Moins de ${p.label}`}
+                >
+                  <Text style={styles.stepText}>−</Text>
+                </Pressable>
+                <Text style={styles.qty} testID={`qty-${p.id}`}>
+                  {n}
                 </Text>
-                {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
+                <Pressable
+                  onPress={() => set(p.id, n + 1)}
+                  style={styles.step}
+                  accessibilityLabel={`Plus de ${p.label}`}
+                >
+                  <Text style={styles.stepText}>+</Text>
+                </Pressable>
               </View>
-              <Pressable
-                onPress={() => set(p.id, n - 1)}
-                style={styles.step}
-                accessibilityLabel={`Moins de ${p.label}`}
-              >
-                <Text style={styles.stepText}>−</Text>
-              </Pressable>
-              <Text style={styles.qty} testID={`qty-${p.id}`}>
-                {n}
-              </Text>
-              <Pressable onPress={() => set(p.id, n + 1)} style={styles.step} accessibilityLabel={`Plus de ${p.label}`}>
-                <Text style={styles.stepText}>+</Text>
-              </Pressable>
-            </View>
-          );
-        })}
-      </Card>
-
-      {q.lines.length > 0 && (
-        <Card style={{ gap: 6 }}>
-          <Line label="Or retiré du coffre" value={formatWeight(q.grams, 'g', 'gold')} />
-          <Line label="Valeur au cours du jour" value={formatEur(q.value)} />
-          <Line
-            label={
-              q.lines.some((l) => l.product.coin) ? 'Fabrication et prime des pièces' : 'Fabrication des lingotins'
-            }
-            value={formatEur(q.premium)}
-          />
-          {q.clientDiscount > 0 && (
-            <Text style={[styles.sub, { color: colors.up }]} testID="quantity-discount">
-              Remise de quantité comprise : −{formatEur(q.clientDiscount)}
-            </Text>
-          )}
-          {q.lines.some((l) => l.product.coin) && (
-            <Text style={styles.sub}>
-              La prime du Napoléon varie avec la demande : son prix exact est fixé le jour de la préparation.
-            </Text>
-          )}
-          <View style={styles.modes}>
-            {[
-              { id: false, label: 'Livraison à domicile' },
-              { id: true, label: 'Retrait en agence' },
-            ].map((m) => (
-              <Pressable
-                key={String(m.id)}
-                onPress={() => setPickup(m.id)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: pickup === m.id }}
-                style={[styles.mode, pickup === m.id && { borderColor: colors.gold }]}
-              >
-                <Text style={[styles.modeText, pickup === m.id && { color: colors.gold }]}>{m.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-          {pickup && <AgencyPicker value={agency} onChange={setAgency} />}
-          <Line
-            label={
-              pickup
-                ? 'Retrait en agence, contre pièce d’identité et bon de remise'
-                : `Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`
-            }
-            value={q.delivery ? formatEur(q.delivery) : pickup ? 'Gratuit' : 'Offerte'}
-          />
-          <View style={styles.sep} />
-          <Line label={`Frais payés depuis le compte d’attente (${pct(q.feesPct)})`} value={formatEur(q.fees)} strong />
-          {tooMuch && <Text style={styles.err}>Pas assez d’or au coffre pour ce retrait.</Text>}
-          {noCash && (
-            <Text style={styles.err}>
-              Compte d’attente insuffisant : créditez-le d’au moins {formatEur(q.fees - cash)} (les frais ne sont pas
-              pris sur votre or : ce serait une vente, donc imposée).
-            </Text>
-          )}
+            );
+          })}
         </Card>
-      )}
-      {noCash && q.lines.length > 0 && (
-        <Button title="Créditer le compte d’attente" variant="ghost" onPress={() => router.push('/attente')} />
-      )}
-      <Button
-        title="Retirer ces lingotins"
-        onPress={() => setConfirm(true)}
-        disabled={!q.lines.length || tooMuch || noCash || (pickup && agency.trim().length < 2)}
-      />
-      {message && <Message {...message} />}
-      <Pressable onPress={() => router.push('/coffre-maison')} accessibilityRole="link">
-        <Text style={ui.link}>Mon coffre maison ›</Text>
-      </Pressable>
 
-      <SectionTitle>Argent et platine</SectionTitle>
-      <Card style={{ gap: 6 }}>
-        <Text style={styles.para}>
-          Ils restent au coffre : à la sortie du port franc, l’argent et le platine paient{' '}
-          {pct(PHYSICAL.vatSilverPlatinum)} de TVA (l’or d’investissement en est exonéré).
-        </Text>
-        <Text style={styles.sub}>
-          1 kg d’argent ≈ {formatEur(silverValue)} → {formatEur(vatIfWithdrawn(silverValue))} de TVA. 1 once de platine
-          ≈ {formatEur(ptValue)} → {formatEur(vatIfWithdrawn(ptValue))} de TVA.
-        </Text>
-      </Card>
-      <Hint>
-        Gardez l’essentiel au coffre : la garde y coûte 0,15 % par an pour l’or, et la revente est sans commission. Chez
-        vous, pensez à l’assurance habitation et à la discrétion.
-      </Hint>
+        {q.lines.length > 0 && (
+          <Card style={{ gap: 6 }}>
+            <Line label="Or retiré du coffre" value={formatWeight(q.grams, 'g', 'gold')} />
+            <Line label="Valeur au cours du jour" value={formatEur(q.value)} />
+            <Line
+              label={
+                q.lines.some((l) => l.product.coin) ? 'Fabrication et prime des pièces' : 'Fabrication des lingotins'
+              }
+              value={formatEur(q.premium)}
+            />
+            {q.clientDiscount > 0 && (
+              <Text style={[styles.sub, { color: colors.up }]} testID="quantity-discount">
+                Remise de quantité comprise : −{formatEur(q.clientDiscount)}
+              </Text>
+            )}
+            {q.lines.some((l) => l.product.coin) && (
+              <Text style={styles.sub}>
+                La prime du Napoléon varie avec la demande : son prix exact est fixé le jour de la préparation.
+              </Text>
+            )}
+            <View style={styles.modes}>
+              {[
+                { id: false, label: 'Livraison à domicile' },
+                { id: true, label: 'Retrait en agence' },
+              ].map((m) => (
+                <Pressable
+                  key={String(m.id)}
+                  onPress={() => setPickup(m.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: pickup === m.id }}
+                  style={[styles.mode, pickup === m.id && { borderColor: colors.gold }]}
+                >
+                  <Text style={[styles.modeText, pickup === m.id && { color: colors.gold }]}>{m.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {pickup && <AgencyPicker value={agency} onChange={setAgency} />}
+            <Line
+              label={
+                pickup
+                  ? 'Retrait en agence, contre pièce d’identité et bon de remise'
+                  : `Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`
+              }
+              value={q.delivery ? formatEur(q.delivery) : pickup ? 'Gratuit' : 'Offerte'}
+            />
+            <View style={styles.sep} />
+            <Line
+              label={`Frais payés depuis le compte d’attente (${pct(q.feesPct)})`}
+              value={formatEur(q.fees)}
+              strong
+            />
+            {tooMuch && <Text style={styles.err}>Pas assez d’or au coffre pour ce retrait.</Text>}
+            {noCash && (
+              <Text style={styles.err}>
+                Compte d’attente insuffisant : créditez-le d’au moins {formatEur(q.fees - cash)} (les frais ne sont pas
+                pris sur votre or : ce serait une vente, donc imposée).
+              </Text>
+            )}
+          </Card>
+        )}
+        {message && <Message {...message} />}
+        <Pressable onPress={() => router.push('/coffre-maison')} accessibilityRole="link">
+          <Text style={ui.link}>Mon coffre maison ›</Text>
+        </Pressable>
 
-      <PinConfirm
-        visible={confirm}
-        summary={`Retirer ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')} : ${formatWeight(q.grams, 'g', 'gold')} d’or, ${formatEur(q.fees)} de frais.`}
-        onConfirm={submit}
-        onCancel={() => setConfirm(false)}
-      />
-    </Screen>
+        <SectionTitle>Argent et platine</SectionTitle>
+        <Card style={{ gap: 6 }}>
+          <Text style={styles.para}>
+            Ils restent au coffre : à la sortie du port franc, l’argent et le platine paient{' '}
+            {pct(PHYSICAL.vatSilverPlatinum)} de TVA (l’or d’investissement en est exonéré).
+          </Text>
+          <Text style={styles.sub}>
+            1 kg d’argent ≈ {formatEur(silverValue)} → {formatEur(vatIfWithdrawn(silverValue))} de TVA. 1 once de
+            platine ≈ {formatEur(ptValue)} → {formatEur(vatIfWithdrawn(ptValue))} de TVA.
+          </Text>
+        </Card>
+        <Hint>
+          Gardez l’essentiel au coffre : la garde y coûte 0,15 % par an pour l’or, et la revente est sans commission.
+          Chez vous, pensez à l’assurance habitation et à la discrétion.
+        </Hint>
+
+        <PinConfirm
+          visible={confirm}
+          summary={`Retirer ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')} : ${formatWeight(q.grams, 'g', 'gold')} d’or, ${formatEur(q.fees)} de frais.`}
+          onConfirm={submit}
+          onCancel={() => setConfirm(false)}
+        />
+      </Screen>
+      <View style={styles.footer} testID="order-footer">
+        {q.lines.length > 0 && (
+          <Text style={styles.footerSub} numberOfLines={2}>
+            {summary}
+          </Text>
+        )}
+        <Button
+          title={cta.title}
+          onPress={() => {
+            if (cta.action === 'buy')
+              router.push({ pathname: '/operations', params: { mode: 'buy', metal: 'gold', t: Date.now() } });
+            else if (cta.action === 'credit') router.push('/attente');
+            else if (cta.action === 'order') setConfirm(true);
+          }}
+          disabled={cta.disabled}
+        />
+        {cta.hint ? <Text style={styles.footerSub}>{cta.hint}</Text> : null}
+      </View>
+    </View>
   );
 }
 
@@ -212,6 +256,14 @@ function Line({ label, value, strong }: { label: string; value: string; strong?:
 }
 
 const styles = StyleSheet.create({
+  footer: {
+    gap: 6,
+    padding: 14,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  footerSub: { color: colors.textMuted, fontSize: 12.5, textAlign: 'center' },
   modes: { flexDirection: 'row', gap: 8 },
   mode: {
     flex: 1,
