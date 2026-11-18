@@ -255,7 +255,7 @@ test('solde : retirer un lingotin ne fait pas baisser le total (le physique est 
   assert.equal(physicalValue(b, p), 0);
 });
 
-test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces, coût en moins pour Orvia', () => {
+test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces, moitié reversée au client', () => {
   const def = physicalFeesOf();
   const g10 = productOf('g10');
   assert.equal(vendorTierOff(g10, 9), 0);
@@ -268,7 +268,12 @@ test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces,
   assert.equal(nine.vendorDiscount, 0);
   const ten = quoteWithdrawal(p, { g10: 10 }, def);
   assert.equal(ten.volume, true);
-  close(ten.premium, 10 * 10 * p.gold * 0.075, 1e-6); // le client paie toujours 7,5 %
+  // La moitié de la remise du revendeur est reversée au client, l'autre moitié reste à Orvia.
+  close(ten.clientDiscount, 10 * 10 * p.gold * 0.0054 * 0.5, 0.01);
+  close(ten.premium, 10 * 10 * p.gold * (0.075 - 0.0027), 0.01);
+  close(nine.premium, 9 * 10 * p.gold * 0.075, 1e-6); // pas de palier : prix de base
+  // Marge d'Orvia par pièce : base + moitié de la remise.
+  close((ten.premium - (ten.cost! - def.vendorDelivery)) / 10, 10 * p.gold * (0.075 - 0.0652 + 0.0027), 0.01);
   close(ten.vendorDiscount, 10 * 10 * p.gold * 0.0054, 0.01);
   close(ten.cost!, 10 * 10 * p.gold * (0.0652 - 0.0054) + def.vendorDelivery, 0.01);
   // Le palier se compte par produit : 5 g + 5 g + 10 g n'atteignent aucun palier.

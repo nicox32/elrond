@@ -134,8 +134,12 @@ export function PhysicalFeesEditor() {
             </Text>
             {margin !== null && p.vendorTiers?.length ? (
               <Text style={styles.tiers}>
-                {p.vendorTiers.map((t) => `dès ${t.from} : ${formatEur(margin + t.off * value)}`).join(' · ')}
-                {' (marge par pièce, remise du revendeur incluse)'}
+                {p.vendorTiers
+                  .map(
+                    (t) => `dès ${t.from} : ${formatEur(margin + t.off * value * (1 - PHYSICAL.clientDiscountShare))}`,
+                  )
+                  .join(' · ')}
+                {' (marge par pièce ; la moitié de la remise du revendeur est reversée au client)'}
               </Text>
             ) : null}
           </View>

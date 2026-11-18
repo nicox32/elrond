@@ -237,6 +237,8 @@ export const PHYSICAL = {
   delivery: 12,
   /** … offerte à partir de ce poids d'or dans le même envoi (inciter à grouper les retraits). */
   freeDeliveryFromGrams: 20,
+  /** Part de la remise de quantité du revendeur reversée au client (le reste améliore la marge d'Orvia). */
+  clientDiscountShare: 0.5,
   /** Livraison payée au vendeur, par commande (relevé du 18/11/2026). */
   vendorDelivery: 7,
   /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
@@ -293,6 +295,7 @@ export function physicalFeeRows(fees: PhysicalFees): { label: string; orvia: str
       label: 'Livraison assurée, remise contre signature',
       orvia: `${fees.delivery.toLocaleString('fr-FR')} € par envoi, offerte dès ${fees.freeFromGrams.toLocaleString('fr-FR')} g`,
     },
+    { label: 'Remise de quantité', orvia: 'Fabrication dégressive dès 10 pièces du même format' },
     { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
   ];
 }
@@ -324,7 +327,8 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
       qty,
       grams: qty * p.grams,
       value,
-      premium: value * (fees.premiums[p.id] ?? p.premium),
+      premium: value * (fees.premiums[p.id] ?? p.premium) - value * applied * PHYSICAL.clientDiscountShare,
+      clientDiscount: value * applied * PHYSICAL.clientDiscountShare,
       vendorCost: v === undefined ? undefined : value * (v - applied),
       vendorDiscount: value * applied,
     };
@@ -333,6 +337,7 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
   const value = lines.reduce((s, l) => s + l.value, 0);
   const premium = lines.reduce((s, l) => s + l.premium, 0);
   const vendorDiscount = lines.reduce((s, l) => s + l.vendorDiscount, 0);
+  const clientDiscount = lines.reduce((s, l) => s + l.clientDiscount, 0);
   const delivery = !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
   const total = Math.round((premium + delivery) * 100) / 100;
   // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) et sa livraison, par commande.
@@ -352,6 +357,8 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
     pieces,
     volume: vendorDiscount > 0,
     vendorDiscount: Math.round(vendorDiscount * 100) / 100,
+    /** Part de cette remise reversée au client : déjà déduite de `premium`. */
+    clientDiscount: Math.round(clientDiscount * 100) / 100,
   };
 }
 

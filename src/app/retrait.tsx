@@ -115,6 +115,11 @@ export default function WithdrawScreen() {
             }
             value={formatEur(q.premium)}
           />
+          {q.clientDiscount > 0 && (
+            <Text style={[styles.sub, { color: colors.up }]} testID="quantity-discount">
+              Remise de quantité comprise : −{formatEur(q.clientDiscount)}
+            </Text>
+          )}
           {q.lines.some((l) => l.product.coin) && (
             <Text style={styles.sub}>
               La prime du Napoléon varie avec la demande : son prix exact est fixé le jour de la préparation.
