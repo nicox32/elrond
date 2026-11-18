@@ -39,8 +39,8 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   a = buy(a, p, 'gold', { unit: 'g', value: 20 }, new Date('2024-06-01T12:00:00'));
   const q = quoteWithdrawal(p, { g10: 2, g5: 1 });
   assert.equal(q.grams, 25);
-  close(q.premium, 10 * 100 * 0.075 * 2 + 5 * 100 * 0.096);
-  close(q.fees, 150 + 48, 0.01); // 25 g : livraison offerte (dès 20 g)
+  close(q.premium, 10 * 100 * 0.075 * 2 + 5 * 100 * 0.0951);
+  close(q.fees, 150 + 47.55, 0.01); // 25 g : livraison offerte (dès 20 g)
   close(quoteWithdrawal(p, { g10: 1 }).fees, 75 + 12, 0.01); // 10 g seul : livraison 12 €
   // Frais à payer depuis le compte d'attente : vide → refusé (payer en or serait une vente imposée).
   assert.throws(() => withdrawPhysical(a, p, { g10: 2, g5: 1 }), LedgerError);
@@ -112,7 +112,7 @@ test('Napoléon 20 F : 5,806 g d’or fin, prime indicative, millésime au coffr
   const { napoleonPrice } = await import('../src/logic/physical.ts');
   const n = napoleonPrice(100);
   close(n.metal, 580.6);
-  close(n.withPremium, 580.6 * 1.065);
+  close(n.withPremium, 580.6 * 1.0535);
   // 4 Napoléons = 23,2 g d'or : livraison offerte (dès 20 g).
   const q = quoteWithdrawal(p, { nap20: 4 });
   close(q.grams, 23.224);
@@ -173,14 +173,14 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   const { companyReport } = await import('../src/logic/company.ts');
   // Valeurs par défaut : 5 g à 11 % (prime vendeur 9,78 % relevée le 18/11/2026), livraison 12 € (7 € payés au vendeur).
   const def = physicalFeesOf();
-  assert.equal(def.premiums.g5, 0.096);
+  assert.equal(def.premiums.g5, 0.0951);
   assert.equal(def.vendor.g5, 0.0901);
   assert.equal(def.vendorDelivery, 7);
   assert.equal(def.delivery, 12);
   assert.equal(def.freeFromGrams, 20);
   const q5 = quoteWithdrawal(p, { g5: 1 }, def);
-  close(q5.premium, 5 * 100 * 0.096, 1e-9);
-  close(q5.fees, 48 + 12, 0.01);
+  close(q5.premium, 5 * 100 * 0.0951, 1e-9);
+  close(q5.fees, 47.55 + 12, 0.01);
   close(q5.cost!, 5 * 100 * 0.0901 + 7, 1e-9); // lingotin payé au vendeur + sa livraison
   // Coût inconnu si un format sans prime vendeur : pas de coût calculé.
   assert.equal(def.vendor.g10, 0.0652);
@@ -191,9 +191,9 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0901 + 10 * 100 * 0.0652 + 7, 1e-9);
   // Réglages de Société Orvia : fabrication, livraison, seuil.
   const custom = physicalFeesOf({
-    physicalFees: { premiums: { g5: 0.1 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },
+    physicalFees: { premiums: { g20: 0.07 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },
   });
-  assert.equal(custom.premiums.g5, 0.1);
+  assert.equal(custom.premiums.g20, 0.07);
   assert.equal(custom.premiums.g10, 0.075); // inchangé
   assert.equal(custom.vendor.g5, 0.0901); // valeur par défaut gardée
   assert.equal(custom.vendor.g10, 0.05);
@@ -205,7 +205,9 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   const low = physicalFeesOf({ physicalFees: { premiums: { g5: 0.08 } } });
   close(low.premiums.g5, 0.0901 + 0.005, 1e-9);
   const high = physicalFeesOf({ physicalFees: { premiums: { g5: 0.2 } } });
-  close(high.premiums.g5, 0.0901 + 0.03, 1e-9);
+  close(high.premiums.g5, 0.0901 + 0.005, 1e-9); // plafonné à 7 % puis ramené au plancher de marge
+  const g20 = physicalFeesOf({ physicalFees: { premiums: { g20: 0.2 } } });
+  close(g20.premiums.g20, 0.05 + 0.03, 1e-9);
   const wide = physicalFeesOf({ physicalFees: { premiums: { g5: 0.08 }, marginMinPt: 0 } });
   close(wide.premiums.g5, 0.0901, 1e-9);
   // Retrait enregistré avec ses frais réglés et son coût pour Orvia.
@@ -221,14 +223,14 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   );
   a = { ...a, settings: { ...a.settings, physicalFees: { premiums: { g5: 0.1 } } } };
   a = withdrawPhysical(a, p, { g5: 1 }, new Date('2026-11-16T12:00:00'));
-  close(a.transactions[0].fees!, 50 + 12, 0.01);
+  close(a.transactions[0].fees!, 47.55 + 12, 0.01); // 10 % demandé, plafonné à 7 % puis au plancher de marge
   close(a.transactions[0].costEur!, 5 * 100 * 0.0901 + 7, 0.01);
   const r = companyReport(a, p, 'all', new Date('2026-11-17T12:00:00'));
   close(r.costs.physical, 5 * 100 * 0.0901 + 7, 0.01);
-  close(r.revenue.physical, 62, 0.01);
+  close(r.revenue.physical, 59.55, 0.01);
   // Grille des Tarifs avec les frais en vigueur.
   const rows = physicalFeeRows(physicalFeesOf(a.settings));
-  assert.equal(rows[0].orvia, 'Fabrication 10 %');
+  assert.equal(rows[0].orvia, 'Fabrication 9,51 %');
   assert.match(rows[5].orvia, /12 € par envoi, offerte dès 20 g/);
 });
 

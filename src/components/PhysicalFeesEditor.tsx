@@ -229,6 +229,14 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                   ? 'Prime de Godot & Fils inconnue : marge non calculée'
                   : `Marge de base ${margin >= 0 ? '+' : '−'}${formatEur(Math.abs(margin))} par ${p.coin ? 'pièce' : 'lingotin'} · autorisé de ${((vend + marginLo) * 100).toFixed(2).replace('.', ',')} % à ${((vend + marginHi) * 100).toFixed(2).replace('.', ',')} %`}
               </Text>
+              {PREMIUM_TARGET[p.id] ? (
+                <Text style={styles.tiers}>
+                  Fourchette visée {(PREMIUM_TARGET[p.id].min * 100).toLocaleString('fr-FR')} à{' '}
+                  {(PREMIUM_TARGET[p.id].max * 100).toLocaleString('fr-FR')} % : prix plafonné à{' '}
+                  {(PREMIUM_TARGET[p.id].max * 100).toLocaleString('fr-FR')} %, mais jamais sous la prime de Godot &
+                  Fils + {mMin} point.
+                </Text>
+              ) : null}
             </View>
           );
         })}

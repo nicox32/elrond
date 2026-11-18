@@ -116,8 +116,8 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Lingotin 5 g',
     grams: 5,
     // Relevé du 18/11/2026 : 621,01 € TTC pour 1 lingotin + 7 € de livraison. Les frais du vendeur (8,91 % du prix)
-    // font 9,78 % de la valeur de l'or ; facturée 9,6 % au client (tarif ajusté le 19/11 : marge d’environ 1,5 point sur les primes réelles).
-    premium: 0.096,
+    // font 9,78 % de la valeur de l'or ; visée à 5-7 % au client (fourchette compétitive du 19/11), mais jamais sous la prime du vendeur + la marge minimale.
+    premium: 0.07,
     vendorPremium: 0.0901, // relevé du 18/11/2026 : 612,50 € l'unité pour 561,86 € d'or
     vendorTiers: [
       { from: 10, off: 0.0062 },
@@ -207,7 +207,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'nap20',
     label: 'Napoléon 20 F (5,81 g d’or fin)',
     grams: NAPOLEON_FINE_GRAMS,
-    premium: 0.065,
+    premium: 0.04,
     vendorPremium: 0.0485, // Godot & Fils, 18/11/2026 : prime affichée par le revendeur
     // Mêmes paliers que les autres formats (10, 20, 50 pièces). Le revendeur en a deux de plus à 100 et 500 pièces,
     // non repris ici : 0,39 point dès 100 et 0,69 point dès 500.
@@ -230,7 +230,7 @@ export function productPrice(p: BarProduct, goldEurPerGram: number, premium = p.
 
 /** Valeur d'un Napoléon : l'or qu'il contient au cours du moment, et le prix indicatif avec sa prime. */
 export function napoleonPrice(goldEurPerGram: number) {
-  return productPrice(productOf('nap20'), goldEurPerGram);
+  return productPrice(productOf('nap20'), goldEurPerGram, physicalFeesOf().premiums.nap20);
 }
 
 export const PHYSICAL = {
@@ -315,6 +315,15 @@ export function vendorDeliveryCost(goodsEur: number, fees: Pick<PhysicalFees, 'v
 export const MARGIN_PT = { min: 0.5, max: 3 } as const;
 
 /** Fourchette de la fabrication facturée au client pour une prime vendeur donnée. */
+/**
+ * Fourchette compétitive visée pour la fabrication ou la prime facturée au client (part de la valeur de l'or), quand elle
+ * est connue. Elle plafonne le prix ; le plancher de marge sur la prime du vendeur passe avant (jamais de vente à perte).
+ */
+export const PREMIUM_TARGET: Record<string, { min: number; max: number }> = {
+  g5: { min: 0.05, max: 0.07 },
+  nap20: { min: 0.03, max: 0.04 },
+};
+
 export function premiumRange(vendorPremium: number, margin: { min: number; max: number }) {
   return { min: vendorPremium + margin.min, max: vendorPremium + margin.max };
 }
@@ -339,6 +348,8 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
   const hi = Math.max(lo, (s.marginMaxPt ?? MARGIN_PT.max) / 100);
   for (const p of BAR_PRODUCTS) {
     const v = vendor[p.id];
+    const cap = PREMIUM_TARGET[p.id]?.max;
+    if (cap !== undefined) premiums[p.id] = Math.min(premiums[p.id], cap);
     if (v !== undefined) premiums[p.id] = r6(Math.min(v + hi, Math.max(v + lo, premiums[p.id])));
   }
   return {
