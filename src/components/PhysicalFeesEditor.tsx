@@ -130,6 +130,12 @@ export function PhysicalFeesEditor() {
                     100
                   ).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} pt)`}
             </Text>
+            {margin !== null && p.vendorTiers?.length ? (
+              <Text style={styles.tiers}>
+                {p.vendorTiers.map((t) => `dès ${t.from} : ${formatEur(margin + t.off * value)}`).join(' · ')}
+                {' (marge par pièce, remise du revendeur incluse)'}
+              </Text>
+            ) : null}
           </View>
         );
       })}
@@ -272,4 +278,5 @@ const styles = StyleSheet.create({
   chipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   result: { color: colors.text, fontSize: 14, fontWeight: '700' },
   margin: { color: colors.textMuted, fontSize: 12 },
+  tiers: { color: colors.textMuted, fontSize: 11 },
 });
