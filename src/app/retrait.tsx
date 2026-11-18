@@ -55,7 +55,7 @@ export default function WithdrawScreen() {
         ok: true,
         text: pickup
           ? `Retrait enregistré : vous serez prévenu dès que vos lingotins sont disponibles à l’agence Godot & Fils (${city}). Apportez une pièce d’identité et signez le bon de remise. Notez ensuite le numéro de série de chaque lingotin dans « Mon coffre maison ».`
-          : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours ouvrés. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
+          : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours environ. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
       });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Retrait impossible.' });

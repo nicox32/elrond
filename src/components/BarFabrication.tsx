@@ -6,7 +6,7 @@ import { colors, metalColor } from '../theme';
 
 /**
  * Lingotin « en fabrication » : un lingot qui se remplit d'or selon l'avancement estimé de la commande, avec ses
- * quatre étapes. L'avancement est une estimation (jours ouvrés écoulés), pas un suivi du revendeur.
+ * quatre étapes. L'avancement est une estimation (jours écoulés), pas un suivi du revendeur.
  */
 export function BarFabrication({ orderedAt, pickup }: { orderedAt: string; pickup?: boolean }) {
   const p = fabricationProgress(orderedAt, new Date(), !!pickup);
@@ -51,7 +51,7 @@ export function BarFabrication({ orderedAt, pickup }: { orderedAt: string; picku
       <Text style={[styles.note, done && { color: colors.up }]}>
         {done
           ? 'Arrivé : à vous de le noter dès que vous l’avez en main.'
-          : 'Avancement estimé d’après les jours ouvrés écoulés (5 à 10 jours en tout).'}
+          : 'Avancement estimé d’après les jours écoulés (8 jours en tout).'}
       </Text>
     </View>
   );
