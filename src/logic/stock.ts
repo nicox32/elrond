@@ -2,7 +2,7 @@
 // client prend d'abord dans le stock de la société, puis dans le coffre professionnel, sinon il faut commander.
 import { LedgerError, newId } from './ledger.ts';
 import { newRef, normalizeSerial, physicalFeesOf, productOf, serialFormatError } from './physical.ts';
-import type { Account, HomeBar, StockLot, StockMove } from './types.ts';
+import type { Account, StockLot, StockMove } from './types.ts';
 
 export const MAX_BATCH = 10000;
 const LOG_LIMIT = 500;
@@ -228,17 +228,12 @@ export function stockCount(account: Pick<Account, 'stock'>, product: string): { 
 /** Plafond par défaut de l'assurance du stock de lingotins et de pièces. */
 export const INSURANCE_CAP_EUR = 250_000;
 
-/** Valeur d'un lingotin du coffre maison : son or au cours du jour plus la prime de base du revendeur. */
-function barInsuredValue(b: HomeBar, goldEurPerGram: number, fees: ReturnType<typeof physicalFeesOf>): number {
-  return b.grams * goldEurPerGram * (1 + (fees.vendor[b.product] ?? 0));
-}
-
-type InsuredAccount = Pick<Account, 'stock' | 'settings'> & Partial<Pick<Account, 'homeVault'>>;
+type InsuredAccount = Pick<Account, 'stock' | 'settings'>;
 
 /**
- * Détail de la valeur assurée : le stock (chaque exemplaire à son prix payé quand il est connu, sinon la valeur de son
- * or au cours du jour plus la prime de base), et les lingotins en route vers un client.
- * Les lingotins encore gardés au coffre sécurisé ne comptent pas.
+ * Détail de la valeur assurée : uniquement ce qu'Orvia a commandé et garde en stock (chaque exemplaire à son prix payé
+ * quand il est connu, sinon la valeur de son or au cours du jour plus la prime de base). Les lingotins partis chez un
+ * client ou gardés au coffre sécurisé ne comptent pas.
  */
 export function insuredBreakdown(account: InsuredAccount, goldEurPerGram: number) {
   const fees = physicalFeesOf(account.settings);
@@ -249,12 +244,7 @@ export function insuredBreakdown(account: InsuredAccount, goldEurPerGram: number
       const unit = l.unitCost ?? p.grams * goldEurPerGram * (1 + (fees.vendor[l.product] ?? 0));
       return s + l.qty * unit;
     }, 0);
-  let transit = 0;
-  for (const b of account.homeVault ?? []) {
-    if (b.status === 'received' || (b.vault && !b.exitedAt)) continue;
-    transit += barInsuredValue(b, goldEurPerGram, fees);
-  }
-  return { stock, transit, total: stock + transit };
+  return { stock, total: stock };
 }
 
 export function stockInsuredValue(account: InsuredAccount, goldEurPerGram: number): number {

@@ -429,24 +429,11 @@ test('assurance du stock : plafond de 250 000 €, lot refusé s’il le fait d�
   assert.equal(stockInsuredValue(emptied, gold), 0);
 });
 
-test('assurance : compte aussi les lingotins en route, pas ceux remis ni ceux du coffre', async () => {
+test('assurance : ne compte que le stock commandé, pas les lingotins en route ni remis', async () => {
   const { insuredBreakdown } = await import('../src/logic/stock.ts');
   let a = createAccount('T', new Date('2020-01-01'));
   a = addStock(a, { product: 'g10', qty: 2, source: 'maison', unitCost: 1000 });
-  const bar = (id: string, status: 'preparing' | 'received', vault?: boolean) => ({
-    id,
-    product: 'g10',
-    grams: 10,
-    orderedAt: '2026-09-01T10:00:00Z',
-    status,
-    vault,
-    cost: 0,
-    acquiredFrom: '2026-01-01',
-    acquiredTo: '2026-01-01',
-  });
-  a = { ...a, homeVault: [bar('a', 'preparing'), bar('b', 'received'), bar('c', 'received', true)] } as typeof a;
-  const b = insuredBreakdown(a, 100);
-  assert.equal(b.stock, 2000);
-  close(b.transit, 10 * 100 * 1.0652, 1e-6);
-  close(b.total, 2000 + 1065.2, 1e-6);
+  const bar = { id: 'a', product: 'g10', grams: 10, orderedAt: '2026-09-01T10:00:00Z', status: 'preparing', cost: 0 };
+  a = { ...a, homeVault: [bar] } as unknown as typeof a;
+  assert.equal(insuredBreakdown(a, 100).total, 2000);
 });

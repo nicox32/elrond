@@ -6,7 +6,6 @@ import { LedgerError } from '../logic/ledger';
 import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, productOf } from '../logic/physical';
 import {
   assertInsuranceRoom,
-  insuredBreakdown,
   insuranceStatus,
   addSerialsToLot,
   addStock,
@@ -57,7 +56,6 @@ export function StockManager({ onBack }: { onBack: () => void }) {
   const [lotSerials, setLotSerials] = useState<Record<string, string>>({});
 
   const insurance = insuranceStatus(account, quote.prices.gold);
-  const insured = insuredBreakdown(account, quote.prices.gold);
   const [capText, setCapText] = useState(String(insurance.cap).replace('.', ','));
   const lots = (account.stock ?? []).filter((l) => l.qty > 0 || (l.serials?.length ?? 0) > 0);
   const summary = stockSummary(account);
@@ -134,7 +132,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
 
       <Banner icon="ℹ️">
         La garde des lingotins en coffre sécurisé chez Godot & Fils est refacturée au client au coût (0,04 € par mois et
-        par gramme). L’assurance couvre le stock et les lingotins en route vers un client, jusqu’au plafond ci-dessous.
+        par gramme). L’assurance couvre ce que vous commandez et gardez en stock, jusqu’au plafond ci-dessous.
       </Banner>
 
       <SectionTitle>Assurance du stock</SectionTitle>
@@ -144,8 +142,6 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           value={`${formatEur(insurance.value)} sur ${formatEur(insurance.cap)}`}
           strong
         />
-        <KeyValue label="· en stock" value={formatEur(insured.stock)} />
-        <KeyValue label="· en route vers un client" value={formatEur(insured.transit)} />
         <InsuranceMeter />
         <Label>Plafond de l’assurance (€)</Label>
         <TextInput
