@@ -115,6 +115,16 @@ export default function WithdrawScreen() {
             }
             value={formatEur(q.premium)}
           />
+          {q.volume && q.discount > 0 && (
+            <Line label={`Dont remise de volume (${q.pieces} pièces)`} value={`−${formatEur(q.discount)}`} />
+          )}
+          {!q.volume && q.pieces > 0 && q.pieces < fees.volumeFrom && fees.volumeDiscount > 0 && (
+            <Text style={styles.sub} testID="volume-nudge">
+              Dès {fees.volumeFrom} pièces dans un même retrait, la fabrication baisse de{' '}
+              {(fees.volumeDiscount * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} point : encore{' '}
+              {fees.volumeFrom - q.pieces} pièce{fees.volumeFrom - q.pieces > 1 ? 's' : ''}.
+            </Text>
+          )}
           {q.lines.some((l) => l.product.coin) && (
             <Text style={styles.sub}>
               La prime du Napoléon varie avec la demande : son prix exact est fixé le jour de la préparation.

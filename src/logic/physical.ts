@@ -210,6 +210,9 @@ export const PHYSICAL = {
   vendorDelivery: 7,
   /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
   vatSilverPlatinum: 0.2,
+  /** Remise de volume : dès 5 pièces dans un même retrait, la fabrication baisse de 0,15 point. */
+  volumeFromQty: 5,
+  volumeDiscount: 0.0015,
   /** Délai indicatif de livraison, en jours ouvrés. */
   delayDays: '5 à 10',
 } as const;
@@ -225,6 +228,9 @@ export interface PhysicalFees {
   /** Livraison payée au vendeur, par commande. */
   vendorDelivery: number;
   freeFromGrams: number;
+  /** Remise de volume : nombre de pièces dans le retrait, et points de fabrication retirés. */
+  volumeFrom: number;
+  volumeDiscount: number;
 }
 
 export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
@@ -242,6 +248,8 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
     delivery: s.delivery ?? PHYSICAL.delivery,
     vendorDelivery: s.vendorDelivery ?? PHYSICAL.vendorDelivery,
     freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
+    volumeFrom: s.volumeFrom ?? PHYSICAL.volumeFromQty,
+    volumeDiscount: s.volumeDiscount ?? PHYSICAL.volumeDiscount,
   };
 }
 
@@ -262,6 +270,10 @@ export function physicalFeeRows(fees: PhysicalFees): { label: string; orvia: str
       label: 'Livraison assurée, remise contre signature',
       orvia: `${fees.delivery.toLocaleString('fr-FR')} € par envoi, offerte dès ${fees.freeFromGrams.toLocaleString('fr-FR')} g`,
     },
+    {
+      label: 'Remise de volume',
+      orvia: `Fabrication −${(fees.volumeDiscount * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} point dès ${fees.volumeFrom} pièces dans un même retrait`,
+    },
     { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
   ];
 }
@@ -274,22 +286,29 @@ export function productOf(id: string): BarProduct {
 
 /** Détail chiffré d'un retrait : grammes pris au coffre, surcoût de fabrication, livraison. */
 export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalFees = physicalFeesOf()) {
+  const pieces = BAR_PRODUCTS.reduce((s, p) => s + Math.max(0, Math.floor(order[p.id] ?? 0)), 0);
+  // Remise de volume : dès N pièces dans le même retrait, la fabrication de chaque pièce baisse de quelques points.
+  const volume = fees.volumeDiscount > 0 && pieces >= fees.volumeFrom;
   const lines = BAR_PRODUCTS.filter((p) => (order[p.id] ?? 0) > 0).map((p) => {
     const qty = Math.floor(order[p.id]);
     const value = qty * p.grams * prices.gold;
     const v = fees.vendor[p.id];
+    const rate = fees.premiums[p.id] ?? p.premium;
+    const applied = volume ? Math.min(rate, fees.volumeDiscount) : 0;
     return {
       product: p,
       qty,
       grams: qty * p.grams,
       value,
-      premium: value * (fees.premiums[p.id] ?? p.premium),
+      premium: value * (rate - applied),
+      discount: value * applied,
       vendorCost: v === undefined ? undefined : value * v,
     };
   });
   const grams = lines.reduce((s, l) => s + l.grams, 0);
   const value = lines.reduce((s, l) => s + l.value, 0);
   const premium = lines.reduce((s, l) => s + l.premium, 0);
+  const discount = lines.reduce((s, l) => s + l.discount, 0);
   const delivery = !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
   const total = Math.round((premium + delivery) * 100) / 100;
   // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) et sa livraison, par commande.
@@ -297,7 +316,19 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
     lines.length && lines.every((l) => l.vendorCost !== undefined)
       ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0) + fees.vendorDelivery
       : undefined;
-  return { lines, grams, value, premium, delivery, fees: total, feesPct: value ? total / value : 0, cost };
+  return {
+    lines,
+    grams,
+    value,
+    premium,
+    delivery,
+    fees: total,
+    feesPct: value ? total / value : 0,
+    cost,
+    pieces,
+    volume,
+    discount: Math.round(discount * 100) / 100,
+  };
 }
 
 /**

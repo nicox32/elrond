@@ -7,6 +7,7 @@ import { isWeekendClosed } from '../src/logic/market.ts';
 import { cancelOrder, placeOrder, runPendingOrders } from '../src/logic/orders.ts';
 import {
   homeVaultTotal,
+  physicalFeesOf,
   quoteWithdrawal,
   receiveBar,
   vendorPremiumFrom,
@@ -250,4 +251,38 @@ test('solde : retirer un lingotin ne fait pas baisser le total (le physique est 
   let b = receiveBar(withChild.account, withChild.account.homeVault![0].id, 'C204518');
   b = giveBarToChild(b, p, b.homeVault![0].id, withChild.child.id, new Date('2026-11-17T13:00:00'));
   assert.equal(physicalValue(b, p), 0);
+});
+
+test('remise de volume : 0,15 point de fabrication dès 5 pièces dans un même retrait', () => {
+  const def = physicalFeesOf();
+  assert.equal(def.volumeFrom, 5);
+  close(def.volumeDiscount, 0.0015, 1e-12);
+  // 4 pièces : aucune remise.
+  const four = quoteWithdrawal(p, { g10: 4 }, def);
+  assert.equal(four.volume, false);
+  assert.equal(four.discount, 0);
+  close(four.premium, 4 * 10 * 100 * 0.075, 1e-9);
+  // 5 pièces : 0,15 point en moins sur chaque pièce (valeur de l'or 5 000 €).
+  const five = quoteWithdrawal(p, { g10: 5 }, def);
+  assert.equal(five.volume, true);
+  assert.equal(five.pieces, 5);
+  close(five.premium, 5 * 10 * 100 * (0.075 - 0.0015), 1e-9);
+  close(five.discount, 5 * 10 * 100 * 0.0015, 0.01);
+  // Les pièces de formats différents comptent ensemble.
+  const mix = quoteWithdrawal(p, { g5: 2, g10: 2, nap20: 1 }, def);
+  assert.equal(mix.volume, true);
+  assert.equal(mix.pieces, 5);
+  // La remise ne rend jamais la fabrication négative et se règle (Société Orvia).
+  const off = quoteWithdrawal(p, { g10: 5 }, { ...def, volumeDiscount: 0 });
+  assert.equal(off.volume, false);
+  const custom = physicalFeesOf({ physicalFees: { volumeFrom: 3, volumeDiscount: 0.002 } });
+  assert.equal(quoteWithdrawal(p, { g10: 3 }, custom).volume, true);
+  // La marge reste positive avec la remise (1 once : fabrication 6 % pour 5,19 % au vendeur).
+  const oz = quoteWithdrawal(p, { oz1: 5 }, def);
+  assert.ok(oz.premium - (oz.lines[0].vendorCost ?? 0) > 0);
+  // Le retrait emporte bien la fabrication remisée depuis le compte d'attente.
+  let a = creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 100 }), 2000);
+  const before = a.cashEur ?? 0;
+  a = withdrawPhysical(a, p, { g10: 5 });
+  close(before - (a.cashEur ?? 0), five.fees, 0.01);
 });
