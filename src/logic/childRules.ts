@@ -70,10 +70,21 @@ export function setChildParents(
   if (coParent && !coParentName) throw new LedgerError('Indiquez le prénom du second parent.');
   return replaceChildAccount(account, {
     ...child,
+    parentsUnlocked: false,
     authority,
     coParent: authority === 'joint' ? (coParent ? { ...coParent, name: coParentName! } : child.coParent) : undefined,
   });
 }
+
+/** Société Orvia : rouvre le choix des parents d'un enfant, que le parent ne peut plus modifier lui-même. */
+export function reopenChildParents(account: Account, childId: string): Account {
+  const child = getChild(account, childId);
+  return replaceChildAccount(account, { ...child, parentsUnlocked: true });
+}
+
+/** Le parent peut-il encore choisir ou modifier les parents ? Oui tant que rien n'est choisi, ou si la société l'a rouvert. */
+export const parentsEditable = (child: Pick<ChildAccount, 'authority' | 'parentsUnlocked'>) =>
+  !child.authority || child.parentsUnlocked === true;
 
 /** Grammes déjà réservés par des demandes de retrait en attente. */
 function reservedGrams(child: ChildAccount, metal: Metal): number {

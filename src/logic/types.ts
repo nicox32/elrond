@@ -154,6 +154,8 @@ export interface Settings {
   custodyFees?: boolean;
   /** Adresse postale du titulaire, affichée sur les relevés (et ceux des comptes enfants). */
   address?: PostalAddress;
+  /** L'adresse des relevés est enregistrée et verrouillée : seule la société peut la rouvrir (Société Orvia). */
+  addressUnlocked?: boolean;
 }
 
 /** Signature dessinée à l'écran : tracé SVG (coordonnées dans une boîte w × h) et date. */
@@ -333,6 +335,8 @@ export interface ChildAccount extends Wallet {
   name: string;
   /** Numéro de membre Orvia du compte enfant, aléatoire : « OV-E-XXXX-XXXX » (jamais un numéro officiel). */
   memberNumber?: string;
+  /** Le choix des parents (autorité parentale) est verrouillé une fois fait : la société peut le rouvrir. */
+  parentsUnlocked?: boolean;
   /** Date de naissance (AAAA-MM-JJ). Aucun frais avant les 18 ans ; sans date, le compte reste exonéré. */
   birthDate?: string;
   /** Autorité parentale : partagée (retraits validés par les deux parents) ou exercée seul. */

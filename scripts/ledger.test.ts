@@ -1526,3 +1526,19 @@ test('numéros de membre : présents sur tous les documents utiles (relevés, av
   // Lien en lecture seule : le numéro de l'enfant voyage avec le partage.
   assert.equal(makeChildView(child, 'Nicolas', p, now).i, kid);
 });
+
+test('choix des parents : verrouillé une fois fait, rouvert seulement par la société', async () => {
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const { setChildParents, reopenChildParents, parentsEditable } = await import('../src/logic/childRules.ts');
+  const t0 = new Date('2026-06-01T10:00:00');
+  const r = addChild(createAccount('T', new Date('2020-01-01')), 'Théo', '2015-06-01', t0);
+  const id = r.child.id;
+  assert.equal(parentsEditable(r.child), true); // rien de choisi : le parent choisit
+  const chosen = setChildParents(r.account, id, 'sole');
+  const c1 = chosen.children[0];
+  assert.equal(parentsEditable(c1), false); // choisi : le choix disparaît du compte enfant
+  const reopened = reopenChildParents(chosen, id);
+  assert.equal(parentsEditable(reopened.children[0]), true); // la société l'a rouvert
+  const again = setChildParents(reopened, id, 'sole');
+  assert.equal(parentsEditable(again.children[0]), false); // et il se verrouille à nouveau après le nouveau choix
+});

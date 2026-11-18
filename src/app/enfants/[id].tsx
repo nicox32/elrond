@@ -24,6 +24,7 @@ import {
   closeChildWithdrawal,
   PURPOSE_LABEL,
   requestChildWithdrawal,
+  parentsEditable,
   setChildParents,
   transferChildAccount,
   undoableDeposits,
@@ -79,7 +80,6 @@ export default function ChildScreen() {
   const [coPin, setCoPin] = useState('');
   const [coPin2, setCoPin2] = useState('');
   const [parentMsg, setParentMsg] = useState<Msg>(null);
-  const [editParents, setEditParents] = useState(false);
   // Date de naissance
   const [birth, setBirth] = useState('');
   const [birthError, setBirthError] = useState<string | null>(null);
@@ -183,7 +183,6 @@ export default function ChildScreen() {
     try {
       if (authority === 'sole') {
         updateAccount((acc) => setChildParents(acc, child!.id, 'sole'));
-        setEditParents(false);
         return;
       }
       if (!coName.trim()) throw new Error('Indiquez le prénom du second parent.');
@@ -194,7 +193,6 @@ export default function ChildScreen() {
       setCoName('');
       setCoPin('');
       setCoPin2('');
-      setEditParents(false);
       setParentMsg({ ok: true, text: 'Second parent enregistré.' });
     } catch (e) {
       setParentMsg({ ok: false, text: errText(e) });
@@ -232,7 +230,7 @@ export default function ChildScreen() {
     ]);
   }
 
-  const needsParents = !child.authority || editParents;
+  const needsParents = parentsEditable(child);
 
   return (
     <Screen testID="screen-enfant">
@@ -450,9 +448,6 @@ export default function ChildScreen() {
                     : 'Vous validez seul les retraits, avec un motif.'}
                 </Hint>
               </View>
-              <Pressable onPress={() => setEditParents(true)} accessibilityRole="button">
-                <Text style={ui.link}>Modifier</Text>
-              </Pressable>
             </Card>
           )}
 

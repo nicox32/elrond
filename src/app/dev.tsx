@@ -12,6 +12,7 @@ import { PhysicalFeesEditor } from '../components/PhysicalFeesEditor';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { barSummary } from '../logic/barControl';
+import { reopenChildParents } from '../logic/childRules';
 import { resetVaults } from '../logic/ledger';
 import { COMPANY, type CompanyPeriod, companyReport } from '../logic/company';
 import { formatEur } from '../logic/format';
@@ -207,6 +208,39 @@ function CompanyDashboard() {
           Non comptés : intérêts sur les euros du compte d’attente, coût des paiements par carte bancaire, transports de
           métal, et la part de chaque client dans les frais fixes (voir le seuil de rentabilité ci-dessus).
         </Text>
+      </Card>
+
+      <SectionTitle>Réglages verrouillés</SectionTitle>
+      <Hint>
+        Une fois choisis, l’adresse des relevés et les parents d’un enfant ne se modifient plus depuis le compte.
+        Rouvrez ici le réglage que vous voulez laisser corriger.
+      </Hint>
+      <Card style={{ gap: 8 }}>
+        {account.settings.address && !account.settings.addressUnlocked ? (
+          <Button
+            title="Rouvrir l’adresse des relevés (adulte et enfants)"
+            variant="ghost"
+            onPress={() => updateSettings({ addressUnlocked: true })}
+          />
+        ) : (
+          <Hint>
+            Adresse des relevés : {account.settings.address ? 'ouverte à la modification.' : 'pas encore saisie.'}
+          </Hint>
+        )}
+        {account.children.map((c) =>
+          c.authority && !c.parentsUnlocked ? (
+            <Button
+              key={c.id}
+              title={`Rouvrir le choix des parents de ${c.name}`}
+              variant="ghost"
+              onPress={() => updateAccount((acc) => reopenChildParents(acc, c.id))}
+            />
+          ) : (
+            <Hint key={c.id}>
+              Parents de {c.name} : {c.authority ? 'ouvert à la modification.' : 'pas encore choisis.'}
+            </Hint>
+          ),
+        )}
       </Card>
 
       <SectionTitle>Outils du compte</SectionTitle>

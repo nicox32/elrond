@@ -16,6 +16,7 @@ export function AddressCard() {
   const [city, setCity] = useState(a?.city ?? '');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const filled = street.trim() && postcode.trim() && city.trim();
+  const locked = !!a && !account.settings.addressUnlocked;
   const validCode = /^\d{5}$/.test(postcode.trim());
 
   function save() {
@@ -27,8 +28,25 @@ export function AddressCard() {
     if (!validCode) return setMsg({ ok: false, text: 'Le code postal doit avoir 5 chiffres.' });
     updateSettings({
       address: { name: name.trim() || undefined, street: street.trim(), postcode: postcode.trim(), city: city.trim() },
+      addressUnlocked: false,
     });
     setMsg({ ok: true, text: 'Adresse enregistrée : elle figure sur vos relevés et ceux de vos enfants.' });
+  }
+
+  if (locked) {
+    // Enregistrée : le formulaire disparaît. Seule la société peut la rouvrir.
+    return (
+      <Card style={{ gap: 4 }}>
+        <Text style={styles.title}>Adresse sur les relevés</Text>
+        <Text style={{ color: colors.text }}>
+          {a.name ? `${a.name}\n` : ''}
+          {a.street}
+          {'\n'}
+          {a.postcode} {a.city}
+        </Text>
+        <Hint>Enregistrée : elle figure sur vos relevés et ceux de vos enfants. Pour la changer, contactez Orvia.</Hint>
+      </Card>
+    );
   }
 
   return (
