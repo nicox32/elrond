@@ -23,7 +23,6 @@ import {
 } from '../logic/physical';
 import { exportPdf } from '../pdf';
 import { BarFabrication } from '../components/BarFabrication';
-import { VaultLogo } from '../components/VaultLogo';
 import { BarImage } from '../components/BarImage';
 import { QrCode } from '../components/QrCode';
 import type { HomeBar } from '../logic/types';
@@ -47,7 +46,6 @@ export default function HomeVaultScreen() {
             du comptoir à la revente)
           </Text>
         </View>
-        <VaultLogo size={64} />
       </Card>
       <ResellerStorageCard />
       {bars.length === 0 ? (

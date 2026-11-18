@@ -181,7 +181,7 @@ export function Banner({
   testID,
 }: {
   tone?: BannerTone;
-  icon?: string;
+  icon?: ReactNode;
   title?: string;
   children?: ReactNode;
   onPress?: () => void;
@@ -190,7 +190,7 @@ export function Banner({
   const t = BANNER[tone];
   const body = (
     <>
-      {icon ? <Text style={styles.bannerIcon}>{icon}</Text> : null}
+      {icon ? typeof icon === 'string' ? <Text style={styles.bannerIcon}>{icon}</Text> : icon : null}
       <View style={{ flex: 1, gap: 3 }}>
         {title ? <Text style={[styles.bannerTitle, { color: t.title }]}>{title}</Text> : null}
         {typeof children === 'string' ||

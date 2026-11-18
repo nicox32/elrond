@@ -4,6 +4,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 
 import { AmountInput } from '../../components/AmountInput';
 import { ChildBarConvert } from '../../components/ChildBarConvert';
+import { CustodyNote } from '../../components/Custody';
 import { ChildBarGifts } from '../../components/ChildBarGifts';
 import { ChildGiftCard } from '../../components/ChildGiftCard';
 import { ChildRules } from '../../components/ChildRules';
@@ -348,6 +349,7 @@ export default function ChildScreen() {
 
       <ChildRules name={name} />
       <DormancyNotice wallet={child} name={name} />
+      <CustodyNote name={name} />
       {offered.minor && offered.yearly > 0 && (
         <Hint>
           Garde offerte jusqu’à ses 18 ans : environ {formatEur(offered.yearly)} par an, lingotins compris. Orvia la
