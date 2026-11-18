@@ -21,6 +21,7 @@ import {
   specLine,
 } from '../logic/physical';
 import { exportPdf } from '../pdf';
+import { BarFabrication } from '../components/BarFabrication';
 import { BarImage } from '../components/BarImage';
 import { QrCode } from '../components/QrCode';
 import type { HomeBar } from '../logic/types';
@@ -121,6 +122,7 @@ function BarCard({
           {bar.status === 'received' ? 'Reçu' : 'En préparation'}
         </Text>
       </View>
+      {bar.status === 'preparing' && <BarFabrication orderedAt={bar.orderedAt} pickup={!!bar.pickupAgency} />}
       {isLocked(bar) ? (
         <Text style={styles.controlled} testID={`bar-lock-${bar.id}`}>
           🔒 Sécurité maximale : verrouillé jusqu’au {new Date(bar.lockedUntil!).toLocaleDateString('fr-FR')} ·{' '}

@@ -760,3 +760,34 @@ export function vendorPremiumFrom(price: number, fees: number | null, metalValue
   }
   return Number.isFinite(rate) && rate >= -0.5 && rate <= 0.5 ? rate : null;
 }
+
+/** Jours ouvrés (lundi à vendredi) écoulés entre deux dates, en jours entiers. */
+function businessDaysBetween(from: Date, to: Date): number {
+  let n = 0;
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  const end = new Date(to);
+  end.setHours(0, 0, 0, 0);
+  while (d < end) {
+    d.setDate(d.getDate() + 1);
+    const w = d.getDay();
+    if (w !== 0 && w !== 6) n++;
+  }
+  return n;
+}
+
+export const FABRICATION_STEPS = ['Commandé', 'En fabrication', 'En route', 'Arrivé'] as const;
+
+/**
+ * Avancement estimé d'un lingotin commandé, d'après les jours ouvrés écoulés (aucun suivi réel du revendeur) :
+ * commandé le premier jour, en fabrication jusqu'au 3e jour ouvré, en route jusqu'au 7e, puis arrivé.
+ * En retrait en agence, la dernière étape est « Prêt en agence ».
+ */
+export function fabricationProgress(orderedAt: string, now = new Date(), pickup = false) {
+  const days = businessDaysBetween(new Date(orderedAt), now);
+  const step = days < 1 ? 0 : days < 4 ? 1 : days < 8 ? 2 : 3;
+  const labels = pickup
+    ? ['Commandé', 'En fabrication', 'En route vers l’agence', 'Prêt en agence']
+    : [...FABRICATION_STEPS];
+  return { days, step, ratio: Math.min(1, days / 8), label: labels[step], labels };
+}

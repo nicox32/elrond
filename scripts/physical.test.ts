@@ -12,6 +12,7 @@ import {
   receiveBar,
   vendorPremiumFrom,
   vendorTierOff,
+  fabricationProgress,
   productOf,
   withdrawPhysical,
 } from '../src/logic/physical.ts';
@@ -303,4 +304,19 @@ test('retrait en agence : pas de livraison, ni facturée au client ni payée au 
   // Sans agence : livraison à domicile, aucune agence notée.
   const home2 = withdrawPhysical(acc, p, { g5: 1 }, new Date('2026-11-18T10:00:00'));
   assert.equal(home2.homeVault![0].pickupAgency, undefined);
+});
+
+test('lingotin en fabrication : étapes estimées selon les jours ouvrés', () => {
+  const ordered = '2026-11-16T10:00:00'; // lundi
+  assert.equal(fabricationProgress(ordered, new Date('2026-11-16T18:00:00')).step, 0);
+  assert.equal(fabricationProgress(ordered, new Date('2026-11-17T09:00:00')).step, 1);
+  assert.equal(fabricationProgress(ordered, new Date('2026-11-20T09:00:00')).step, 2); // 4 jours ouvrés
+  // Le week-end ne compte pas : lundi → lundi suivant = 5 jours ouvrés.
+  const next = fabricationProgress(ordered, new Date('2026-11-23T09:00:00'));
+  assert.equal(next.days, 5);
+  assert.equal(next.step, 2);
+  const late = fabricationProgress(ordered, new Date('2026-12-01T09:00:00'));
+  assert.equal(late.step, 3);
+  assert.equal(late.ratio, 1);
+  assert.equal(fabricationProgress(ordered, new Date('2026-12-01T09:00:00'), true).label, 'Prêt en agence');
 });

@@ -88,6 +88,7 @@ export default function WithdrawScreen() {
                 <Text style={styles.sub}>
                   ≈ {formatEur(p.grams * quote.prices.gold)} ·{' '}
                   {p.coin ? `prime ≈ ${pct(fees.premiums[p.id])}, variable` : `fabrication ${pct(fees.premiums[p.id])}`}
+                  {` · ${formatEur(quote.prices.gold * fees.premiums[p.id])}/g`}
                   {p.id === 'g10' ? ' · conseillé' : p.coin ? ' · la pièce la plus facile à revendre en France' : ''}
                 </Text>
                 {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
