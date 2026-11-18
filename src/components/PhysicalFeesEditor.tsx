@@ -13,6 +13,7 @@ const PREMIUM_CALCULATOR_URL = 'https://lingot-dor.fr/calculateur-prime-or';
 
 const toText = (n: number | undefined) =>
   n === undefined ? '' : (Math.round(n * 10000) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+const perGram = (g: number) => g.toLocaleString('fr-FR', { maximumFractionDigits: 3 });
 const toRate = (t: string) => Math.round(parseAmount(t) * 100) / 10000;
 
 /** Société Orvia : frais du retrait physique (fabrication par format, prime du vendeur, livraison), réglables. */
@@ -46,15 +47,19 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   // Calculateur de commande Godot & Fils : relevé de prix par tranche, cours de l'or et date.
   const [calcId, setCalcId] = useState(BAR_PRODUCTS[1].id);
   const [calcDate, setCalcDate] = useState(() => formatDay(new Date()));
-  const [calcGold, setCalcGold] = useState(() => String(Math.round(quote.prices.gold * 1000) / 1000).replace('.', ','));
+  // Valeur intrinsèque de la fiche (le métal d'une pièce, selon Godot & Fils) : le cours de l'or en découle.
+  const [calcIntrinsic, setCalcIntrinsic] = useState('');
   const [calcPrices, setCalcPrices] = useState<string[]>(['', '', '', '']);
   const [lotQty, setLotQty] = useState('10');
   const calcProduct = BAR_PRODUCTS.find((p) => p.id === calcId) ?? BAR_PRODUCTS[0];
+  const defaultIntrinsic = Math.round(calcProduct.grams * quote.prices.gold * 100) / 100;
+  const intrinsic = calcIntrinsic.trim() ? parseAmount(calcIntrinsic) : defaultIntrinsic;
+  const calcGold = Math.round((intrinsic / calcProduct.grams) * 10000) / 10000;
   const calc = (() => {
     try {
       const sheet = {
         productId: calcId,
-        gold: parseAmount(calcGold),
+        gold: calcGold,
         prices: calcPrices.map((x) => parseAmount(x)) as [number, number, number, number],
       };
       return { sheet, result: sheetResult(sheet), error: null as string | null };
@@ -360,7 +365,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           <Text style={styles.link}>Calculateur de prime en ligne (lingot-dor.fr) ›</Text>
         </Pressable>
         <Hint>
-          Relevez sur la page de Godot & Fils le prix d’un format pour chaque tranche, avec le cours de l’or du jour. Le
+          Relevez sur la fiche de Godot & Fils la « valeur intrinsèque » du format et son prix pour chaque tranche. Le
           calculateur règle la prime de base et la remise de chaque tranche, et peut enregistrer un lot acheté avec sa
           date et son prix.
         </Hint>
@@ -396,16 +401,23 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
             />
           </View>
           <View style={{ flex: 1, gap: 5 }}>
-            <Label>Cours de l’or ce jour-là (€/g)</Label>
+            <Label>Valeur intrinsèque de la fiche (€)</Label>
             <TextInput
-              value={calcGold}
-              onChangeText={setCalcGold}
+              value={calcIntrinsic}
+              onChangeText={setCalcIntrinsic}
               keyboardType="decimal-pad"
+              placeholder={String(defaultIntrinsic).replace('.', ',')}
+              placeholderTextColor={colors.textMuted}
               style={[ui.input, { minWidth: 0 }]}
-              accessibilityLabel="Cours de l’or à la date du relevé"
+              accessibilityLabel="Valeur intrinsèque de la fiche"
             />
           </View>
         </View>
+        <Text style={styles.tiers} testID="godot-calc-gold">
+          Cours de l’or déduit : {Number.isFinite(calcGold) ? perGram(calcGold) : '—'} €/g (
+          {calcProduct.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin)
+          {calcIntrinsic.trim() ? '' : ' · valeur du cours Orvia, à remplacer par celle de la fiche'}
+        </Text>
         <Label>Prix de {calcProduct.label.replace(/ \(.*/, '')} par pièce, métal compris (€)</Label>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {QTY_RANGES.map((r, i) => (
@@ -505,7 +517,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               );
               setMsg({
                 ok: true,
-                text: `Lot de ${q} enregistré au stock : ${formatEur(unit)} par pièce au cours de ${toText(calc.sheet.gold * 100)} €/g, le ${formatDay(when)}.`,
+                text: `Lot de ${q} enregistré au stock : ${formatEur(unit)} par pièce, or à ${perGram(calc.sheet.gold)} €/g, le ${formatDay(when)}.`,
               });
             } catch (e) {
               setMsg({ ok: false, text: e instanceof Error ? e.message : 'Impossible d’enregistrer ce lot.' });
