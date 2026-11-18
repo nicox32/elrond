@@ -134,7 +134,7 @@ function CompanyDashboard() {
   const { quote, updateAccount, updateSettings } = useBank();
   const [vaultConfirm, setVaultConfirm] = useState(false);
   const [period, setPeriod] = useState<CompanyPeriod>('year');
-  const [view, setView] = useState<'dashboard' | 'bars' | 'stock'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'bars' | 'stock' | 'godot'>('dashboard');
   const r = companyReport(account, quote.prices, period);
   const years = r.years.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 
@@ -142,6 +142,15 @@ function CompanyDashboard() {
     return (
       <Screen testID="screen-stock">
         <StockManager onBack={() => setView('dashboard')} />
+      </Screen>
+    );
+  }
+
+  if (view === 'godot') {
+    return (
+      <Screen testID="screen-dev-godot">
+        <Button title="← Espace DEV" variant="ghost" onPress={() => setView('dashboard')} />
+        <PhysicalFeesEditor part="vendor" />
       </Screen>
     );
   }
@@ -293,8 +302,14 @@ function CompanyDashboard() {
           onPress={() => setView('stock')}
           testID="open-stock"
         />
+        <ListRow
+          title="Commande Godot & Fils"
+          subtitle="Primes, remises par quantité (1 à 9 · 10 à 19 · 20 à 49 · 50 et plus), livraison"
+          onPress={() => setView('godot')}
+          testID="open-godot"
+        />
       </Card>
-      <PhysicalFeesEditor />
+      <PhysicalFeesEditor part="client" />
       <History2019 />
       <ChildGifts2022 />
       <History900 />

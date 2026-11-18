@@ -21,7 +21,7 @@ const toText = (n: number | undefined) =>
 const toRate = (t: string) => Math.round(parseAmount(t) * 100) / 10000;
 
 /** Société Orvia : frais du retrait physique (fabrication par format, prime du vendeur, livraison), réglables. */
-export function PhysicalFeesEditor() {
+export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const account = useAccount();
   const { quote, updateSettings } = useBank();
   const fees = physicalFeesOf(account.settings);
@@ -32,10 +32,9 @@ export function PhysicalFeesEditor() {
     Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(fees.vendor[p.id])])),
   );
   // Remise du revendeur (points de %) pour chaque tranche de quantité : 10 à 19, 20 à 49, 50 et plus.
-  const offsOf = (id: string) => {
-    const t = fees.vendorTiers[id] ?? [];
-    return QTY_RANGES.slice(1).map((r) => toText(t.find((x) => x.from === r.from)?.off ?? 0));
-  };
+  const offsFrom = (t: { from: number; off: number }[] = []) =>
+    QTY_RANGES.slice(1).map((r) => toText(t.find((x) => x.from === r.from)?.off ?? 0));
+  const offsOf = (id: string) => offsFrom(fees.vendorTiers[id]);
   const [offs, setOffs] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, offsOf(p.id)])),
   );
@@ -59,28 +58,40 @@ export function PhysicalFeesEditor() {
     calcProduct.grams * quote.prices.gold,
   );
 
-  const valid =
+  const validClient =
     BAR_PRODUCTS.every((p) => {
       const r = toRate(premiums[p.id]);
-      const v = vendor[p.id].trim() ? toRate(vendor[p.id]) : 0;
-      return r >= 0 && r <= 0.5 && v >= 0 && v <= 0.5;
+      return r >= 0 && r <= 0.5;
     }) &&
     parseAmount(delivery) >= 0 &&
     parseAmount(delivery) <= 200 &&
     parseAmount(free) >= 0 &&
-    parseAmount(free) <= 1000 &&
-    tiers.every((t) => parseAmount(t.cost) >= 0 && parseAmount(t.cost) <= 500 && parseAmount(t.from) >= 0);
+    parseAmount(free) <= 1000;
+  const validVendor =
+    BAR_PRODUCTS.every((p) => {
+      const v = vendor[p.id].trim() ? toRate(vendor[p.id]) : 0;
+      return v >= 0 && v <= 0.5;
+    }) && tiers.every((t) => parseAmount(t.cost) >= 0 && parseAmount(t.cost) <= 500 && parseAmount(t.from) >= 0);
 
   function save() {
-    const prem: Record<string, number> = {};
-    const vend: Record<string, number> = {};
-    for (const p of BAR_PRODUCTS) {
-      prem[p.id] = toRate(premiums[p.id]);
-      if (vendor[p.id].trim()) vend[p.id] = toRate(vendor[p.id]);
+    const cur = account.settings.physicalFees ?? {};
+    if (part === 'client') {
+      const prem: Record<string, number> = {};
+      for (const p of BAR_PRODUCTS) prem[p.id] = toRate(premiums[p.id]);
+      updateSettings({
+        physicalFees: { ...cur, premiums: prem, delivery: parseAmount(delivery), freeFromGrams: parseAmount(free) },
+      });
+      setMsg({
+        ok: true,
+        text: 'Frais enregistrés : ils s’appliquent aux prochains retraits, aux Tarifs et à l’accueil.',
+      });
+      return;
     }
+    const vend: Record<string, number> = {};
+    for (const p of BAR_PRODUCTS) if (vendor[p.id].trim()) vend[p.id] = toRate(vendor[p.id]);
     updateSettings({
       physicalFees: {
-        premiums: prem,
+        ...cur,
         vendor: vend,
         vendorTiers: Object.fromEntries(
           BAR_PRODUCTS.map((p) => [
@@ -88,58 +99,125 @@ export function PhysicalFeesEditor() {
             QTY_RANGES.slice(1).map((r, i) => ({ from: r.from, off: Math.max(0, toRate(offs[p.id][i] || '0')) })),
           ]),
         ),
-        delivery: parseAmount(delivery),
         vendorDeliveryTiers: normalizeDeliveryTiers(
           tiers.map((t) => ({ fromEur: parseAmount(t.from), cost: parseAmount(t.cost) })),
           PHYSICAL.vendorDelivery,
         ),
-        freeFromGrams: parseAmount(free),
       },
     });
-    setMsg({
-      ok: true,
-      text: 'Frais enregistrés : ils s’appliquent aux prochains retraits, aux Tarifs et à l’accueil.',
-    });
+    setMsg({ ok: true, text: 'Commande Godot & Fils enregistrée : elle sert au coût et à la marge.' });
   }
 
   function reset() {
-    updateSettings({ physicalFees: undefined });
-    setPremiums(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(physicalFeesOf().premiums[p.id])])));
-    setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(physicalFeesOf().vendor[p.id])])));
-    setOffs(
-      Object.fromEntries(
-        BAR_PRODUCTS.map((p) => [
-          p.id,
-          QTY_RANGES.slice(1).map((r) => toText(p.vendorTiers?.find((x) => x.from === r.from)?.off ?? 0)),
-        ]),
-      ),
-    );
-    setDelivery(String(PHYSICAL.delivery));
-    setFree(String(PHYSICAL.freeDeliveryFromGrams));
-    setTiers(
-      physicalFeesOf().vendorDeliveryTiers.map((t) => ({
-        from: String(t.fromEur).replace('.', ','),
-        cost: String(t.cost).replace('.', ','),
-      })),
-    );
+    const cur: Record<string, unknown> = { ...(account.settings.physicalFees ?? {}) };
+    const drop =
+      part === 'client'
+        ? ['premiums', 'delivery', 'freeFromGrams']
+        : ['vendor', 'vendorTiers', 'vendorDeliveryTiers', 'vendorDelivery'];
+    for (const k of drop) delete cur[k];
+    updateSettings({
+      physicalFees: Object.keys(cur).length ? (cur as typeof account.settings.physicalFees) : undefined,
+    });
+    const d = physicalFeesOf({ physicalFees: cur as typeof account.settings.physicalFees });
+    if (part === 'client') {
+      setPremiums(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(d.premiums[p.id])])));
+      setDelivery(String(PHYSICAL.delivery));
+      setFree(String(PHYSICAL.freeDeliveryFromGrams));
+    } else {
+      setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(d.vendor[p.id])])));
+      setOffs(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, offsFrom(d.vendorTiers[p.id])])));
+      setTiers(
+        d.vendorDeliveryTiers.map((t) => ({
+          from: String(t.fromEur).replace('.', ','),
+          cost: String(t.cost).replace('.', ','),
+        })),
+      );
+    }
     setMsg({ ok: true, text: 'Valeurs par défaut rétablies.' });
+  }
+
+  if (part === 'client') {
+    return (
+      <Card style={{ gap: 12 }}>
+        <Text style={styles.title}>Frais du retrait physique</Text>
+        <Hint>
+          Ce que paie le client pour chaque format (fabrication ou prime, en % de la valeur de l’or), la livraison et le
+          seuil de livraison offerte. Ce que vous payez à Godot & Fils se règle dans « Commande Godot & Fils ».
+        </Hint>
+        <View style={styles.head}>
+          <Text style={[styles.col, { flexGrow: 1.4 }]}>Format</Text>
+          <Text style={styles.col}>Client %</Text>
+        </View>
+        {BAR_PRODUCTS.map((p) => {
+          const client = toRate(premiums[p.id]);
+          const vend = fees.vendor[p.id];
+          const value = p.grams * quote.prices.gold;
+          const margin = vend === undefined || !Number.isFinite(client) ? null : value * (client - vend);
+          return (
+            <View key={p.id} style={{ gap: 4 }}>
+              <View style={styles.line}>
+                <Text style={[styles.name, { flexGrow: 1.4, flexBasis: 0, minWidth: 0 }]}>
+                  {p.label.replace(/ \(.*/, '')}
+                </Text>
+                <TextInput
+                  value={premiums[p.id]}
+                  onChangeText={(t) => setPremiums((x) => ({ ...x, [p.id]: t }))}
+                  keyboardType="decimal-pad"
+                  style={[ui.input, styles.input]}
+                  accessibilityLabel={`Frais client ${p.label}`}
+                />
+              </View>
+              <Text style={[styles.margin, margin !== null && { color: margin >= 0 ? colors.up : colors.down }]}>
+                {margin === null
+                  ? 'Prime de Godot & Fils inconnue : marge non calculée'
+                  : `Marge de base ${margin >= 0 ? '+' : '−'}${formatEur(Math.abs(margin))} par ${p.coin ? 'pièce' : 'lingotin'}`}
+              </Text>
+            </View>
+          );
+        })}
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Label>Livraison par envoi (€)</Label>
+            <TextInput
+              value={delivery}
+              onChangeText={setDelivery}
+              keyboardType="decimal-pad"
+              style={ui.input}
+              accessibilityLabel="Livraison par envoi"
+            />
+          </View>
+          <View style={{ flex: 1, gap: 5 }}>
+            <Label>Offerte dès (g d’or)</Label>
+            <TextInput
+              value={free}
+              onChangeText={setFree}
+              keyboardType="decimal-pad"
+              style={ui.input}
+              accessibilityLabel="Livraison offerte dès"
+            />
+          </View>
+        </View>
+        <Button title="Enregistrer les frais" onPress={save} disabled={!validClient} />
+        <Button title="Rétablir les valeurs par défaut" variant="ghost" onPress={reset} />
+        {msg ? <Message {...msg} /> : null}
+      </Card>
+    );
   }
 
   return (
     <Card style={{ gap: 12 }}>
-      <Text style={styles.title}>Frais du retrait physique</Text>
+      <Text style={styles.title}>Commande Godot & Fils</Text>
       <Hint>
-        Pour chaque format : ce que paie le client (fabrication ou prime, en % de la valeur de l’or) et ce que vous
-        payez au vendeur. La marge est la différence. Les valeurs servent au retrait, aux Tarifs, à l’accueil et au coût
-        dans l’Espace DEV.
+        Ce que vous payez à Godot & Fils : la prime de chaque format (1 à 9 pièces), la remise selon la quantité
+        commandée (mêmes tranches pour tous : 1 à 9, 10 à 19, 20 à 49, 50 et plus) et la livraison. La marge est la
+        différence avec ce que paie le client.
       </Hint>
       <View style={styles.head}>
         <Text style={[styles.col, { flexGrow: 1.4 }]}>Format</Text>
-        <Text style={styles.col}>Client %</Text>
-        <Text style={styles.col}>Vendeur %</Text>
+        <Text style={styles.col}>Prime vendeur %</Text>
       </View>
       {BAR_PRODUCTS.map((p) => {
-        const client = toRate(premiums[p.id]);
+        const client = fees.premiums[p.id];
         const vend = vendor[p.id].trim() ? toRate(vendor[p.id]) : null;
         const value = p.grams * quote.prices.gold;
         const margin = vend === null || !Number.isFinite(client) ? null : value * (client - vend);
@@ -149,13 +227,6 @@ export function PhysicalFeesEditor() {
               <Text style={[styles.name, { flexGrow: 1.4, flexBasis: 0, minWidth: 0 }]}>
                 {p.label.replace(/ \(.*/, '')}
               </Text>
-              <TextInput
-                value={premiums[p.id]}
-                onChangeText={(t) => setPremiums((x) => ({ ...x, [p.id]: t }))}
-                keyboardType="decimal-pad"
-                style={[ui.input, styles.input]}
-                accessibilityLabel={`Frais client ${p.label}`}
-              />
               <TextInput
                 value={vendor[p.id]}
                 onChangeText={(t) => setVendor((x) => ({ ...x, [p.id]: t }))}
@@ -198,7 +269,7 @@ export function PhysicalFeesEditor() {
                   })}
                 </View>
                 {(range[p.id] ?? 0) === 0 ? (
-                  <Text style={styles.tiers}>1 à 9 pièces : prix de base, colonne « Vendeur % ».</Text>
+                  <Text style={styles.tiers}>1 à 9 pièces : prix de base, colonne « Prime vendeur % ».</Text>
                 ) : (
                   <View style={{ gap: 4 }}>
                     <Label>Remise du revendeur de {QTY_RANGES[range[p.id]].label} pièces (points de %)</Label>
@@ -224,28 +295,6 @@ export function PhysicalFeesEditor() {
           </View>
         );
       })}
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1, gap: 5 }}>
-          <Label>Livraison par envoi (€)</Label>
-          <TextInput
-            value={delivery}
-            onChangeText={setDelivery}
-            keyboardType="decimal-pad"
-            style={ui.input}
-            accessibilityLabel="Livraison par envoi"
-          />
-        </View>
-        <View style={{ flex: 1, gap: 5 }}>
-          <Label>Offerte dès (g d’or)</Label>
-          <TextInput
-            value={free}
-            onChangeText={setFree}
-            keyboardType="decimal-pad"
-            style={ui.input}
-            accessibilityLabel="Livraison offerte dès"
-          />
-        </View>
-      </View>
       <View style={{ gap: 6 }} testID="vendor-delivery-tiers">
         <Label>Livraison payée au vendeur, selon la valeur de la commande</Label>
         {tiers.map((t, i) => (
@@ -257,7 +306,7 @@ export function PhysicalFeesEditor() {
               keyboardType="decimal-pad"
               placeholder="À partir de (€)"
               placeholderTextColor={colors.textMuted}
-              style={[ui.input, { flex: 1 }, i === 0 && { opacity: 0.6 }]}
+              style={[ui.input, { flex: 1, minWidth: 0 }, i === 0 && { opacity: 0.6 }]}
               accessibilityLabel={`Palier ${i + 1} : à partir de (euros)`}
             />
             <TextInput
@@ -266,7 +315,7 @@ export function PhysicalFeesEditor() {
               keyboardType="decimal-pad"
               placeholder="Coût (€)"
               placeholderTextColor={colors.textMuted}
-              style={[ui.input, { flex: 1 }]}
+              style={[ui.input, { flex: 1, minWidth: 0 }]}
               accessibilityLabel={`Palier ${i + 1} : coût de la livraison (euros)`}
             />
             {i > 0 ? (
@@ -359,17 +408,17 @@ export function PhysicalFeesEditor() {
             : `Prime vendeur : ${toText(calcRate)} % de la valeur de l’or`}
         </Text>
         <Button
-          title={`Mettre dans Vendeur % (${calcProduct.label.replace(/ \(.*/, '')})`}
+          title={`Mettre dans Prime vendeur % (${calcProduct.label.replace(/ \(.*/, '')})`}
           variant="ghost"
           disabled={calcRate === null}
           onPress={() => {
             if (calcRate === null) return;
             setVendor((x) => ({ ...x, [calcId]: toText(calcRate) }));
-            setMsg({ ok: true, text: 'Valeur placée dans la colonne Vendeur %. Enregistrez pour la garder.' });
+            setMsg({ ok: true, text: 'Valeur placée dans la colonne Prime vendeur %. Enregistrez pour la garder.' });
           }}
         />
       </View>
-      <Button title="Enregistrer les frais" onPress={save} disabled={!valid} />
+      <Button title="Enregistrer" onPress={save} disabled={!validVendor} />
       <Button title="Rétablir les valeurs par défaut" variant="ghost" onPress={reset} />
       {msg ? <Message {...msg} /> : null}
     </Card>
