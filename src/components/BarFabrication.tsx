@@ -25,21 +25,34 @@ export function BarFabrication({ orderedAt, pickup }: { orderedAt: string; picku
   return (
     <View style={styles.wrap} testID="bar-fabrication" accessibilityLabel={`Avancement estimé : ${p.label}`}>
       <View style={styles.ingot}>
-        <View style={[styles.fill, { width: `${Math.max(8, Math.round(p.ratio * 100))}%` }]}>
+        <View style={[styles.fill, { width: `${Math.max(8, Math.round(p.ratio * 100))}%` }, done && styles.fillDone]}>
           {!done && <Animated.View style={[styles.shine, { opacity: pulse }]} />}
         </View>
       </View>
       <View style={styles.steps}>
         {p.labels.map((l, i) => (
           <View key={l} style={styles.step}>
-            <View style={[styles.dot, i <= p.step && styles.dotOn, i === p.step && !done && styles.dotNow]} />
-            <Text style={[styles.stepText, i === p.step && styles.stepNow]} numberOfLines={2}>
+            <View
+              style={[
+                styles.dot,
+                i <= p.step && (done ? styles.dotDone : styles.dotOn),
+                i === p.step && !done && styles.dotNow,
+              ]}
+            />
+            <Text
+              style={[styles.stepText, i === p.step && (done ? styles.stepDone : styles.stepNow)]}
+              numberOfLines={2}
+            >
               {l}
             </Text>
           </View>
         ))}
       </View>
-      <Text style={styles.note}>Avancement estimé d’après les jours ouvrés écoulés (5 à 10 jours en tout).</Text>
+      <Text style={[styles.note, done && { color: colors.up }]}>
+        {done
+          ? 'Arrivé : à vous de le noter dès que vous l’avez en main.'
+          : 'Avancement estimé d’après les jours ouvrés écoulés (5 à 10 jours en tout).'}
+      </Text>
     </View>
   );
 }
@@ -59,6 +72,9 @@ const styles = StyleSheet.create({
   steps: { flexDirection: 'row', gap: 4 },
   step: { flex: 1, alignItems: 'center', gap: 4 },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.border },
+  fillDone: { backgroundColor: colors.up },
+  dotDone: { backgroundColor: colors.up },
+  stepDone: { color: colors.up, fontWeight: '700' },
   dotOn: { backgroundColor: metalColor.gold },
   dotNow: { borderWidth: 2, borderColor: '#fff3bf' },
   stepText: { color: colors.textMuted, fontSize: 11, textAlign: 'center' },

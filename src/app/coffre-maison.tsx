@@ -104,6 +104,7 @@ function BarCard({
   const [pickedUp, setPickedUp] = useState(false);
   const waitingAgency = bar.status === 'preparing' && !!bar.pickupAgency && !pickedUp && !bar.serial;
   const readyAtAgency = fabricationProgress(bar.orderedAt, new Date(), true).step >= 3;
+  const arrived = bar.status === 'preparing' && readyAtAgency;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const p = productOf(bar.product);
   const gain = bar.grams * goldPrice - bar.cost;
@@ -122,8 +123,14 @@ function BarCard({
       <View style={styles.head}>
         <BarImage product={bar.product} size={46} />
         <Text style={[styles.name, { flex: 1, marginLeft: 10 }]}>{p.label}</Text>
-        <Text style={[styles.badge, bar.status === 'received' ? styles.ok : styles.wait]}>
-          {bar.status === 'received' ? 'Reçu' : 'En préparation'}
+        <Text style={[styles.badge, bar.status === 'received' || arrived ? styles.ok : styles.wait]}>
+          {bar.status === 'received'
+            ? 'Reçu'
+            : arrived
+              ? bar.pickupAgency
+                ? 'Prêt en agence'
+                : 'Arrivé'
+              : 'En préparation'}
         </Text>
       </View>
       {bar.status === 'preparing' && <BarFabrication orderedAt={bar.orderedAt} pickup={!!bar.pickupAgency} />}
