@@ -13,6 +13,8 @@ import {
   vendorPremiumFrom,
   vendorTierOff,
   fabricationProgress,
+  GODOT_AGENCIES,
+  agencyLabel,
   productOf,
   withdrawPhysical,
 } from '../src/logic/physical.ts';
@@ -319,4 +321,15 @@ test('lingotin en fabrication : étapes estimées selon les jours ouvrés', () =
   assert.equal(late.step, 3);
   assert.equal(late.ratio, 1);
   assert.equal(fabricationProgress(ordered, new Date('2026-12-01T09:00:00'), true).label, 'Prêt en agence');
+});
+
+test('agences Godot & Fils : libellés uniques, adresse notée quand elle est connue', () => {
+  const labels = GODOT_AGENCIES.map(agencyLabel);
+  assert.equal(new Set(labels).size, labels.length);
+  assert.equal(
+    agencyLabel({ name: 'Nantes', address: '22 rue des Halles, 44000' }),
+    'Nantes · 22 rue des Halles, 44000',
+  );
+  assert.equal(agencyLabel({ name: 'Hyères' }), 'Hyères');
+  assert.ok(GODOT_AGENCIES.some((a) => a.name === 'Paris 2 (siège)'));
 });

@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AgencyPicker } from '../components/AgencyPicker';
 import { BarImage } from '../components/BarImage';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
@@ -147,17 +148,7 @@ export default function WithdrawScreen() {
               </Pressable>
             ))}
           </View>
-          {pickup && (
-            <TextInput
-              value={agency}
-              onChangeText={setAgency}
-              placeholder="Agence Godot & Fils (ville)"
-              placeholderTextColor={colors.textMuted}
-              style={ui.input}
-              accessibilityLabel="Agence de retrait"
-              testID="pickup-agency"
-            />
-          )}
+          {pickup && <AgencyPicker value={agency} onChange={setAgency} />}
           <Line
             label={
               pickup

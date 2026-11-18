@@ -791,3 +791,35 @@ export function fabricationProgress(orderedAt: string, now = new Date(), pickup 
     : [...FABRICATION_STEPS];
   return { days, step, ratio: Math.min(1, days / 8), label: labels[step], labels };
 }
+
+/**
+ * Agences Godot & Fils relevées sur leurs sites (liste non exhaustive, adresses à confirmer avant de se déplacer).
+ * Sans adresse : la ville figure sur leur réseau, mais l'adresse n'a pas été relevée.
+ */
+export const GODOT_AGENCIES: { name: string; address?: string }[] = [
+  { name: 'Paris 2 (siège)', address: '26 rue Vivienne, 75002' },
+  { name: 'Paris 5 (Panthéon)', address: '14 rue Soufflot, 75005' },
+  { name: 'Paris 14', address: '33 avenue du Général Leclerc, 75014' },
+  { name: 'Paris 15', address: '17 rue Cambronne, 75015' },
+  { name: 'Aix-en-Provence', address: '33 rue Espariat, 13100' },
+  { name: 'Alès', address: '25 rue Taisson, 30100' },
+  { name: 'Amiens', address: '11 rue Noyon, 80000' },
+  { name: 'Angers', address: '5 rue d’Alsace, 49100' },
+  { name: 'Arras' },
+  { name: 'Colmar', address: '7 place de l’École, 68000' },
+  { name: 'Courbevoie' },
+  { name: 'Hyères' },
+  { name: 'Lille Flandres', address: '48 rue Faidherbe, 59800' },
+  { name: 'Lille Gambetta', address: '116 rue Léon Gambetta, 59000' },
+  { name: 'Marseille Saint-Ferréol' },
+  { name: 'Nantes', address: '22 rue des Halles, 44000' },
+  { name: 'Perpignan' },
+  { name: 'Poitiers', address: '21 rue du Marché Notre Dame, 86000' },
+  { name: 'Toulouse Centre' },
+  { name: 'Valenciennes' },
+  { name: 'Versailles (États-Généraux)', address: '8 rue des États-Généraux, 78000' },
+  { name: 'Versailles (Saint-Cloud)', address: '26 avenue de Saint-Cloud, 78000' },
+];
+
+/** Libellé d'une agence, tel qu'il est noté sur le retrait : « Nantes · 22 rue des Halles, 44000 ». */
+export const agencyLabel = (a: { name: string; address?: string }) => (a.address ? `${a.name} · ${a.address}` : a.name);
