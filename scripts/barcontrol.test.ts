@@ -155,6 +155,16 @@ test('pièce : poids brut 6,45 g, marge d’usure, pas de carte d’essai', () =
   assert.ok(!lines.some((l) => l.key === 'veriscan'));
   const worn = evaluateControl(coin, { sealed: true, serialBar: '1912', weight: 6.2, diameter: 21 }, toleranceOf(a));
   assert.equal(worn.find((l) => l.key === 'weight')!.ok, false);
+  // Poids légal 6,4516 g (±2 ‰, au plus 6,4645 g), usure jusqu'à 0,5 % ; au-delà : suspect.
+  const w = (x: number) =>
+    evaluateControl(coin, { sealed: true, serialBar: '1912', weight: x, diameter: 21 }, toleranceOf(a)).find(
+      (l) => l.key === 'weight',
+    )!.ok;
+  assert.equal(w(6.4516), true);
+  assert.equal(w(6.4645), true);
+  assert.equal(w(6.43), true);
+  assert.equal(w(6.55), false); // trop lourd pour un 20 F
+  assert.equal(w(6.35), false); // trop usé
 });
 
 test('numéro PAMP : « C » + 6 chiffres, normalisé, vérifié au contrôle', async () => {

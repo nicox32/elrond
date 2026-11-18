@@ -19,6 +19,9 @@ export type Tolerance = { weightG: number; dimMm: number };
 
 /** Poids brut d'un Napoléon 20 F : 6,45 g (la pièce usée pèse un peu moins). */
 export const NAPOLEON_GROSS_GRAMS = 6.45;
+/** 20 F or : poids légal 6,45161 g, tolérance de frappe ±2 ‰ (soit au plus 6,4645 g) ; usure (frai) jusqu'à 0,5 %. */
+export const NAPOLEON_MAX_G = 6.4645;
+export const NAPOLEON_MIN_G = 6.4194;
 /** Une pièce ancienne s'use : marge de pesée au moins de 0,1 g. */
 const COIN_MIN_WEIGHT_TOL = 0.1;
 
@@ -133,14 +136,14 @@ export function evaluateControl(bar: HomeBar, input: ControlInput, tol: Toleranc
     const d = input.weight - expected;
     // Lingot : jamais sous le poids nominal (à la marge de la balance près). Pièce usée : marge des deux côtés.
     const ok = p.coin
-      ? Math.abs(d) <= wTol + 1e-9
+      ? input.weight >= NAPOLEON_MIN_G - tol.weightG - 1e-9 && input.weight <= NAPOLEON_MAX_G + tol.weightG + 1e-9
       : d >= -wTol - 1e-9 && d <= Math.max(wTol, BAR_MAX_OVERWEIGHT_G) + 1e-9;
     lines.push({
       key: 'weight',
       label: 'Pesée',
       ok,
       detail: p.coin
-        ? `${g(input.weight)} g · attendu ${g(expected)} g · écart ${d >= 0 ? '+' : '−'}${g(Math.abs(d))} g (marge ±${g(wTol)} g)`
+        ? `${g(input.weight)} g · attendu de ${g(NAPOLEON_MIN_G)} g (usure de 0,5 %) à ${g(NAPOLEON_MAX_G)} g (poids légal ${g(6.4516)} g ±2 ‰), balance ±${g(tol.weightG)} g`
         : `${g(input.weight)} g · au moins ${g(expected)} g (balance −${g(wTol)} g) · écart ${d >= 0 ? '+' : '−'}${g(Math.abs(d))} g`,
     });
   } else {
