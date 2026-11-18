@@ -37,6 +37,7 @@ export function ChildViewScreen({ view }: { view: ChildView }) {
         <Text style={styles.badgeText}>Lecture seule</Text>
       </View>
       <Text style={styles.title}>Compte de {view.n}</Text>
+      {view.i ? <Text style={styles.memberNumber}>N° de membre {view.i}</Text> : null}
       <Hint>
         Partagé par {view.p} le {day(view.at)}. Ce lien permet seulement de consulter le compte : aucune opération n’est
         possible.
@@ -136,6 +137,7 @@ export function ChildViewScreen({ view }: { view: ChildView }) {
 }
 
 const styles = StyleSheet.create({
+  memberNumber: { color: colors.textMuted, fontSize: 13, letterSpacing: 1 },
   page: { padding: 16, gap: 10, maxWidth: 640, width: '100%', alignSelf: 'center', paddingBottom: 40 },
   badge: {
     alignSelf: 'flex-start',

@@ -46,6 +46,7 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
   const bars = account.homeVault ?? [];
   const total = homeVaultTotal(account, prices);
   const ownerOf = (b: HomeBar) => account.children.find((c) => c.id === b.ownerChildId)?.name ?? 'un enfant';
+  const ownerNumber = (b: HomeBar) => account.children.find((c) => c.id === b.ownerChildId)?.memberNumber;
   const rows = bars
     .map((b) => {
       const p = productOf(b.product);
@@ -54,7 +55,7 @@ export function homeVaultHtml(account: Account, prices: Prices, now = new Date()
         <td style="width:70px">${BAR_PHOTOS[b.product] ? `<img src="${BAR_PHOTOS[b.product]}" width="64" height="64" alt="${esc(p.label)}" style="border-radius:6px"/>` : ''}</td>
         <td><b>${esc(p.label)}</b><br/>${b.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin<br/>
           ${specLine(p.spec) ? `<span class="muted">${esc(specLine(p.spec)!)}${p.spec?.veriscan ? ' · VERISCAN' : ''}</span><br/>` : ''}
-          ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b>${b.ref ? `<br/><span class="muted">Réf. interne Orvia : ${esc(b.ref)}</span>` : ''}${b.ownerChildId ? `<br/><b>Propriété de ${esc(ownerOf(b))}</b> <span class="muted">(don du ${d(b.giftedAt ?? b.orderedAt)})</span>` : ''}<br/><span class="muted">Lieu : ${esc(placeLabel(b))}</span></td>
+          ${p.coin ? 'Millésime' : 'N° de série'} : <b>${esc(b.serial ?? 'à noter à réception')}</b>${b.ref ? `<br/><span class="muted">Réf. interne Orvia : ${esc(b.ref)}</span>` : ''}${b.ownerChildId ? `<br/><b>Propriété de ${esc(ownerOf(b))}</b>${ownerNumber(b) ? ` <span class="muted">· n° de membre ${esc(ownerNumber(b)!)}</span>` : ''} <span class="muted">(don du ${d(b.giftedAt ?? b.orderedAt)})</span>` : ''}<br/><span class="muted">Lieu : ${esc(placeLabel(b))}</span></td>
         <td>Retiré le ${d(b.orderedAt)}${b.receivedAt ? `<br/>reçu le ${d(b.receivedAt)}` : '<br/><span class="muted">en livraison</span>'}${controlledOn(b) ? `<br/><b>✓ contrôlé le ${d(controlledOn(b)!)}</b>` : ''}</td>
         <td>Acheté du ${d(b.acquiredFrom)}<br/>au ${d(b.acquiredTo)}<br/>exonéré en ${exemptYear(b)}</td>
         <td class="num">${formatEur(b.cost)}</td>

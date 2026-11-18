@@ -1483,3 +1483,46 @@ test('numéro de membre adulte : OV-M-XXXX-XXXX, anciens numéros convertis sans
     );
   }
 });
+
+test('numéros de membre : présents sur tous les documents utiles (relevés, avis, dons, inventaire, tableau fiscal, lien enfant)', async () => {
+  const p = prices;
+  const { addChild, fundChild } = await import('../src/logic/ledger.ts');
+  const { operationHtml, statementHtml, docHead } = await import('../src/logic/statement.ts');
+  const { childStatementHtml } = await import('../src/logic/childStatement.ts');
+  const { giftRecapHtml } = await import('../src/logic/giftRecap.ts');
+  const { homeVaultHtml } = await import('../src/logic/homeVaultDoc.ts');
+  const { taxYearHtml } = await import('../src/logic/taxYear.ts');
+  const { makeChildView } = await import('../src/logic/shareView.ts');
+  const t0 = new Date('2026-06-01T10:00:00');
+  let acc = buy(createAccount('Nicolas', new Date('2020-01-01')), p, 'gold', { unit: 'g', value: 50 }, t0);
+  const r = addChild(acc, 'Théo', '2015-06-01', t0);
+  acc = fundChild(r.account, p, r.child.id, 'gold', { unit: 'g', value: 5 }, t0);
+  const child = acc.children[0];
+  const parent = acc.memberId;
+  const kid = child.memberNumber!;
+  assert.match(parent, /^OV-M-/);
+  assert.match(kid, /^OV-E-/);
+  const now = new Date('2026-06-15T10:00:00');
+  // Relevé du compte enfant (modèle général) : son numéro et celui du parent.
+  const st = statementHtml({
+    account: acc,
+    wallet: child,
+    walletName: 'Théo',
+    scope: { kind: 'all' },
+    period: 'all',
+    prices: p,
+    now,
+  });
+  assert.ok(st.includes(kid) && st.includes(parent));
+  // Relevé d'épargne de l'enfant, récapitulatif des dons, avis d'opération d'un enfant.
+  assert.ok(childStatementHtml(acc, child, p, now).includes(kid));
+  assert.ok(giftRecapHtml(acc, child, 'all' as any, now).includes(kid));
+  assert.ok(giftRecapHtml(acc, child, 'all' as any, now).includes(parent));
+  assert.ok(operationHtml(acc, 'Théo', child.transactions[0]).includes(kid));
+  // Documents du compte adulte : en-tête avec son numéro.
+  assert.ok(docHead(acc).includes(parent));
+  assert.ok(homeVaultHtml(acc, p, now).includes(parent));
+  assert.ok(taxYearHtml(acc, 2026, p, now).includes(parent));
+  // Lien en lecture seule : le numéro de l'enfant voyage avec le partage.
+  assert.equal(makeChildView(child, 'Nicolas', p, now).i, kid);
+});

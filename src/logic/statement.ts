@@ -225,7 +225,7 @@ export function statementHtml(input: {
   const addrLines = addr ? `${esc(addr.street)}<br/>${esc(addr.postcode)} ${esc(addr.city)}` : '';
   const holderName = addr?.name?.trim() || account.holder;
   const holderBlock = child
-    ? `<b>${esc(child.name)}</b> (${child.transferredAt ? 'majeur' : 'mineur'})<br/>représenté par ${esc(holderName)}${addrLines ? `<br/>${addrLines}` : ''}`
+    ? `<b>${esc(child.name)}</b> (${child.transferredAt ? 'majeur' : 'mineur'})<br/>représenté par ${esc(holderName)}${addrLines ? `<br/>${addrLines}` : ''}${child.memberNumber ? `<br/><span class="muted">N° de membre ${esc(child.memberNumber)}</span>` : ''}<br/><span class="muted">Parent : membre ${esc(account.memberId)}</span>`
     : `<b>${esc(holderName)}</b>${addrLines ? `<br/>${addrLines}` : ''}<br/><span class="muted">Membre ${esc(account.memberId)}</span>`;
   const sign = (g: number, t: Transaction) => (t.kind === 'family_out' ? '→' : g > 0 ? '+' : '−');
   const cls = (g: number, t: Transaction) => (t.kind === 'family_out' ? '' : g > 0 ? 'pos' : 'neg');
@@ -298,9 +298,10 @@ export function statementHtml(input: {
 /** Avis d'opération : le détail d'une seule opération. */
 export function operationHtml(account: Account, walletName: string, t: Transaction): string {
   const unit = account.settings.unit;
+  const childNumber = account.children.find((c) => c.name === walletName)?.memberNumber;
   const line = (k: string, v: string) => `<tr><td class="muted">${k}</td><td class="num"><b>${v}</b></td></tr>`;
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"/><title>Avis d’opération</title><style>${STYLE}</style></head><body>
-  ${header(account, 'Avis d’opération', `${walletName} · référence ${esc(t.id)}`)}
+  ${header(account, 'Avis d’opération', `${walletName}${childNumber ? ` (n° de membre ${esc(childNumber)})` : ''} · référence ${esc(t.id)}`)}
   <table>
     ${line('Opération', esc(t.label))}
     ${line('Date', stamp(t.date))}

@@ -63,6 +63,7 @@ export default function ChildrenScreen() {
             <Text style={styles.since}>
               {STAGE_LABEL[childStage(child)]} · ouvert le {new Date(child.createdAt).toLocaleDateString('fr-FR')}
             </Text>
+            {child.memberNumber ? <Text style={styles.since}>N° de membre {child.memberNumber}</Text> : null}
           </View>
           <Text style={styles.value}>{formatEur(accountValue(child, quote.prices).total)}</Text>
           <Text style={styles.chevron}>›</Text>

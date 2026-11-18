@@ -161,8 +161,8 @@ export function giftRecapHtml(account: Account, child: ChildAccount, period: Gif
   <p class="sub">Pour la déclaration de don manuel (en ligne sur impots.gouv.fr, obligatoire depuis le 1er janvier 2026 ; formulaire papier 2735 seulement en cas de dispense).</p>
 
   <div class="grid">
-    <div class="box"><div class="k">Donateur</div><div class="v">${esc(account.holder)}</div>parent de l’enfant</div>
-    <div class="box"><div class="k">Bénéficiaire</div><div class="v">${esc(child.name)}</div>${child.birthDate ? `né(e) le ${day(child.birthDate)}, mineur(e)` : 'mineur(e)'}</div>
+    <div class="box"><div class="k">Donateur</div><div class="v">${esc(account.holder)}</div>parent de l’enfant · membre ${esc(account.memberId)}</div>
+    <div class="box"><div class="k">Bénéficiaire</div><div class="v">${esc(child.name)}</div>${child.birthDate ? `né(e) le ${day(child.birthDate)}, mineur(e)` : 'mineur(e)'}${child.memberNumber ? ` · n° de membre ${esc(child.memberNumber)}` : ''}</div>
     <div class="box"><div class="k">Acceptation</div><div class="v">${esc(account.holder)}</div>pour l’enfant, en qualité de représentant légal</div>
     <div class="box"><div class="k">Période</div><div class="v">${esc(label)}</div>du ${day(from)} au ${day(new Date(to.getTime() - 86_400_000))}</div>
   </div>

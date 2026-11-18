@@ -17,6 +17,8 @@ export interface ChildView {
   v: 1;
   /** Prénom de l'enfant. */
   n: string;
+  /** Numéro de membre de l'enfant. */
+  i?: string;
   /** Parent qui partage. */
   p: string;
   /** Date de naissance (AAAA-MM-JJ). */
@@ -75,6 +77,7 @@ export function makeChildView(
   return {
     v: 1,
     n: child.name,
+    ...(child.memberNumber ? { i: child.memberNumber } : {}),
     p: parent,
     ...(child.birthDate ? { b: child.birthDate } : {}),
     at: now.toISOString(),
