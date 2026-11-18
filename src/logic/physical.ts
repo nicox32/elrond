@@ -498,6 +498,9 @@ export function withdrawPhysical(
         cost: Math.round(t.cost * 100) / 100,
         acquiredFrom: t.from,
         acquiredTo: t.to,
+        ...(q.fees > 0 && q.grams > 0
+          ? { feesPaid: Math.round(((q.fees * l.product.grams) / q.grams) * 100) / 100 }
+          : {}),
         txId: tx.id,
         ...(agency ? { pickupAgency: agency } : {}),
         ...(vault ? { vault: true, place: 'coffre' as const, placeNote: CHILD_STORAGE_NOTE } : {}),
@@ -833,6 +836,7 @@ export function convertChildToBars(
         cost: Math.round(t.cost * 100) / 100,
         acquiredFrom: t.from,
         acquiredTo: t.to,
+        ...(fee > 0 && q.grams > 0 ? { feesPaid: Math.round(((fee * l.product.grams) / q.grams) * 100) / 100 } : {}),
         txId,
         origin: 'commande',
         ref: newRef(usedRefs),

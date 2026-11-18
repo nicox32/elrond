@@ -17,7 +17,8 @@ import {
   searchBars,
   toleranceOf,
 } from '../logic/barControl';
-import { formatDate, parseAmount } from '../logic/format';
+import { RETURN_STATUS_LABEL, defaultReturnReason, rejectBar, setReturnStatus } from '../logic/barReturn';
+import { formatDate, formatEur, parseAmount } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
 import { placeLabel, productOf, setBarPlace, specLine } from '../logic/physical';
 import type { HomeBar } from '../logic/types';
@@ -129,6 +130,10 @@ export function BarControl({ onBack }: { onBack: () => void }) {
           onRecheck={() => setMode('recheck')}
           onResolve={(note) => updateAccount((a) => resolveAnomaly(a, bar.id, note))}
           onPlace={(place, note) => updateAccount((a) => setBarPlace(a, bar.id, place, note))}
+          onReject={() => {
+            updateAccount((a) => rejectBar(a, bar.id));
+            back();
+          }}
         />
       </>
     );
@@ -154,6 +159,33 @@ export function BarControl({ onBack }: { onBack: () => void }) {
       >
         {dup.length ? `Numéro de série en double : ${dup.join(', ')}.` : 'Aucun numéro de série en double.'}
       </Banner>
+
+      {(account.returnedBars ?? []).length > 0 && (
+        <>
+          <SectionTitle>Retours à Godot & Fils</SectionTitle>
+          <Card style={{ gap: 10 }}>
+            {(account.returnedBars ?? []).map((r) => (
+              <View key={r.id} style={{ gap: 6 }} testID={`return-${r.id}`}>
+                <Text style={styles.name}>
+                  {productOf(r.product).label} · {r.serial ?? r.ref ?? 'sans numéro'}
+                </Text>
+                <Text style={ui.hint}>
+                  Refusé le {formatDate(r.returnedAt)} · {r.reason} · client remboursé : {g(r.refundGold)} g
+                  {r.refundEur > 0 ? ` + ${formatEur(r.refundEur)}` : ''}
+                </Text>
+                <Segmented
+                  value={r.status}
+                  onChange={(s) => updateAccount((a) => setReturnStatus(a, r.id, s))}
+                  options={(Object.keys(RETURN_STATUS_LABEL) as (keyof typeof RETURN_STATUS_LABEL)[]).map((k) => ({
+                    value: k,
+                    label: RETURN_STATUS_LABEL[k].replace(' Godot & Fils', '').replace(' par Godot & Fils', ''),
+                  }))}
+                />
+              </View>
+            ))}
+          </Card>
+        </>
+      )}
 
       <TextInput
         value={query}
@@ -256,13 +288,16 @@ function Detail({
   onRecheck,
   onResolve,
   onPlace,
+  onReject,
 }: {
   bar: HomeBar;
   onControl: () => void;
   onRecheck: () => void;
   onResolve: (note: string) => void;
   onPlace: (place: import('../logic/physical').BarPlace | 'auto', note?: string) => void;
+  onReject: () => void;
 }) {
+  const [confirmReject, setConfirmReject] = useState(false);
   const p = productOf(bar.product);
   const state = barState(bar);
   const checks = [...(bar.checks ?? [])].reverse();
@@ -308,6 +343,21 @@ function Detail({
               variant="ghost"
               onPress={() => onResolve('VERISCAN conforme après vérification')}
             />
+          ) : null}
+          {state === 'anomaly' ? (
+            confirmReject ? (
+              <Card style={{ gap: 8 }}>
+                <Text style={ui.hint}>
+                  Motif : {defaultReturnReason(bar)}. Le lingotin disparaît du compte du client, qui récupère son or (
+                  {g(bar.grams)} g) et ses frais ({formatEur(bar.feesPaid ?? 0)}). Il est ajouté aux retours à renvoyer
+                  à Godot & Fils.
+                </Text>
+                <Button title="Confirmer : refuser et rembourser" onPress={onReject} />
+                <Button title="Annuler" variant="ghost" onPress={() => setConfirmReject(false)} />
+              </Card>
+            ) : (
+              <Button title="Refuser et rembourser le client" variant="ghost" onPress={() => setConfirmReject(true)} />
+            )
           ) : null}
           <Button title="Refaire le contrôle de réception" variant="ghost" onPress={onControl} />
         </>

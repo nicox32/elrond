@@ -56,6 +56,8 @@ export type TransactionKind =
   | 'fee_custody'
   /** Or retiré du coffre en lingotins, livré au titulaire (pas une vente). */
   | 'withdraw_physical'
+  /** Lingotin défectueux retiré du compte : or recrédité et frais remboursés. */
+  | 'bar_refund'
   /** Paiement chez un commerçant avec la carte Orvia. */
   | 'card_payment'
   /** Retrait au distributeur avec la carte Orvia. */
@@ -210,6 +212,8 @@ export interface HomeBar {
   serial?: string;
   /** Prix de revient du métal (achat d'origine, frais compris), pour l'impôt à la revente. */
   cost: number;
+  /** Part des frais du retrait payée pour ce lingotin (€) : remboursée s'il est refusé au contrôle. */
+  feesPaid?: number;
   /** Dates d'achat d'origine du métal (le plus ancien et le plus récent) : la durée de détention continue. */
   acquiredFrom: string;
   acquiredTo: string;
@@ -277,6 +281,27 @@ export interface StockMove {
   qty: number;
   source: 'maison' | 'pro';
   lotId?: string;
+  note?: string;
+}
+
+/** Lingotin ou pièce refusé au contrôle : retiré du compte du client, renvoyé à Godot & Fils. */
+export interface ReturnedBar {
+  id: string;
+  product: string;
+  grams: number;
+  serial?: string;
+  ref?: string;
+  /** Motif : les vérifications non conformes, ou le motif saisi. */
+  reason: string;
+  returnedAt: string;
+  /** Or recrédité au client (g) et frais remboursés (€). */
+  refundGold: number;
+  refundEur: number;
+  /** Propriétaire : enfant, ou le titulaire (absent). */
+  ownerChildId?: string;
+  /** Suivi chez le fournisseur : à renvoyer, renvoyé, remplacé ou remboursé à Orvia. */
+  status: 'to_send' | 'sent' | 'replaced' | 'credited';
+  statusAt?: string;
   note?: string;
 }
 
@@ -434,6 +459,8 @@ export interface Account extends Wallet {
   pendingOrders?: PendingOrder[];
   /** Lingotins retirés du coffre et gardés chez soi. */
   homeVault?: HomeBar[];
+  /** Lingotins refusés au contrôle, retirés des comptes et à renvoyer au fournisseur (suivi du retour). */
+  returnedBars?: ReturnedBar[];
   /** Stock de lingotins et de pièces de la société (Société Orvia), et son journal. */
   stock?: StockLot[];
   stockLog?: StockMove[];

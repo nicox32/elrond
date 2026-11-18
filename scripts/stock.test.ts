@@ -455,3 +455,29 @@ test('assurance : ne compte que le stock commandé, pas les lingotins en route n
   a = { ...a, homeVault: [bar] } as unknown as typeof a;
   assert.equal(insuredBreakdown(a, 100).total, 2000);
 });
+
+test('défaut au contrôle d’un lingotin d’enfant verrouillé : l’or et la fabrication reviennent', async () => {
+  const { convertChildToBars, barsOfChild } = await import('../src/logic/physical.ts');
+  const { addChild, fundChild, getChild } = await import('../src/logic/ledger.ts');
+  const { recordControl } = await import('../src/logic/barControl.ts');
+  const { rejectBar } = await import('../src/logic/barReturn.ts');
+  const t0 = new Date('2026-11-17T10:00:00');
+  let a = creditCash(buy(createAccount('T', new Date('2020-01-01')), p, 'gold', { unit: 'g', value: 50 }), 300);
+  const added = addChild(a, 'Théo', '2015-06-01', t0);
+  a = fundChild(added.account, p, added.child.id, 'gold', { unit: 'g', value: 20 }, t0);
+  const id = added.child.id;
+  const cash = a.cashEur ?? 0;
+  const l = convertChildToBars(a, p, id, { g5: 1 }, true, t0);
+  const bar = barsOfChild(l, id)[0];
+  const bad = recordControl(
+    l,
+    bar.id,
+    { sealed: false, serialBar: 'C000001', serialCard: 'C000001', weight: 5, veriscan: true },
+    t0,
+  );
+  const r = rejectBar(bad, bar.id, undefined, t0);
+  assert.equal(barsOfChild(r, id).length, 0);
+  close(getChild(r, id).holdings.gold, 20, 1e-9);
+  close(r.cashEur ?? 0, cash, 0.01);
+  assert.equal(r.returnedBars![0].ownerChildId, id);
+});

@@ -172,3 +172,34 @@ test('numéro PAMP : « C » + 6 chiffres, normalisé, vérifié au contrôle', 
   const bad = recordControl(a, bar5.id, { ...ok5, serialBar: 'C84120', serialCard: 'C84120' }, new Date());
   assert.equal(barState(bad.homeVault!.find((b) => b.id === bar5.id)!), 'anomaly'); // enregistré comme anomalie
 });
+
+test('défaut au contrôle : le lingotin quitte le compte du client, qui récupère son or et ses frais', async () => {
+  const { rejectBar, setReturnStatus } = await import('../src/logic/barReturn.ts');
+  const a = withBars();
+  const goldBefore = a.holdings.gold;
+  const cashBefore = a.cashEur ?? 0;
+  const b5 = a.homeVault!.find((b) => b.grams === 5)!;
+  assert.ok((b5.feesPaid ?? 0) > 0);
+  // Pas d'anomalie : refus impossible.
+  assert.throws(() => rejectBar(a, b5.id), /en anomalie/);
+  // Poids hors marge : anomalie, puis refus.
+  const bad = recordControl(a, b5.id, { ...ok5, weight: 4.5 }, new Date('2026-11-21T12:00:00'));
+  assert.equal(barState(bad.homeVault!.find((b) => b.id === b5.id)!), 'anomaly');
+  const r = rejectBar(bad, b5.id, undefined, new Date('2026-11-22T12:00:00'));
+  assert.equal(
+    r.homeVault!.some((b) => b.id === b5.id),
+    false,
+  );
+  close5(r.holdings.gold, goldBefore + 5);
+  close5(r.cashEur ?? 0, cashBefore + b5.feesPaid!);
+  assert.equal(r.transactions[0].kind, 'bar_refund');
+  assert.match(r.transactions[0].label, /Lingotin défectueux retiré/);
+  assert.equal(r.returnedBars![0].status, 'to_send');
+  assert.match(r.returnedBars![0].reason, /Pesée/);
+  assert.equal(r.returnedBars![0].refundGold, 5);
+  const sent = setReturnStatus(r, b5.id, 'sent', 'colis n° 123');
+  assert.equal(sent.returnedBars![0].status, 'sent');
+  assert.equal(sent.returnedBars![0].note, 'colis n° 123');
+  assert.throws(() => setReturnStatus(r, 'x', 'sent'));
+});
+const close5 = (x: number, y: number) => assert.ok(Math.abs(x - y) < 1e-6, `${x} ≉ ${y}`);

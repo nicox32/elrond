@@ -72,7 +72,9 @@ export function companyReport(
     conversion: sum((t) => (t.kind === 'convert' ? (t.fees ?? 0) : 0)),
     dormancy: sum((t) => (t.kind === 'fee_dormancy' ? t.eur : 0)),
     custody: sum((t) => (t.kind === 'fee_custody' ? t.eur : 0)),
-    physical: sum((t) => (t.kind === 'withdraw_physical' ? (t.fees ?? 0) : 0)),
+    physical: sum((t) =>
+      t.kind === 'withdraw_physical' ? (t.fees ?? 0) : t.kind === 'bar_refund' ? -(t.cash ?? 0) : 0,
+    ),
     card: sum((t) => (t.kind === 'card_payment' ? t.eur * COMPANY.interchange : 0)),
     total: 0,
   };
