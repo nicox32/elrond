@@ -838,3 +838,67 @@ export const GODOT_AGENCIES: { name: string; address?: string }[] = [
 
 /** Libellé d'une agence, tel qu'il est noté sur le retrait : « Nantes · 22 rue des Halles, 44000 ». */
 export const agencyLabel = (a: { name: string; address?: string }) => (a.address ? `${a.name} · ${a.address}` : a.name);
+
+/**
+ * Demande de sortie d'un lingotin gardé en coffre chez Godot & Fils : livraison à domicile (12 € par envoi, offerte dès
+ * 20 g) ou retrait gratuit en agence. Les frais éventuels sont payés depuis le compte d'attente. Impossible pour un
+ * lingotin d'enfant (jamais livré) ou verrouillé.
+ */
+export function requestVaultExit(
+  account: Account,
+  barId: string,
+  mode: 'home' | 'agency',
+  agency?: string,
+  now = new Date(),
+): Account {
+  const bar = (account.homeVault ?? []).find((b) => b.id === barId);
+  if (!bar) throw new LedgerError('Lingotin introuvable.');
+  if (!bar.vault) throw new LedgerError('Ce lingotin n’est pas gardé en coffre.');
+  if (bar.ownerChildId) throw new LedgerError('Le lingotin d’un enfant reste au coffre : il n’est jamais livré.');
+  if (isLocked(bar, now))
+    throw new LedgerError('Sécurité maximale : ce lingotin ne peut pas sortir avant la majorité.');
+  if (bar.status !== 'received') throw new LedgerError('Le lingotin n’est pas encore entré au coffre.');
+  if (bar.exitRequest) throw new LedgerError('Un retrait est déjà demandé pour ce lingotin.');
+  const place = agency?.trim();
+  if (mode === 'agency' && (!place || place.length < 2)) throw new LedgerError('Indiquez l’agence de retrait.');
+  const fees = physicalFeesOf(account.settings);
+  const fee = mode === 'home' && bar.grams < fees.freeFromGrams - 1e-9 ? fees.delivery : 0;
+  const cash = account.cashEur ?? 0;
+  if (fee > cash + 0.005) {
+    throw new LedgerError(
+      `Livraison de ${fee.toFixed(2).replace('.', ',')} € à payer depuis le compte d’attente (${cash.toFixed(2).replace('.', ',')} € disponibles) : créditez-le d’abord.`,
+    );
+  }
+  let next = account;
+  if (fee > 0) {
+    next = applyTx(next, 'cash_out', {}, fee, `Sortie du coffre · ${productOf(bar.product).label} · livraison`, now);
+    const [tx, ...rest] = next.transactions;
+    next = {
+      ...next,
+      cashEur: Math.round((cash - fee) * 100) / 100,
+      transactions: [{ ...tx, cash: -fee }, ...rest],
+    };
+  }
+  return {
+    ...next,
+    homeVault: (next.homeVault ?? []).map((b) =>
+      b.id === barId
+        ? { ...b, exitRequest: { mode, ...(mode === 'agency' ? { agency: place } : {}), at: now.toISOString() } }
+        : b,
+    ),
+  };
+}
+
+/** Le lingotin sorti du coffre est en main : il passe chez le client, hors du coffre de Godot & Fils. */
+export function confirmVaultExit(account: Account, barId: string, now = new Date()): Account {
+  const bar = (account.homeVault ?? []).find((b) => b.id === barId);
+  if (!bar?.exitRequest) throw new LedgerError('Aucun retrait demandé pour ce lingotin.');
+  return {
+    ...account,
+    homeVault: (account.homeVault ?? []).map((b) => {
+      if (b.id !== barId) return b;
+      const { exitRequest: _e, placeNote: _n, vault: _v, ...rest } = b;
+      return { ...rest, place: 'maison' as const, exitedAt: now.toISOString() };
+    }),
+  };
+}

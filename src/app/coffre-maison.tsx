@@ -11,18 +11,21 @@ import { controlledOn } from '../logic/barControl';
 import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
 import {
   type BarPlace,
+  confirmVaultExit,
   fabricationProgress,
   homeVaultTotal,
   isLocked,
   placeLabel,
   productOf,
   receiveBar,
+  requestVaultExit,
   removeBar,
   setBarPlace,
   specLine,
 } from '../logic/physical';
 import { exportPdf } from '../pdf';
 import { BarFabrication } from '../components/BarFabrication';
+import { VaultExit } from '../components/VaultExit';
 import { BarImage } from '../components/BarImage';
 import { QrCode } from '../components/QrCode';
 import type { HomeBar } from '../logic/types';
@@ -63,6 +66,8 @@ export default function HomeVaultScreen() {
             onReceive={(serial) => updateAccount((a) => receiveBar(a, b.id, serial))}
             onRemove={() => updateAccount((a) => removeBar(a, b.id))}
             onPlace={(place, note) => updateAccount((a) => setBarPlace(a, b.id, place, note))}
+            onExitRequest={(mode, agency) => updateAccount((a) => requestVaultExit(a, b.id, mode, agency))}
+            onExitConfirm={() => updateAccount((a) => confirmVaultExit(a, b.id))}
           />
         ))
       )}
@@ -93,6 +98,8 @@ function BarCard({
   onReceive,
   onRemove,
   onPlace,
+  onExitRequest,
+  onExitConfirm,
 }: {
   bar: HomeBar;
   owner?: string;
@@ -100,6 +107,8 @@ function BarCard({
   onReceive: (s: string) => void;
   onRemove: () => void;
   onPlace: (place: BarPlace, note?: string) => void;
+  onExitRequest: (mode: 'home' | 'agency', agency?: string) => void;
+  onExitConfirm: () => void;
 }) {
   const [serial, setSerial] = useState(bar.serial ?? '');
   const [showQr, setShowQr] = useState(false);
@@ -146,7 +155,7 @@ function BarCard({
           🔒 Sécurité maximale : verrouillé jusqu’au {new Date(bar.lockedUntil!).toLocaleDateString('fr-FR')} ·{' '}
           {placeLabel(bar)}
         </Text>
-      ) : bar.status === 'received' ? (
+      ) : bar.status === 'received' && !bar.vault ? (
         <PlaceEditor bar={bar} onChange={onPlace} title="Où il est gardé" />
       ) : null}
       {owner || bar.ownerChildId ? (
@@ -235,6 +244,9 @@ function BarCard({
         </View>
       )}
       {msg && <Message {...msg} />}
+      {bar.vault && bar.status === 'received' && !bar.ownerChildId && !isLocked(bar) && (
+        <VaultExit bar={bar} onRequest={onExitRequest} onConfirm={onExitConfirm} />
+      )}
       <Pressable onPress={() => setShowQr((v) => !v)} accessibilityRole="button" testID={`qr-toggle-${bar.id}`}>
         <Text style={ui.link}>{showQr ? 'Masquer le QR code' : 'Afficher le QR code de la fiche'}</Text>
       </Pressable>

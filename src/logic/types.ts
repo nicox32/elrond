@@ -195,6 +195,10 @@ export interface HomeBar {
   pickupAgency?: string;
   /** Lingotin gardé en coffre sécurisé chez le revendeur (jamais livré chez le client). */
   vault?: boolean;
+  /** Retrait demandé d'un lingotin gardé en coffre : livraison à domicile ou retrait en agence. */
+  exitRequest?: { mode: 'home' | 'agency'; agency?: string; at: string };
+  /** Date à laquelle le lingotin est sorti du coffre et remis au client. */
+  exitedAt?: string;
   serial?: string;
   /** Prix de revient du métal (achat d'origine, frais compris), pour l'impôt à la revente. */
   cost: number;

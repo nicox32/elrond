@@ -13,6 +13,8 @@ import {
   vendorPremiumFrom,
   vendorTierOff,
   fabricationProgress,
+  requestVaultExit,
+  confirmVaultExit,
   GODOT_AGENCIES,
   agencyLabel,
   productOf,
@@ -394,4 +396,42 @@ test('ancien revendeur : les comptes enregistrés citant Gold Avenue passent à 
   assert.equal(m.homeVault![0].placeNote, 'Godot & Fils, stockage sécurisé');
   assert.equal(m.stock![0].vault, 'Godot & Fils');
   assert.ok(!JSON.stringify(m).match(/gold ?avenue/i));
+});
+
+test('retrait d’un lingotin gardé en coffre : à domicile (12 €) ou en agence (gratuit), puis remise en main', () => {
+  let acc = createAccount('T', new Date('2020-01-01'));
+  acc = buy(acc, p, 'gold', { unit: 'g', value: 30 }, new Date('2020-03-01T12:00:00'));
+  acc = creditCash(acc, 500);
+  const t0 = new Date('2026-11-01T10:00:00');
+  acc = withdrawPhysical(acc, p, { g5: 1, g20: 1 }, t0, undefined, true);
+  const [b5, b20] = acc.homeVault!.map((b) => b.id);
+  // Pas encore entré au coffre : impossible.
+  assert.throws(() => requestVaultExit(acc, b5, 'home', undefined, t0), /pas encore entré/);
+  acc = receiveBar(acc, b5, 'C841201', t0);
+  acc = receiveBar(acc, b20, 'C841202', t0);
+  const cash0 = acc.cashEur!;
+  // Agence : gratuit, agence obligatoire.
+  assert.throws(() => requestVaultExit(acc, b5, 'agency', ' ', t0), /agence/i);
+  const ag = requestVaultExit(acc, b5, 'agency', 'Nantes', t0);
+  assert.equal(ag.cashEur, cash0);
+  assert.equal(ag.homeVault!.find((b) => b.id === b5)!.exitRequest!.agency, 'Nantes');
+  // Un seul retrait à la fois par lingotin.
+  assert.throws(() => requestVaultExit(ag, b5, 'agency', 'Nantes', t0), /déjà demandé/);
+  // Domicile : 12 € pour un 5 g, offerte pour un 20 g.
+  const home5 = requestVaultExit(acc, b5, 'home', undefined, t0);
+  close(cash0 - home5.cashEur!, 12, 0.01);
+  const home20 = requestVaultExit(acc, b20, 'home', undefined, t0);
+  assert.equal(home20.cashEur, cash0);
+  // Compte d'attente vide : refusé pour une livraison payante.
+  assert.throws(() => requestVaultExit({ ...acc, cashEur: 5 }, b5, 'home', undefined, t0), /créditez/);
+  // Remise en main : le lingotin quitte le coffre et passe chez le client.
+  const out = confirmVaultExit(home5, b5, new Date('2026-11-10T10:00:00'));
+  const bar = out.homeVault!.find((b) => b.id === b5)!;
+  assert.equal(bar.vault, undefined);
+  assert.equal(bar.exitRequest, undefined);
+  assert.equal(bar.place, 'maison');
+  assert.ok(bar.exitedAt);
+  // Un lingotin d'enfant n'est jamais livré.
+  const child = { ...acc, homeVault: acc.homeVault!.map((b) => (b.id === b5 ? { ...b, ownerChildId: 'c1' } : b)) };
+  assert.throws(() => requestVaultExit(child, b5, 'home', undefined, t0), /enfant/);
 });
