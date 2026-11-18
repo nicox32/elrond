@@ -20,6 +20,7 @@ import type { StockLot } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { BarImage } from './BarImage';
+import { InsuranceMeter } from './InsuranceMeter';
 import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, Label, Message, SectionTitle, styles as ui } from './ui';
 
@@ -141,22 +142,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           value={`${formatEur(insurance.value)} sur ${formatEur(insurance.cap)}`}
           strong
         />
-        <View style={styles.meter}>
-          <View
-            style={[
-              styles.meterFill,
-              { flex: Math.max(0.0001, Math.min(1, insurance.share)) },
-              insurance.share >= 0.8 && { backgroundColor: colors.warning },
-              insurance.share >= 1 && { backgroundColor: colors.down },
-            ]}
-          />
-          <View style={{ flex: Math.max(0.0001, 1 - Math.min(1, insurance.share)) }} />
-        </View>
-        <Text style={ui.hint}>
-          {insurance.share >= 1
-            ? 'Plafond atteint : un nouveau lot est refusé tant que le stock n’a pas baissé.'
-            : `Il reste ${formatEur(insurance.left)} de place (${Math.round(insurance.share * 100)} % utilisés).${insurance.share >= 0.8 ? ' Attention : le plafond est proche.' : ''}`}
-        </Text>
+        <InsuranceMeter />
         <Label>Plafond de l’assurance (€)</Label>
         <TextInput
           value={capText}
@@ -261,6 +247,9 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           placeholderTextColor={colors.textMuted}
           style={ui.input}
           accessibilityLabel="Prix payé par exemplaire"
+        />
+        <InsuranceMeter
+          extraEur={(Number.isFinite(n) && n > 0 ? n : 0) * (cost.trim() ? parseAmount(cost) || 0 : expectedLot)}
         />
         <Label>
           {coin ? 'Millésimes connus (un par ligne, facultatif)' : 'Numéros de série connus (un par ligne)'}

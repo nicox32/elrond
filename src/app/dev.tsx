@@ -9,6 +9,7 @@ import { History2019 } from '../components/History2019';
 import { History900 } from '../components/History900';
 import { stockSummary } from '../logic/stock';
 import { PhysicalFeesEditor } from '../components/PhysicalFeesEditor';
+import { InsuranceMeter } from '../components/InsuranceMeter';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { barSummary } from '../logic/barControl';
@@ -177,6 +178,10 @@ function CompanyDashboard() {
           { value: 'all', label: 'Depuis l’ouverture' },
         ]}
       />
+
+      <Card style={{ gap: 6 }}>
+        <InsuranceMeter compact />
+      </Card>
 
       <Card style={{ gap: 8, borderColor: r.margin >= 0 ? colors.up : colors.down }}>
         <Row label={`Marge sur la période (${years} an${r.years >= 2 ? 's' : ''})`} value={signed(r.margin)} strong />

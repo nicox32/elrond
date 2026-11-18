@@ -7,6 +7,7 @@ import { useAccount, useBank } from '../state/BankProvider';
 import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
 import { addStock, assertInsuranceRoom } from '../logic/stock';
 import { colors } from '../theme';
+import { InsuranceMeter } from './InsuranceMeter';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
 
 const PREMIUM_CALCULATOR_URL = 'https://lingot-dor.fr/calculateur-prime-or';
@@ -491,6 +492,13 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               : ''}
           </Text>
         </View>
+        <InsuranceMeter
+          extraEur={
+            calc.sheet && Number(lotQty) > 0
+              ? Math.floor(Number(lotQty)) * lotPriceOf(calc.sheet, Math.floor(Number(lotQty)))
+              : 0
+          }
+        />
         <Button
           title="Enregistrer ce lot au stock"
           variant="ghost"
