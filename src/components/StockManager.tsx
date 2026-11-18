@@ -186,7 +186,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           <TextInput
             value={vault}
             onChangeText={setVault}
-            placeholder="Nom du revendeur (ex. Gold Avenue)"
+            placeholder="Nom du revendeur (ex. Godot & Fils)"
             placeholderTextColor={colors.textMuted}
             style={ui.input}
             accessibilityLabel="Nom du pro (revendeur)"
