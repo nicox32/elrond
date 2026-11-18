@@ -359,3 +359,39 @@ test('garde en coffre chez Godot & Fils : ni livraison ni agence, lingotin marqu
   const r = companyReport(out, p, 'year', new Date('2027-11-18T10:00:00'));
   assert.ok(r.costs.custody >= 5 * 0.48 - 1e-6);
 });
+
+test('ancien revendeur : les comptes enregistrés citant Gold Avenue passent à Godot & Fils', async () => {
+  const { migrateAccount } = await import('../src/logic/ledger.ts');
+  let acc = createAccount('T', new Date('2020-01-01'));
+  acc = {
+    ...acc,
+    homeVault: [
+      {
+        id: 'b1',
+        product: 'g5',
+        grams: 5,
+        orderedAt: '2026-11-01T10:00:00.000Z',
+        status: 'received',
+        cost: 500,
+        acquiredFrom: '2025-01-01T00:00:00.000Z',
+        acquiredTo: '2025-01-01T00:00:00.000Z',
+        txId: 't',
+        placeNote: 'Gold Avenue (stockage sécurisé)',
+      },
+    ],
+    stock: [
+      {
+        id: 'l1',
+        product: 'g10',
+        qty: 2,
+        source: 'pro',
+        vault: 'Gold Avenue',
+        addedAt: '2026-11-01T10:00:00.000Z',
+      } as any,
+    ],
+  };
+  const m = migrateAccount(JSON.parse(JSON.stringify(acc)))!;
+  assert.equal(m.homeVault![0].placeNote, 'Godot & Fils, stockage sécurisé');
+  assert.equal(m.stock![0].vault, 'Godot & Fils');
+  assert.ok(!JSON.stringify(m).match(/gold ?avenue/i));
+});

@@ -1,4 +1,4 @@
-// Stockage chez le revendeur (Gold Avenue) : grille en francs suisses, en vigueur depuis le 1er novembre 2026.
+// Stockage chez le revendeur (Godot & Fils) : l'ancienne grille en francs suisses n'est plus affichée aux clients.
 // Elle s'applique à chaque CLIENT (et à chaque enfant, qui a son propre compte), pas à la société Orvia.
 //  - jusqu'à 10 000 CHF : gratuit ;
 //  - de 10 000 à 40 000 CHF : 15 CHF par mois ;
@@ -61,7 +61,7 @@ export function storageStatus(usedEur: number, chfToEur: number): StorageStatus 
 
 /** Un lingotin ou une pièce gardé chez le revendeur (stockage sécurisé), et non à la maison ou en banque. */
 export function isAtReseller(bar: Pick<HomeBar, 'origin' | 'placeNote' | 'place'>): boolean {
-  return /gold avenue|godot/i.test(bar.placeNote ?? '') || bar.origin === 'pro';
+  return /godot/i.test(bar.placeNote ?? '') || bar.origin === 'pro';
 }
 
 export interface ClientStorage {

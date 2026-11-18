@@ -195,6 +195,18 @@ function safely<T>(value: T, migrate: (v: T) => T): T {
   }
 }
 
+/** Le revendeur est Godot & Fils : les anciens comptes qui citent un autre revendeur sont renommés. */
+export function renameReseller(account: Account): Account {
+  const rename = (t?: string) => (t && /gold ?avenue/i.test(t) ? 'Godot & Fils, stockage sécurisé' : t);
+  const homeVault = (account.homeVault ?? []).map((b) =>
+    b.placeNote && /gold ?avenue/i.test(b.placeNote) ? { ...b, placeNote: rename(b.placeNote) } : b,
+  );
+  const stock = (account.stock ?? []).map((l) =>
+    l.vault && /gold ?avenue/i.test(l.vault) ? { ...l, vault: 'Godot & Fils' } : l,
+  );
+  return { ...account, ...(account.homeVault ? { homeVault } : {}), ...(account.stock ? { stock } : {}) };
+}
+
 /** Met à niveau un compte enregistré par une ancienne version de l'appli. */
 export function migrateAccount(raw: unknown): Account | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -202,7 +214,7 @@ export function migrateAccount(raw: unknown): Account | null {
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
     return {
-      ...safely(a as Account, (acc) => compactHistory(removeHistory2021(retireGoldOria(acc)))),
+      ...safely(a as Account, (acc) => renameReseller(compactHistory(removeHistory2021(retireGoldOria(acc))))),
       children: Array.isArray(a.children)
         ? a.children.map((c: ChildAccount) => safely(c, (w) => compactHistory(retireGoldOria(w))))
         : [],

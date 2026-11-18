@@ -12,12 +12,12 @@ const base = () => creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', va
 test('stock : lots par quantité, au coffre de la société ou en coffre professionnel', () => {
   let a = base();
   a = addStock(a, { product: 'g10', qty: 100, source: 'maison', unitCost: 1199.83 });
-  a = addStock(a, { product: 'g10', qty: 10, source: 'pro', vault: 'Gold Avenue' });
+  a = addStock(a, { product: 'g10', qty: 10, source: 'pro', vault: 'Godot & Fils' });
   a = addStock(a, { product: 'nap20', qty: 50, source: 'maison' });
   assert.deepEqual(stockCount(a, 'g10'), { maison: 100, pro: 10 });
   assert.equal(stockSummary(a).length, 2);
   assert.equal(a.stockLog!.length, 3);
-  assert.equal(a.stock![1].vault, 'Gold Avenue');
+  assert.equal(a.stock![1].vault, 'Godot & Fils');
   assert.throws(() => addStock(a, { product: 'g10', qty: 0, source: 'maison' }));
   assert.throws(() => addStock(a, { product: 'g10', qty: 1.5, source: 'maison' }));
   assert.throws(() => addStock(a, { product: 'g10', qty: 20000, source: 'maison' }));
@@ -48,7 +48,7 @@ test('stock : numéros de série connus, format PAMP, doublons refusés', () => 
 test('stock : un retrait prend dans le stock de la société, puis le coffre professionnel, sinon commande', () => {
   let a = base();
   a = addStock(a, { product: 'g10', qty: 2, source: 'maison', serials: ['C204518', 'C319760'] });
-  a = addStock(a, { product: 'g10', qty: 1, source: 'pro', vault: 'Gold Avenue' });
+  a = addStock(a, { product: 'g10', qty: 1, source: 'pro', vault: 'Godot & Fils' });
   a = withdrawPhysical(a, p, { g10: 4 }, new Date('2026-11-16T12:00:00'));
   const origins = a.homeVault!.map((b) => b.origin);
   assert.deepEqual(origins, ['maison', 'maison', 'pro', 'commande']);
@@ -187,7 +187,7 @@ test('contrôle des lingots : on retrouve un lingotin par son lieu de garde', as
 
 test('lot déjà créé : on y colle la liste de numéros du revendeur, ils sortent avec les exemplaires', async () => {
   const { addSerialsToLot } = await import('../src/logic/stock.ts');
-  let a = addStock(base(), { product: 'g5', qty: 3, source: 'pro', vault: 'Gold Avenue' });
+  let a = addStock(base(), { product: 'g5', qty: 3, source: 'pro', vault: 'Godot & Fils' });
   const id = a.stock![0].id;
   a = addSerialsToLot(a, id, parseSerials('C841201\nC386511'));
   assert.deepEqual(a.stock![0].serials, ['C841201', 'C386511']);
@@ -209,7 +209,7 @@ test('lot déjà créé : on y colle la liste de numéros du revendeur, ils sort
 
 test('stock : supprimer un lot (trace au journal) ou effacer tout le stock', async () => {
   const { removeLot, clearStock } = await import('../src/logic/stock.ts');
-  let a = addStock(base(), { product: 'g5', qty: 10, source: 'pro', vault: 'Gold Avenue' });
+  let a = addStock(base(), { product: 'g5', qty: 10, source: 'pro', vault: 'Godot & Fils' });
   a = addStock(a, { product: 'g10', qty: 10, source: 'maison' });
   const [l5, l10] = a.stock!;
   const r = removeLot(a, l5.id);
@@ -228,7 +228,7 @@ test('stock : supprimer un lot (trace au journal) ou effacer tout le stock', asy
 
 test('stockage chez le revendeur : grille en francs suisses depuis le 1er novembre 2026', async () => {
   const { proStockValue, storageStatus, STORAGE_LIMIT } = await import('../src/logic/storageLimit.ts');
-  let a = addStock(base(), { product: 'g10', qty: 3, source: 'pro', vault: 'Gold Avenue' });
+  let a = addStock(base(), { product: 'g10', qty: 3, source: 'pro', vault: 'Godot & Fils' });
   a = addStock(a, { product: 'g5', qty: 2, source: 'pro' });
   a = addStock(a, { product: 'g20', qty: 5, source: 'maison' }); // chez soi : pas compté
   close(proStockValue(a, 100), (3 * 10 + 2 * 5) * 100, 1e-6);
@@ -262,7 +262,7 @@ test('compte enfant : or converti en lingotin gardé chez le revendeur, fabricat
   a = fundChild(added.account, p, added.child.id, 'gold', { unit: 'g', value: 20 }, t0);
   const id = added.child.id;
   const cash = a.cashEur ?? 0;
-  // Standard : gardé chez Gold Avenue, jamais livré.
+  // Standard : gardé chez Godot & Fils, jamais livré.
   const s = convertChildToBars(a, p, id, { g5: 1 }, false, t0);
   const bar = barsOfChild(s, id)[0];
   assert.equal(bar.ownerChildId, id);
@@ -298,7 +298,7 @@ test('stockage chez le revendeur : le seuil gratuit est propre à chaque client,
   let a = creditCash(buy(createAccount('T', new Date('2020-01-01')), p, 'gold', { unit: 'g', value: 80 }), 400);
   const added = addChild(a, 'Théo', '2015-06-01', t0);
   a = fundChild(added.account, p, added.child.id, 'gold', { unit: 'g', value: 20 }, t0);
-  // Un lingotin de l'enfant, gardé chez Gold Avenue ; un lingotin du titulaire, chez lui.
+  // Un lingotin de l'enfant, gardé chez Godot & Fils ; un lingotin du titulaire, chez lui.
   a = convertChildToBars(a, p, added.child.id, { g10: 1 }, false, t0);
   a = withdrawPhysical(a, p, { g5: 1 }, t0);
   const mine = a.homeVault!.find((b) => !b.ownerChildId)!;
@@ -307,8 +307,8 @@ test('stockage chez le revendeur : le seuil gratuit est propre à chaque client,
   assert.equal(g.length, 1);
   assert.equal(g[0].ownerChildId, added.child.id);
   close(g[0].valueEur, 1000, 1e-6);
-  // Le même titulaire, avec un lingotin gardé chez Gold Avenue, a son propre seuil.
-  const stored = a.homeVault!.map((b) => (b.id === mine.id ? { ...b, placeNote: 'Gold Avenue (stockage)' } : b));
+  // Le même titulaire, avec un lingotin gardé chez Godot & Fils, a son propre seuil.
+  const stored = a.homeVault!.map((b) => (b.id === mine.id ? { ...b, placeNote: 'Godot & Fils (stockage)' } : b));
   const two = clientStorage({ homeVault: stored }, 100);
   assert.equal(two.length, 2);
   close(two.find((x) => x.ownerChildId === null)!.valueEur, 500, 1e-6);

@@ -94,7 +94,7 @@ export function companyReport(
     custody:
       // Lingotins gardés en coffre chez Godot & Fils : leur garde est facturée à Orvia, au gramme.
       (account.homeVault ?? [])
-        .filter((b) => b.vault || /godot|gold avenue/i.test(b.placeNote ?? '') || b.origin === 'pro')
+        .filter((b) => b.vault || /godot/i.test(b.placeNote ?? '') || b.origin === 'pro')
         .reduce((s, b) => s + b.grams * (COMPANY.custodyPerGramYear.gold ?? 0), 0) *
         years +
       wallets.reduce(
