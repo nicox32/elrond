@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BarImage } from '../components/BarImage';
 import { PinConfirm } from '../components/PinConfirm';
@@ -31,7 +31,9 @@ export default function WithdrawScreen() {
   const [confirm, setConfirm] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const fees = physicalFeesOf(account.settings);
-  const q = quoteWithdrawal(quote.prices, order, fees);
+  const [pickup, setPickup] = useState(false);
+  const [agency, setAgency] = useState('');
+  const q = quoteWithdrawal(quote.prices, order, fees, pickup);
   const cash = account.cashEur ?? 0;
   const gold = account.holdings.gold;
   const tooMuch = q.grams > gold + 1e-9;
@@ -45,11 +47,14 @@ export default function WithdrawScreen() {
   function submit() {
     setConfirm(false);
     try {
-      commit((a, p) => withdrawPhysical(a, p, order));
+      const city = agency.trim();
+      commit((a, p) => withdrawPhysical(a, p, order, new Date(), pickup ? city : undefined));
       setOrder({});
       setMessage({
         ok: true,
-        text: `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours ouvrés. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
+        text: pickup
+          ? `Retrait enregistré : vous serez prévenu dès que vos lingotins sont disponibles à l’agence Godot & Fils (${city}). Apportez une pièce d’identité et signez le bon de remise. Notez ensuite le numéro de série de chaque lingotin dans « Mon coffre maison ».`
+          : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours ouvrés. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
       });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Retrait impossible.' });
@@ -125,9 +130,40 @@ export default function WithdrawScreen() {
               La prime du Napoléon varie avec la demande : son prix exact est fixé le jour de la préparation.
             </Text>
           )}
+          <View style={styles.modes}>
+            {[
+              { id: false, label: 'Livraison à domicile' },
+              { id: true, label: 'Retrait en agence' },
+            ].map((m) => (
+              <Pressable
+                key={String(m.id)}
+                onPress={() => setPickup(m.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: pickup === m.id }}
+                style={[styles.mode, pickup === m.id && { borderColor: colors.gold }]}
+              >
+                <Text style={[styles.modeText, pickup === m.id && { color: colors.gold }]}>{m.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {pickup && (
+            <TextInput
+              value={agency}
+              onChangeText={setAgency}
+              placeholder="Agence Godot & Fils (ville)"
+              placeholderTextColor={colors.textMuted}
+              style={ui.input}
+              accessibilityLabel="Agence de retrait"
+              testID="pickup-agency"
+            />
+          )}
           <Line
-            label={`Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`}
-            value={q.delivery ? formatEur(q.delivery) : 'Offerte'}
+            label={
+              pickup
+                ? 'Retrait en agence, contre pièce d’identité et bon de remise'
+                : `Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`
+            }
+            value={q.delivery ? formatEur(q.delivery) : pickup ? 'Gratuit' : 'Offerte'}
           />
           <View style={styles.sep} />
           <Line label={`Frais payés depuis le compte d’attente (${pct(q.feesPct)})`} value={formatEur(q.fees)} strong />
@@ -146,7 +182,7 @@ export default function WithdrawScreen() {
       <Button
         title="Retirer ces lingotins"
         onPress={() => setConfirm(true)}
-        disabled={!q.lines.length || tooMuch || noCash}
+        disabled={!q.lines.length || tooMuch || noCash || (pickup && agency.trim().length < 2)}
       />
       {message && <Message {...message} />}
       <Pressable onPress={() => router.push('/coffre-maison')} accessibilityRole="link">
@@ -184,6 +220,16 @@ function Line({ label, value, strong }: { label: string; value: string; strong?:
 }
 
 const styles = StyleSheet.create({
+  modes: { flexDirection: 'row', gap: 8 },
+  mode: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  modeText: { color: colors.textMuted, fontSize: 13.5, fontWeight: '600' },
   avail: { color: colors.textMuted, fontSize: 13.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   border: { borderTopWidth: 1, borderTopColor: colors.border },

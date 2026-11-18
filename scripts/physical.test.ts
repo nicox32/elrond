@@ -282,3 +282,25 @@ test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces,
   assert.equal(vendorTierOff(productOf('nap20'), 100), 0.0039);
   assert.equal(vendorTierOff(productOf('nap20'), 500), 0.0069);
 });
+
+test('retrait en agence : pas de livraison, ni facturée au client ni payée au revendeur, agence notée sur les lingotins', () => {
+  const def = physicalFeesOf();
+  const home = quoteWithdrawal(p, { g5: 1 }, def);
+  const agency = quoteWithdrawal(p, { g5: 1 }, def, true);
+  assert.equal(home.delivery, def.delivery);
+  assert.equal(agency.delivery, 0);
+  assert.equal(agency.pickup, true);
+  close(home.fees - agency.fees, def.delivery, 1e-9);
+  close(home.cost! - agency.cost!, def.vendorDelivery, 1e-9);
+  let acc = createAccount('T', new Date('2020-01-01'));
+  acc = buy(acc, p, 'gold', { unit: 'g', value: 12 }, new Date('2020-03-01T12:00:00'));
+  acc = creditCash(acc, 500);
+  const out = withdrawPhysical(acc, p, { g5: 2 }, new Date('2026-11-18T10:00:00'), ' Lyon ');
+  assert.ok(out.homeVault!.every((b) => b.pickupAgency === 'Lyon'));
+  assert.match(out.transactions[0].label, /en agence \(Lyon\)/);
+  close(out.cashEur!, 500 - quoteWithdrawal(p, { g5: 2 }, def, true).fees, 0.01);
+  assert.throws(() => withdrawPhysical(acc, p, { g5: 1 }, new Date(), ' '), /agence/i);
+  // Sans agence : livraison à domicile, aucune agence notée.
+  const home2 = withdrawPhysical(acc, p, { g5: 1 }, new Date('2026-11-18T10:00:00'));
+  assert.equal(home2.homeVault![0].pickupAgency, undefined);
+});

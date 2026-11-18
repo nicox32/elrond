@@ -187,6 +187,8 @@ export interface HomeBar {
   orderedAt: string;
   status: 'preparing' | 'received';
   receivedAt?: string;
+  /** Retrait en agence du revendeur (ville ou agence) : le lingotin n'est pas livré à domicile. */
+  pickupAgency?: string;
   serial?: string;
   /** Prix de revient du métal (achat d'origine, frais compris), pour l'impôt à la revente. */
   cost: number;

@@ -314,7 +314,13 @@ export function vendorTierOff(p: BarProduct, qty: number): number {
 }
 
 /** Détail chiffré d'un retrait : grammes pris au coffre, surcoût de fabrication, livraison. */
-export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalFees = physicalFeesOf()) {
+export function quoteWithdrawal(
+  prices: Prices,
+  order: BarOrder,
+  fees: PhysicalFees = physicalFeesOf(),
+  /** Retrait en agence du revendeur : pas de livraison, ni facturée au client ni payée au revendeur. */
+  pickup = false,
+) {
   const pieces = BAR_PRODUCTS.reduce((s, p) => s + Math.max(0, Math.floor(order[p.id] ?? 0)), 0);
   const lines = BAR_PRODUCTS.filter((p) => (order[p.id] ?? 0) > 0).map((p) => {
     const qty = Math.floor(order[p.id]);
@@ -338,12 +344,12 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
   const premium = lines.reduce((s, l) => s + l.premium, 0);
   const vendorDiscount = lines.reduce((s, l) => s + l.vendorDiscount, 0);
   const clientDiscount = lines.reduce((s, l) => s + l.clientDiscount, 0);
-  const delivery = !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
+  const delivery = pickup || !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
   const total = Math.round((premium + delivery) * 100) / 100;
   // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) et sa livraison, par commande.
   const cost =
     lines.length && lines.every((l) => l.vendorCost !== undefined)
-      ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0) + fees.vendorDelivery
+      ? lines.reduce((s, l) => s + (l.vendorCost ?? 0), 0) + (pickup ? 0 : fees.vendorDelivery)
       : undefined;
   return {
     lines,
@@ -351,6 +357,7 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
     value,
     premium,
     delivery,
+    pickup,
     fees: total,
     feesPct: value ? total / value : 0,
     cost,
@@ -367,8 +374,17 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
  * d'attente (payer en or serait une vente, donc imposée). Chaque lingotin entre au registre du coffre maison avec
  * les dates et le prix d'achat d'origine du métal (premier entré, premier sorti).
  */
-export function withdrawPhysical(account: Account, prices: Prices, order: BarOrder, now = new Date()): Account {
-  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings));
+export function withdrawPhysical(
+  account: Account,
+  prices: Prices,
+  order: BarOrder,
+  now = new Date(),
+  /** Agence du revendeur où le client retire ses lingotins (sinon livraison à domicile). */
+  pickupAgency?: string,
+): Account {
+  const agency = pickupAgency?.trim();
+  if (pickupAgency !== undefined && agency!.length < 2) throw new LedgerError('Indiquez l’agence de retrait (ville).');
+  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), pickupAgency !== undefined);
   if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
   if (q.grams > account.holdings.gold + 1e-9) {
     throw new LedgerError(
@@ -401,7 +417,7 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
     }
     return { cost, from: from || now.toISOString(), to: to || now.toISOString() };
   };
-  const label = `Retrait physique · ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')}`;
+  const label = `Retrait physique${agency ? ` en agence (${agency})` : ''} · ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')}`;
   let next = applyTx(account, 'withdraw_physical', { gold: -q.grams }, q.value, label, now, q.fees);
   const [tx, ...rest] = next.transactions;
   const bars: HomeBar[] = [];
@@ -418,6 +434,7 @@ export function withdrawPhysical(account: Account, prices: Prices, order: BarOrd
         acquiredFrom: t.from,
         acquiredTo: t.to,
         txId: tx.id,
+        ...(agency ? { pickupAgency: agency } : {}),
       });
     }
   }
