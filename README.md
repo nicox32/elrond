@@ -74,7 +74,7 @@ jamais dans Git (dossier `signing/` ignoré).
   de cette date.
 - **L'or s'appelle Gold Spot** dans l'appli. (Le jeton maison Gold Oria a été arrêté : un éventuel solde est
   converti en Gold Spot sans frais, avec son prix de revient d'origine.)
-- **Société Orvia** (Profil, protégé par un code ; `src/logic/company.ts`) : tableau de bord de ce que la société
+- **Espace DEV** (Profil, protégé par un code ; `src/logic/company.ts`) : tableau de bord de ce que la société
   aurait gagné (frais réellement prélevés) et dépensé (garde, assurance, vérification d'identité, fidélité, parrainage)
   avec ce compte, sur 12 mois ou depuis l'ouverture, et nombre de clients semblables pour couvrir les frais fixes.
 - **L'or fractionné** (`src/app/or-fractionne.tsx`, `docs/or-fractionne.png`) : page explicative (or dès 1 €, sans
@@ -109,7 +109,7 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Historique allégé** (`src/logic/compact.ts`) : au-delà de 600 opérations, les achats de plus de 12 mois sont
   regroupés par mois et par métal (mêmes montants, frais et grammes ; date du dernier achat du mois, donc impôt jamais
   sous-estimé).
-- **Reprise de l'épargne depuis 2019** (Société Orvia → Outils du compte, `src/logic/history2019.ts`) : compte ouvert le 4 janvier
+- **Reprise de l'épargne depuis 2019** (Espace DEV → Outils du compte, `src/logic/history2019.ts`) : compte ouvert le 4 janvier
   2019, 25 € par semaine en 4 achats (lundi, mercredi, vendredi, dimanche), 50 % Gold Spot, 25 % argent, 25 % platine,
   frais d'achat Orvia compris ; une seule fois. Chaque achat au cours moyen réel de son mois en €/once
   (`src/logic/monthlyPrices.ts`, calculé par `.github/workflows/cours-mensuels.yml` à partir des cours quotidiens et du
@@ -135,11 +135,11 @@ jamais dans Git (dossier `signing/` ignoré).
 - **Don mensuel à un enfant** (écran du compte enfant, `src/logic/childGiftPlan.ts`) : montant, jour du mois et
   répartition ; le jour prévu, rappel par notification et don en un geste (« Faire le don », ou « Pas ce mois-ci »),
   ou don automatique si vous le choisissez. Le métal est acheté sur le compte du parent puis versé gratuitement.
-- **Compte d'essai « 900 € avec des pauses »** (Société Orvia → Outils du compte, `src/logic/history900.ts`) : sur des coffres
+- **Compte d'essai « 900 € avec des pauses »** (Espace DEV → Outils du compte, `src/logic/history900.ts`) : sur des coffres
   vides, 36 versements de 25 € le 5 du mois depuis le 4 janvier 2019 avec des pauses de 9 à 15 mois ; frais
   d'oxydation appliqués par la règle de l'appli à chaque période de 6 mois sans opération ; achats selon la
   répartition, au cours moyen réel du mois. Le versement du mois en cours n'est pas ajouté.
-- **Dons à un enfant depuis 2022** (Société Orvia → Outils du compte, `src/logic/childGifts.ts`) : 50 € le 5
+- **Dons à un enfant depuis 2022** (Espace DEV → Outils du compte, `src/logic/childGifts.ts`) : 50 € le 5
   de chaque mois depuis le 5 janvier 2022, 50 % Gold Spot et 50 % argent, au cours moyen réel de chaque mois, frais
   d'achat compris, ajoutés au compte de l'enfant choisi (le compte principal ne change pas) ; une seule fois.
 - **Lien en lecture seule d'un compte enfant** (écran du compte enfant → « Partager le compte de … »,
@@ -163,14 +163,14 @@ jamais dans Git (dossier `signing/` ignoré).
   (modèles 50/25/25, 60/20/20…), comparaison avec la répartition actuelle, et **achat réparti en euros** en un geste,
   « selon mes % » ou « vers mon objectif » (priorité aux métaux en retard, sans rien vendre) (`docs/repartition.png`).
 - **Retrait physique d'or** (coffre Gold Spot, ou Profil › Mon coffre maison) : lingotins LBMA de 5 g, 10 g, 20 g
-  et 1 once, ou Napoléon 20 F (5,81 g, prime ≈ 7,5 % variable) ; fabrication 6 à 11 % selon le format et livraison assurée 12 € (offerte dès 20 g) ou retrait gratuit en agence Godot & Fils (pièce d'identité et bon de remise) ; **réglables dans Société Orvia** (le revendeur accorde des remises de quantité par produit, dès 10, 20 ou 50 pièces : la moitié est reversée au client sous forme de fabrication dégressive, l'autre moitié améliore la marge d'Orvia)
+  et 1 once, ou Napoléon 20 F (5,81 g, prime ≈ 7,5 % variable) ; fabrication 6 à 11 % selon le format et livraison assurée 12 € (offerte dès 20 g) ou retrait gratuit en agence Godot & Fils (pièce d'identité et bon de remise) ; **réglables dans Espace DEV** (le revendeur accorde des remises de quantité par produit, dès 10, 20 ou 50 pièces : la moitié est reversée au client sous forme de fabrication dégressive, l'autre moitié améliore la marge d'Orvia)
   (frais client et prime du vendeur par format, marge calculée, livraison), payées depuis le compte d'attente (pas une vente, pas
   d'impôt, la durée de détention continue). Registre « Mon coffre maison » : numéro de série, prix et dates d'achat
   d'origine. Argent et platine non retirables (20 % de TVA à la sortie du port franc).
 - **Règles d'achat** : minimum 10 € sur le total de l'opération, aucun minimum de frais. Le week-end (marché fermé),
   ordre au cours de la réouverture sans supplément, ou tout de suite avec 0,5 % ; programme, bot et dons attendent
   lundi.
-- **Contrôle des lingots** (Société Orvia, derrière le code) : base interne des lingotins et pièces du coffre maison.
+- **Contrôle des lingots** (Espace DEV, derrière le code) : base interne des lingotins et pièces du coffre maison.
   Contrôle à la réception (scellé, numéro de série comparé à la carte d'essai, pesée, dimensions, VERISCAN fait),
   poids de référence, recontrôle par pesée, anomalies, recherche par numéro de série, doublons refusés, marges
   réglables. Le client voit seulement « Contrôlé par Orvia le … » (aussi dans la fiche QR et l'inventaire PDF).

@@ -109,7 +109,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
 
   return (
     <>
-      <Button title="← Société Orvia" variant="ghost" onPress={onBack} />
+      <Button title="← Espace DEV" variant="ghost" onPress={onBack} />
       <Hint>
         Le stock des lingotins et pièces, par lot : chez Orvia, ou chez un pro (revendeur) qui les garde pour vous.
         Quand un client retire de l’or, l’appli prend d’abord dans le stock d’Orvia, puis chez le pro (revendeur) ; sans

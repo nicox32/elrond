@@ -89,7 +89,7 @@ export function PhysicalFeesEditor() {
       <Hint>
         Pour chaque format : ce que paie le client (fabrication ou prime, en % de la valeur de l’or) et ce que vous
         payez au vendeur. La marge est la différence. Les valeurs servent au retrait, aux Tarifs, à l’accueil et au coût
-        dans Société Orvia.
+        dans l’Espace DEV.
       </Hint>
       <View style={styles.head}>
         <Text style={[styles.col, { flexGrow: 1.4 }]}>Format</Text>

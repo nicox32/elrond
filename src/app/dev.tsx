@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { BarControl } from '../components/BarControl';
 import { StockManager } from '../components/StockManager';
@@ -24,11 +24,16 @@ import { Segmented } from '../components/Segmented';
 
 const pct = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`;
 
-/** Tableau de bord « Société Orvia », protégé par son propre code. */
+/**
+ * « Espace DEV » : réservé à la société. Pour les clients, l'écran affiche seulement « Inopérant pour les clients » ;
+ * six appuis rapides sur ce texte ouvrent l'accès, protégé par son propre code.
+ */
 export default function DevScreen() {
   const account = useAccount();
   const { updateSettings } = useBank();
   const [unlocked, setUnlocked] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const taps = useRef<number[]>([]);
   const [asking, setAsking] = useState(false);
   const [code, setCode] = useState('');
   const [code2, setCode2] = useState('');
@@ -36,14 +41,32 @@ export default function DevScreen() {
 
   if (unlocked) return <CompanyDashboard />;
 
+  // Les clients ne voient que cette phrase. Six appuis, chacun dans la seconde qui suit le précédent, ouvrent l'accès.
+  if (!revealed) {
+    const tap = () => {
+      const now = Date.now();
+      taps.current = [...taps.current.filter((t) => now - t < 1000), now];
+      if (taps.current.length >= 6) {
+        taps.current = [];
+        setRevealed(true);
+      }
+    };
+    return (
+      <Screen testID="screen-dev">
+        <Pressable onPress={tap} accessibilityRole="text" testID="dev-inoperative" style={styles.inoperative}>
+          <Text style={styles.inoperativeText}>Inopérant pour les clients</Text>
+        </Pressable>
+      </Screen>
+    );
+  }
+
   if (!account.settings.devCodeHash) {
     return (
       <Screen testID="screen-dev">
         <Card style={{ gap: 10 }}>
-          <Text style={styles.bold}>Créer le code du tableau de bord</Text>
+          <Text style={styles.bold}>Créer le code de l’Espace DEV</Text>
           <Text style={styles.para}>
-            Ce code à 4 chiffres protège le tableau de bord de la société. Choisissez-en un différent de votre code
-            d’accès.
+            Ce code à 4 chiffres protège l’Espace DEV. Choisissez-en un différent de votre code d’accès.
           </Text>
           <TextInput
             value={code}
@@ -83,14 +106,14 @@ export default function DevScreen() {
   return (
     <Screen testID="screen-dev">
       <Card style={{ gap: 10 }}>
-        <Text style={styles.bold}>Tableau de bord verrouillé</Text>
-        <Text style={styles.para}>Entrez le code pour voir les chiffres de la société Orvia.</Text>
+        <Text style={styles.bold}>Espace DEV verrouillé</Text>
+        <Text style={styles.para}>Entrez votre code.</Text>
         <Button title="Déverrouiller" onPress={() => setAsking(true)} />
       </Card>
       <CodeConfirm
         visible={asking}
-        title="Code du tableau de bord"
-        summary="Société Orvia"
+        title="Code de l’Espace DEV"
+        summary="Espace DEV"
         verify={(pin) => verifySecret(pin, account.settings.devCodeHash)}
         onConfirm={() => {
           setAsking(false);
@@ -296,6 +319,8 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 }
 
 const styles = StyleSheet.create({
+  inoperative: { flex: 1, minHeight: 240, alignItems: 'center', justifyContent: 'center' },
+  inoperativeText: { color: colors.textMuted, fontSize: 16 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   label: { color: colors.textMuted, fontSize: 13, flexShrink: 1 },
   value: { color: colors.text, fontSize: 14, fontVariant: ['tabular-nums'] },

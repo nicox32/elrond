@@ -147,12 +147,7 @@ export default function ProfileScreen() {
           to="/fidelite"
           border
         />
-        <LinkRow
-          label="Société Orvia"
-          hint="Tableau de bord (code) : revenus et coûts de la société"
-          to="/dev"
-          border
-        />
+        <LinkRow label="Espace DEV" hint="Inopérant pour les clients" to="/dev" border />
         <LinkRow label="Tarifs" hint="Frais d’achat, de revente, de virement et d’oxydation" to="/tarifs" border />
       </Card>
 
