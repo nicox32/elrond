@@ -104,8 +104,9 @@ function BarCard({
   const [serial, setSerial] = useState(bar.serial ?? '');
   const [showQr, setShowQr] = useState(false);
   const [pickedUp, setPickedUp] = useState(false);
-  const waitingAgency = bar.status === 'preparing' && !!bar.pickupAgency && !pickedUp && !bar.serial;
-  const readyAtAgency = fabricationProgress(bar.orderedAt, new Date(), true).step >= 3;
+  const toCollect = !!bar.pickupAgency || !!bar.vault;
+  const waitingAgency = bar.status === 'preparing' && toCollect && !pickedUp && !bar.serial;
+  const readyAtAgency = fabricationProgress(bar.orderedAt, new Date(), true, !!bar.vault).step >= 3;
   const arrived = bar.status === 'preparing' && readyAtAgency;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const p = productOf(bar.product);
@@ -129,13 +130,17 @@ function BarCard({
           {bar.status === 'received'
             ? 'Reçu'
             : arrived
-              ? bar.pickupAgency
-                ? 'Prêt en agence'
-                : 'Arrivé'
+              ? bar.vault
+                ? 'Entré au coffre'
+                : bar.pickupAgency
+                  ? 'Prêt en agence'
+                  : 'Arrivé'
               : 'En préparation'}
         </Text>
       </View>
-      {bar.status === 'preparing' && <BarFabrication orderedAt={bar.orderedAt} pickup={!!bar.pickupAgency} />}
+      {bar.status === 'preparing' && (
+        <BarFabrication orderedAt={bar.orderedAt} pickup={!!bar.pickupAgency} vault={!!bar.vault} />
+      )}
       {isLocked(bar) ? (
         <Text style={styles.controlled} testID={`bar-lock-${bar.id}`}>
           🔒 Sécurité maximale : verrouillé jusqu’au {new Date(bar.lockedUntil!).toLocaleDateString('fr-FR')} ·{' '}
@@ -189,14 +194,18 @@ function BarCard({
       ) : waitingAgency ? (
         <View style={{ gap: 6 }}>
           <Button
-            title={`Retirer en agence (${bar.pickupAgency})`}
+            title={bar.vault ? 'Confirmer l’entrée au coffre' : `Retirer en agence (${bar.pickupAgency})`}
             onPress={() => setPickedUp(true)}
             disabled={!readyAtAgency}
           />
           <Text style={styles.sub} testID={`bar-agency-hint-${bar.id}`}>
-            {readyAtAgency
-              ? 'Prêt à l’agence : apportez une pièce d’identité et signez le bon de remise, puis appuyez ici pour noter le numéro de série.'
-              : 'Disponible dès que le lingotin est prêt à l’agence (suivi estimé ci-dessus).'}
+            {bar.vault
+              ? readyAtAgency
+                ? 'Entré au coffre chez Godot & Fils, à votre nom : appuyez ici pour noter son numéro de série.'
+                : 'Il reste au coffre de Godot & Fils, sans livraison : disponible dès son entrée au coffre (suivi estimé ci-dessus).'
+              : readyAtAgency
+                ? 'Prêt à l’agence : apportez une pièce d’identité et signez le bon de remise, puis appuyez ici pour noter le numéro de série.'
+                : 'Disponible dès que le lingotin est prêt à l’agence (suivi estimé ci-dessus).'}
           </Text>
         </View>
       ) : (

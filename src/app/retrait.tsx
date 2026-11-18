@@ -32,16 +32,18 @@ export default function WithdrawScreen() {
   const [confirm, setConfirm] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const fees = physicalFeesOf(account.settings);
-  const [pickup, setPickup] = useState(false);
+  const [mode, setMode] = useState<'home' | 'agency' | 'vault'>('home');
+  const pickup = mode === 'agency';
+  const vault = mode === 'vault';
   const [agency, setAgency] = useState('');
-  const q = quoteWithdrawal(quote.prices, order, fees, pickup);
+  const q = quoteWithdrawal(quote.prices, order, fees, pickup || vault);
   const cash = account.cashEur ?? 0;
   const gold = account.holdings.gold;
   const tooMuch = q.grams > gold + 1e-9;
   const noCash = q.fees > cash + 0.005;
 
   const missingGrams = Math.max(0, q.grams - gold);
-  const summary = `${q.pieces} ${q.pieces > 1 ? 'lingotins' : 'lingotin'} · ${pickup ? 'retrait en agence' : 'livraison à domicile'} · ${formatEur(q.fees)} de frais`;
+  const summary = `${q.pieces} ${q.pieces > 1 ? 'lingotins' : 'lingotin'} · ${pickup ? 'retrait en agence' : vault ? 'gardés en coffre chez Godot & Fils' : 'livraison à domicile'} · ${formatEur(q.fees)} de frais`;
   // Un seul bouton d'action : il dit ce qui manque et y mène, plutôt que de rester grisé.
   const cta: { title: string; action: 'none' | 'buy' | 'credit' | 'order'; disabled?: boolean; hint?: string } = !q
     .lines.length
@@ -71,13 +73,15 @@ export default function WithdrawScreen() {
     setConfirm(false);
     try {
       const city = agency.trim();
-      commit((a, p) => withdrawPhysical(a, p, order, new Date(), pickup ? city : undefined));
+      commit((a, p) => withdrawPhysical(a, p, order, new Date(), pickup ? city : undefined, vault));
       setOrder({});
       setMessage({
         ok: true,
-        text: pickup
-          ? `Retrait enregistré : vous serez prévenu dès que vos lingotins sont disponibles à l’agence Godot & Fils (${city}). Apportez une pièce d’identité et signez le bon de remise. Notez ensuite le numéro de série de chaque lingotin dans « Mon coffre maison ».`
-          : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours environ. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
+        text: vault
+          ? 'Commande enregistrée : vos lingotins seront gardés en coffre sécurisé chez Godot & Fils, à votre nom. Vous pourrez noter leur numéro de série dès leur entrée au coffre, dans « Mon coffre maison ».'
+          : pickup
+            ? `Retrait enregistré : vous serez prévenu dès que vos lingotins sont disponibles à l’agence Godot & Fils (${city}). Apportez une pièce d’identité et signez le bon de remise. Notez ensuite le numéro de série de chaque lingotin dans « Mon coffre maison ».`
+            : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours environ. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
       });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Retrait impossible.' });
@@ -162,29 +166,41 @@ export default function WithdrawScreen() {
               </Text>
             )}
             <View style={styles.modes}>
-              {[
-                { id: false, label: 'Livraison à domicile' },
-                { id: true, label: 'Retrait en agence' },
-              ].map((m) => (
+              {(
+                [
+                  { id: 'home', label: 'À domicile' },
+                  { id: 'agency', label: 'En agence' },
+                  { id: 'vault', label: 'Garder en coffre' },
+                ] as const
+              ).map((m) => (
                 <Pressable
-                  key={String(m.id)}
-                  onPress={() => setPickup(m.id)}
+                  key={m.id}
+                  onPress={() => setMode(m.id)}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: pickup === m.id }}
-                  style={[styles.mode, pickup === m.id && { borderColor: colors.gold }]}
+                  accessibilityState={{ selected: mode === m.id }}
+                  style={[styles.mode, mode === m.id && { borderColor: colors.gold }]}
                 >
-                  <Text style={[styles.modeText, pickup === m.id && { color: colors.gold }]}>{m.label}</Text>
+                  <Text style={[styles.modeText, mode === m.id && { color: colors.gold }]}>{m.label}</Text>
                 </Pressable>
               ))}
             </View>
             {pickup && <AgencyPicker value={agency} onChange={setAgency} />}
+            {vault && (
+              <Text style={styles.sub} testID="vault-note">
+                Vos lingotins restent en coffre sécurisé chez Godot & Fils, à votre nom, sans livraison. Ils
+                apparaissent dans « Mon coffre maison » dès leur entrée au coffre. Leur garde est à la charge d’Orvia
+                pour l’instant.
+              </Text>
+            )}
             <Line
               label={
                 pickup
                   ? 'Retrait en agence, contre pièce d’identité et bon de remise'
-                  : `Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`
+                  : vault
+                    ? 'Garde en coffre chez Godot & Fils : pas de livraison'
+                    : `Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`
               }
-              value={q.delivery ? formatEur(q.delivery) : pickup ? 'Gratuit' : 'Offerte'}
+              value={q.delivery ? formatEur(q.delivery) : pickup || vault ? 'Gratuit' : 'Offerte'}
             />
             <View style={styles.sep} />
             <Line
@@ -273,7 +289,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
   },
-  modeText: { color: colors.textMuted, fontSize: 13.5, fontWeight: '600' },
+  modeText: { color: colors.textMuted, fontSize: 13.5, fontWeight: '600', textAlign: 'center' },
   avail: { color: colors.textMuted, fontSize: 13.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   border: { borderTopWidth: 1, borderTopColor: colors.border },

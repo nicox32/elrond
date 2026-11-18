@@ -333,3 +333,29 @@ test('agences Godot & Fils : libellés uniques, adresse notée quand elle est co
   assert.equal(agencyLabel({ name: 'Hyères' }), 'Hyères');
   assert.ok(GODOT_AGENCIES.some((a) => a.name === 'Paris 2 (siège)'));
 });
+
+test('garde en coffre chez Godot & Fils : ni livraison ni agence, lingotin marqué en coffre, coût de garde pour Orvia', async () => {
+  const { CHILD_STORAGE_NOTE } = await import('../src/logic/physical.ts');
+  const { companyReport } = await import('../src/logic/company.ts');
+  let acc = createAccount('T', new Date('2020-01-01'));
+  acc = buy(acc, p, 'gold', { unit: 'g', value: 12 }, new Date('2020-03-01T12:00:00'));
+  acc = creditCash(acc, 500);
+  const now = new Date('2026-11-18T10:00:00');
+  const out = withdrawPhysical(acc, p, { g5: 1 }, now, undefined, true);
+  const bar = out.homeVault![0];
+  assert.equal(bar.vault, true);
+  assert.equal(bar.pickupAgency, undefined);
+  assert.equal(bar.placeNote, CHILD_STORAGE_NOTE);
+  assert.match(out.transactions[0].label, /gardé en coffre chez Godot/);
+  // Pas de livraison facturée au client.
+  close(500 - out.cashEur!, quoteWithdrawal(p, { g5: 1 }, physicalFeesOf(), true).fees, 0.01);
+  assert.equal(quoteWithdrawal(p, { g5: 1 }, physicalFeesOf(), true).delivery, 0);
+  // Étapes propres au coffre.
+  assert.equal(
+    fabricationProgress(bar.orderedAt, new Date('2026-12-01T10:00:00'), true, true).label,
+    'Entré au coffre',
+  );
+  // Garde de ce lingotin : coût pour Orvia, au gramme.
+  const r = companyReport(out, p, 'year', new Date('2027-11-18T10:00:00'));
+  assert.ok(r.costs.custody >= 5 * 0.48 - 1e-6);
+});

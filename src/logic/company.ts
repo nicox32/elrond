@@ -92,6 +92,11 @@ export function companyReport(
   const accountsOpened = wallets.filter((w) => new Date(w.createdAt).getTime() >= from).length;
   const costs = {
     custody:
+      // Lingotins gardés en coffre chez Godot & Fils : leur garde est facturée à Orvia, au gramme.
+      (account.homeVault ?? [])
+        .filter((b) => b.vault || /godot|gold avenue/i.test(b.placeNote ?? '') || b.origin === 'pro')
+        .reduce((s, b) => s + b.grams * (COMPANY.custodyPerGramYear.gold ?? 0), 0) *
+        years +
       wallets.reduce(
         (s, w) =>
           s +
@@ -104,7 +109,8 @@ export function companyReport(
             0,
           ),
         0,
-      ) * years,
+      ) *
+        years,
     kyc: accountsOpened * COMPANY.kycPerAccount,
     loyalty: loyaltyCost,
     referral: sum((t) => (t.kind === 'referral_bonus' ? t.eur : 0)),

@@ -191,6 +191,8 @@ export interface HomeBar {
   receivedAt?: string;
   /** Retrait en agence du revendeur (ville ou agence) : le lingotin n'est pas livré à domicile. */
   pickupAgency?: string;
+  /** Lingotin gardé en coffre sécurisé chez le revendeur (jamais livré chez le client). */
+  vault?: boolean;
   serial?: string;
   /** Prix de revient du métal (achat d'origine, frais compris), pour l'impôt à la revente. */
   cost: number;

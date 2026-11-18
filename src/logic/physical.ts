@@ -381,10 +381,12 @@ export function withdrawPhysical(
   now = new Date(),
   /** Agence du revendeur où le client retire ses lingotins (sinon livraison à domicile). */
   pickupAgency?: string,
+  /** Garde en coffre sécurisé chez le revendeur : ni livraison ni retrait, le lingotin reste au nom du client. */
+  vault = false,
 ): Account {
   const agency = pickupAgency?.trim();
   if (pickupAgency !== undefined && agency!.length < 2) throw new LedgerError('Indiquez l’agence de retrait (ville).');
-  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), pickupAgency !== undefined);
+  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), pickupAgency !== undefined || vault);
   if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
   if (q.grams > account.holdings.gold + 1e-9) {
     throw new LedgerError(
@@ -417,7 +419,7 @@ export function withdrawPhysical(
     }
     return { cost, from: from || now.toISOString(), to: to || now.toISOString() };
   };
-  const label = `Retrait physique${agency ? ` en agence (${agency})` : ''} · ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')}`;
+  const label = `Retrait physique${agency ? ` en agence (${agency})` : ''}${vault ? ' gardé en coffre chez Godot & Fils' : ''} · ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')}`;
   let next = applyTx(account, 'withdraw_physical', { gold: -q.grams }, q.value, label, now, q.fees);
   const [tx, ...rest] = next.transactions;
   const bars: HomeBar[] = [];
@@ -435,6 +437,7 @@ export function withdrawPhysical(
         acquiredTo: t.to,
         txId: tx.id,
         ...(agency ? { pickupAgency: agency } : {}),
+        ...(vault ? { vault: true, place: 'autre' as const, placeNote: CHILD_STORAGE_NOTE } : {}),
       });
     }
   }
@@ -779,12 +782,14 @@ export const FABRICATION_STEPS = ['Commandé', 'En fabrication', 'En route', 'Ar
  */
 export const FABRICATION_DAYS = 8;
 
-export function fabricationProgress(orderedAt: string, now = new Date(), pickup = false) {
+export function fabricationProgress(orderedAt: string, now = new Date(), pickup = false, vault = false) {
   const days = daysBetween(new Date(orderedAt), now);
   const step = days < 1 ? 0 : days < 4 ? 1 : days < FABRICATION_DAYS ? 2 : 3;
-  const labels = pickup
-    ? ['Commandé', 'En fabrication', 'En route vers l’agence', 'Prêt en agence']
-    : [...FABRICATION_STEPS];
+  const labels = vault
+    ? ['Commandé', 'En fabrication', 'En route vers le coffre', 'Entré au coffre']
+    : pickup
+      ? ['Commandé', 'En fabrication', 'En route vers l’agence', 'Prêt en agence']
+      : [...FABRICATION_STEPS];
   return { days, step, ratio: Math.min(1, days / FABRICATION_DAYS), label: labels[step], labels };
 }
 

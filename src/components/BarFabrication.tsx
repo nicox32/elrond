@@ -8,8 +8,8 @@ import { colors, metalColor } from '../theme';
  * Lingotin « en fabrication » : un lingot qui se remplit d'or selon l'avancement estimé de la commande, avec ses
  * quatre étapes. L'avancement est une estimation (jours écoulés), pas un suivi du revendeur.
  */
-export function BarFabrication({ orderedAt, pickup }: { orderedAt: string; pickup?: boolean }) {
-  const p = fabricationProgress(orderedAt, new Date(), !!pickup);
+export function BarFabrication({ orderedAt, pickup, vault }: { orderedAt: string; pickup?: boolean; vault?: boolean }) {
+  const p = fabricationProgress(orderedAt, new Date(), !!pickup, !!vault);
   const [pulse] = useState(() => new Animated.Value(0.55));
   useEffect(() => {
     const loop = Animated.loop(
