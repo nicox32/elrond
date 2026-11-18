@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Alert, Platform, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AddressCard } from '../../components/AddressCard';
 import { BackupCard } from '../../components/BackupCard';
@@ -9,7 +9,7 @@ import { ChangePinCard } from '../../components/ChangePinCard';
 import { CsvExportCard } from '../../components/CsvExportCard';
 import { Segmented } from '../../components/Segmented';
 import { LOCK_DELAYS, lockDelayOf } from '../../logic/lock';
-import { Button, Card, Hint, Label, ListRow, Screen, SectionTitle, Title } from '../../components/ui';
+import { Button, Card, Hint, Label, ListRow, Screen, SectionTitle, styles as ui, Title } from '../../components/ui';
 import { formatDate, formatEur as formatEurShort } from '../../logic/format';
 import { loyalty } from '../../logic/loyalty';
 import { useAccount, useBank } from '../../state/BankProvider';
@@ -211,6 +211,22 @@ export default function ProfileScreen() {
           trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
         />
       </Card>
+      <Card style={styles.switchRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.switchLabel}>Carte sur l’accueil</Text>
+          <Hint>Affiche votre carte Orvia sur l’accueil. Masquée, elle reste dans « Ma carte » ci-dessous.</Hint>
+        </View>
+        <Switch
+          value={account.settings.homeCard !== false}
+          onValueChange={(homeCard) => updateSettings({ homeCard })}
+          trackColor={{ true: colors.gold, false: colors.surfaceAlt }}
+          accessibilityLabel="Afficher la carte sur l’accueil"
+          testID="home-card-switch"
+        />
+      </Card>
+      <Pressable onPress={() => router.push('/carte')} accessibilityRole="link">
+        <Text style={ui.link}>Ma carte Orvia ›</Text>
+      </Pressable>
       <Hint>
         Le code à 4 chiffres est demandé à l’ouverture de l’appli, après le délai choisi ci-dessus, et pour valider
         chaque virement.

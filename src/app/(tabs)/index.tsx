@@ -205,19 +205,36 @@ export default function AccountScreen() {
 
       <HomeNews />
 
-      <SectionTitle>Ma carte</SectionTitle>
-      {account.card ? (
-        <Pressable
-          onPress={() => router.push('/carte')}
-          accessibilityRole="button"
-          accessibilityLabel="Ouvrir ma carte"
-        >
-          <OrviaCard card={account.card} />
-        </Pressable>
-      ) : (
-        <Banner icon="▭" title="Votre carte Orvia" onPress={() => router.push('/carte')} testID="card-banner">
-          Payez et retirez avec votre or, votre argent ou votre platine : commandez votre carte Orvia, gratuite.
-        </Banner>
+      {account.settings.homeCard !== false && (
+        <>
+          <SectionTitle
+            right={
+              <Pressable
+                onPress={() => updateSettings({ homeCard: false })}
+                accessibilityRole="button"
+                accessibilityLabel="Masquer la carte de l’accueil"
+                testID="hide-home-card"
+              >
+                <Text style={ui.link}>Masquer</Text>
+              </Pressable>
+            }
+          >
+            Ma carte
+          </SectionTitle>
+          {account.card ? (
+            <Pressable
+              onPress={() => router.push('/carte')}
+              accessibilityRole="button"
+              accessibilityLabel="Ouvrir ma carte"
+            >
+              <OrviaCard card={account.card} />
+            </Pressable>
+          ) : (
+            <Banner icon="▭" title="Votre carte Orvia" onPress={() => router.push('/carte')} testID="card-banner">
+              Payez et retirez avec votre or, votre argent ou votre platine : commandez votre carte Orvia, gratuite.
+            </Banner>
+          )}
+        </>
       )}
 
       <Banner tone="gold" icon="★" title="Parrainez vos proches" onPress={() => router.push('/parrainage')}>
