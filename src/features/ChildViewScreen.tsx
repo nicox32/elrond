@@ -80,6 +80,35 @@ export function ChildViewScreen({ view }: { view: ChildView }) {
         ))}
       </Card>
 
+      {view.k && view.k.length > 0 && (
+        <>
+          <SectionTitle>Coffre physique</SectionTitle>
+          <Card style={{ paddingVertical: 4 }}>
+            {view.k.map(([label, grams, place, got], i) => (
+              <View key={i} style={[styles.row, i > 0 && styles.border]}>
+                <View style={[styles.dot, { backgroundColor: metalColor.gold }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>{label}</Text>
+                  <Text style={styles.rowSub}>
+                    {place === 'v'
+                      ? 'Gardé en coffre sécurisé chez Godot & Fils'
+                      : got
+                        ? place === 'a'
+                          ? 'Retiré en agence Godot & Fils'
+                          : 'Livré à domicile'
+                        : place === 'a'
+                          ? 'En préparation, à retirer en agence'
+                          : 'En préparation, livraison à domicile'}
+                  </Text>
+                </View>
+                <Text style={styles.rowValue}>{formatEur(grams * prices.gold)}</Text>
+              </View>
+            ))}
+          </Card>
+          <Hint>Ces lingotins et pièces ne sont pas comptés dans les coffres ci-dessus ; leur valeur est en plus.</Hint>
+        </>
+      )}
+
       <SectionTitle>Protection de l’enfant</SectionTitle>
       <Card style={{ gap: 6 }}>
         <Text style={styles.rule}>• L’argent versé appartient à {view.n} : il ne peut pas être repris librement.</Text>

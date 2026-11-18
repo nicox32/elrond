@@ -5,8 +5,9 @@
  * valeur, elle, est recalculée aux cours du moment à chaque ouverture.
  */
 import { majorityDate } from './ledger.ts';
+import { productOf } from './physical.ts';
 import { holdingLots } from './tax.ts';
-import type { ChildAccount, Metal, Prices } from './types.ts';
+import type { ChildAccount, HomeBar, Metal, Prices } from './types.ts';
 import { METALS } from './types.ts';
 
 export const VIEW_BASE_URL = 'https://nicox32.github.io/elrond/';
@@ -35,6 +36,8 @@ export interface ChildView {
   j: boolean;
   /** Dernières opérations : [date, libellé, euros, grammes par métal]. */
   o: [string, string, number, number, number, number][];
+  /** Coffre physique : lingotins et pièces [format, grammes d'or, lieu : v coffre sécurisé / a agence / d domicile, remis ?]. */
+  k?: [string, number, 'v' | 'a' | 'd', 0 | 1][];
   /** Nombre total d'opérations. */
   t: number;
   /** Message du parent qui partage. */
@@ -66,6 +69,7 @@ export function makeChildView(
   prices: Prices,
   now = new Date(),
   note?: string,
+  bars: HomeBar[] = [],
 ): ChildView {
   const lots = holdingLots(child);
   const cost = { gold: 0, silver: 0, platinum: 0 } as Record<Metal, number>;
@@ -99,6 +103,16 @@ export function makeChildView(
         r(t.deltas.silver ?? 0, 4),
         r(t.deltas.platinum ?? 0, 4),
       ]),
+    ...(bars.length
+      ? {
+          k: bars.map((b): [string, number, 'v' | 'a' | 'd', 0 | 1] => [
+            productOf(b.product).label,
+            r(b.grams, 4),
+            b.vault && !b.exitedAt ? 'v' : b.pickupAgency ? 'a' : 'd',
+            b.status === 'received' ? 1 : 0,
+          ]),
+        }
+      : {}),
     t: child.transactions.length,
     ...(note?.trim() ? { m: note.trim().slice(0, 2000) } : {}),
   };

@@ -3,7 +3,7 @@ import { Platform, Share, StyleSheet, Text, TextInput } from 'react-native';
 
 import { replaceChildAccount } from '../logic/ledger';
 import { childViewLink, defaultShareNote, makeChildView } from '../logic/shareView';
-import { useBank } from '../state/BankProvider';
+import { useAccount, useBank } from '../state/BankProvider';
 import type { ChildAccount, Prices } from '../logic/types';
 import { colors } from '../theme';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
@@ -11,13 +11,16 @@ import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
 /** Partage d'un lien en lecture seule du compte enfant (pour l'autre parent). */
 export function ShareViewCard({ child, parent, prices }: { child: ChildAccount; parent: string; prices: Prices }) {
   const { updateAccount } = useBank();
+  const account = useAccount();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [note, setNote] = useState(child.shareNote ?? defaultShareNote(child));
+
+  const bars = (account.homeVault ?? []).filter((b) => b.ownerChildId === child.id);
 
   async function share() {
     // Le message est gardé pour le prochain partage.
     if (note !== child.shareNote) updateAccount((a) => replaceChildAccount(a, { ...child, shareNote: note }));
-    const link = childViewLink(makeChildView(child, parent, prices, new Date(), note));
+    const link = childViewLink(makeChildView(child, parent, prices, new Date(), note, bars));
     const text = `Compte Orvia de ${child.name}, en lecture seule :\n${link}`;
     try {
       if (Platform.OS === 'web' && !navigator.share) {

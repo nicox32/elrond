@@ -1623,3 +1623,49 @@ test('QR code d’un numéro de membre : unique par numéro, et relu tel quel', 
   // Le QR se dessine, et deux numéros différents donnent deux QR différents.
   assert.notDeepEqual(qrMatrix(a), qrMatrix(b));
 });
+
+test('lien de l’autre parent : le coffre physique de l’enfant y figure', async () => {
+  const { makeChildView, childViewLink, readChildView } = await import('../src/logic/shareView.ts');
+  const child = {
+    id: 'c1',
+    name: 'Théo',
+    birthDate: '2015-06-01',
+    authority: 'joint' as const,
+    holdings: { gold: 2.5, silver: 0, platinum: 0 },
+    transactions: [],
+  };
+  const bar = (id: string, extra: object) => ({
+    id,
+    product: 'g10',
+    grams: 10,
+    orderedAt: '2026-09-01T10:00:00Z',
+    status: 'received',
+    cost: 0,
+    acquiredFrom: '2026-01-01',
+    acquiredTo: '2026-01-01',
+    ...extra,
+  });
+  const none = makeChildView(
+    child as never,
+    'Nicolas',
+    { gold: 110, silver: 1.3, platinum: 35 },
+    new Date('2026-11-04'),
+  );
+  assert.equal(none.k, undefined);
+  const v = makeChildView(
+    child as never,
+    'Nicolas',
+    { gold: 110, silver: 1.3, platinum: 35 },
+    new Date('2026-11-04'),
+    undefined,
+    [bar('a', { vault: true }), bar('b', { status: 'preparing', pickupAgency: 'Albi' })] as never,
+  );
+  const back = readChildView(childViewLink(v));
+  assert.deepEqual(
+    back?.k?.map((x) => [x[1], x[2], x[3]]),
+    [
+      [10, 'v', 1],
+      [10, 'a', 0],
+    ],
+  );
+});
