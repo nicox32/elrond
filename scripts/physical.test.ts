@@ -39,9 +39,9 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   a = buy(a, p, 'gold', { unit: 'g', value: 20 }, new Date('2024-06-01T12:00:00'));
   const q = quoteWithdrawal(p, { g10: 2, g5: 1 });
   assert.equal(q.grams, 25);
-  close(q.premium, 10 * 100 * 0.075 * 2 + 5 * 100 * 0.0951);
-  close(q.fees, 150 + 47.55, 0.01); // 25 g : livraison offerte (dès 20 g)
-  close(quoteWithdrawal(p, { g10: 1 }).fees, 75 + 12, 0.01); // 10 g seul : livraison 12 €
+  close(q.premium, 10 * 100 * 0.0702 * 2 + 5 * 100 * 0.0951);
+  close(q.fees, 140.4 + 47.55, 0.01); // 25 g : livraison offerte (dès 20 g)
+  close(quoteWithdrawal(p, { g10: 1 }).fees, 70.2 + 12, 0.01); // 10 g seul : livraison 12 €
   // Frais à payer depuis le compte d'attente : vide → refusé (payer en or serait une vente imposée).
   assert.throws(() => withdrawPhysical(a, p, { g10: 2, g5: 1 }), LedgerError);
   a = creditCash(a, 250);
@@ -193,8 +193,8 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   const custom = physicalFeesOf({
     physicalFees: { premiums: { g20: 0.07 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },
   });
-  assert.equal(custom.premiums.g20, 0.07);
-  assert.equal(custom.premiums.g10, 0.075); // inchangé
+  close(custom.premiums.g20, 0.055, 1e-9); // plafonné à 4 %, plancher : prime vendeur 5 % + 0,5 point
+  close(custom.premiums.g10, 0.055, 1e-9); // prime vendeur réglée à 5 % : plancher 5,5 %
   assert.equal(custom.vendor.g5, 0.0901); // valeur par défaut gardée
   assert.equal(custom.vendor.g10, 0.05);
   const q = quoteWithdrawal(p, { g10: 2 }, custom); // 20 g : livraison offerte seulement dès 50 g
@@ -207,7 +207,7 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   const high = physicalFeesOf({ physicalFees: { premiums: { g5: 0.2 } } });
   close(high.premiums.g5, 0.0901 + 0.005, 1e-9); // plafonné à 7 % puis ramené au plancher de marge
   const g20 = physicalFeesOf({ physicalFees: { premiums: { g20: 0.2 } } });
-  close(g20.premiums.g20, 0.05 + 0.03, 1e-9);
+  close(g20.premiums.g20, 0.05 + 0.005, 1e-9);
   const wide = physicalFeesOf({ physicalFees: { premiums: { g5: 0.08 }, marginMinPt: 0 } });
   close(wide.premiums.g5, 0.0901, 1e-9);
   // Retrait enregistré avec ses frais réglés et son coût pour Orvia.
@@ -291,8 +291,8 @@ test('commande par lots : prix du lot selon sa tranche, prix client indépendant
   // Le client paie la même fabrication quel que soit le nombre de pièces retirées : plus de remise de quantité.
   const one = quoteWithdrawal(p, { g10: 1 }, def);
   const fifty = quoteWithdrawal(p, { g10: 50 }, def);
-  close(one.premium / 1, 10 * p.gold * 0.075, 1e-9);
-  close(fifty.premium / 50, 10 * p.gold * 0.075, 1e-9);
+  close(one.premium / 1, 10 * p.gold * 0.0702, 1e-9);
+  close(fifty.premium / 50, 10 * p.gold * 0.0702, 1e-9);
   assert.equal(fifty.volume, false);
   assert.equal(fifty.clientDiscount, 0);
   assert.equal(fifty.vendorDiscount, 0);

@@ -320,8 +320,11 @@ export const MARGIN_PT = { min: 0.5, max: 3 } as const;
  * est connue. Elle plafonne le prix ; le plancher de marge sur la prime du vendeur passe avant (jamais de vente à perte).
  */
 export const PREMIUM_TARGET: Record<string, { min: number; max: number }> = {
+  nap20: { min: 0.03, max: 0.045 },
   g5: { min: 0.05, max: 0.07 },
-  nap20: { min: 0.03, max: 0.04 },
+  g10: { min: 0.035, max: 0.05 },
+  g20: { min: 0.025, max: 0.04 },
+  oz1: { min: 0.02, max: 0.035 },
 };
 
 export function premiumRange(vendorPremium: number, margin: { min: number; max: number }) {

@@ -233,9 +233,9 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               {PREMIUM_TARGET[p.id] ? (
                 <Text style={styles.tiers}>
                   Fourchette visée {(PREMIUM_TARGET[p.id].min * 100).toLocaleString('fr-FR')} à{' '}
-                  {(PREMIUM_TARGET[p.id].max * 100).toLocaleString('fr-FR')} % : prix plafonné à{' '}
-                  {(PREMIUM_TARGET[p.id].max * 100).toLocaleString('fr-FR')} %, mais jamais sous la prime de Godot &
-                  Fils + {mMin} point.
+                  {(PREMIUM_TARGET[p.id].max * 100).toLocaleString('fr-FR')} % · prix maximum{' '}
+                  {formatEur(value * (1 + PREMIUM_TARGET[p.id].max))} au cours du jour, hors livraison. Jamais sous la
+                  prime de Godot & Fils + {mMin} point.
                 </Text>
               ) : null}
             </View>
