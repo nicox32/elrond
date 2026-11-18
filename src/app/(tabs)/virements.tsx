@@ -26,6 +26,7 @@ import type { AmountUnit, Beneficiary, BeneficiaryKind, Metal } from '../../logi
 import { useAccount, useBank } from '../../state/BankProvider';
 import { describeTax } from '../../logic/tax';
 import { colors } from '../../theme';
+import { MemberQr } from '../../components/MemberQr';
 
 export default function TransfersScreen() {
   const account = useAccount();
@@ -135,6 +136,7 @@ export default function TransfersScreen() {
         <Card style={{ gap: 6 }}>
           <Label>Pour recevoir du métal ou des euros</Label>
           <Info label="Mon n° de membre" value={account.memberId} />
+          <MemberQr memberNumber={account.memberId} />
           <Info label="Mon IBAN" value={account.iban} />
         </Card>
 

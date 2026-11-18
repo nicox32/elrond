@@ -4,6 +4,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 
 import { AmountInput } from '../../components/AmountInput';
 import { ChildBarConvert } from '../../components/ChildBarConvert';
+import { MemberQr } from '../../components/MemberQr';
 import { VaultLogo } from '../../components/VaultLogo';
 import { CustodyNote } from '../../components/Custody';
 import { ChildBarGifts } from '../../components/ChildBarGifts';
@@ -246,6 +247,7 @@ export default function ChildScreen() {
             N° de membre {child.memberNumber}
           </Text>
         ) : null}
+        {child.memberNumber ? <MemberQr memberNumber={child.memberNumber} label="de l’enfant" /> : null}
         <Text style={styles.heroValue}>{formatEur(value.total)}</Text>
         {tax.cost > 0 && (
           <Pressable

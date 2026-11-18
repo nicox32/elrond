@@ -1605,3 +1605,21 @@ test('sauvegarde d’un compte enfant à la majorité : reconnu comme compte adu
   assert.equal(new Date(adult.custodyChargedThrough!).getMonth(), 11);
   assert.ok(migrateAccount(JSON.parse(JSON.stringify(adult))));
 });
+
+test('QR code d’un numéro de membre : unique par numéro, et relu tel quel', async () => {
+  const { memberQrText, parseMemberQr } = await import('../src/logic/memberQr.ts');
+  const { qrMatrix } = await import('../src/logic/qr.ts');
+  const { addChild } = await import('../src/logic/ledger.ts');
+  const acc = createAccount('T', new Date('2020-01-01'));
+  const r = addChild(acc, 'Théo', '2015-06-01');
+  const a = memberQrText(acc.memberId);
+  const b = memberQrText(r.child.memberNumber!);
+  assert.notEqual(a, b);
+  assert.equal(parseMemberQr(a), acc.memberId);
+  assert.equal(parseMemberQr(b), r.child.memberNumber);
+  assert.equal(parseMemberQr(' orvia:membre:ov-m-0123-4567 '), 'OV-M-0123-4567');
+  assert.equal(parseMemberQr('https://exemple.fr'), null);
+  assert.equal(parseMemberQr('ORVIA:MEMBRE:n’importe quoi'), null);
+  // Le QR se dessine, et deux numéros différents donnent deux QR différents.
+  assert.notDeepEqual(qrMatrix(a), qrMatrix(b));
+});

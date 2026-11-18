@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AddressCard } from '../../components/AddressCard';
+import { MemberQr } from '../../components/MemberQr';
 import { BackupCard } from '../../components/BackupCard';
 import { ChangePinCard } from '../../components/ChangePinCard';
 import { CsvExportCard } from '../../components/CsvExportCard';
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
       <Card style={{ gap: 10 }}>
         <Row label="Titulaire" value={account.holder} />
         <Row label="N° de membre" value={account.memberId} />
+        <MemberQr memberNumber={account.memberId} />
         {account.formerMemberNumber ? (
           <Row label="Ancien n° (compte enfant)" value={account.formerMemberNumber} />
         ) : null}
