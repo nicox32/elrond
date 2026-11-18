@@ -49,7 +49,7 @@ test('contrôle à la réception : série = carte d’essai, pesée, dimensions,
   const bar5 = a.homeVault!.find((b) => b.grams === 5)!;
   assert.equal(barState(bar5), 'todo');
   const tol = toleranceOf(a);
-  assert.deepEqual(tol, { weightG: 0.05, dimMm: 0.2 });
+  assert.deepEqual(tol, { weightG: 0.01, dimMm: 0.2 });
   const good = evaluateControl(bar5, ok5, tol);
   assert.ok(
     good.every((l) => l.ok),
@@ -129,9 +129,9 @@ test('recontrôle par pesée : écart hors marge = anomalie, levée après véri
     },
     new Date('2026-11-21T12:00:00'),
   );
-  a = recheckWeight(a, b.id, 10.03, new Date('2027-03-02T12:00:00'));
+  a = recheckWeight(a, b.id, 10.015, new Date('2027-03-02T12:00:00'));
   let cur = a.homeVault!.find((x) => x.id === b.id)!;
-  assert.equal(barState(cur), 'ok'); // +0,02 g : dans la marge
+  assert.equal(barState(cur), 'ok'); // +0,005 g : dans la marge
   a = recheckWeight(a, b.id, 9.92, new Date('2027-03-03T12:00:00'));
   cur = a.homeVault!.find((x) => x.id === b.id)!;
   assert.equal(barState(cur), 'anomaly');
@@ -203,3 +203,15 @@ test('défaut au contrôle : le lingotin quitte le compte du client, qui récup�
   assert.throws(() => setReturnStatus(r, 'x', 'sent'));
 });
 const close5 = (x: number, y: number) => assert.ok(Math.abs(x - y) < 1e-6, `${x} ≉ ${y}`);
+
+test('pesée d’un lingot de 5 g : jamais sous 5,00 g (à la marge de la balance près)', () => {
+  const a = withBars();
+  const bar5 = a.homeVault!.find((b) => b.grams === 5)!;
+  const tol = toleranceOf(a);
+  const weightOk = (w: number) => evaluateControl(bar5, { ...ok5, weight: w }, tol).find((l) => l.key === 'weight')!.ok;
+  assert.equal(weightOk(5.0), true);
+  assert.equal(weightOk(5.005), true);
+  assert.equal(weightOk(4.99), true); // marge de la balance
+  assert.equal(weightOk(4.98), false); // sous le poids nominal : rejet
+  assert.equal(weightOk(5.2), false); // trop lourd : suspect
+});

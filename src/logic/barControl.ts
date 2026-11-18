@@ -7,7 +7,14 @@ import { LedgerError } from './ledger.ts';
 import { normalizeSerial, placeLabel, productOf, serialFormatError } from './physical.ts';
 import type { Account, BarCheck, HomeBar } from './types.ts';
 
-export const DEFAULT_TOLERANCE = { weightG: 0.05, dimMm: 0.2 } as const;
+/**
+ * Marges par défaut : balance au centigramme (±0,01 g) et pied à coulisse (±0,2 mm). Un lingot de fondeur-affineur reconnu
+ * (LBMA) pèse entre son poids nominal et quelques milligrammes de plus : sous le poids nominal (moins la marge de la
+ * balance), il est refusé.
+ */
+export const DEFAULT_TOLERANCE = { weightG: 0.01, dimMm: 0.2 } as const;
+/** Un lingot plus lourd que prévu de plus que cela est suspect (autre métal, mauvais format). */
+export const BAR_MAX_OVERWEIGHT_G = 0.05;
 export type Tolerance = { weightG: number; dimMm: number };
 
 /** Poids brut d'un Napoléon 20 F : 6,45 g (la pièce usée pèse un peu moins). */
@@ -95,11 +102,17 @@ export function evaluateControl(bar: HomeBar, input: ControlInput, tol: Toleranc
   const wTol = p.coin ? Math.max(tol.weightG, COIN_MIN_WEIGHT_TOL) : tol.weightG;
   if (num(input.weight)) {
     const d = input.weight - expected;
+    // Lingot : jamais sous le poids nominal (à la marge de la balance près). Pièce usée : marge des deux côtés.
+    const ok = p.coin
+      ? Math.abs(d) <= wTol + 1e-9
+      : d >= -wTol - 1e-9 && d <= Math.max(wTol, BAR_MAX_OVERWEIGHT_G) + 1e-9;
     lines.push({
       key: 'weight',
       label: 'Pesée',
-      ok: Math.abs(d) <= wTol + 1e-9,
-      detail: `${g(input.weight)} g · attendu ${g(expected)} g · écart ${d >= 0 ? '+' : '−'}${g(Math.abs(d))} g (marge ±${g(wTol)} g)`,
+      ok,
+      detail: p.coin
+        ? `${g(input.weight)} g · attendu ${g(expected)} g · écart ${d >= 0 ? '+' : '−'}${g(Math.abs(d))} g (marge ±${g(wTol)} g)`
+        : `${g(input.weight)} g · au moins ${g(expected)} g (balance −${g(wTol)} g) · écart ${d >= 0 ? '+' : '−'}${g(Math.abs(d))} g`,
     });
   } else {
     lines.push({ key: 'weight', label: 'Pesée', ok: false, detail: 'Indiquez le poids mesuré' });

@@ -265,8 +265,9 @@ function Tolerance({
       </View>
       <Hint>
         Selon votre balance et votre pied à coulisse. Par défaut ±{String(DEFAULT_TOLERANCE.weightG).replace('.', ',')}{' '}
-        g et ±{String(DEFAULT_TOLERANCE.dimMm).replace('.', ',')} mm ; pour une pièce, la marge de pesée est au moins de
-        0,1 g (usure).
+        g et ±{String(DEFAULT_TOLERANCE.dimMm).replace('.', ',')} mm. Un lingot ne doit jamais peser moins que son poids
+        nominal (5,00 g pour 5 g), à la marge de la balance près ; un fondeur reconnu livre entre 5,000 et 5,005 g. Pour
+        une pièce, la marge de pesée est au moins de 0,1 g (usure).
       </Hint>
       <Button
         title="Enregistrer les marges"
