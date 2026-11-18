@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -20,13 +21,17 @@ import {
   quoteSale,
   toGrams,
   transferToIban,
-  transferToMember,
 } from '../../logic/ledger';
 import type { AmountUnit, Beneficiary, BeneficiaryKind, Metal } from '../../logic/types';
 import { useAccount, useBank } from '../../state/BankProvider';
 import { describeTax } from '../../logic/tax';
 import { colors } from '../../theme';
 import { MemberQr } from '../../components/MemberQr';
+import { QrCode } from '../../components/QrCode';
+import { ScanQr } from '../../components/ScanQr';
+import { parseMemberQr } from '../../logic/memberQr';
+import { receiveTicket, sendBarToMember, sendMetalToMember } from '../../logic/memberTicket';
+import { isLocked, productOf } from '../../logic/physical';
 
 export default function TransfersScreen() {
   const account = useAccount();
@@ -43,6 +48,10 @@ export default function TransfersScreen() {
   const [text, setText] = useState('');
   const [speed, setSpeed] = useState<SaleSpeed>('deferred');
   const [confirming, setConfirming] = useState(false);
+  // Scanner ouvert (destinataire ou virement reçu) et bon de virement à montrer au destinataire.
+  const [scanning, setScanning] = useState<'recipient' | 'ticket' | null>(null);
+  const [ticket, setTicket] = useState<{ text: string; label: string } | null>(null);
+  const [barToSend, setBarToSend] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   const list = account.beneficiaries.filter((b) => b.kind === kind);
@@ -65,6 +74,9 @@ export default function TransfersScreen() {
       ? quoteSale(quote.prices, metal, { unit: amountUnit, value }, speed, abroad, account)
       : null;
   const room = memberTransferRoom(account);
+  const sendableBars = (account.homeVault ?? []).filter(
+    (b) => b.status === 'received' && !b.vault && !b.ownerChildId && !isLocked(b),
+  );
   const grams = !valid ? 0 : sale ? sale.grams : toGrams({ unit: amountUnit, value }, quote.prices[metal]);
 
   const summary =
@@ -116,13 +128,22 @@ export default function TransfersScreen() {
     if (!selected) return;
     const q = { unit: amountUnit, value };
     try {
-      commit((acc, p) =>
-        kind === 'member'
-          ? transferToMember(acc, p, metal, q, selected)
-          : transferToIban(acc, p, metal, q, selected, speed),
-      );
+      let bon = '';
+      commit((acc, p) => {
+        if (kind !== 'member') return transferToIban(acc, p, metal, q, selected, speed);
+        const r = sendMetalToMember(acc, p, metal, q, selected);
+        bon = r.ticket;
+        return r.account;
+      });
       setText('');
-      setMessage({ ok: true, text: `Virement envoyé à ${selected.name}.` });
+      if (bon) setTicket({ text: bon, label: `${formatQty(metal, grams, unit)} pour ${selected.name}` });
+      setMessage({
+        ok: true,
+        text:
+          kind === 'member'
+            ? `Débité. Faites scanner le QR code ci-dessous à ${selected.name} pour qu’il reçoive le virement.`
+            : `Virement envoyé à ${selected.name}.`,
+      });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Une erreur est survenue.' });
     }
@@ -157,6 +178,70 @@ export default function TransfersScreen() {
             ? 'Échange de métal : il passe directement de votre coffre à celui du membre, immédiat et sans frais.'
             : `Le métal est vendu au cours du moment, puis les euros partent par virement SEPA. Frais : ${(FEES.sale * 100).toLocaleString('fr-FR')}\u00a0% (+ ${FEES.saleAbroadFixed}\u00a0€ vers un compte hors de France).`}
         </Hint>
+
+        {ticket && (
+          <Card style={{ gap: 8, alignItems: 'center' }}>
+            <Text style={ui.hint}>Virement : {ticket.label}</Text>
+            <QrCode value={ticket.text} size={260} />
+            <Hint>
+              Le destinataire ouvre « Virements » dans son appli, appuie sur « Scanner un virement reçu » et lit ce QR
+              code. Il ne peut être encaissé qu’une seule fois.
+            </Hint>
+            <Button
+              title="Copier le texte du bon (si le scan ne marche pas)"
+              variant="ghost"
+              onPress={() => Clipboard.setStringAsync(ticket.text)}
+            />
+            <Button title="Terminé" variant="ghost" onPress={() => setTicket(null)} />
+          </Card>
+        )}
+        {kind === 'member' && !scanning && (
+          <>
+            <Button title="Scanner le QR code d’un membre" variant="ghost" onPress={() => setScanning('recipient')} />
+            <Button title="Scanner un virement reçu" variant="ghost" onPress={() => setScanning('ticket')} />
+          </>
+        )}
+        {scanning === 'recipient' && (
+          <ScanQr
+            title="QR code du membre"
+            hint="Demandez au destinataire d’afficher son QR code (Profil, « Afficher le QR code »)."
+            onClose={() => setScanning(null)}
+            onScan={(text) => {
+              setScanning(null);
+              const number = parseMemberQr(text);
+              if (!number) return setMessage({ ok: false, text: 'Ce QR code n’est pas un numéro de membre Orvia.' });
+              try {
+                const r = addBeneficiary(account, 'member', `Membre ${number}`, number);
+                if (r.account !== account) commit(() => r.account);
+                setSelectedId(r.beneficiary.id);
+                setMessage({ ok: true, text: `${r.beneficiary.name} est le destinataire. Indiquez le montant.` });
+              } catch (e) {
+                setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Une erreur est survenue.' });
+              }
+            }}
+          />
+        )}
+        {scanning === 'ticket' && (
+          <ScanQr
+            title="Virement reçu"
+            hint="Scannez le QR code affiché par l’expéditeur après son envoi."
+            onClose={() => setScanning(null)}
+            onScan={(text) => {
+              setScanning(null);
+              try {
+                let summary = '';
+                commit((acc, p) => {
+                  const r = receiveTicket(acc, p, text);
+                  summary = r.summary;
+                  return r.account;
+                });
+                setMessage({ ok: true, text: `Virement encaissé : ${summary}` });
+              } catch (e) {
+                setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Une erreur est survenue.' });
+              }
+            }}
+          />
+        )}
 
         <SectionTitle
           right={
@@ -265,7 +350,62 @@ export default function TransfersScreen() {
         <Button title="Continuer" onPress={startTransfer} />
         {message && <Message {...message} />}
 
+        {kind === 'member' && sendableBars.length > 0 && (
+          <>
+            <SectionTitle>Envoyer un lingotin ou une pièce</SectionTitle>
+            <Card style={{ gap: 8 }}>
+              {sendableBars.map((b) => (
+                <View key={b.id} style={{ gap: 4 }} testID={`send-bar-${b.id}`}>
+                  <Text style={styles.preview}>
+                    {productOf(b.product).label}
+                    {b.serial ? ` · n° ${b.serial}` : ''} · ≈ {formatEur(b.grams * quote.prices.gold)}
+                  </Text>
+                  <Button
+                    title={selected ? `Envoyer à ${selected.name}` : 'Choisissez d’abord un destinataire'}
+                    variant="ghost"
+                    disabled={!selected}
+                    onPress={() => setBarToSend(b.id)}
+                  />
+                </View>
+              ))}
+              <Hint>
+                Le lingotin quitte votre coffre maison ; le destinataire le reçoit en scannant le QR code qui
+                s’affichera. Même limite de {MEMBER_TRANSFER_LIMIT.eur} € sur {MEMBER_TRANSFER_LIMIT.days} jours.
+              </Hint>
+            </Card>
+          </>
+        )}
+
         <PinConfirm visible={confirming} summary={summary} onConfirm={execute} onCancel={() => setConfirming(false)} />
+        <PinConfirm
+          visible={!!barToSend}
+          summary={
+            barToSend && selected
+              ? `Envoyer ${productOf(account.homeVault?.find((b) => b.id === barToSend)?.product ?? 'g5').label.toLowerCase()} à ${selected.name}, gratuitement. Il quitte votre coffre maison.`
+              : ''
+          }
+          onConfirm={() => {
+            const id = barToSend;
+            setBarToSend(null);
+            if (!id || !selected) return;
+            try {
+              let bon = '';
+              commit((acc, p) => {
+                const r = sendBarToMember(acc, p, id, selected);
+                bon = r.ticket;
+                return r.account;
+              });
+              setTicket({ text: bon, label: `lingotin pour ${selected.name}` });
+              setMessage({
+                ok: true,
+                text: `Envoyé. Faites scanner le QR code à ${selected.name} pour qu’il reçoive le lingotin.`,
+              });
+            } catch (e) {
+              setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Une erreur est survenue.' });
+            }
+          }}
+          onCancel={() => setBarToSend(null)}
+        />
       </Screen>
     </KeyboardAvoidingView>
   );

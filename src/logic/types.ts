@@ -394,6 +394,8 @@ export interface Account extends Wallet {
   memberId: string;
   /** Ancien n° de membre du compte enfant, quand ce compte adulte en est issu (à la majorité). */
   formerMemberNumber?: string;
+  /** Identifiants des virements de membre déjà reçus (par QR code) : un virement ne peut être encaissé qu'une fois. */
+  receivedTickets?: string[];
   iban: string;
   beneficiaries: Beneficiary[];
   children: ChildAccount[];

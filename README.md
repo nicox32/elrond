@@ -50,7 +50,7 @@ jamais dans Git (dossier `signing/` ignoré).
   en grammes ou en onces.
 - **Conversion** d'un métal à l'autre.
 - **Virements**, sur le modèle des comptes adossés aux métaux :
-  - **à un membre** (n° de membre « OV-M-XXXX-XXXX », e-mail ou téléphone) : le métal passe de coffre à coffre, immédiat et sans frais, dans la limite de 300 € sur 30 jours glissants (les comptes enfants ont leur n° « OV-E-XXXX-XXXX ») ;
+  - **à un membre** (n° de membre « OV-M-XXXX-XXXX », e-mail ou téléphone) : le métal passe de coffre à coffre, immédiat et sans frais, dans la limite de 300 € sur 30 jours glissants (les comptes enfants ont leur n° « OV-E-XXXX-XXXX ») ; **entre deux téléphones, par QR codes** (sans serveur) : le destinataire montre le QR de son n° de membre, l'expéditeur le scanne, envoie du métal ou un lingotin, puis fait scanner le bon de virement (signé, encaissable une seule fois) au destinataire (`src/logic/memberTicket.ts`) ;
   - **vers un IBAN** : le métal est vendu puis les euros partent par virement SEPA (IBAN vérifié).
 - **Sécurité** : code à 4 chiffres à chaque ouverture et pour valider chaque virement, déverrouillage
   par empreinte en option, blocage de 30 s après 5 codes faux. Seule une empreinte salée du code est

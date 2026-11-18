@@ -730,7 +730,7 @@ export function harmonizeMemberId(account: Account): Account {
 }
 
 /** Un numéro de membre, avec ou sans le « M » de la nouvelle forme : « OV-M-1234-5678 » = « OV-1234-5678 ». */
-const sameMember = (a: string, b: string) =>
+export const sameMember = (a: string, b: string) =>
   a.toUpperCase().replace(/^OV-M-/, 'OV-') === b.toUpperCase().replace(/^OV-M-/, 'OV-');
 
 /** Donne un numéro de membre aux comptes enfants qui n'en ont pas encore (comptes créés avant cette version). */

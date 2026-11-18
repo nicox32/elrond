@@ -49,7 +49,15 @@
         }
       ],
       "./plugins/withReleaseSigning",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Orvia utilise l’appareil photo pour lire le QR code d’un membre ou un virement reçu.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
