@@ -96,7 +96,7 @@ export function createAccount(holder: string, now = new Date()): Account {
   return {
     version: 2,
     holder,
-    memberId: `OV-${randomDigits(4)}-${randomDigits(4)}`,
+    memberId: newMemberNumber(new Set(), Math.random, 'M'),
     iban: generateIban(),
     createdAt: now.toISOString(),
     holdings: emptyHoldings(),
@@ -213,13 +213,15 @@ export function migrateAccount(raw: unknown): Account | null {
   const a = raw as Record<string, any>;
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
-    return ensureMemberNumbers({
-      ...safely(a as Account, (acc) => renameReseller(compactHistory(removeHistory2021(retireGoldOria(acc))))),
-      children: Array.isArray(a.children)
-        ? a.children.map((c: ChildAccount) => safely(c, (w) => compactHistory(retireGoldOria(w))))
-        : [],
-      referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
-    });
+    return harmonizeMemberId(
+      ensureMemberNumbers({
+        ...safely(a as Account, (acc) => renameReseller(compactHistory(removeHistory2021(retireGoldOria(acc))))),
+        children: Array.isArray(a.children)
+          ? a.children.map((c: ChildAccount) => safely(c, (w) => compactHistory(retireGoldOria(w))))
+          : [],
+        referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
+      }),
+    );
   }
   if (typeof a.holder !== 'string') return null;
 
@@ -489,6 +491,23 @@ export function convert(
   );
 }
 
+/** Virements de métal à un autre membre : limités en euros sur 30 jours glissants (protège des erreurs et des fraudes). */
+export const MEMBER_TRANSFER_LIMIT = { eur: 300, days: 30 } as const;
+
+/** Montant déjà viré à des membres sur les 30 derniers jours, et ce qu'il reste, avec la date où de la place se libère. */
+export function memberTransferRoom(account: Pick<Account, 'transactions'>, now = new Date()) {
+  const from = now.getTime() - MEMBER_TRANSFER_LIMIT.days * DAY_MS;
+  const recent = account.transactions
+    .filter((t) => t.kind === 'transfer_member' && new Date(t.date).getTime() > from)
+    .sort((x, y) => x.date.localeCompare(y.date));
+  const used = recent.reduce((s, t) => s + t.eur, 0);
+  const left = Math.max(0, MEMBER_TRANSFER_LIMIT.eur - used);
+  const freeAt = recent.length
+    ? new Date(new Date(recent[0].date).getTime() + MEMBER_TRANSFER_LIMIT.days * DAY_MS)
+    : null;
+  return { used, left, freeAt };
+}
+
 /** Virement de métal à un autre membre : gratuit et immédiat, le métal change de propriétaire. */
 export function transferToMember(
   account: Account,
@@ -500,10 +519,17 @@ export function transferToMember(
 ): Account {
   assertPositive(q.value, 'La quantité');
   if (beneficiary.kind !== 'member') throw new LedgerError('Ce bénéficiaire n’est pas un membre.');
-  if (beneficiary.identifier === account.memberId) {
+  if (sameMember(beneficiary.identifier, account.memberId)) {
     throw new LedgerError('Vous ne pouvez pas vous faire un virement à vous-même.');
   }
   const grams = toGrams(q, prices[metal]);
+  const room = memberTransferRoom(account, now);
+  if (grams * prices[metal] > room.left + 0.005) {
+    const eur = (n: number) => n.toFixed(2).replace('.', ',');
+    throw new LedgerError(
+      `Limite de ${MEMBER_TRANSFER_LIMIT.eur} € de virements à des membres sur ${MEMBER_TRANSFER_LIMIT.days} jours glissants : il vous reste ${eur(room.left)} €${room.freeAt && room.left < MEMBER_TRANSFER_LIMIT.eur ? `, et de la place se libère le ${room.freeAt.toLocaleDateString('fr-FR')}` : ''}.`,
+    );
+  }
   return apply(
     account,
     'transfer_member',
@@ -681,17 +707,31 @@ export function majorityDate(birthDate: string): Date {
 const MEMBER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 /** Numéro de membre d'un compte enfant : « OV-E-XXXX-XXXX », aléatoire et unique parmi les comptes de la famille. */
-export function newMemberNumber(taken: Set<string> = new Set(), random: () => number = Math.random): string {
+export function newMemberNumber(
+  taken: Set<string> = new Set(),
+  random: () => number = Math.random,
+  kind: 'E' | 'M' = 'E',
+): string {
   for (;;) {
     let r = '';
     for (let i = 0; i < 8; i++) r += MEMBER_ALPHABET[Math.floor(random() * MEMBER_ALPHABET.length)];
-    const n = `OV-E-${r.slice(0, 4)}-${r.slice(4)}`;
+    const n = `OV-${kind}-${r.slice(0, 4)}-${r.slice(4)}`;
     if (!taken.has(n)) {
       taken.add(n);
       return n;
     }
   }
 }
+
+/** Les anciens numéros de membre (« OV-1234-5678 ») deviennent « OV-M-1234-5678 » : mêmes chiffres, même compte. */
+export function harmonizeMemberId(account: Account): Account {
+  const m = /^OV-(\d{4})-(\d{4})$/.exec(account.memberId ?? '');
+  return m ? { ...account, memberId: `OV-M-${m[1]}-${m[2]}` } : account;
+}
+
+/** Un numéro de membre, avec ou sans le « M » de la nouvelle forme : « OV-M-1234-5678 » = « OV-1234-5678 ». */
+const sameMember = (a: string, b: string) =>
+  a.toUpperCase().replace(/^OV-M-/, 'OV-') === b.toUpperCase().replace(/^OV-M-/, 'OV-');
 
 /** Donne un numéro de membre aux comptes enfants qui n'en ont pas encore (comptes créés avant cette version). */
 export function ensureMemberNumbers(account: Account): Account {

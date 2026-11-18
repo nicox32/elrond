@@ -15,6 +15,8 @@ import {
   METAL_OF,
   removeBeneficiary,
   isForeignIban,
+  MEMBER_TRANSFER_LIMIT,
+  memberTransferRoom,
   quoteSale,
   toGrams,
   transferToIban,
@@ -61,6 +63,7 @@ export default function TransfersScreen() {
     valid && kind === 'iban'
       ? quoteSale(quote.prices, metal, { unit: amountUnit, value }, speed, abroad, account)
       : null;
+  const room = memberTransferRoom(account);
   const grams = !valid ? 0 : sale ? sale.grams : toGrams({ unit: amountUnit, value }, quote.prices[metal]);
 
   const summary =
@@ -98,6 +101,12 @@ export default function TransfersScreen() {
     if (grams > account.holdings[metal] + 1e-9) {
       return setMessage({ ok: false, text: `Solde ${METAL_OF[metal]} insuffisant.` });
     }
+    if (kind === 'member' && grams * quote.prices[metal] > room.left + 0.005) {
+      return setMessage({
+        ok: false,
+        text: `Limite de ${MEMBER_TRANSFER_LIMIT.eur} € de virements à des membres sur ${MEMBER_TRANSFER_LIMIT.days} jours glissants : il vous reste ${formatEur(room.left)}${room.freeAt && room.left < MEMBER_TRANSFER_LIMIT.eur ? `, et de la place se libère le ${room.freeAt.toLocaleDateString('fr-FR')}` : ''}.`,
+      });
+    }
     setConfirming(true);
   }
 
@@ -129,6 +138,10 @@ export default function TransfersScreen() {
           <Info label="Mon IBAN" value={account.iban} />
         </Card>
 
+        <Hint>
+          Virements à un membre (dons, par exemple) : {MEMBER_TRANSFER_LIMIT.eur} € maximum sur{' '}
+          {MEMBER_TRANSFER_LIMIT.days} jours glissants. Il vous reste {formatEur(room.left)}.
+        </Hint>
         <Segmented
           value={kind}
           onChange={changeKind}

@@ -1432,3 +1432,54 @@ test('numéro de membre du compte enfant : aléatoire, unique, ajouté aux ancie
     m.children.map((c) => c.memberNumber),
   );
 });
+
+test('virements à un membre : 300 € maximum sur 30 jours glissants', async () => {
+  const { transferToMember, memberTransferRoom, MEMBER_TRANSFER_LIMIT } = await import('../src/logic/ledger.ts');
+  const t0 = new Date('2026-11-01T10:00:00');
+  let acc = buy(createAccount('T', t0), prices, 'gold', { unit: 'g', value: 50 }, t0);
+  const to = { id: 'b', name: 'Théo', kind: 'member' as const, identifier: 'OV-M-AAAA-BBBB' };
+  assert.equal(MEMBER_TRANSFER_LIMIT.eur, 300);
+  const g = (eur: number) => ({ unit: 'eur' as const, value: eur });
+  // 200 € puis 100 € : la limite est atteinte pile.
+  acc = transferToMember(acc, prices, 'gold', g(200), to, t0);
+  acc = transferToMember(acc, prices, 'gold', g(100), to, new Date('2026-11-10T10:00:00'));
+  close(memberTransferRoom(acc, new Date('2026-11-11T10:00:00')).left, 0, 0.01);
+  assert.throws(() => transferToMember(acc, prices, 'gold', g(1), to, new Date('2026-11-11T10:00:00')), /300 €/);
+  // Le premier virement sort de la fenêtre au bout de 30 jours : 200 € se libèrent.
+  const later = new Date('2026-12-02T10:00:00');
+  close(memberTransferRoom(acc, later).left, 200, 0.01);
+  assert.throws(() => transferToMember(acc, prices, 'gold', g(201), to, later), LedgerError);
+  const ok = transferToMember(acc, prices, 'gold', g(200), to, later);
+  assert.equal(ok.transactions[0].kind, 'transfer_member');
+});
+
+test('numéro de membre adulte : OV-M-XXXX-XXXX, anciens numéros convertis sans changer les chiffres', async () => {
+  const { harmonizeMemberId, migrateAccount, transferToMember } = await import('../src/logic/ledger.ts');
+  const acc = createAccount('T', new Date('2020-01-01'));
+  assert.match(acc.memberId, /^OV-M-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  assert.equal(harmonizeMemberId({ ...acc, memberId: 'OV-0123-4567' }).memberId, 'OV-M-0123-4567');
+  assert.equal(harmonizeMemberId(acc).memberId, acc.memberId);
+  const old = JSON.parse(JSON.stringify({ ...acc, memberId: 'OV-0123-4567' }));
+  assert.equal(migrateAccount(old)!.memberId, 'OV-M-0123-4567');
+  // Un virement vers son propre numéro reste refusé, avec l'ancienne ou la nouvelle forme.
+  const mine = buy(
+    { ...acc, memberId: 'OV-M-0123-4567' },
+    prices,
+    'gold',
+    { unit: 'g', value: 5 },
+    new Date('2026-11-01'),
+  );
+  for (const id of ['OV-M-0123-4567', 'OV-0123-4567']) {
+    assert.throws(
+      () =>
+        transferToMember(
+          mine,
+          prices,
+          'gold',
+          { unit: 'g', value: 1 },
+          { id: 'x', name: 'Moi', kind: 'member', identifier: id },
+        ),
+      /vous-même/,
+    );
+  }
+});
