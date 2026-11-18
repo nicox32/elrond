@@ -383,12 +383,9 @@ export function withdrawPhysical(
   pickupAgency?: string,
   /** Garde en coffre sécurisé chez le revendeur : ni livraison ni retrait, le lingotin reste au nom du client. */
   vault = false,
-  /** Coffre personnel : le client loue sa case chez Godot & Fils (payée à Godot & Fils) et y dépose ses lingotins. */
-  privateVault = false,
 ): Account {
   const agency = pickupAgency?.trim();
   if (pickupAgency !== undefined && agency!.length < 2) throw new LedgerError('Indiquez l’agence de retrait (ville).');
-  if (privateVault && !agency) throw new LedgerError('Indiquez l’agence où se trouve votre coffre personnel.');
   const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), pickupAgency !== undefined || vault);
   if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
   if (q.grams > account.holdings.gold + 1e-9) {
@@ -422,7 +419,7 @@ export function withdrawPhysical(
     }
     return { cost, from: from || now.toISOString(), to: to || now.toISOString() };
   };
-  const label = `Retrait physique${agency ? ` en agence (${agency})` : ''}${vault ? ' gardé en coffre chez Godot & Fils' : ''}${privateVault ? ' pour le coffre personnel' : ''} · ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')}`;
+  const label = `Retrait physique${agency ? ` en agence (${agency})` : ''}${vault ? ' gardé en coffre chez Godot & Fils' : ''} · ${q.lines.map((l) => `${l.qty} × ${l.product.label.toLowerCase()}`).join(', ')}`;
   let next = applyTx(account, 'withdraw_physical', { gold: -q.grams }, q.value, label, now, q.fees);
   const [tx, ...rest] = next.transactions;
   const bars: HomeBar[] = [];
@@ -441,9 +438,6 @@ export function withdrawPhysical(
         txId: tx.id,
         ...(agency ? { pickupAgency: agency } : {}),
         ...(vault ? { vault: true, place: 'autre' as const, placeNote: CHILD_STORAGE_NOTE } : {}),
-        ...(privateVault
-          ? { privateVault: true, place: 'autre' as const, placeNote: `Coffre personnel, Godot & Fils (${agency})` }
-          : {}),
       });
     }
   }

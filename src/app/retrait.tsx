@@ -32,9 +32,8 @@ export default function WithdrawScreen() {
   const [confirm, setConfirm] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const fees = physicalFeesOf(account.settings);
-  const [mode, setMode] = useState<'home' | 'agency' | 'vault' | 'personal'>('home');
-  const personal = mode === 'personal';
-  const pickup = mode === 'agency' || personal;
+  const [mode, setMode] = useState<'home' | 'agency' | 'vault'>('home');
+  const pickup = mode === 'agency';
   const vault = mode === 'vault';
   const [agency, setAgency] = useState('');
   const q = quoteWithdrawal(quote.prices, order, fees, pickup || vault);
@@ -44,7 +43,7 @@ export default function WithdrawScreen() {
   const noCash = q.fees > cash + 0.005;
 
   const missingGrams = Math.max(0, q.grams - gold);
-  const summary = `${q.pieces} ${q.pieces > 1 ? 'lingotins' : 'lingotin'} · ${personal ? 'pour votre coffre personnel' : pickup ? 'retrait en agence' : vault ? 'gardés en coffre chez Godot & Fils' : 'livraison à domicile'} · ${formatEur(q.fees)} de frais`;
+  const summary = `${q.pieces} ${q.pieces > 1 ? 'lingotins' : 'lingotin'} · ${pickup ? 'retrait en agence' : vault ? 'gardés en coffre chez Godot & Fils' : 'livraison à domicile'} · ${formatEur(q.fees)} de frais`;
   // Un seul bouton d'action : il dit ce qui manque et y mène, plutôt que de rester grisé.
   const cta: { title: string; action: 'none' | 'buy' | 'credit' | 'order'; disabled?: boolean; hint?: string } = !q
     .lines.length
@@ -74,17 +73,15 @@ export default function WithdrawScreen() {
     setConfirm(false);
     try {
       const city = agency.trim();
-      commit((a, p) => withdrawPhysical(a, p, order, new Date(), pickup ? city : undefined, vault, personal));
+      commit((a, p) => withdrawPhysical(a, p, order, new Date(), pickup ? city : undefined, vault));
       setOrder({});
       setMessage({
         ok: true,
-        text: personal
-          ? `Commande enregistrée : vos lingotins seront livrés à l’agence Godot & Fils (${city}), où vous les déposerez dans votre coffre personnel. Vous règlerez la location de votre case directement à Godot & Fils.`
-          : vault
-            ? 'Commande enregistrée : vos lingotins seront gardés en coffre sécurisé chez Godot & Fils, à votre nom. Vous pourrez noter leur numéro de série dès leur entrée au coffre, dans « Mon coffre maison ».'
-            : pickup
-              ? `Retrait enregistré : vous serez prévenu dès que vos lingotins sont disponibles à l’agence Godot & Fils (${city}). Apportez une pièce d’identité et signez le bon de remise. Notez ensuite le numéro de série de chaque lingotin dans « Mon coffre maison ».`
-              : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours environ. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
+        text: vault
+          ? 'Commande enregistrée : vos lingotins seront gardés en coffre sécurisé chez Godot & Fils, à votre nom. Vous pourrez noter leur numéro de série dès leur entrée au coffre, dans « Mon coffre maison ».'
+          : pickup
+            ? `Retrait enregistré : vous serez prévenu dès que vos lingotins sont disponibles à l’agence Godot & Fils (${city}). Apportez une pièce d’identité et signez le bon de remise. Notez ensuite le numéro de série de chaque lingotin dans « Mon coffre maison ».`
+            : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours environ. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
       });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Retrait impossible.' });
@@ -173,8 +170,7 @@ export default function WithdrawScreen() {
                 [
                   { id: 'home', label: 'À domicile' },
                   { id: 'agency', label: 'En agence' },
-                  { id: 'vault', label: 'Coffre sécurisé' },
-                  { id: 'personal', label: 'Coffre personnel' },
+                  { id: 'vault', label: 'Garder en coffre' },
                 ] as const
               ).map((m) => (
                 <Pressable
@@ -189,13 +185,6 @@ export default function WithdrawScreen() {
               ))}
             </View>
             {pickup && <AgencyPicker value={agency} onChange={setAgency} />}
-            {personal && (
-              <Text style={styles.sub} testID="personal-note">
-                Vous louez votre propre case chez Godot & Fils (Coffre-Fort Privé, de 300 à 1 300 € par an selon la
-                taille, tarif indicatif). Vos lingotins sont livrés à l’agence et vous les y déposez. La location est
-                payée directement à Godot & Fils : Orvia ne la facture pas.
-              </Text>
-            )}
             {vault && (
               <Text style={styles.sub} testID="vault-note">
                 Vos lingotins restent en coffre sécurisé chez Godot & Fils, à votre nom, sans livraison. Ils
@@ -205,13 +194,11 @@ export default function WithdrawScreen() {
             )}
             <Line
               label={
-                personal
-                  ? 'Livraison à l’agence pour le dépôt dans votre coffre : gratuite'
-                  : pickup
-                    ? 'Retrait en agence, contre pièce d’identité et bon de remise'
-                    : vault
-                      ? 'Garde en coffre chez Godot & Fils : pas de livraison'
-                      : `Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`
+                pickup
+                  ? 'Retrait en agence, contre pièce d’identité et bon de remise'
+                  : vault
+                    ? 'Garde en coffre chez Godot & Fils : pas de livraison'
+                    : `Livraison assurée, remise contre signature${q.delivery ? ` (offerte dès ${fees.freeFromGrams} g)` : ''}`
               }
               value={q.delivery ? formatEur(q.delivery) : pickup || vault ? 'Gratuit' : 'Offerte'}
             />
@@ -293,10 +280,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   footerSub: { color: colors.textMuted, fontSize: 12.5, textAlign: 'center' },
-  modes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  modes: { flexDirection: 'row', gap: 8 },
   mode: {
-    flexGrow: 1,
-    flexBasis: '45%',
+    flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 10,

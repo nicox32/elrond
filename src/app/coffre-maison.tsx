@@ -203,13 +203,7 @@ function BarCard({
       ) : waitingAgency ? (
         <View style={{ gap: 6 }}>
           <Button
-            title={
-              bar.vault
-                ? 'Confirmer l’entrée au coffre'
-                : bar.privateVault
-                  ? `Confirmer le dépôt dans mon coffre (${bar.pickupAgency})`
-                  : `Retirer en agence (${bar.pickupAgency})`
-            }
+            title={bar.vault ? 'Confirmer l’entrée au coffre' : `Retirer en agence (${bar.pickupAgency})`}
             onPress={() => setPickedUp(true)}
             disabled={!readyAtAgency}
           />
@@ -218,13 +212,9 @@ function BarCard({
               ? readyAtAgency
                 ? 'Entré au coffre chez Godot & Fils, à votre nom : appuyez ici pour noter son numéro de série.'
                 : 'Il reste au coffre de Godot & Fils, sans livraison : disponible dès son entrée au coffre (suivi estimé ci-dessus).'
-              : bar.privateVault
-                ? readyAtAgency
-                  ? 'Prêt à l’agence : déposez-le dans votre coffre personnel, puis appuyez ici pour noter le numéro de série.'
-                  : 'Disponible dès que le lingotin est livré à l’agence (suivi estimé ci-dessus).'
-                : readyAtAgency
-                  ? 'Prêt à l’agence : apportez une pièce d’identité et signez le bon de remise, puis appuyez ici pour noter le numéro de série.'
-                  : 'Disponible dès que le lingotin est prêt à l’agence (suivi estimé ci-dessus).'}
+              : readyAtAgency
+                ? 'Prêt à l’agence : apportez une pièce d’identité et signez le bon de remise, puis appuyez ici pour noter le numéro de série.'
+                : 'Disponible dès que le lingotin est prêt à l’agence (suivi estimé ci-dessus).'}
           </Text>
         </View>
       ) : (
