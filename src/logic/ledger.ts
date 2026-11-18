@@ -922,7 +922,14 @@ const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
  * métal. Jamais rétroactif : la première fois, la garde démarre au mois suivant. Comptes enfants exonérés
  * jusqu'à 18 ans ; aucun frais si la société a désactivé la garde payante.
  */
-export function chargeCustody<W extends Wallet>(wallet: W, prices: Prices, now = new Date(), enabled = true): W {
+export function chargeCustody<W extends Wallet>(
+  wallet: W,
+  prices: Prices,
+  now = new Date(),
+  enabled = true,
+  /** Grammes d'or en lingotins appartenant à ce compte (enfant), gardés en coffre sécurisé : ils paient la garde aussi. */
+  barGrams = 0,
+): W {
   const thisMonth = monthStart(now);
   if (!wallet.custodyChargedThrough)
     return enabled ? { ...wallet, custodyChargedThrough: thisMonth.toISOString() } : wallet;
@@ -943,7 +950,9 @@ export function chargeCustody<W extends Wallet>(wallet: W, prices: Prices, now =
       const byMetal: Partial<Record<Metal, number>> = {};
       let value = 0;
       for (const metal of METALS) {
-        const fee = result.holdings[metal] * (FEES.custodyYearly[metal] / 12);
+        // Les lingotins de l'enfant paient comme son or en grammes, prélevé sur ses grammes (jamais plus que ce qu'il a).
+        const base = result.holdings[metal] + (metal === 'gold' ? barGrams : 0);
+        const fee = Math.min(result.holdings[metal], base * (FEES.custodyYearly[metal] / 12));
         if (fee > 1e-9) {
           deltas[metal] = -fee;
           byMetal[metal] = fee * prices[metal];
@@ -961,11 +970,38 @@ export function chargeCustody<W extends Wallet>(wallet: W, prices: Prices, now =
   return result;
 }
 
+/** Grammes d'or des lingotins et pièces qui appartiennent à un enfant (don ou conversion), gardés en coffre sécurisé. */
+export function childBarGrams(account: Pick<Account, 'homeVault'>, childId: string): number {
+  return (account.homeVault ?? []).filter((b) => b.ownerChildId === childId).reduce((s, b) => s + b.grams, 0);
+}
+
+/**
+ * Garde offerte à un enfant mineur : ce que son or (grammes et lingotins) coûterait par an au tarif Orvia. Nulle une
+ * fois majeur, car il la paie alors lui-même.
+ */
+export function custodyOffered(
+  account: Pick<Account, 'homeVault'>,
+  child: ChildAccount,
+  prices: Prices,
+  now = new Date(),
+) {
+  const until = feesExemptUntil(child);
+  const minor = !!until && now < until && !child.transferredAt;
+  const bars = childBarGrams(account, child.id);
+  const yearly = METALS.reduce(
+    (s, m) => s + (child.holdings[m] + (m === 'gold' ? bars : 0)) * prices[m] * FEES.custodyYearly[m],
+    0,
+  );
+  return { minor, yearly: minor ? yearly : 0, barGrams: bars };
+}
+
 /** Applique les frais d'oxydation et de garde au compte principal et à chaque compte enfant. */
 export function applyDormancy(account: Account, prices: Prices, now = new Date()): Account {
   const custody = account.settings.custodyFees !== false;
   const parent = chargeCustody(chargeDormancy(account, prices, now), prices, now, custody);
-  const children = account.children.map((c) => chargeCustody(chargeDormancy(c, prices, now), prices, now, custody));
+  const children = account.children.map((c) =>
+    chargeCustody(chargeDormancy(c, prices, now), prices, now, custody, childBarGrams(account, c.id)),
+  );
   const changed = parent !== account || children.some((c, i) => c !== account.children[i]);
   return changed ? { ...parent, children } : account;
 }

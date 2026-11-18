@@ -31,6 +31,7 @@ import { barsOfChild, placeLabel, productOf } from '../../logic/physical';
 import { estimateTax } from '../../logic/tax';
 import {
   accountValue,
+  custodyOffered,
   fundChild,
   LedgerError,
   majorityDate,
@@ -94,6 +95,7 @@ export default function ChildScreen() {
   const stage = childStage(child);
   const value = accountValue(child, quote.prices);
   const tax = estimateTax(child, quote.prices);
+  const offered = custodyOffered(account, child, quote.prices);
   const amount = parseAmount(text);
   const grams =
     Number.isFinite(amount) && amount > 0 ? toGrams({ unit: amountUnit, value: amount }, quote.prices[metal]) : 0;
@@ -346,6 +348,12 @@ export default function ChildScreen() {
 
       <ChildRules name={name} />
       <DormancyNotice wallet={child} name={name} />
+      {offered.minor && offered.yearly > 0 && (
+        <Hint>
+          Garde offerte jusqu’à ses 18 ans : environ {formatEur(offered.yearly)} par an, lingotins compris. Orvia la
+          prend en charge ; ensuite, {name} la paie en or sur son propre compte.
+        </Hint>
+      )}
 
       {stage === 'minor' && (
         <>

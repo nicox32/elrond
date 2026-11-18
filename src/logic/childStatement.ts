@@ -4,7 +4,7 @@
  * honnête : il récapitule ce qui est enregistré dans l'appli, sans se présenter comme un certificat de dépôt.
  */
 import { formatEur, formatPercent } from './format.ts';
-import { accountValue, majorityDate, METAL_LABEL } from './ledger.ts';
+import { accountValue, childBarGrams, custodyOffered, majorityDate, METAL_LABEL } from './ledger.ts';
 import { LOGO_PNG_BASE64 } from './logoData.ts';
 import { holdingLots } from './tax.ts';
 import { type Account, type ChildAccount, type Metal, METALS, type Prices } from './types.ts';
@@ -29,6 +29,9 @@ export function childStatementHtml(account: Account, child: ChildAccount, prices
   const first = [...child.transactions].sort((a, b) => a.date.localeCompare(b.date))[0];
   const opened = first && first.date < child.createdAt ? first.date : child.createdAt;
   const majority = child.birthDate ? majorityDate(child.birthDate) : null;
+  const offered = custodyOffered(account, child, prices, now);
+  const barG = childBarGrams(account, child.id);
+  const custodyPaid = child.transactions.reduce((s, t) => s + (t.kind === 'fee_custody' ? t.eur : 0), 0);
 
   // Récapitulatif par année : nombre de versements, euros versés, grammes reçus.
   // Un don partagé entre plusieurs métaux compte pour un seul versement (même jour).
@@ -117,6 +120,13 @@ export function childStatementHtml(account: Account, child: ChildAccount, prices
       .join('')}
     <tr class="tot"><td colspan="3">Total</td><td class="n">${formatEur(value.total)}</td></tr>
   </table>
+
+  <h2>Frais de garde</h2>
+  <div class="note">${
+    offered.minor
+      ? `<b>Garde offerte jusqu’à ${majority ? `vos 18 ans (${day(majority)})` : 'vos 18 ans'}.</b> Elle vaudrait environ ${formatEur(offered.yearly)} par an${barG > 0 ? ` (lingotins compris : ${grams(barG)})` : ''} au tarif Orvia (0,15 % par an pour l’or). Orvia la prend en charge : ni ${esc(account.holder)} ni ${esc(child.name)} ne paient.`
+      : `Garde en coffre : 0,15 % par an pour l’or, prélevée en métal chaque mois sur le compte de ${esc(child.name)}, lingotins compris. Payée sur la période : ${formatEur(custodyPaid)}.`
+  }</div>
 
   ${
     yearRows

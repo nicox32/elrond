@@ -312,3 +312,31 @@ test('stockage chez le revendeur : le seuil gratuit est propre à chaque client,
   assert.equal(two.length, 2);
   close(two.find((x) => x.ownerChildId === null)!.valueEur, 500, 1e-6);
 });
+
+test('garde des lingotins d’un enfant : offerte jusqu’à 18 ans, puis payée par lui en or', async () => {
+  const { convertChildToBars } = await import('../src/logic/physical.ts');
+  const { addChild, fundChild, getChild, applyDormancy, custodyOffered, childBarGrams } =
+    await import('../src/logic/ledger.ts');
+  const { FEES } = await import('../src/logic/fees.ts');
+  const t0 = new Date('2026-11-17T10:00:00');
+  let a = creditCash(buy(createAccount('T', new Date('2020-01-01')), p, 'gold', { unit: 'g', value: 50 }), 300);
+  const added = addChild(a, 'Théo', '2008-12-01', t0); // majeur le 1er décembre 2026
+  a = fundChild(added.account, p, added.child.id, 'gold', { unit: 'g', value: 20 }, t0);
+  const id = added.child.id;
+  a = convertChildToBars(a, p, id, { g5: 1 }, false, t0); // 5 g en lingotin, 15 g en grammes
+  assert.equal(childBarGrams(a, id), 5);
+  // Mineur : garde offerte, valeur chiffrée (grammes et lingotin), rien prélevé.
+  const off = custodyOffered(a, getChild(a, id), p, t0);
+  assert.equal(off.minor, true);
+  close(off.yearly, (15 + 5) * p.gold * FEES.custodyYearly.gold, 1e-6);
+  const mid = applyDormancy(
+    { ...a, children: a.children.map((c) => ({ ...c, custodyChargedThrough: '2026-11-01T00:00:00.000Z' })) },
+    p,
+    new Date('2026-12-02T10:00:00'),
+  );
+  // Après la majorité (décembre 2026), il paie sur ses grammes ET son lingotin, en or, sans dépasser ses grammes.
+  const g0 = getChild(mid, id).holdings.gold;
+  assert.ok(g0 < 15 - 1e-9, 'la garde de décembre est prélevée sur ses grammes');
+  close(15 - g0, (15 + 5) * (FEES.custodyYearly.gold / 12) * 1, 1e-6); // un mois, lingotin compris
+  assert.equal(custodyOffered(mid, getChild(mid, id), p, new Date('2026-12-02T10:00:00')).yearly, 0);
+});
