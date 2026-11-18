@@ -39,8 +39,8 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   a = buy(a, p, 'gold', { unit: 'g', value: 20 }, new Date('2024-06-01T12:00:00'));
   const q = quoteWithdrawal(p, { g10: 2, g5: 1 });
   assert.equal(q.grams, 25);
-  close(q.premium, 10 * 100 * 0.075 * 2 + 5 * 100 * 0.095);
-  close(q.fees, 150 + 47.5, 0.01); // 25 g : livraison offerte (dès 20 g)
+  close(q.premium, 10 * 100 * 0.075 * 2 + 5 * 100 * 0.096);
+  close(q.fees, 150 + 48, 0.01); // 25 g : livraison offerte (dès 20 g)
   close(quoteWithdrawal(p, { g10: 1 }).fees, 75 + 12, 0.01); // 10 g seul : livraison 12 €
   // Frais à payer depuis le compte d'attente : vide → refusé (payer en or serait une vente imposée).
   assert.throws(() => withdrawPhysical(a, p, { g10: 2, g5: 1 }), LedgerError);
@@ -173,14 +173,14 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   const { companyReport } = await import('../src/logic/company.ts');
   // Valeurs par défaut : 5 g à 11 % (prime vendeur 9,78 % relevée le 18/11/2026), livraison 12 € (7 € payés au vendeur).
   const def = physicalFeesOf();
-  assert.equal(def.premiums.g5, 0.095);
+  assert.equal(def.premiums.g5, 0.096);
   assert.equal(def.vendor.g5, 0.0901);
   assert.equal(def.vendorDelivery, 7);
   assert.equal(def.delivery, 12);
   assert.equal(def.freeFromGrams, 20);
   const q5 = quoteWithdrawal(p, { g5: 1 }, def);
-  close(q5.premium, 5 * 100 * 0.095, 1e-9);
-  close(q5.fees, 47.5 + 12, 0.01);
+  close(q5.premium, 5 * 100 * 0.096, 1e-9);
+  close(q5.fees, 48 + 12, 0.01);
   close(q5.cost!, 5 * 100 * 0.0901 + 7, 1e-9); // lingotin payé au vendeur + sa livraison
   // Coût inconnu si un format sans prime vendeur : pas de coût calculé.
   assert.equal(def.vendor.g10, 0.0652);
@@ -191,9 +191,9 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0901 + 10 * 100 * 0.0652 + 7, 1e-9);
   // Réglages de Société Orvia : fabrication, livraison, seuil.
   const custom = physicalFeesOf({
-    physicalFees: { premiums: { g5: 0.08 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },
+    physicalFees: { premiums: { g5: 0.1 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },
   });
-  assert.equal(custom.premiums.g5, 0.08);
+  assert.equal(custom.premiums.g5, 0.1);
   assert.equal(custom.premiums.g10, 0.075); // inchangé
   assert.equal(custom.vendor.g5, 0.0901); // valeur par défaut gardée
   assert.equal(custom.vendor.g10, 0.05);
@@ -201,6 +201,13 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   assert.equal(q.delivery, 20);
   close(q.cost!, 2 * 10 * 100 * 0.05 + 7, 1e-9);
   close(productPrice(productOf('g5'), 100, 0.08).withPremium, 540);
+  // Marge bloquée : la fabrication reste entre la prime vendeur + 0,5 point et + 3 points.
+  const low = physicalFeesOf({ physicalFees: { premiums: { g5: 0.08 } } });
+  close(low.premiums.g5, 0.0901 + 0.005, 1e-9);
+  const high = physicalFeesOf({ physicalFees: { premiums: { g5: 0.2 } } });
+  close(high.premiums.g5, 0.0901 + 0.03, 1e-9);
+  const wide = physicalFeesOf({ physicalFees: { premiums: { g5: 0.08 }, marginMinPt: 0 } });
+  close(wide.premiums.g5, 0.0901, 1e-9);
   // Retrait enregistré avec ses frais réglés et son coût pour Orvia.
   let a = creditCash(
     buy(

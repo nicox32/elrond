@@ -145,6 +145,9 @@ export interface Settings {
     vendorDeliveryTiers?: { fromEur: number; cost: number }[];
     /** Livraison offerte à partir de ce poids d'or dans l'envoi (g). */
     freeFromGrams?: number;
+    /** Marge d'Orvia autorisée sur la prime du vendeur, en points de % de la valeur de l'or (défaut : 0,5 à 3). */
+    marginMinPt?: number;
+    marginMaxPt?: number;
   };
   /** Marges des contrôles de lingots (Société Orvia) : pesée en grammes, dimensions en millimètres. */
   barTolerance?: { weightG: number; dimMm: number };

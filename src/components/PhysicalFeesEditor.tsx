@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
-import { BAR_PRODUCTS, normalizeDeliveryTiers, physicalFeesOf, PHYSICAL, QTY_RANGES } from '../logic/physical';
+import {
+  BAR_PRODUCTS,
+  MARGIN_PT,
+  normalizeDeliveryTiers,
+  physicalFeesOf,
+  PHYSICAL,
+  QTY_RANGES,
+} from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
 import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
 import { addStock, assertInsuranceRoom } from '../logic/stock';
@@ -41,6 +48,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     pro: String(fees.leadDays.pro),
     commande: String(fees.leadDays.commande),
   });
+  const [mMin, setMMin] = useState(String(Math.round(fees.margin.min * 10000) / 100).replace('.', ','));
+  const [mMax, setMMax] = useState(String(Math.round(fees.margin.max * 10000) / 100).replace('.', ','));
   const [delivery, setDelivery] = useState(String(fees.delivery).replace('.', ','));
   const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
   const [tiers, setTiers] = useState<{ from: string; cost: string }[]>(() =>
@@ -74,7 +83,19 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     }
   })();
 
+  const marginLo = parseAmount(mMin) / 100;
+  const marginHi = parseAmount(mMax) / 100;
+  const marginOk =
+    Number.isFinite(marginLo) && Number.isFinite(marginHi) && marginLo >= 0 && marginHi >= marginLo && marginHi <= 0.2;
+  // Fabrication facturée hors de la fourchette (prime vendeur + marge mini / maxi) : l'enregistrement est bloqué.
+  const outOfRange = BAR_PRODUCTS.filter((p) => {
+    const v = fees.vendor[p.id];
+    const r = toRate(premiums[p.id]);
+    return marginOk && v !== undefined && Number.isFinite(r) && (r < v + marginLo - 1e-9 || r > v + marginHi + 1e-9);
+  });
   const validClient =
+    marginOk &&
+    outOfRange.length === 0 &&
     BAR_PRODUCTS.every((p) => {
       const r = toRate(premiums[p.id]);
       return r >= 0 && r <= 0.5;
@@ -99,6 +120,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
         physicalFees: {
           ...cur,
           premiums: prem,
+          marginMinPt: parseAmount(mMin),
+          marginMaxPt: parseAmount(mMax),
           delivery: parseAmount(delivery),
           freeFromGrams: parseAmount(free),
           leadDays: {
@@ -139,7 +162,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     const cur: Record<string, unknown> = { ...(account.settings.physicalFees ?? {}) };
     const drop =
       part === 'client'
-        ? ['premiums', 'delivery', 'freeFromGrams', 'leadDays']
+        ? ['premiums', 'delivery', 'freeFromGrams', 'leadDays', 'marginMinPt', 'marginMaxPt']
         : ['vendor', 'vendorTiers', 'vendorDeliveryTiers', 'vendorDelivery'];
     for (const k of drop) delete cur[k];
     updateSettings({
@@ -148,6 +171,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     const d = physicalFeesOf({ physicalFees: cur as typeof account.settings.physicalFees });
     if (part === 'client') {
       setPremiums(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(d.premiums[p.id])])));
+      setMMin(String(MARGIN_PT.min).replace('.', ','));
+      setMMax(String(MARGIN_PT.max).replace('.', ','));
       setDelivery(String(PHYSICAL.delivery));
       setFree(String(PHYSICAL.freeDeliveryFromGrams));
       setLead({
@@ -202,11 +227,45 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               <Text style={[styles.margin, margin !== null && { color: margin >= 0 ? colors.up : colors.down }]}>
                 {margin === null
                   ? 'Prime de Godot & Fils inconnue : marge non calculée'
-                  : `Marge de base ${margin >= 0 ? '+' : '−'}${formatEur(Math.abs(margin))} par ${p.coin ? 'pièce' : 'lingotin'}`}
+                  : `Marge de base ${margin >= 0 ? '+' : '−'}${formatEur(Math.abs(margin))} par ${p.coin ? 'pièce' : 'lingotin'} · autorisé de ${((vend + marginLo) * 100).toFixed(2).replace('.', ',')} % à ${((vend + marginHi) * 100).toFixed(2).replace('.', ',')} %`}
               </Text>
             </View>
           );
         })}
+        <Label>Marge autorisée sur la prime de Godot & Fils (points de %)</Label>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.tiers}>Minimum</Text>
+            <TextInput
+              value={mMin}
+              onChangeText={setMMin}
+              keyboardType="decimal-pad"
+              style={ui.input}
+              accessibilityLabel="Marge minimum"
+            />
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.tiers}>Maximum</Text>
+            <TextInput
+              value={mMax}
+              onChangeText={setMMax}
+              keyboardType="decimal-pad"
+              style={ui.input}
+              accessibilityLabel="Marge maximum"
+            />
+          </View>
+        </View>
+        {outOfRange.length > 0 ? (
+          <Message
+            ok={false}
+            text={`Hors fourchette : ${outOfRange.map((p) => p.label.replace(/ \(.*/, '')).join(', ')}. La fabrication doit rester entre la prime de Godot & Fils + ${mMin} point et + ${mMax} points.`}
+          />
+        ) : (
+          <Hint>
+            La fabrication facturée ne peut pas passer sous la prime de Godot & Fils + le minimum (jamais à perte), ni
+            au-dessus du maximum (pas de prix excessif).
+          </Hint>
+        )}
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1, gap: 5 }}>
             <Label>Livraison par envoi (€)</Label>

@@ -116,8 +116,8 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Lingotin 5 g',
     grams: 5,
     // Relevé du 18/11/2026 : 621,01 € TTC pour 1 lingotin + 7 € de livraison. Les frais du vendeur (8,91 % du prix)
-    // font 9,78 % de la valeur de l'or ; facturée 9,5 % au client (tarif ajusté le 19/11 : marge d’environ 1,5 point sur les primes réelles).
-    premium: 0.095,
+    // font 9,78 % de la valeur de l'or ; facturée 9,6 % au client (tarif ajusté le 19/11 : marge d’environ 1,5 point sur les primes réelles).
+    premium: 0.096,
     vendorPremium: 0.0901, // relevé du 18/11/2026 : 612,50 € l'unité pour 561,86 € d'or
     vendorTiers: [
       { from: 10, off: 0.0062 },
@@ -265,6 +265,8 @@ export interface PhysicalFees {
   /** Délai de livraison en jours selon l'origine du lingotin. */
   leadDays: { maison: number; pro: number; commande: number };
   freeFromGrams: number;
+  /** Marge d'Orvia autorisée sur la prime du vendeur, en part de la valeur de l'or (0,005 = 0,5 point). */
+  margin: { min: number; max: number };
   /** Remises de quantité du revendeur, par produit. */
   vendorTiers: Record<string, { from: number; off: number }[]>;
 }
@@ -309,6 +311,16 @@ export function vendorDeliveryCost(goodsEur: number, fees: Pick<PhysicalFees, 'v
   return cost;
 }
 
+/** Marge autorisée par défaut : de 0,5 à 3 points de % au-dessus de la prime payée au vendeur. */
+export const MARGIN_PT = { min: 0.5, max: 3 } as const;
+
+/** Fourchette de la fabrication facturée au client pour une prime vendeur donnée. */
+export function premiumRange(vendorPremium: number, margin: { min: number; max: number }) {
+  return { min: vendorPremium + margin.min, max: vendorPremium + margin.max };
+}
+
+const r6 = (n: number) => Math.round(n * 1e6) / 1e6;
+
 export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
   const s = settings?.physicalFees ?? {};
   const premiums: Record<string, number> = {};
@@ -322,7 +334,15 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
   }
   const flat = s.vendorDelivery ?? PHYSICAL.vendorDelivery;
   const tiers = normalizeDeliveryTiers(s.vendorDeliveryTiers, flat);
+  // Marge bloquée entre un minimum et un maximum : la fabrication facturée reste dans la fourchette de la prime vendeur.
+  const lo = Math.max(0, s.marginMinPt ?? MARGIN_PT.min) / 100;
+  const hi = Math.max(lo, (s.marginMaxPt ?? MARGIN_PT.max) / 100);
+  for (const p of BAR_PRODUCTS) {
+    const v = vendor[p.id];
+    if (v !== undefined) premiums[p.id] = r6(Math.min(v + hi, Math.max(v + lo, premiums[p.id])));
+  }
   return {
+    margin: { min: lo, max: hi },
     premiums,
     vendor,
     delivery: s.delivery ?? PHYSICAL.delivery,
