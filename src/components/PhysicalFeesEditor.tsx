@@ -8,6 +8,7 @@ import {
   normalizeDeliveryTiers,
   physicalFeesOf,
   PHYSICAL,
+  PREMIUM_TARGET,
   QTY_RANGES,
 } from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
