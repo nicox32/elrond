@@ -210,7 +210,7 @@ export const PHYSICAL = {
   vendorDelivery: 7,
   /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
   vatSilverPlatinum: 0.2,
-  /** Remise de volume : dès 5 pièces dans un même retrait, la fabrication baisse de 0,15 point. */
+  /** Remise du revendeur : dès 5 pièces dans une même commande chez lui, sa prime baisse de 0,15 point (coût d'Orvia). */
   volumeFromQty: 5,
   volumeDiscount: 0.0015,
   /** Délai indicatif de livraison, en jours ouvrés. */
@@ -228,7 +228,7 @@ export interface PhysicalFees {
   /** Livraison payée au vendeur, par commande. */
   vendorDelivery: number;
   freeFromGrams: number;
-  /** Remise de volume : nombre de pièces dans le retrait, et points de fabrication retirés. */
+  /** Remise du revendeur : nombre de pièces dans la commande, et points de prime vendeur retirés (baisse du coût). */
   volumeFrom: number;
   volumeDiscount: number;
 }
@@ -270,10 +270,6 @@ export function physicalFeeRows(fees: PhysicalFees): { label: string; orvia: str
       label: 'Livraison assurée, remise contre signature',
       orvia: `${fees.delivery.toLocaleString('fr-FR')} € par envoi, offerte dès ${fees.freeFromGrams.toLocaleString('fr-FR')} g`,
     },
-    {
-      label: 'Remise de volume',
-      orvia: `Fabrication −${(fees.volumeDiscount * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} point dès ${fees.volumeFrom} pièces dans un même retrait`,
-    },
     { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
   ];
 }
@@ -287,28 +283,28 @@ export function productOf(id: string): BarProduct {
 /** Détail chiffré d'un retrait : grammes pris au coffre, surcoût de fabrication, livraison. */
 export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalFees = physicalFeesOf()) {
   const pieces = BAR_PRODUCTS.reduce((s, p) => s + Math.max(0, Math.floor(order[p.id] ?? 0)), 0);
-  // Remise de volume : dès N pièces dans le même retrait, la fabrication de chaque pièce baisse de quelques points.
+  // Remise du revendeur : dès N pièces dans la même commande chez lui, sa prime baisse de quelques points. C'est un
+  // coût en moins pour Orvia : le prix facturé au client ne change pas.
   const volume = fees.volumeDiscount > 0 && pieces >= fees.volumeFrom;
   const lines = BAR_PRODUCTS.filter((p) => (order[p.id] ?? 0) > 0).map((p) => {
     const qty = Math.floor(order[p.id]);
     const value = qty * p.grams * prices.gold;
     const v = fees.vendor[p.id];
-    const rate = fees.premiums[p.id] ?? p.premium;
-    const applied = volume ? Math.min(rate, fees.volumeDiscount) : 0;
+    const applied = volume && v !== undefined ? Math.min(v, fees.volumeDiscount) : 0;
     return {
       product: p,
       qty,
       grams: qty * p.grams,
       value,
-      premium: value * (rate - applied),
-      discount: value * applied,
-      vendorCost: v === undefined ? undefined : value * v,
+      premium: value * (fees.premiums[p.id] ?? p.premium),
+      vendorCost: v === undefined ? undefined : value * (v - applied),
+      vendorDiscount: value * applied,
     };
   });
   const grams = lines.reduce((s, l) => s + l.grams, 0);
   const value = lines.reduce((s, l) => s + l.value, 0);
   const premium = lines.reduce((s, l) => s + l.premium, 0);
-  const discount = lines.reduce((s, l) => s + l.discount, 0);
+  const vendorDiscount = lines.reduce((s, l) => s + l.vendorDiscount, 0);
   const delivery = !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
   const total = Math.round((premium + delivery) * 100) / 100;
   // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) et sa livraison, par commande.
@@ -327,7 +323,7 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
     cost,
     pieces,
     volume,
-    discount: Math.round(discount * 100) / 100,
+    vendorDiscount: Math.round(vendorDiscount * 100) / 100,
   };
 }
 

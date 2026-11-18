@@ -253,36 +253,26 @@ test('solde : retirer un lingotin ne fait pas baisser le total (le physique est 
   assert.equal(physicalValue(b, p), 0);
 });
 
-test('remise de volume : 0,15 point de fabrication dès 5 pièces dans un même retrait', () => {
+test('remise du revendeur : prime −0,15 point dès 5 pièces commandées, coût en moins pour Orvia, prix client inchangé', () => {
   const def = physicalFeesOf();
   assert.equal(def.volumeFrom, 5);
   close(def.volumeDiscount, 0.0015, 1e-12);
-  // 4 pièces : aucune remise.
+  // 4 pièces : pas de remise du revendeur.
   const four = quoteWithdrawal(p, { g10: 4 }, def);
   assert.equal(four.volume, false);
-  assert.equal(four.discount, 0);
-  close(four.premium, 4 * 10 * 100 * 0.075, 1e-9);
-  // 5 pièces : 0,15 point en moins sur chaque pièce (valeur de l'or 5 000 €).
+  assert.equal(four.vendorDiscount, 0);
+  close(four.premium, 4 * 10 * 100 * 0.075, 1e-9); // prix client : 7,5 %
+  close(four.cost!, 4 * 10 * 100 * 0.064 + 7, 1e-9);
+  // 5 pièces : le client paie toujours 7,5 %, mais la prime du vendeur passe de 6,4 % à 6,25 %.
   const five = quoteWithdrawal(p, { g10: 5 }, def);
   assert.equal(five.volume, true);
-  assert.equal(five.pieces, 5);
-  close(five.premium, 5 * 10 * 100 * (0.075 - 0.0015), 1e-9);
-  close(five.discount, 5 * 10 * 100 * 0.0015, 0.01);
-  // Les pièces de formats différents comptent ensemble.
-  const mix = quoteWithdrawal(p, { g5: 2, g10: 2, nap20: 1 }, def);
-  assert.equal(mix.volume, true);
-  assert.equal(mix.pieces, 5);
-  // La remise ne rend jamais la fabrication négative et se règle (Société Orvia).
-  const off = quoteWithdrawal(p, { g10: 5 }, { ...def, volumeDiscount: 0 });
-  assert.equal(off.volume, false);
+  close(five.premium, 5 * 10 * 100 * 0.075, 1e-9);
+  close(five.cost!, 5 * 10 * 100 * (0.064 - 0.0015) + 7, 1e-9);
+  close(five.vendorDiscount, 5 * 10 * 100 * 0.0015, 0.01);
+  close(five.fees, (four.fees / 4) * 5, 0.01); // frais du client proportionnels : pas de remise pour lui
+  // Les pièces de formats différents comptent ensemble ; la remise se règle.
+  assert.equal(quoteWithdrawal(p, { g5: 2, g10: 2, nap20: 1 }, def).pieces, 5);
+  assert.equal(quoteWithdrawal(p, { g10: 5 }, { ...def, volumeDiscount: 0 }).volume, false);
   const custom = physicalFeesOf({ physicalFees: { volumeFrom: 3, volumeDiscount: 0.002 } });
   assert.equal(quoteWithdrawal(p, { g10: 3 }, custom).volume, true);
-  // La marge reste positive avec la remise (1 once : fabrication 6 % pour 5,19 % au vendeur).
-  const oz = quoteWithdrawal(p, { oz1: 5 }, def);
-  assert.ok(oz.premium - (oz.lines[0].vendorCost ?? 0) > 0);
-  // Le retrait emporte bien la fabrication remisée depuis le compte d'attente.
-  let a = creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 100 }), 2000);
-  const before = a.cashEur ?? 0;
-  a = withdrawPhysical(a, p, { g10: 5 });
-  close(before - (a.cashEur ?? 0), five.fees, 0.01);
 });

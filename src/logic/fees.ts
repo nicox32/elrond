@@ -95,7 +95,6 @@ export const FEE_TABLE: { title: string; rows: FeeRow[] }[] = [
       { label: 'Lingot 1 once (31,1 g)', orvia: 'Fabrication 6 %' },
       { label: 'Napoléon 20 F (5,81 g d’or fin)', orvia: 'Prime ≈ 7,5 %, variable' },
       { label: 'Livraison assurée, remise contre signature', orvia: '12 € par envoi, offerte dès 20 g' },
-      { label: 'Remise de volume', orvia: 'Fabrication −0,15 point dès 5 pièces dans un même retrait' },
       { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
       {
         label: 'Lingotins gardés chez le revendeur (par client)',

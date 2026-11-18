@@ -167,13 +167,13 @@ export function PhysicalFeesEditor() {
       </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1, gap: 5 }}>
-          <Label>Remise dès (pièces)</Label>
+          <Label>Remise du revendeur dès (pièces)</Label>
           <TextInput
             value={volFrom}
             onChangeText={setVolFrom}
             keyboardType="number-pad"
             style={ui.input}
-            accessibilityLabel="Remise de volume dès"
+            accessibilityLabel="Remise du revendeur dès"
           />
         </View>
         <View style={{ flex: 1, gap: 5 }}>
@@ -183,13 +183,13 @@ export function PhysicalFeesEditor() {
             onChangeText={setVolPts}
             keyboardType="decimal-pad"
             style={ui.input}
-            accessibilityLabel="Remise de volume en points"
+            accessibilityLabel="Remise du revendeur en points"
           />
         </View>
       </View>
       <Hint>
-        Remise de volume : à partir de ce nombre de pièces dans un même retrait, la fabrication de chaque pièce baisse
-        de ce nombre de points (0,15 = 0,15 point).
+        Remise du revendeur : à partir de ce nombre de pièces dans une même commande chez lui, sa prime baisse de ce
+        nombre de points (0,15 = 0,15 point). C’est un coût en moins pour vous ; le prix du client ne change pas.
       </Hint>
       <View style={{ gap: 5 }}>
         <Label>Livraison payée au vendeur, par commande (€)</Label>
