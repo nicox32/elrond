@@ -4,6 +4,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 
 import { AmountInput } from '../../components/AmountInput';
 import { ChildBarConvert } from '../../components/ChildBarConvert';
+import { VaultLogo } from '../../components/VaultLogo';
 import { CustodyNote } from '../../components/Custody';
 import { ChildBarGifts } from '../../components/ChildBarGifts';
 import { ChildGiftCard } from '../../components/ChildGiftCard';
@@ -97,6 +98,12 @@ export default function ChildScreen() {
   const value = accountValue(child, quote.prices);
   const tax = estimateTax(child, quote.prices);
   const offered = custodyOffered(account, child, quote.prices);
+  const childGrams = barsOfChild(account, child.id).reduce((t, b) => t + b.grams, 0);
+  const childBars = {
+    count: barsOfChild(account, child.id).length,
+    grams: childGrams,
+    value: childGrams * quote.prices.gold,
+  };
   const amount = parseAmount(text);
   const grams =
     Number.isFinite(amount) && amount > 0 ? toGrams({ unit: amountUnit, value: amount }, quote.prices[metal]) : 0;
@@ -347,6 +354,24 @@ export default function ChildScreen() {
         </Card>
       )}
 
+      <Pressable
+        onPress={() => router.push('/coffre-maison')}
+        accessibilityRole="button"
+        accessibilityLabel={`Lingotins et pièces de ${name}`}
+        testID="child-bars-summary"
+        style={styles.barsSummary}
+      >
+        <VaultLogo size={60} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.barsTitle}>Lingotins et pièces de {name}</Text>
+          <Text style={styles.barsValue}>{formatEur(childBars.value)}</Text>
+          <Text style={styles.barsSub}>
+            {childBars.count} lingotin{childBars.count > 1 ? 's' : ''} ou pièce{childBars.count > 1 ? 's' : ''} ·{' '}
+            {formatWeight(childBars.grams, 'g', 'gold')}
+          </Text>
+        </View>
+        <Text style={{ color: colors.textMuted, fontSize: 22 }}>›</Text>
+      </Pressable>
       <ChildRules name={name} />
       <DormancyNotice wallet={child} name={name} />
       <CustodyNote name={name} />
@@ -599,6 +624,19 @@ export default function ChildScreen() {
 }
 
 const styles = StyleSheet.create({
+  barsSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  barsTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  barsValue: { color: colors.gold, fontSize: 22, fontWeight: '800' },
+  barsSub: { color: colors.textMuted, fontSize: 13 },
   hero: {
     backgroundColor: colors.surface,
     borderRadius: 20,
