@@ -170,7 +170,7 @@ export default function WithdrawScreen() {
                 [
                   { id: 'home', label: 'À domicile' },
                   { id: 'agency', label: 'En agence' },
-                  { id: 'vault', label: 'Garder en coffre' },
+                  { id: 'vault', label: 'Coffre sécurisé' },
                 ] as const
               ).map((m) => (
                 <Pressable
