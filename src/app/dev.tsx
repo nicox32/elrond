@@ -13,6 +13,7 @@ import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
 import { barSummary } from '../logic/barControl';
 import { reopenChildParents } from '../logic/childRules';
+import { registerTap, type TapState } from '../logic/devTap';
 import { resetVaults } from '../logic/ledger';
 import { COMPANY, type CompanyPeriod, companyReport } from '../logic/company';
 import { formatEur } from '../logic/format';
@@ -26,14 +27,14 @@ const pct = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractio
 
 /**
  * « Espace DEV » : réservé à la société. Pour les clients, l'écran affiche seulement « Inopérant pour les clients » ;
- * six appuis rapides sur ce texte ouvrent l'accès, protégé par son propre code.
+ * six appuis rapides (1,5 s au plus entre deux) sur ce texte ouvrent l'accès, protégé par son propre code.
  */
 export default function DevScreen() {
   const account = useAccount();
   const { updateSettings } = useBank();
   const [unlocked, setUnlocked] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const taps = useRef<number[]>([]);
+  const taps = useRef<TapState>({ count: 0, last: 0 });
   const [asking, setAsking] = useState(false);
   const [code, setCode] = useState('');
   const [code2, setCode2] = useState('');
@@ -41,19 +42,22 @@ export default function DevScreen() {
 
   if (unlocked) return <CompanyDashboard />;
 
-  // Les clients ne voient que cette phrase. Six appuis, chacun dans la seconde qui suit le précédent, ouvrent l'accès.
+  // Les clients ne voient que cette phrase. Six appuis, chacun dans la seconde et demie qui suit le précédent, ouvrent l'accès.
   if (!revealed) {
     const tap = () => {
-      const now = Date.now();
-      taps.current = [...taps.current.filter((t) => now - t < 1000), now];
-      if (taps.current.length >= 6) {
-        taps.current = [];
-        setRevealed(true);
-      }
+      const r = registerTap(taps.current, Date.now());
+      taps.current = r.state;
+      if (r.opened) setRevealed(true);
     };
     return (
       <Screen testID="screen-dev">
-        <Pressable onPress={tap} accessibilityRole="text" testID="dev-inoperative" style={styles.inoperative}>
+        <Pressable
+          onPress={tap}
+          accessibilityRole="button"
+          accessibilityLabel="Inopérant pour les clients"
+          testID="dev-inoperative"
+          style={styles.inoperative}
+        >
           <Text style={styles.inoperativeText}>Inopérant pour les clients</Text>
         </Pressable>
       </Screen>
@@ -319,7 +323,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 }
 
 const styles = StyleSheet.create({
-  inoperative: { flex: 1, minHeight: 240, alignItems: 'center', justifyContent: 'center' },
+  inoperative: { minHeight: 320, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   inoperativeText: { color: colors.textMuted, fontSize: 16 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   label: { color: colors.textMuted, fontSize: 13, flexShrink: 1 },
