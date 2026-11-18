@@ -403,6 +403,7 @@ function ControlForm({ bar, onDone, onCancel }: { bar: HomeBar; onDone: () => vo
   const [thickness, setThickness] = useState('');
   const [diameter, setDiameter] = useState('');
   const [veriscan, setVeriscan] = useState(false);
+  const [blister, setBlister] = useState(!p.coin);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const input: ControlInput = {
@@ -415,6 +416,7 @@ function ControlForm({ bar, onDone, onCancel }: { bar: HomeBar; onDone: () => vo
     thickness: parseAmount(thickness),
     diameter: parseAmount(diameter),
     veriscan,
+    blister: blister && !p.coin,
   };
   const lines = evaluateControl(bar, input, toleranceOf(account));
   const allOk = lines.every((l) => l.ok);
@@ -446,13 +448,25 @@ function ControlForm({ bar, onDone, onCancel }: { bar: HomeBar; onDone: () => vo
             />
           ) : null}
         </View>
+        {!p.coin ? (
+          <Check
+            on={blister}
+            onChange={setBlister}
+            title="Lingotin sous blister scellé (non ouvert)"
+            sub="Ne l’ouvrez pas : la carte fait foi. Pesée avec la carte, indicative ; pas de dimensions."
+          />
+        ) : null}
         <Field
-          label={`Poids mesuré (g) · attendu ${g(expectedWeight(bar))} g`}
+          label={
+            blister && !p.coin
+              ? `Poids avec blister (g) · lingotin seul ${g(expectedWeight(bar))} g + carte ≈ 5 à 7 g`
+              : `Poids mesuré (g) · attendu ${g(expectedWeight(bar))} g`
+          }
           value={weight}
           onChange={setWeight}
           numeric
         />
-        {spec?.diameterMm ? (
+        {blister && !p.coin ? null : spec?.diameterMm ? (
           <Field
             label={`Diamètre (mm) · attendu ${g(spec.diameterMm)}`}
             value={diameter}
@@ -483,7 +497,11 @@ function ControlForm({ bar, onDone, onCancel }: { bar: HomeBar; onDone: () => vo
         ))}
       </Card>
       {allOk ? (
-        <Banner tone="gold" icon="⚖" title={`Poids de référence : ${g(input.weight)} g`}>
+        <Banner
+          tone="gold"
+          icon="⚖"
+          title={`Poids de référence : ${g(input.weight)} g${blister && !p.coin ? ' (avec blister)' : ''}`}
+        >
           Enregistré à la validation : il servira aux recontrôles.
         </Banner>
       ) : (
@@ -517,10 +535,16 @@ function RecheckForm({ bar, onDone, onCancel }: { bar: HomeBar; onDone: () => vo
       <Button title="← Annuler" variant="ghost" onPress={onCancel} />
       <Text style={styles.name}>Recontrôle : {label(bar)}</Text>
       <Hint>
-        N° {bar.serial ?? '—'} · poids de référence {g(ref)} g (marge ±{g(wTol)} g)
+        N° {bar.serial ?? '—'} · poids de référence {g(ref)} g{bar.weightRefBlister ? ' avec blister' : ''} (marge ±
+        {g(wTol)} g)
       </Hint>
       <Card style={{ gap: 10 }}>
-        <Field label="Nouvelle pesée (g)" value={weight} onChange={setWeight} numeric />
+        <Field
+          label={bar.weightRefBlister ? 'Nouvelle pesée avec blister (g)' : 'Nouvelle pesée (g)'}
+          value={weight}
+          onChange={setWeight}
+          numeric
+        />
       </Card>
       {Number.isFinite(w) ? (
         ok ? (

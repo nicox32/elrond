@@ -215,3 +215,42 @@ test('pesée d’un lingot de 5 g : jamais sous 5,00 g (à la marge de la balanc
   assert.equal(weightOk(4.98), false); // sous le poids nominal : rejet
   assert.equal(weightOk(5.2), false); // trop lourd : suspect
 });
+
+test('lingotin sous blister scellé : pesée avec la carte indicative, pas de dimensions, VERISCAN exigé', () => {
+  const a = withBars();
+  const bar10 = a.homeVault!.find((b) => b.grams === 10)!;
+  const tol = toleranceOf(a);
+  const sealed = {
+    sealed: true,
+    serialBar: 'C000009',
+    serialCard: 'C000009',
+    weight: 16.2,
+    veriscan: true,
+    blister: true,
+  };
+  const lines = evaluateControl(bar10, sealed, tol);
+  assert.deepEqual(
+    lines.map((l) => l.key),
+    ['seal', 'format', 'serial', 'weight', 'veriscan'],
+  );
+  assert.ok(
+    lines.every((l) => l.ok),
+    JSON.stringify(lines),
+  );
+  // Plus léger que le lingotin seul : impossible, donc refusé. VERISCAN absent : refusé.
+  assert.equal(evaluateControl(bar10, { ...sealed, weight: 9.5 }, tol).find((l) => l.key === 'weight')!.ok, false);
+  assert.equal(
+    evaluateControl(bar10, { ...sealed, veriscan: false }, tol).find((l) => l.key === 'veriscan')!.ok,
+    false,
+  );
+  // Poids inhabituel : signalé mais pas refusé.
+  const odd = evaluateControl(bar10, { ...sealed, weight: 22 }, tol).find((l) => l.key === 'weight')!;
+  assert.equal(odd.ok, true);
+  assert.match(odd.detail, /hors de l’ordre habituel/);
+  const r = recordControl(a, bar10.id, sealed, new Date('2026-11-21T12:00:00'));
+  const done = r.homeVault!.find((b) => b.id === bar10.id)!;
+  assert.equal(done.weightRef, 16.2);
+  assert.equal(done.weightRefBlister, true);
+  assert.equal(done.checks![0].blister, true);
+  assert.equal(barState(done), 'ok');
+});

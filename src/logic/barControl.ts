@@ -47,7 +47,12 @@ export interface ControlInput {
   diameter?: number;
   /** Contrôle VERISCAN fait avec l'application de PAMP, conforme. */
   veriscan?: boolean;
+  /** Lingotin sous blister scellé, non ouvert : pesée avec la carte (indicative), dimensions non mesurées. */
+  blister?: boolean;
 }
+
+/** Poids habituel d'une carte CertiPAMP : environ 5 à 7 g, sans norme officielle. */
+export const BLISTER_GRAMS = { min: 4, max: 8 } as const;
 
 export interface CheckLine {
   key: string;
@@ -99,6 +104,30 @@ export function evaluateControl(bar: HomeBar, input: ControlInput, tol: Toleranc
     });
   }
   const expected = expectedWeight(bar);
+  if (input.blister && !p.coin) {
+    // Sous blister : on ne verdicte pas la pesée (le poids de la carte n'est pas normé), on la garde comme référence.
+    const w = input.weight;
+    const usual = w >= expected + BLISTER_GRAMS.min && w <= expected + BLISTER_GRAMS.max;
+    lines.push({
+      key: 'weight',
+      label: 'Pesée avec blister (indicative)',
+      ok: num(w) && w >= expected,
+      detail: !num(w)
+        ? 'Indiquez le poids mesuré'
+        : w < expected
+          ? `${g(w)} g : moins que le lingotin seul (${g(expected)} g)`
+          : `${g(w)} g avec la carte${usual ? '' : ' · hors de l’ordre habituel (carte de 5 à 7 g, sans norme officielle)'}`,
+    });
+    if (p.spec?.veriscan) {
+      lines.push({
+        key: 'veriscan',
+        label: 'VERISCAN fait avec l’appli PAMP',
+        ok: !!input.veriscan,
+        detail: input.veriscan ? 'Conforme' : 'À cocher après le scan',
+      });
+    }
+    return lines;
+  }
   const wTol = p.coin ? Math.max(tol.weightG, COIN_MIN_WEIGHT_TOL) : tol.weightG;
   if (num(input.weight)) {
     const d = input.weight - expected;
@@ -240,6 +269,7 @@ export function recordControl(account: Account, barId: string, input: ControlInp
     measures: { length: input.length, width: input.width, thickness: input.thickness, diameter: input.diameter },
     ok: failed.length === 0,
     ...(failed.length ? { failed } : {}),
+    ...(input.blister && !p.coin ? { blister: true } : {}),
   };
   return update(account, barId, (b) => ({
     ...b,
@@ -247,6 +277,7 @@ export function recordControl(account: Account, barId: string, input: ControlInp
     status: 'received',
     receivedAt: b.receivedAt ?? now.toISOString(),
     weightRef: input.weight,
+    ...(input.blister && !p.coin ? { weightRefBlister: true } : { weightRefBlister: undefined }),
     checks: [...(b.checks ?? []), check],
   }));
 }

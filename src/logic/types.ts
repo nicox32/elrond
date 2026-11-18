@@ -221,6 +221,8 @@ export interface HomeBar {
   txId: string;
   /** Poids de référence mesuré à la réception (g) : sert aux recontrôles par pesée. */
   weightRef?: number;
+  /** Le poids de référence a été pris avec le blister (lingotin scellé, jamais ouvert). */
+  weightRefBlister?: boolean;
   /** Contrôles faits sur cet objet (réception, recontrôles, levée d'anomalie), du plus ancien au plus récent. */
   checks?: BarCheck[];
   /** D'où vient l'objet : stock de la société, coffre professionnel, ou commande chez le revendeur. */
@@ -316,6 +318,8 @@ export interface BarCheck {
   ok: boolean;
   /** Vérifications non conformes. */
   failed?: string[];
+  /** Contrôle fait sous blister scellé : pesée avec la carte, dimensions non mesurées. */
+  blister?: boolean;
   note?: string;
 }
 
