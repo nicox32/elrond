@@ -3,6 +3,7 @@ import { Alert, Platform, StyleSheet, Text } from 'react-native';
 
 import { pickBackup, shareBackup } from '../backup';
 import { backupFileName, BackupError, makeBackup, readBackup } from '../logic/backup';
+import { childStage, childToAdultAccount } from '../logic/childRules';
 import { formatDate } from '../logic/format';
 import type { Account } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
@@ -19,7 +20,9 @@ function notify(title: string, message: string) {
 export function BackupCard() {
   const account = useAccount();
   const { updateAccount } = useBank();
-  const [pending, setPending] = useState<{ account: Account; exportedAt: string } | null>(null);
+  const [pending, setPending] = useState<{ account: Account; exportedAt: string; adultOf?: string } | null>(null);
+  // Sauvegarde contenant un enfant devenu majeur : on demande ce qu'il faut restaurer.
+  const [choose, setChoose] = useState<{ account: Account; exportedAt: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function exportNow() {
@@ -37,7 +40,10 @@ export function BackupCard() {
     try {
       const text = await pickBackup();
       if (text === null) return;
-      setPending(readBackup(text));
+      const backup = readBackup(text);
+      const grown = backup.account.children.some((c) => childStage(c) !== 'minor');
+      if (grown) setChoose(backup);
+      else setPending(backup);
     } catch (e) {
       notify('Restauration impossible', e instanceof BackupError ? e.message : 'Le fichier n’a pas pu être lu.');
     }
@@ -53,13 +59,53 @@ export function BackupCard() {
       </Hint>
       <Button title={busy ? 'Préparation…' : 'Exporter une sauvegarde'} onPress={exportNow} disabled={busy} />
       <Button title="Restaurer une sauvegarde" variant="ghost" onPress={restore} />
+      {choose && (
+        <Card style={{ gap: 8 }}>
+          <Text style={styles.title}>Que voulez-vous restaurer ?</Text>
+          <Hint>
+            Cette sauvegarde contient un compte enfant dont l’enfant est devenu majeur. Vous pouvez l’ouvrir comme
+            compte adulte à son nom : son or, son historique et ses lingotins le suivent.
+          </Hint>
+          {choose.account.children
+            .filter((c) => childStage(c) !== 'minor')
+            .map((c) => (
+              <Button
+                key={c.id}
+                title={`Ouvrir le compte de ${c.name} comme compte adulte`}
+                onPress={() => {
+                  try {
+                    setPending({
+                      account: childToAdultAccount(choose.account, c.id),
+                      exportedAt: choose.exportedAt,
+                      adultOf: c.name,
+                    });
+                    setChoose(null);
+                  } catch (e) {
+                    notify('Impossible', e instanceof Error ? e.message : 'Le compte n’a pas pu être ouvert.');
+                  }
+                }}
+              />
+            ))}
+          <Button
+            title="Restaurer tout le compte tel quel"
+            variant="ghost"
+            onPress={() => {
+              setPending(choose);
+              setChoose(null);
+            }}
+          />
+          <Button title="Annuler" variant="ghost" onPress={() => setChoose(null)} />
+        </Card>
+      )}
       <PinConfirm
         visible={!!pending}
         summary={
           pending
-            ? `Remplacer le compte actuel par la sauvegarde${
-                pending.exportedAt ? ` du ${formatDate(pending.exportedAt)}` : ''
-              } (${pending.account.transactions.length} opérations). Votre code actuel est gardé.`
+            ? pending.adultOf
+              ? `Remplacer le compte actuel par le compte adulte de ${pending.adultOf} (${pending.account.transactions.length} opérations). Votre code actuel est gardé.`
+              : `Remplacer le compte actuel par la sauvegarde${
+                  pending.exportedAt ? ` du ${formatDate(pending.exportedAt)}` : ''
+                } (${pending.account.transactions.length} opérations). Votre code actuel est gardé.`
             : ''
         }
         onConfirm={() => {
@@ -67,7 +113,12 @@ export function BackupCard() {
           setPending(null);
           if (next) {
             updateAccount(() => next);
-            notify('Sauvegarde restaurée', 'Votre compte a été remis tel qu’il était lors de la sauvegarde.');
+            notify(
+              'Sauvegarde restaurée',
+              pending?.adultOf
+                ? `Le compte de ${pending.adultOf} est maintenant un compte adulte à son nom.`
+                : 'Votre compte a été remis tel qu’il était lors de la sauvegarde.',
+            );
           }
         }}
         onCancel={() => setPending(null)}

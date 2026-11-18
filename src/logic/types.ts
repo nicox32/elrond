@@ -392,6 +392,8 @@ export interface Account extends Wallet {
   holder: string;
   /** Identifiant membre, utilisé pour recevoir des virements de métal. */
   memberId: string;
+  /** Ancien n° de membre du compte enfant, quand ce compte adulte en est issu (à la majorité). */
+  formerMemberNumber?: string;
   iban: string;
   beneficiaries: Beneficiary[];
   children: ChildAccount[];

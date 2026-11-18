@@ -6,6 +6,7 @@
  * - à 18 ans, le compte devient celui de l'enfant : le parent ne le gère plus et le lui transfère.
  */
 import {
+  createAccount,
   getChild,
   LedgerError,
   majorityDate,
@@ -243,4 +244,37 @@ export function transferChildAccount(account: Account, childId: string, now = ne
       r.status === 'pending' ? { ...r, status: 'cancelled' as const, decidedAt: now.toISOString() } : r,
     ),
   });
+}
+
+/**
+ * À la majorité de l'enfant : son compte enfant (retrouvé dans une sauvegarde, par exemple après une réinstallation)
+ * devient un compte adulte à son nom. Son or, son historique, ses prix d'achat d'origine (donc sa durée de détention)
+ * et ses lingotins suivent ; il n'a plus de parents ni de blocage. Les frais d'un adulte s'appliquent à partir du mois
+ * suivant, sans rien rattraper. Refusé avant les 18 ans.
+ */
+export function childToAdultAccount(account: Account, childId: string, now = new Date()): Account {
+  const child = getChild(account, childId);
+  const stage = childStage(child, now);
+  if (stage === 'minor') {
+    throw new LedgerError(`${child.name} n’a pas encore 18 ans : son compte reste un compte enfant.`);
+  }
+  const base = createAccount(child.name, now);
+  const majority = child.birthDate ? majorityDate(child.birthDate) : null;
+  const bars = (account.homeVault ?? [])
+    .filter((b) => b.ownerChildId === child.id)
+    .map((b) => {
+      const { ownerChildId: _o, lockedUntil: _l, ...rest } = b;
+      return rest;
+    });
+  return {
+    ...base,
+    createdAt: child.createdAt,
+    holdings: { ...child.holdings },
+    transactions: child.transactions,
+    formerMemberNumber: child.memberNumber,
+    custodyChargedThrough: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(),
+    ...(majority ? { dormancyNotBefore: majority.toISOString() } : {}),
+    ...(child.dormancyChargedThrough ? { dormancyChargedThrough: child.dormancyChargedThrough } : {}),
+    ...(bars.length ? { homeVault: bars } : {}),
+  };
 }

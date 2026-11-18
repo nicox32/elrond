@@ -50,6 +50,9 @@ export default function ProfileScreen() {
       <Card style={{ gap: 10 }}>
         <Row label="Titulaire" value={account.holder} />
         <Row label="N° de membre" value={account.memberId} />
+        {account.formerMemberNumber ? (
+          <Row label="Ancien n° (compte enfant)" value={account.formerMemberNumber} />
+        ) : null}
         <Row label="IBAN" value={account.iban} />
         <Row label="Compte ouvert le" value={formatDate(account.createdAt)} />
       </Card>

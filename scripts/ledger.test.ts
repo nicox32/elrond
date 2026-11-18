@@ -1542,3 +1542,66 @@ test('choix des parents : verrouillé une fois fait, rouvert seulement par la so
   const again = setChildParents(reopened, id, 'sole');
   assert.equal(parentsEditable(again.children[0]), false); // et il se verrouille à nouveau après le nouveau choix
 });
+
+test('sauvegarde d’un compte enfant à la majorité : reconnu comme compte adulte, or et lingotins compris', async () => {
+  const { addChild, fundChild, migrateAccount } = await import('../src/logic/ledger.ts');
+  const { childToAdultAccount } = await import('../src/logic/childRules.ts');
+  const { makeBackup, readBackup } = await import('../src/logic/backup.ts');
+  const t0 = new Date('2026-06-01T10:00:00');
+  let acc = buy(createAccount('Nicolas', new Date('2020-01-01')), prices, 'gold', { unit: 'g', value: 50 }, t0);
+  const r = addChild(acc, 'Théo', '2008-12-01', t0); // majeur le 1er décembre 2026
+  acc = fundChild(r.account, prices, r.child.id, 'gold', { unit: 'g', value: 20 }, t0);
+  const id = r.child.id;
+  const kid = acc.children[0].memberNumber;
+  acc = {
+    ...acc,
+    homeVault: [
+      {
+        id: 'b1',
+        product: 'g5',
+        grams: 5,
+        orderedAt: '2026-06-02T10:00:00.000Z',
+        status: 'received',
+        cost: 500,
+        acquiredFrom: '2026-06-01T10:00:00.000Z',
+        acquiredTo: '2026-06-01T10:00:00.000Z',
+        txId: 't',
+        ownerChildId: id,
+        lockedUntil: '2026-12-01T00:00:00.000Z',
+        vault: true,
+      },
+      {
+        id: 'b2',
+        product: 'g10',
+        grams: 10,
+        orderedAt: '2026-06-02T10:00:00.000Z',
+        status: 'received',
+        cost: 1000,
+        acquiredFrom: '2026-06-01T10:00:00.000Z',
+        acquiredTo: '2026-06-01T10:00:00.000Z',
+        txId: 't',
+      },
+    ] as any,
+  };
+  // Une sauvegarde passe par un fichier, comme à la réinstallation.
+  const restored = readBackup(makeBackup(acc)).account;
+  // Avant les 18 ans : refusé.
+  assert.throws(() => childToAdultAccount(restored, id, new Date('2026-11-01')), /pas encore 18 ans/);
+  const now = new Date('2026-12-15T10:00:00');
+  const adult = childToAdultAccount(restored, id, now);
+  assert.equal(adult.holder, 'Théo');
+  assert.equal(adult.holdings.gold, 20);
+  assert.equal(adult.children.length, 0);
+  assert.match(adult.memberId, /^OV-M-/);
+  assert.equal(adult.formerMemberNumber, kid);
+  assert.equal(adult.createdAt, restored.children[0].createdAt);
+  assert.equal(adult.transactions.length, restored.children[0].transactions.length);
+  // Seul le lingotin de l'enfant le suit, devenu un lingotin ordinaire (plus de propriétaire ni de blocage).
+  assert.equal(adult.homeVault!.length, 1);
+  assert.equal(adult.homeVault![0].id, 'b1');
+  assert.equal(adult.homeVault![0].ownerChildId, undefined);
+  assert.equal(adult.homeVault![0].lockedUntil, undefined);
+  // Pas de frais rétroactifs : la garde commence au mois suivant.
+  assert.equal(new Date(adult.custodyChargedThrough!).getMonth(), 11);
+  assert.ok(migrateAccount(JSON.parse(JSON.stringify(adult))));
+});
