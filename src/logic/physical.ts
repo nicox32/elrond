@@ -802,6 +802,7 @@ export const GODOT_AGENCIES: { name: string; address?: string }[] = [
   { name: 'Paris 14', address: '33 avenue du Général Leclerc, 75014' },
   { name: 'Paris 15', address: '17 rue Cambronne, 75015' },
   { name: 'Aix-en-Provence', address: '33 rue Espariat, 13100' },
+  { name: 'Albi' },
   { name: 'Alès', address: '25 rue Taisson, 30100' },
   { name: 'Amiens', address: '11 rue Noyon, 80000' },
   { name: 'Angers', address: '5 rue d’Alsace, 49100' },
