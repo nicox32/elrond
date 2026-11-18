@@ -8,8 +8,13 @@ import { accountValue } from './ledger.ts';
 import { type Account, type Metal, METALS, type Prices, type Transaction } from './types.ts';
 
 export const COMPANY = {
-  /** Garde en port franc et assurance, par an, en part des stocks de chaque métal (l'argent, encombrant, coûte plus). */
-  custodyYearly: { gold: 0.001, silver: 0.003, platinum: 0.0012 } as Record<Metal, number>,
+  /**
+   * Garde chez Godot & Fils (GardienOr, stockage en France) : 0,04 € par mois et par gramme d'or (0,48 € par an),
+   * 0,005 € par mois pour l'argent (0,06 € par an). Tarif public : un tarif professionnel est à négocier.
+   */
+  custodyPerGramYear: { gold: 0.48, silver: 0.06 } as Partial<Record<Metal, number>>,
+  /** Garde des métaux sans tarif au gramme connu (platine), par an, en part de leur valeur. */
+  custodyYearly: { gold: 0, silver: 0, platinum: 0.0012 } as Record<Metal, number>,
   /** Commission versée par le commerçant sur un paiement par carte (plafond européen d'une carte de débit). */
   interchange: 0.002,
   /** Vérification d'identité et anti-blanchiment, par compte ouvert. */
@@ -89,7 +94,15 @@ export function companyReport(
     custody:
       wallets.reduce(
         (s, w) =>
-          s + METALS.reduce((m, metal) => m + accountValue(w, prices).byMetal[metal] * COMPANY.custodyYearly[metal], 0),
+          s +
+          METALS.reduce(
+            (m, metal) =>
+              m +
+              (COMPANY.custodyPerGramYear[metal] !== undefined
+                ? w.holdings[metal] * (COMPANY.custodyPerGramYear[metal] ?? 0)
+                : accountValue(w, prices).byMetal[metal] * COMPANY.custodyYearly[metal]),
+            0,
+          ),
         0,
       ) * years,
     kyc: accountsOpened * COMPANY.kycPerAccount,

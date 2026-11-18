@@ -186,7 +186,7 @@ function CompanyDashboard() {
       <SectionTitle>Coûts</SectionTitle>
       <Card style={{ gap: 6 }}>
         <Row
-          label={`Garde en port franc et assurance (or ${pct(COMPANY.custodyYearly.gold)}, argent ${pct(COMPANY.custodyYearly.silver)}, platine ${pct(COMPANY.custodyYearly.platinum)} par an, sur ${formatEur(r.assets)})`}
+          label={`Garde chez Godot & Fils (or ${COMPANY.custodyPerGramYear.gold} € par gramme et par an, argent ${COMPANY.custodyPerGramYear.silver} €, platine ${pct(COMPANY.custodyYearly.platinum)} de sa valeur, sur ${formatEur(r.assets)})`}
           value={formatEur(r.costs.custody)}
         />
         <Row
