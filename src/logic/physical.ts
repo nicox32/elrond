@@ -187,7 +187,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 3 508,47 €, frais 182,03 € = 5,19 % ; 7 € de livraison.
     // Facturée 6 % : environ 0,8 point de marge (≈ 28 €), moins les 7 € de livraison offerte dès 20 g.
     premium: 0.06,
-    vendorPremium: 0.0409, // Godot & Fils, 18/11/2026 : 3 620 € pour 3 477,62 € d'or
+    vendorPremium: 0.0401, // Godot & Fils, 18/11/2026 : 3 620 € pour 3 477,62 € d'or
     vendorTiers: [
       { from: 10, off: 0.0027 },
       { from: 20, off: 0.0053 },
@@ -208,7 +208,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Napoléon 20 F (5,81 g d’or fin)',
     grams: NAPOLEON_FINE_GRAMS,
     premium: 0.075,
-    vendorPremium: 0.0528, // Godot & Fils, 18/11/2026 : 683,50 € pour 649,21 € d'or
+    vendorPremium: 0.0505, // Godot & Fils, 18/11/2026 : 683,50 € pour 649,21 € d'or
     vendorTiers: [
       { from: 10, off: 0.0015 },
       { from: 50, off: 0.0023 },
