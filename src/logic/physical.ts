@@ -500,7 +500,7 @@ export function withdrawPhysical(
         acquiredTo: t.to,
         txId: tx.id,
         ...(agency ? { pickupAgency: agency } : {}),
-        ...(vault ? { vault: true, place: 'autre' as const, placeNote: CHILD_STORAGE_NOTE } : {}),
+        ...(vault ? { vault: true, place: 'coffre' as const, placeNote: CHILD_STORAGE_NOTE } : {}),
       });
     }
   }
@@ -668,33 +668,73 @@ export function giveBarToChild(
 
 export type BarPlace = NonNullable<HomeBar['place']>;
 export const PLACE_LABEL: Record<BarPlace, string> = {
+  orvia: 'Stock Orvia',
+  coffre: 'Godot & Fils · coffre sécurisé',
+  agence: 'Godot & Fils · agence',
+  route: 'En préparation ou en route',
+  client: 'Chez le client',
+  autre: 'Autre lieu',
+  // Anciennes valeurs, encore lues mais plus proposées.
   maison: 'Chez vous',
   banque: 'Coffre en banque',
-  autre: 'Autre lieu',
 };
+/** Lieux proposés au choix (le lieu « automatique » s'ajoute devant). */
+export const PLACE_CHOICES: BarPlace[] = ['orvia', 'coffre', 'agence', 'route', 'client', 'autre'];
 
-/** Lieu où est gardé l'objet, en clair : « Chez vous », « Coffre en banque · Crédit X »… */
-export function placeLabel(b: Pick<HomeBar, 'place' | 'placeNote'>): string {
-  const base = PLACE_LABEL[b.place ?? 'maison'];
-  const note = b.placeNote?.trim();
+type PlaceFacts = Pick<HomeBar, 'place' | 'placeNote'> &
+  Partial<Pick<HomeBar, 'status' | 'vault' | 'exitedAt' | 'exitRequest' | 'pickupAgency'>>;
+
+/** Lieu déduit de l'état du lingotin, quand personne ne l'a choisi à la main. */
+export function autoPlace(b: PlaceFacts): BarPlace {
+  if (b.vault && !b.exitedAt) {
+    if (b.exitRequest) return b.exitRequest.mode === 'agency' ? 'agence' : 'route';
+    return 'coffre';
+  }
+  if (b.status === 'received') return 'client';
+  if (b.status === 'preparing') return b.pickupAgency ? 'agence' : 'route';
+  return 'orvia';
+}
+
+/** Lieu en vigueur : celui choisi à la main, sinon celui déduit de l'état. */
+export function effectivePlace(b: PlaceFacts): BarPlace {
+  return b.place ?? autoPlace(b);
+}
+
+/** Lieu où est gardé l'objet, en clair : « Godot & Fils · coffre sécurisé », « Godot & Fils · agence · Albi »… */
+export function placeLabel(b: PlaceFacts): string {
+  const place = effectivePlace(b);
+  const base = PLACE_LABEL[place];
+  const note =
+    b.placeNote?.trim() ||
+    (!b.place && place === 'agence' ? (b.exitRequest?.agency ?? b.pickupAgency)?.trim() : undefined);
   if (!note) return base;
-  return b.place === 'autre' ? note : `${base} · ${note}`;
+  return place === 'autre' ? note : `${base} · ${note}`;
 }
 
 /** Change le lieu de garde d'un lingotin ou d'une pièce (chez vous, coffre en banque, ailleurs). */
 export function setBarPlace(
   account: Account,
   barId: string,
-  place: BarPlace,
+  place: BarPlace | 'auto',
   note?: string,
   now = new Date(),
 ): Account {
   const found = (account.homeVault ?? []).find((b) => b.id === barId);
   if (!found) throw new LedgerError('Lingotin introuvable.');
-  if (isLocked(found, now) && (place !== (found.place ?? 'maison') || (note ?? '') !== (found.placeNote ?? ''))) {
+  if (isLocked(found, now) && (place !== (found.place ?? 'auto') || (note ?? '') !== (found.placeNote ?? ''))) {
     throw new LedgerError('Sécurité maximale : ce lingotin ne peut pas être déplacé avant la majorité de l’enfant.');
   }
   const clean = note?.trim().slice(0, 80);
+  if (place === 'auto') {
+    return {
+      ...account,
+      homeVault: (account.homeVault ?? []).map((b) => {
+        if (b.id !== barId) return b;
+        const { place: _p, placeNote: _n, ...rest } = b;
+        return rest;
+      }),
+    };
+  }
   return {
     ...account,
     homeVault: (account.homeVault ?? []).map((b) => {
@@ -799,7 +839,7 @@ export function convertChildToBars(
         ownerChildId: child.id,
         giftedAt: now.toISOString(),
         giftValue: Math.round(l.product.grams * prices.gold * 100) / 100,
-        place: 'autre',
+        place: 'coffre',
         placeNote: CHILD_STORAGE_NOTE,
         vault: true,
         ...(lock && majority ? { lockedUntil: majority.toISOString() } : {}),
@@ -1006,7 +1046,7 @@ export function confirmVaultExit(account: Account, barId: string, now = new Date
     homeVault: (account.homeVault ?? []).map((b) => {
       if (b.id !== barId) return b;
       const { exitRequest: _e, placeNote: _n, vault: _v, ...rest } = b;
-      return { ...rest, place: 'maison' as const, exitedAt: now.toISOString() };
+      return { ...rest, place: 'client' as const, exitedAt: now.toISOString() };
     }),
   };
 }

@@ -3,7 +3,16 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatDate, formatEur } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
-import { type BarPlace, barsOfChild, giveBarToChild, PLACE_LABEL, placeLabel, productOf } from '../logic/physical';
+import {
+  type BarPlace,
+  barsOfChild,
+  effectivePlace,
+  giveBarToChild,
+  PLACE_CHOICES,
+  PLACE_LABEL,
+  placeLabel,
+  productOf,
+} from '../logic/physical';
 import type { ChildAccount, HomeBar } from '../logic/types';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
@@ -32,12 +41,7 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
     setPicked(null);
     setConfirm(false);
     try {
-      commit((a, p) =>
-        giveBarToChild(a, p, bar.id, child.id, new Date(), {
-          place: place ?? bar.place ?? 'maison',
-          note: place ? note : bar.placeNote,
-        }),
-      );
+      commit((a, p) => giveBarToChild(a, p, bar.id, child.id, new Date(), place ? { place, note } : undefined));
       setMsg({
         ok: true,
         text: `${name(bar)} donné à ${child.name}. Gardé : ${placeLabel({ place: place ?? bar.place, placeNote: place ? note : bar.placeNote }).toLowerCase()}. Le don est inscrit dans ses dons, à déclarer en ligne.`,
@@ -50,9 +54,9 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
   return (
     <>
       <Hint>
-        Le lingotin reste où il est (chez vous, ou dans un coffre en banque) : seule sa propriété, son numéro de série,
-        est cédée à {child.name}. Le don est compté à la valeur de l’or du jour dans ses dons et dans l’abattement de
-        100 000 € (déclaration en ligne).
+        Le lingotin reste où il est (chez Godot & Fils, chez le client ou ailleurs) : seule sa propriété, son numéro de
+        série, est cédée à {child.name}. Le don est compté à la valeur de l’or du jour dans ses dons et dans
+        l’abattement de 100 000 € (déclaration en ligne).
       </Hint>
 
       {owned.length > 0 && (
@@ -113,8 +117,8 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
             <View style={{ gap: 6 }}>
               <Text style={styles.sub}>Où est gardé ce lingotin ?</Text>
               <View style={styles.chips}>
-                {(Object.keys(PLACE_LABEL) as BarPlace[]).map((k) => {
-                  const on = (place ?? picked.place ?? 'maison') === k;
+                {PLACE_CHOICES.map((k) => {
+                  const on = (place ?? effectivePlace(picked)) === k;
                   return (
                     <Pressable
                       key={k}
@@ -128,7 +132,7 @@ export function ChildBarGifts({ child }: { child: ChildAccount }) {
                   );
                 })}
               </View>
-              {(place ?? picked.place ?? 'maison') !== 'maison' && (
+              {(place ?? effectivePlace(picked)) !== 'orvia' && (
                 <TextInput
                   value={note}
                   onChangeText={setNote}

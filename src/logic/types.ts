@@ -225,8 +225,11 @@ export interface HomeBar {
   lotId?: string;
   /** Numéro de série prévu par le stock (à confirmer à la réception). */
   expectedSerial?: string;
-  /** Où il est gardé : chez vous (défaut), dans un coffre en banque, ou ailleurs (précisé dans placeNote). */
-  place?: 'maison' | 'banque' | 'autre';
+  /**
+   * Où il est gardé, choisi à la main. Absent : le lieu suit automatiquement l'état du lingotin (préparation, coffre
+   * sécurisé, agence, remis). « maison » et « banque » sont d'anciennes valeurs, encore lues.
+   */
+  place?: 'maison' | 'banque' | 'orvia' | 'coffre' | 'agence' | 'route' | 'client' | 'autre';
   /** Précision du lieu : nom de la banque, adresse, proche… */
   placeNote?: string;
   /** Sécurité maximale : ni déplacé ni vendu avant cette date (la majorité de l'enfant), ISO. */

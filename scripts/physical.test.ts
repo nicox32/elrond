@@ -453,7 +453,7 @@ test('retrait d’un lingotin gardé en coffre : à domicile (12 €) ou en agen
   const bar = out.homeVault!.find((b) => b.id === b5)!;
   assert.equal(bar.vault, undefined);
   assert.equal(bar.exitRequest, undefined);
-  assert.equal(bar.place, 'maison');
+  assert.equal(bar.place, 'client');
   assert.ok(bar.exitedAt);
   // Un lingotin d'enfant n'est jamais livré.
   const child = { ...acc, homeVault: acc.homeVault!.map((b) => (b.id === b5 ? { ...b, ownerChildId: 'c1' } : b)) };

@@ -108,7 +108,7 @@ function BarCard({
   goldPrice: number;
   onReceive: (s: string) => void;
   onRemove: () => void;
-  onPlace: (place: BarPlace, note?: string) => void;
+  onPlace: (place: BarPlace | 'auto', note?: string) => void;
   onExitRequest: (mode: 'home' | 'agency', agency?: string) => void;
   onExitConfirm: () => void;
 }) {

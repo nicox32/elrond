@@ -149,29 +149,47 @@ test('don d’un lingotin à un enfant : il reste chez le parent, seule la propr
   assert.equal(barsOfChild(g, childId)[0].acquiredFrom, b10.acquiredFrom);
 });
 
-test('lieu de garde d’un lingotin : chez vous, coffre en banque, ailleurs', async () => {
-  const { giveBarToChild, setBarPlace, placeLabel, PLACE_LABEL } = await import('../src/logic/physical.ts');
+test('lieu de garde d’un lingotin : automatique selon l’état, ou choisi à la main', async () => {
+  const { giveBarToChild, setBarPlace, placeLabel, PLACE_CHOICES, PLACE_LABEL, autoPlace } =
+    await import('../src/logic/physical.ts');
   const { addChild } = await import('../src/logic/ledger.ts');
   const { barQrText } = await import('../src/logic/homeVaultDoc.ts');
   let a = withdrawPhysical(base(), p, { g10: 1 }, new Date('2026-11-16T12:00:00'));
   const id = a.homeVault![0].id;
+  assert.deepEqual(
+    PLACE_CHOICES.map((k) => PLACE_LABEL[k]),
+    [
+      'Stock Orvia',
+      'Godot & Fils · coffre sécurisé',
+      'Godot & Fils · agence',
+      'En préparation ou en route',
+      'Chez le client',
+      'Autre lieu',
+    ],
+  );
+  // Automatique : en préparation = en route ; reçu = chez le client.
+  assert.equal(autoPlace(a.homeVault![0]), 'route');
+  assert.equal(placeLabel(a.homeVault![0]), 'En préparation ou en route');
   a = receiveBar(a, id, 'C841201');
-  assert.equal(placeLabel(a.homeVault![0]), 'Chez vous');
-  assert.deepEqual(Object.values(PLACE_LABEL), ['Chez vous', 'Coffre en banque', 'Autre lieu']);
-  a = setBarPlace(a, id, 'banque', 'Banque Dupont, agence centre');
-  assert.equal(placeLabel(a.homeVault![0]), 'Coffre en banque · Banque Dupont, agence centre');
-  assert.match(barQrText(a.homeVault![0]), /Lieu de garde : Coffre en banque/);
+  assert.equal(placeLabel(a.homeVault![0]), 'Chez le client');
+  // Choisi à la main : le choix l'emporte, puis « automatique » le retire.
+  a = setBarPlace(a, id, 'agence', 'Albi');
+  assert.equal(placeLabel(a.homeVault![0]), 'Godot & Fils · agence · Albi');
+  assert.match(barQrText(a.homeVault![0]), /Lieu de garde : Godot & Fils · agence/);
   a = setBarPlace(a, id, 'autre', 'chez ma mère');
   assert.equal(placeLabel(a.homeVault![0]), 'chez ma mère');
-  assert.throws(() => setBarPlace(a, 'x', 'maison'));
+  a = setBarPlace(a, id, 'auto');
+  assert.equal(a.homeVault![0].place, undefined);
+  assert.equal(placeLabel(a.homeVault![0]), 'Chez le client');
+  assert.throws(() => setBarPlace(a, 'x', 'client'));
   // Au moment du don, on choisit où il est gardé.
   const added = addChild(a, 'Théo', '2015-06-01');
   const g = giveBarToChild(added.account, p, id, added.child.id, new Date('2026-11-17T10:00:00'), {
-    place: 'banque',
-    note: 'Banque Dupont',
+    place: 'coffre',
+    note: 'Albi',
   });
-  assert.equal(placeLabel(g.homeVault![0]), 'Coffre en banque · Banque Dupont');
-  assert.match(g.children[0].transactions[0].label, /coffre en banque/);
+  assert.equal(placeLabel(g.homeVault![0]), 'Godot & Fils · coffre sécurisé · Albi');
+  assert.match(g.children[0].transactions[0].label, /coffre sécurisé/);
   assert.equal(g.homeVault![0].ownerChildId, added.child.id);
 });
 
@@ -179,10 +197,10 @@ test('contrôle des lingots : on retrouve un lingotin par son lieu de garde', as
   const { setBarPlace } = await import('../src/logic/physical.ts');
   const { searchBars } = await import('../src/logic/barControl.ts');
   let a = withdrawPhysical(base(), p, { g5: 1, g10: 1 }, new Date('2026-11-16T12:00:00'));
-  a = setBarPlace(a, a.homeVault![0].id, 'banque', 'Banque Dupont');
-  assert.equal(searchBars(a, 'dupont').length, 1);
-  assert.equal(searchBars(a, 'banque').length, 1);
-  assert.equal(searchBars(a, 'chez vous').length, 1);
+  a = setBarPlace(a, a.homeVault![0].id, 'agence', 'Albi');
+  assert.equal(searchBars(a, 'albi').length, 1);
+  assert.equal(searchBars(a, 'agence').length, 1);
+  assert.equal(searchBars(a, 'en route').length, 1);
 });
 
 test('lot déjà créé : on y colle la liste de numéros du revendeur, ils sortent avec les exemplaires', async () => {

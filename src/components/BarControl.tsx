@@ -261,7 +261,7 @@ function Detail({
   onControl: () => void;
   onRecheck: () => void;
   onResolve: (note: string) => void;
-  onPlace: (place: import('../logic/physical').BarPlace, note?: string) => void;
+  onPlace: (place: import('../logic/physical').BarPlace | 'auto', note?: string) => void;
 }) {
   const p = productOf(bar.product);
   const state = barState(bar);
