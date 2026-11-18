@@ -23,6 +23,7 @@ import {
 } from '../logic/physical';
 import { exportPdf } from '../pdf';
 import { BarFabrication } from '../components/BarFabrication';
+import { VaultLogo } from '../components/VaultLogo';
 import { BarImage } from '../components/BarImage';
 import { QrCode } from '../components/QrCode';
 import type { HomeBar } from '../logic/types';
@@ -38,12 +39,15 @@ export default function HomeVaultScreen() {
 
   return (
     <Screen testID="screen-coffre-maison">
-      <Card style={{ gap: 4 }}>
-        <Text style={styles.big}>{formatWeight(total.grams, 'g', 'gold')}</Text>
-        <Text style={styles.sub}>
-          {total.count} lingotin{total.count > 1 ? 's' : ''} · ≈ {formatEur(total.value)} au cours de l’or (hors frais
-          du comptoir à la revente)
-        </Text>
+      <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={styles.big}>{formatWeight(total.grams, 'g', 'gold')}</Text>
+          <Text style={styles.sub}>
+            {total.count} lingotin{total.count > 1 ? 's' : ''} · ≈ {formatEur(total.value)} au cours de l’or (hors frais
+            du comptoir à la revente)
+          </Text>
+        </View>
+        <VaultLogo size={64} />
       </Card>
       <ResellerStorageCard />
       {bars.length === 0 ? (

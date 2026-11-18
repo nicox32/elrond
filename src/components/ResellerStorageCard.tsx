@@ -3,6 +3,7 @@ import { FEES } from '../logic/fees';
 import { clientStorage } from '../logic/storageLimit';
 import { useAccount, useBank } from '../state/BankProvider';
 import { Card, Hint, KeyValue, SectionTitle } from './ui';
+import { VaultLogo } from './VaultLogo';
 
 /**
  * Lingotins gardés en coffre sécurisé chez le revendeur (Godot & Fils) : un seul mode de garde proposé aux clients,
@@ -15,7 +16,7 @@ export function ResellerStorageCard() {
   if (!groups.length) return null;
   return (
     <>
-      <SectionTitle>Coffre sécurisé</SectionTitle>
+      <SectionTitle right={<VaultLogo size={30} />}>Coffre sécurisé</SectionTitle>
       <Card style={{ gap: 8 }}>
         {groups.map((g) => {
           const owner = g.ownerChildId
