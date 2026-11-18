@@ -11,6 +11,7 @@ import { controlledOn } from '../logic/barControl';
 import { barQrText, exemptYear, homeVaultHtml } from '../logic/homeVaultDoc';
 import {
   type BarPlace,
+  fabricationProgress,
   homeVaultTotal,
   isLocked,
   placeLabel,
@@ -100,6 +101,9 @@ function BarCard({
 }) {
   const [serial, setSerial] = useState(bar.serial ?? '');
   const [showQr, setShowQr] = useState(false);
+  const [pickedUp, setPickedUp] = useState(false);
+  const waitingAgency = bar.status === 'preparing' && !!bar.pickupAgency && !pickedUp && !bar.serial;
+  const readyAtAgency = fabricationProgress(bar.orderedAt, new Date(), true).step >= 3;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const p = productOf(bar.product);
   const gain = bar.grams * goldPrice - bar.cost;
@@ -173,6 +177,19 @@ function BarCard({
         <Text style={styles.serial}>
           {p.coin ? 'Millésime' : 'N° de série'} : {bar.serial}
         </Text>
+      ) : waitingAgency ? (
+        <View style={{ gap: 6 }}>
+          <Button
+            title={`Retirer en agence (${bar.pickupAgency})`}
+            onPress={() => setPickedUp(true)}
+            disabled={!readyAtAgency}
+          />
+          <Text style={styles.sub} testID={`bar-agency-hint-${bar.id}`}>
+            {readyAtAgency
+              ? 'Prêt à l’agence : apportez une pièce d’identité et signez le bon de remise, puis appuyez ici pour noter le numéro de série.'
+              : 'Disponible dès que le lingotin est prêt à l’agence (suivi estimé ci-dessus).'}
+          </Text>
+        </View>
       ) : (
         <View style={{ gap: 6 }}>
           <TextInput
