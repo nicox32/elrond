@@ -1,7 +1,7 @@
 // Société Orvia : stock de lingotins et de pièces. Les lots sont créés par quantité (x1, x10, x100…) ; un retrait
 // client prend d'abord dans le stock de la société, puis dans le coffre professionnel, sinon il faut commander.
 import { LedgerError, newId } from './ledger.ts';
-import { newRef, normalizeSerial, productOf, serialFormatError } from './physical.ts';
+import { newRef, normalizeSerial, physicalFeesOf, productOf, serialFormatError } from './physical.ts';
 import type { Account, StockLot, StockMove } from './types.ts';
 
 export const MAX_BATCH = 10000;
@@ -223,4 +223,43 @@ export function stockSummary(account: Pick<Account, 'stock'>): StockSummaryRow[]
 export function stockCount(account: Pick<Account, 'stock'>, product: string): { maison: number; pro: number } {
   const r = stockSummary(account).find((x) => x.product === product);
   return { maison: r?.maison ?? 0, pro: r?.pro ?? 0 };
+}
+
+/** Plafond par défaut de l'assurance du stock de lingotins et de pièces. */
+export const INSURANCE_CAP_EUR = 250_000;
+
+/**
+ * Valeur assurée du stock : chaque exemplaire à son prix payé quand il est connu, sinon la valeur de son or au cours du
+ * jour plus la prime de base du revendeur.
+ */
+export function stockInsuredValue(account: Pick<Account, 'stock' | 'settings'>, goldEurPerGram: number): number {
+  const fees = physicalFeesOf(account.settings);
+  return (account.stock ?? [])
+    .filter((l) => l.qty > 0)
+    .reduce((s, l) => {
+      const p = productOf(l.product);
+      const unit = l.unitCost ?? p.grams * goldEurPerGram * (1 + (fees.vendor[l.product] ?? 0));
+      return s + l.qty * unit;
+    }, 0);
+}
+
+export function insuranceStatus(account: Pick<Account, 'stock' | 'settings'>, goldEurPerGram: number) {
+  const cap = account.settings.insuranceCapEur ?? INSURANCE_CAP_EUR;
+  const value = stockInsuredValue(account, goldEurPerGram);
+  return { cap, value, left: Math.max(0, cap - value), share: cap > 0 ? value / cap : 1 };
+}
+
+/** Refuse l'entrée d'un lot qui ferait dépasser le plafond de l'assurance. */
+export function assertInsuranceRoom(
+  account: Pick<Account, 'stock' | 'settings'>,
+  goldEurPerGram: number,
+  addedEur: number,
+): void {
+  const st = insuranceStatus(account, goldEurPerGram);
+  if (st.value + addedEur > st.cap + 0.005) {
+    const eur = (n: number) => Math.round(n).toLocaleString('fr-FR');
+    throw new LedgerError(
+      `Ce lot (${eur(addedEur)} €) dépasse le plafond de l’assurance : ${eur(st.value)} € en stock sur ${eur(st.cap)} €. Il reste ${eur(st.left)} € de place.`,
+    );
+  }
 }

@@ -5,6 +5,8 @@ import { formatDate, formatEur, parseAmount } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
 import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, productOf } from '../logic/physical';
 import {
+  assertInsuranceRoom,
+  insuranceStatus,
   addSerialsToLot,
   addStock,
   adjustStock,
@@ -40,7 +42,7 @@ const shortName = (id: string) => productOf(id).label.replace(/ \(.*/, '');
 /** Société Orvia › Stock : lots de lingotins et de pièces (x1, x10, x100…), chez Orvia ou chez un pro (revendeur). */
 export function StockManager({ onBack }: { onBack: () => void }) {
   const account = useAccount();
-  const { updateAccount, quote } = useBank();
+  const { updateAccount, updateSettings, quote } = useBank();
   const [product, setProduct] = useState(BAR_PRODUCTS[1].id);
   const [qty, setQty] = useState('10');
   const [source, setSource] = useState<'maison' | 'pro'>('maison');
@@ -52,6 +54,8 @@ export function StockManager({ onBack }: { onBack: () => void }) {
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [lotSerials, setLotSerials] = useState<Record<string, string>>({});
 
+  const insurance = insuranceStatus(account, quote.prices.gold);
+  const [capText, setCapText] = useState(String(insurance.cap).replace('.', ','));
   const lots = (account.stock ?? []).filter((l) => l.qty > 0 || (l.serials?.length ?? 0) > 0);
   const summary = stockSummary(account);
   const n = Math.floor(parseAmount(qty));
@@ -66,6 +70,8 @@ export function StockManager({ onBack }: { onBack: () => void }) {
 
   function add() {
     try {
+      const unit = cost.trim() ? parseAmount(cost) : expectedLot;
+      assertInsuranceRoom(account, quote.prices.gold, (Number.isFinite(n) ? n : 0) * unit);
       updateAccount((a) =>
         addStock(a, {
           product,
@@ -124,10 +130,46 @@ export function StockManager({ onBack }: { onBack: () => void }) {
       </Hint>
 
       <Banner icon="ℹ️">
-        Les frais de stockage du revendeur (gratuit jusqu’à 10 000 CHF, puis un forfait) concernent chaque client, pas
-        la société : le détail se voit dans « Mon coffre maison ».
+        La garde des lingotins en coffre sécurisé chez Godot & Fils est refacturée au client au coût (0,04 € par mois et
+        par gramme). Les lots de ce stock sont assurés jusqu’au plafond ci-dessous.
       </Banner>
 
+      <SectionTitle>Assurance du stock</SectionTitle>
+      <Card style={{ gap: 6 }}>
+        <KeyValue
+          label="Valeur du stock assuré"
+          value={`${formatEur(insurance.value)} sur ${formatEur(insurance.cap)}`}
+          strong
+        />
+        <View style={styles.meter}>
+          <View
+            style={[
+              styles.meterFill,
+              { flex: Math.max(0.0001, Math.min(1, insurance.share)) },
+              insurance.share >= 0.8 && { backgroundColor: colors.warning },
+              insurance.share >= 1 && { backgroundColor: colors.down },
+            ]}
+          />
+          <View style={{ flex: Math.max(0.0001, 1 - Math.min(1, insurance.share)) }} />
+        </View>
+        <Text style={ui.hint}>
+          {insurance.share >= 1
+            ? 'Plafond atteint : un nouveau lot est refusé tant que le stock n’a pas baissé.'
+            : `Il reste ${formatEur(insurance.left)} de place (${Math.round(insurance.share * 100)} % utilisés).${insurance.share >= 0.8 ? ' Attention : le plafond est proche.' : ''}`}
+        </Text>
+        <Label>Plafond de l’assurance (€)</Label>
+        <TextInput
+          value={capText}
+          onChangeText={(t) => {
+            setCapText(t);
+            const v = parseAmount(t);
+            if (Number.isFinite(v) && v >= 0) updateSettings({ insuranceCapEur: v });
+          }}
+          keyboardType="decimal-pad"
+          style={ui.input}
+          accessibilityLabel="Plafond de l’assurance"
+        />
+      </Card>
       <SectionTitle>En stock</SectionTitle>
       <Card style={{ gap: 8 }}>
         {BAR_PRODUCTS.map((b) => {
@@ -366,6 +408,8 @@ export function StockManager({ onBack }: { onBack: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  meter: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: colors.surfaceAlt },
+  meterFill: { backgroundColor: colors.gold },
   sumRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   name: { color: colors.text, fontSize: 14, fontWeight: '600' },
   sum: { color: colors.text, fontSize: 14, fontWeight: '700', marginLeft: 'auto' },

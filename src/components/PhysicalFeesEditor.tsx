@@ -5,7 +5,7 @@ import { formatEur, parseAmount } from '../logic/format';
 import { BAR_PRODUCTS, normalizeDeliveryTiers, physicalFeesOf, PHYSICAL, QTY_RANGES } from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
 import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
-import { addStock } from '../logic/stock';
+import { addStock, assertInsuranceRoom } from '../logic/stock';
 import { colors } from '../theme';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
 
@@ -501,6 +501,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               const when = parseDay(calcDate);
               const q = Math.floor(Number(lotQty));
               const unit = lotPriceOf(calc.sheet, q);
+              assertInsuranceRoom(account, quote.prices.gold, q * unit);
               updateAccount((a) =>
                 addStock(
                   a,
