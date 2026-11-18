@@ -2,15 +2,10 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
-import {
-  BAR_PRODUCTS,
-  normalizeDeliveryTiers,
-  physicalFeesOf,
-  PHYSICAL,
-  QTY_RANGES,
-  vendorPremiumFrom,
-} from '../logic/physical';
+import { BAR_PRODUCTS, normalizeDeliveryTiers, physicalFeesOf, PHYSICAL, QTY_RANGES } from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
+import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
+import { addStock } from '../logic/stock';
 import { colors } from '../theme';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
 
@@ -23,7 +18,7 @@ const toRate = (t: string) => Math.round(parseAmount(t) * 100) / 10000;
 /** Société Orvia : frais du retrait physique (fabrication par format, prime du vendeur, livraison), réglables. */
 export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const account = useAccount();
-  const { quote, updateSettings } = useBank();
+  const { quote, updateSettings, updateAccount } = useBank();
   const fees = physicalFeesOf(account.settings);
   const [premiums, setPremiums] = useState<Record<string, string>>(() =>
     Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(fees.premiums[p.id])])),
@@ -48,15 +43,25 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     })),
   );
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [calcId, setCalcId] = useState(BAR_PRODUCTS[BAR_PRODUCTS.length - 1].id);
-  const [calcPrice, setCalcPrice] = useState('');
-  const [calcFees, setCalcFees] = useState('');
+  // Calculateur de commande Godot & Fils : relevé de prix par tranche, cours de l'or et date.
+  const [calcId, setCalcId] = useState(BAR_PRODUCTS[1].id);
+  const [calcDate, setCalcDate] = useState(() => formatDay(new Date()));
+  const [calcGold, setCalcGold] = useState(() => String(Math.round(quote.prices.gold * 1000) / 1000).replace('.', ','));
+  const [calcPrices, setCalcPrices] = useState<string[]>(['', '', '', '']);
+  const [lotQty, setLotQty] = useState('10');
   const calcProduct = BAR_PRODUCTS.find((p) => p.id === calcId) ?? BAR_PRODUCTS[0];
-  const calcRate = vendorPremiumFrom(
-    parseAmount(calcPrice),
-    calcFees.trim() ? parseAmount(calcFees) : null,
-    calcProduct.grams * quote.prices.gold,
-  );
+  const calc = (() => {
+    try {
+      const sheet = {
+        productId: calcId,
+        gold: parseAmount(calcGold),
+        prices: calcPrices.map((x) => parseAmount(x)) as [number, number, number, number],
+      };
+      return { sheet, result: sheetResult(sheet), error: null as string | null };
+    } catch (e) {
+      return { sheet: null, result: null, error: e instanceof Error ? e.message : 'Relevé invalide.' };
+    }
+  })();
 
   const validClient =
     BAR_PRODUCTS.every((p) => {
@@ -344,8 +349,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           agence).
         </Hint>
       </View>
-      <View style={styles.calc}>
-        <Text style={styles.title}>Calculateur de prime vendeur</Text>
+      <View style={styles.calc} testID="godot-calculator">
+        <Text style={styles.title}>Calculateur de commande</Text>
         <Pressable
           onPress={() => Linking.openURL(PREMIUM_CALCULATOR_URL).catch(() => {})}
           accessibilityRole="link"
@@ -355,8 +360,9 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           <Text style={styles.link}>Calculateur de prime en ligne (lingot-dor.fr) ›</Text>
         </Pressable>
         <Hint>
-          Sur la page du revendeur, choisissez « Livrer en France » et relevez le prix. Si elle affiche les frais en
-          euros, saisissez-les aussi : le calcul est exact. Sinon, il compare le prix à la valeur de l’or du moment.
+          Relevez sur la page de Godot & Fils le prix d’un format pour chaque tranche, avec le cours de l’or du jour. Le
+          calculateur règle la prime de base et la remise de chaque tranche, et peut enregistrer un lot acheté avec sa
+          date et son prix.
         </Hint>
         <View style={styles.chips}>
           {BAR_PRODUCTS.map((p) => (
@@ -379,43 +385,131 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
         </View>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1, gap: 5 }}>
-            <Label>Prix du site (€)</Label>
+            <Label>Date du relevé ou de l’achat</Label>
             <TextInput
-              value={calcPrice}
-              onChangeText={setCalcPrice}
-              keyboardType="decimal-pad"
-              placeholder="698,91"
+              value={calcDate}
+              onChangeText={setCalcDate}
+              placeholder="JJ/MM/AAAA"
               placeholderTextColor={colors.textMuted}
-              style={ui.input}
-              accessibilityLabel="Prix du site"
+              style={[ui.input, { minWidth: 0 }]}
+              accessibilityLabel="Date du relevé"
             />
           </View>
           <View style={{ flex: 1, gap: 5 }}>
-            <Label>Frais du site (€)</Label>
+            <Label>Cours de l’or ce jour-là (€/g)</Label>
             <TextInput
-              value={calcFees}
-              onChangeText={setCalcFees}
+              value={calcGold}
+              onChangeText={setCalcGold}
               keyboardType="decimal-pad"
-              placeholder="42,83 (facultatif)"
-              placeholderTextColor={colors.textMuted}
-              style={ui.input}
-              accessibilityLabel="Frais du site"
+              style={[ui.input, { minWidth: 0 }]}
+              accessibilityLabel="Cours de l’or à la date du relevé"
             />
           </View>
         </View>
-        <Text style={styles.result} testID="calc-result">
-          {calcRate === null
-            ? 'Saisissez le prix pour calculer.'
-            : `Prime vendeur : ${toText(calcRate)} % de la valeur de l’or`}
-        </Text>
+        <Label>Prix de {calcProduct.label.replace(/ \(.*/, '')} par pièce, métal compris (€)</Label>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {QTY_RANGES.map((r, i) => (
+            <View key={r.label} style={{ flexBasis: '47%', flexGrow: 1, gap: 4 }}>
+              <Text style={styles.tiers}>{r.label} pièces</Text>
+              <TextInput
+                value={calcPrices[i]}
+                onChangeText={(t) => setCalcPrices((all) => all.map((v, j) => (j === i ? t : v)))}
+                keyboardType="decimal-pad"
+                placeholder="€"
+                placeholderTextColor={colors.textMuted}
+                style={[ui.input, { minWidth: 0 }]}
+                accessibilityLabel={`Prix ${r.label} pièces`}
+              />
+            </View>
+          ))}
+        </View>
+        {calc.result ? (
+          <View style={{ gap: 3 }} testID="godot-calc-result">
+            <Text style={styles.result}>Prime de base : {toText(calc.result.premium)} % de la valeur de l’or</Text>
+            <Text style={styles.tiers}>
+              Remises : 10 à 19 : {toText(calc.result.offs[0])} pt · 20 à 49 : {toText(calc.result.offs[1])} pt · 50 et
+              plus : {toText(calc.result.offs[2])} pt
+            </Text>
+            {calc.result.warnings.map((w) => (
+              <Text key={w} style={[styles.tiers, { color: colors.warning }]}>
+                {w}
+              </Text>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.tiers}>{calc.error}</Text>
+        )}
         <Button
-          title={`Mettre dans Prime vendeur % (${calcProduct.label.replace(/ \(.*/, '')})`}
+          title={`Régler ${calcProduct.label.replace(/ \(.*/, '')} avec ce relevé`}
           variant="ghost"
-          disabled={calcRate === null}
+          disabled={!calc.result}
           onPress={() => {
-            if (calcRate === null) return;
-            setVendor((x) => ({ ...x, [calcId]: toText(calcRate) }));
-            setMsg({ ok: true, text: 'Valeur placée dans la colonne Prime vendeur %. Enregistrez pour la garder.' });
+            const r = calc.result;
+            if (!r) return;
+            setVendor((x) => ({ ...x, [calcId]: toText(r.premium) }));
+            setOffs((x) => ({ ...x, [calcId]: r.offs.map((o) => toText(o)) }));
+            setMsg({
+              ok: true,
+              text: 'Prime et remises réglées pour ce format. Appuyez sur Enregistrer pour les garder.',
+            });
+          }}
+        />
+        <Label>Enregistrer un lot acheté à ce relevé</Label>
+        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+          <TextInput
+            value={lotQty}
+            onChangeText={setLotQty}
+            keyboardType="number-pad"
+            style={[ui.input, { flex: 1, minWidth: 0 }]}
+            accessibilityLabel="Nombre de pièces du lot"
+          />
+          <Text style={[styles.tiers, { flex: 2 }]}>
+            {calc.sheet && Number(lotQty) > 0
+              ? `${formatEur(lotPriceOf(calc.sheet, Math.floor(Number(lotQty))))} par pièce (tranche ${
+                  QTY_RANGES[
+                    Math.max(
+                      0,
+                      QTY_RANGES.findIndex(
+                        (r) =>
+                          Math.floor(Number(lotQty)) >= r.from && (r.to === null || Math.floor(Number(lotQty)) <= r.to),
+                      ),
+                    )
+                  ].label
+                })`
+              : ''}
+          </Text>
+        </View>
+        <Button
+          title="Enregistrer ce lot au stock"
+          variant="ghost"
+          disabled={!calc.sheet || !(Math.floor(Number(lotQty)) > 0)}
+          onPress={() => {
+            try {
+              if (!calc.sheet) return;
+              const when = parseDay(calcDate);
+              const q = Math.floor(Number(lotQty));
+              const unit = lotPriceOf(calc.sheet, q);
+              updateAccount((a) =>
+                addStock(
+                  a,
+                  {
+                    product: calcId,
+                    qty: q,
+                    source: 'pro',
+                    vault: 'Godot & Fils',
+                    unitCost: unit,
+                    goldPrice: calc.sheet!.gold,
+                  },
+                  when,
+                ),
+              );
+              setMsg({
+                ok: true,
+                text: `Lot de ${q} enregistré au stock : ${formatEur(unit)} par pièce au cours de ${toText(calc.sheet.gold * 100)} €/g, le ${formatDay(when)}.`,
+              });
+            } catch (e) {
+              setMsg({ ok: false, text: e instanceof Error ? e.message : 'Impossible d’enregistrer ce lot.' });
+            }
           }}
         />
       </View>
