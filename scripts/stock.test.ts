@@ -429,7 +429,7 @@ test('assurance du stock : plafond de 250 000 €, lot refusé s’il le fait d�
   assert.equal(stockInsuredValue(emptied, gold), 0);
 });
 
-test('assurance : compte aussi les lingotins en route et ceux remis aux clients, pas ceux du coffre', async () => {
+test('assurance : compte aussi les lingotins en route, pas ceux remis ni ceux du coffre', async () => {
   const { insuredBreakdown } = await import('../src/logic/stock.ts');
   let a = createAccount('T', new Date('2020-01-01'));
   a = addStock(a, { product: 'g10', qty: 2, source: 'maison', unitCost: 1000 });
@@ -448,6 +448,5 @@ test('assurance : compte aussi les lingotins en route et ceux remis aux clients,
   const b = insuredBreakdown(a, 100);
   assert.equal(b.stock, 2000);
   close(b.transit, 10 * 100 * 1.0652, 1e-6);
-  close(b.delivered, 10 * 100 * 1.0652, 1e-6);
-  close(b.total, 2000 + 2 * 1065.2, 1e-6);
+  close(b.total, 2000 + 1065.2, 1e-6);
 });

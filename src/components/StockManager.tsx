@@ -134,7 +134,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
 
       <Banner icon="ℹ️">
         La garde des lingotins en coffre sécurisé chez Godot & Fils est refacturée au client au coût (0,04 € par mois et
-        par gramme). L’assurance couvre le stock, les lingotins en route et ceux déjà remis aux clients, jusqu’au plafond ci-dessous.
+        par gramme). L’assurance couvre le stock et les lingotins en route vers un client, jusqu’au plafond ci-dessous.
       </Banner>
 
       <SectionTitle>Assurance du stock</SectionTitle>
@@ -146,7 +146,6 @@ export function StockManager({ onBack }: { onBack: () => void }) {
         />
         <KeyValue label="· en stock" value={formatEur(insured.stock)} />
         <KeyValue label="· en route vers un client" value={formatEur(insured.transit)} />
-        <KeyValue label="· déjà remis aux clients" value={formatEur(insured.delivered)} />
         <InsuranceMeter />
         <Label>Plafond de l’assurance (€)</Label>
         <TextInput

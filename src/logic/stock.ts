@@ -237,7 +237,7 @@ type InsuredAccount = Pick<Account, 'stock' | 'settings'> & Partial<Pick<Account
 
 /**
  * Détail de la valeur assurée : le stock (chaque exemplaire à son prix payé quand il est connu, sinon la valeur de son
- * or au cours du jour plus la prime de base), les lingotins en route vers un client, et ceux déjà remis aux clients.
+ * or au cours du jour plus la prime de base), et les lingotins en route vers un client.
  * Les lingotins encore gardés au coffre sécurisé ne comptent pas.
  */
 export function insuredBreakdown(account: InsuredAccount, goldEurPerGram: number) {
@@ -250,14 +250,11 @@ export function insuredBreakdown(account: InsuredAccount, goldEurPerGram: number
       return s + l.qty * unit;
     }, 0);
   let transit = 0;
-  let delivered = 0;
   for (const b of account.homeVault ?? []) {
-    if (b.vault && !b.exitedAt) continue;
-    const v = barInsuredValue(b, goldEurPerGram, fees);
-    if (b.status === 'received') delivered += v;
-    else transit += v;
+    if (b.status === 'received' || (b.vault && !b.exitedAt)) continue;
+    transit += barInsuredValue(b, goldEurPerGram, fees);
   }
-  return { stock, transit, delivered, total: stock + transit + delivered };
+  return { stock, transit, total: stock + transit };
 }
 
 export function stockInsuredValue(account: InsuredAccount, goldEurPerGram: number): number {
