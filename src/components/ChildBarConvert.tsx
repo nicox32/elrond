@@ -132,7 +132,7 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
       {msg && <Message {...msg} />}
       {q.lines.length === 0 && (
         <Banner icon="ℹ️">
-          Gardé uniquement chez le revendeur ({CHILD_STORAGE_NOTE}). Choisissez ce que vous voulez convertir.
+          Gardé uniquement chez Godot & Fils ({CHILD_STORAGE_NOTE}). Choisissez ce que vous voulez convertir.
         </Banner>
       )}
 

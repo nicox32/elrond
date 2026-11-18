@@ -234,7 +234,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           {(
             [
               ['maison', 'En stock Orvia'],
-              ['pro', 'Stock revendeur'],
+              ['pro', 'Stock Godot & Fils'],
               ['commande', 'À commander'],
             ] as const
           ).map(([k, label]) => (
@@ -329,7 +329,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                   <Text style={styles.tiers}>1 à 9 pièces : prix de base, colonne « Prime vendeur % ».</Text>
                 ) : (
                   <View style={{ gap: 4 }}>
-                    <Label>Remise du revendeur de {QTY_RANGES[range[p.id]].label} pièces (points de %)</Label>
+                    <Label>Remise de Godot & Fils de {QTY_RANGES[range[p.id]].label} pièces (points de %)</Label>
                     <TextInput
                       value={offs[p.id][range[p.id] - 1]}
                       onChangeText={(t) =>
@@ -340,7 +340,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                       }
                       keyboardType="decimal-pad"
                       style={ui.input}
-                      accessibilityLabel={`Remise du revendeur ${p.label} ${QTY_RANGES[range[p.id]].label} pièces`}
+                      accessibilityLabel={`Remise de Godot & Fils ${p.label} ${QTY_RANGES[range[p.id]].label} pièces`}
                     />
                     <Text style={styles.tiers}>
                       Elle baisse le prix d’un lot de cette taille : tout reste à Orvia, le client paie la même

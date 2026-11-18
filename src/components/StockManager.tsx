@@ -37,7 +37,7 @@ function confirmAction(text: string, onYes: () => void) {
     ]);
   }
 }
-const SOURCE_LABEL = { maison: 'Orvia', pro: 'Pro (revendeur)' } as const;
+const SOURCE_LABEL = { maison: 'Orvia', pro: 'Godot & Fils' } as const;
 const shortName = (id: string) => productOf(id).label.replace(/ \(.*/, '');
 
 /** Société Orvia › Stock : lots de lingotins et de pièces (x1, x10, x100…), chez Orvia ou chez un pro (revendeur). */
@@ -125,9 +125,9 @@ export function StockManager({ onBack }: { onBack: () => void }) {
     <>
       <Button title="← Espace DEV" variant="ghost" onPress={onBack} />
       <Hint>
-        Le stock des lingotins et pièces, par lot : chez Orvia, ou chez un pro (revendeur) qui les garde pour vous.
-        Quand un client retire de l’or, l’appli prend d’abord dans le stock d’Orvia, puis chez le pro (revendeur) ; sans
-        stock, il faut commander chez le revendeur.
+        Le stock des lingotins et pièces, par lot : chez Orvia, ou chez Godot & Fils qui les garde pour vous. Quand un
+        client retire de l’or, l’appli prend d’abord dans le stock d’Orvia, puis chez Godot & Fils ; sans stock, il faut
+        commander chez Godot & Fils.
       </Hint>
 
       <Banner icon="ℹ️">
@@ -214,17 +214,17 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           onChange={setSource}
           options={[
             { value: 'maison', label: 'Orvia' },
-            { value: 'pro', label: 'Pro (revendeur)' },
+            { value: 'pro', label: 'Godot & Fils' },
           ]}
         />
         {source === 'pro' && (
           <TextInput
             value={vault}
             onChangeText={setVault}
-            placeholder="Nom du revendeur (ex. Godot & Fils)"
+            placeholder="Lieu de garde (ex. Godot & Fils, Albi)"
             placeholderTextColor={colors.textMuted}
             style={ui.input}
-            accessibilityLabel="Nom du pro (revendeur)"
+            accessibilityLabel="Lieu de garde chez Godot & Fils"
           />
         )}
         {source === 'pro' || source === 'maison' ? (
@@ -287,7 +287,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
 
       <SectionTitle>Lots</SectionTitle>
       {lots.length === 0 ? (
-        <Banner icon="ℹ️">Aucun lot en stock. Les retraits des clients sont commandés chez le revendeur.</Banner>
+        <Banner icon="ℹ️">Aucun lot en stock. Les retraits des clients sont commandés chez Godot & Fils.</Banner>
       ) : (
         lots.map((l) => (
           <Card key={l.id} style={{ gap: 6 }}>
@@ -299,7 +299,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
             </View>
             <KeyValue
               label="Lieu"
-              value={l.source === 'pro' ? `Pro (revendeur)${l.vault ? ` · ${l.vault}` : ''}` : 'Orvia'}
+              value={l.source === 'pro' ? `Godot & Fils${l.vault ? ` · ${l.vault}` : ''}` : 'Orvia'}
             />
             <KeyValue label="Entré le" value={formatDate(l.addedAt)} />
             {l.serials?.length ? <KeyValue label="N° connus restants" value={String(l.serials.length)} /> : null}
@@ -311,7 +311,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
                   onChangeText={(t) => setLotSerials((c) => ({ ...c, [l.id]: t }))}
                   multiline
                   autoCapitalize="characters"
-                  placeholder="Collez ici la liste des numéros du revendeur (un par ligne)"
+                  placeholder="Collez ici la liste des numéros de Godot & Fils (un par ligne)"
                   placeholderTextColor={colors.textMuted}
                   style={[ui.input, { minHeight: 56, textAlignVertical: 'top' }]}
                   accessibilityLabel="Numéros de série à ajouter au lot"

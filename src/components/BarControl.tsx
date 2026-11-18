@@ -283,8 +283,8 @@ function Detail({
               bar.origin === 'maison'
                 ? 'Stock Orvia'
                 : bar.origin === 'pro'
-                  ? 'Stock du pro (revendeur)'
-                  : 'Commande chez le revendeur'
+                  ? 'Stock Godot & Fils'
+                  : 'Commande chez Godot & Fils'
             }
           />
         ) : null}

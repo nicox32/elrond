@@ -196,7 +196,7 @@ export default function ProfileScreen() {
         options={LOCK_DELAYS.map((d) => ({ value: String(d.value), label: d.label }))}
       />
       <Hint>
-        Temps passé dans une autre appli (le site d’un revendeur, par exemple) avant que le code soit redemandé. Si
+        Temps passé dans une autre appli (le site de Godot & Fils, par exemple) avant que le code soit redemandé. Si
         l’appli est fermée par le téléphone, le code est toujours demandé.
       </Hint>
       <ChangePinCard />
