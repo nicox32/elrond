@@ -239,7 +239,7 @@ export const PHYSICAL = {
   /** … offerte à partir de ce poids d'or dans le même envoi (inciter à grouper les retraits). */
   freeDeliveryFromGrams: 20,
   /** Part de la remise de quantité du revendeur reversée au client (le reste améliore la marge d'Orvia). */
-  clientDiscountShare: 0.5,
+  clientDiscountShare: 0,
   /** Livraison payée au vendeur, par commande (relevé du 18/11/2026). */
   vendorDelivery: 7,
   /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
@@ -272,6 +272,18 @@ export const QTY_RANGES = [
   { from: 20, to: 49, label: '20 à 49' },
   { from: 50, to: null, label: '50 et plus' },
 ] as const;
+
+/**
+ * Prix attendu d'un lot chez le revendeur : l'or du jour plus sa prime, diminuée de la remise de la tranche du lot
+ * (10 à 19, 20 à 49, 50 et plus). Sert à pré-remplir le prix de revient d'un lot entré au stock.
+ */
+export function lotUnitCost(productId: string, lotQty: number, goldEurPerGram: number, fees: PhysicalFees): number {
+  const p = productOf(productId);
+  const v = fees.vendor[productId];
+  if (v === undefined) return p.grams * goldEurPerGram;
+  const off = vendorTierOff({ vendorTiers: fees.vendorTiers[productId] }, lotQty);
+  return p.grams * goldEurPerGram * (1 + Math.max(0, v - off));
+}
 
 /** Paliers triés, sans doublon, dont le premier commence à 0 € ; à défaut, un seul palier au coût fixe. */
 export function normalizeDeliveryTiers(
@@ -334,7 +346,6 @@ export function physicalFeeRows(fees: PhysicalFees): { label: string; orvia: str
       label: 'Livraison assurée, remise contre signature',
       orvia: `${fees.delivery.toLocaleString('fr-FR')} € par envoi, offerte dès ${fees.freeFromGrams.toLocaleString('fr-FR')} g`,
     },
-    { label: 'Remise de quantité', orvia: 'Fabrication dégressive dès 10 pièces du même format' },
     { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
   ];
 }
@@ -365,8 +376,9 @@ export function quoteWithdrawal(
     const qty = Math.floor(order[p.id]);
     const value = qty * p.grams * prices.gold;
     const v = fees.vendor[p.id];
-    // Remise de quantité du revendeur sur ce produit : un coût en moins pour Orvia, le prix client ne change pas.
-    const applied = v !== undefined ? Math.min(v, vendorTierOff({ vendorTiers: fees.vendorTiers[p.id] }, qty)) : 0;
+    // Orvia commande par lots : le prix du revendeur dépend du lot acheté, pas de ce qu'un client retire. Un retrait
+    // servi sans stock est commandé à l'unité, au prix de 1 à 9 pièces.
+    const applied = 0;
     return {
       product: p,
       qty,
@@ -427,7 +439,8 @@ export function withdrawPhysical(
 ): Account {
   const agency = pickupAgency?.trim();
   if (pickupAgency !== undefined && agency!.length < 2) throw new LedgerError('Indiquez l’agence de retrait (ville).');
-  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), pickupAgency !== undefined || vault);
+  const noShipping = pickupAgency !== undefined || vault;
+  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), noShipping);
   if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
   if (q.grams > account.holdings.gold + 1e-9) {
     throw new LedgerError(
@@ -487,8 +500,19 @@ export function withdrawPhysical(
     ...(account.homeVault ?? []).flatMap((b) => (b.ref ? [b.ref] : [])),
     ...(account.stock ?? []).flatMap((l) => l.refs ?? []),
   ]);
-  let stockLots = [...(account.stock ?? [])];
+  // Premier entré, premier sorti : le lot acheté à la date la plus ancienne part en premier.
+  let stockLots = [...(account.stock ?? [])].sort((a, b) => a.addedAt.localeCompare(b.addedAt));
   const moves: StockMove[] = [];
+  // Coût réel de la prime payée au revendeur : celle du lot dont sort le lingotin (prix du lot moins le métal), ou, sans
+  // stock, celle d'une commande à l'unité. Si un prix manque, le coût du retrait reste inconnu.
+  let premiumCost = 0;
+  let costKnown = true;
+  let orderedGoods = 0;
+  let ordered = false;
+  const perPiece = (productId: string) => {
+    const l = q.lines.find((x) => x.product.id === productId);
+    return l && l.vendorCost !== undefined ? l.vendorCost / l.qty : undefined;
+  };
   for (const bar of bars) {
     const lot =
       stockLots.find((l) => l.product === bar.product && l.source === 'maison' && l.qty > 0) ??
@@ -496,7 +520,21 @@ export function withdrawPhysical(
     if (!lot) {
       bar.origin = 'commande';
       bar.ref = newRef(usedRefs);
+      const c = perPiece(bar.product);
+      if (c === undefined) costKnown = false;
+      else {
+        premiumCost += c;
+        orderedGoods += bar.grams * prices.gold + c;
+        ordered = true;
+      }
       continue;
+    }
+    if (lot.unitCost !== undefined) {
+      premiumCost += lot.unitCost - bar.grams * (lot.goldPriceAtEntry ?? prices.gold);
+    } else {
+      const c = perPiece(bar.product);
+      if (c === undefined) costKnown = false;
+      else premiumCost += c;
     }
     const [serial, ...restSerials] = lot.serials ?? [];
     const [ref, ...restRefs] = lot.refs ?? [];
@@ -532,7 +570,16 @@ export function withdrawPhysical(
       {
         ...tx,
         cash: -q.fees,
-        ...(q.cost !== undefined ? { costEur: Math.round(q.cost * 100) / 100 } : {}),
+        ...(costKnown
+          ? {
+              costEur:
+                Math.round(
+                  (premiumCost +
+                    (ordered && !noShipping ? vendorDeliveryCost(orderedGoods, physicalFeesOf(account.settings)) : 0)) *
+                    100,
+                ) / 100,
+            }
+          : {}),
       },
       ...rest,
     ],

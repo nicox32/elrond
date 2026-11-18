@@ -208,9 +208,9 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     <Card style={{ gap: 12 }}>
       <Text style={styles.title}>Commande Godot & Fils</Text>
       <Hint>
-        Ce que vous payez à Godot & Fils : la prime de chaque format (1 à 9 pièces), la remise selon la quantité
-        commandée (mêmes tranches pour tous : 1 à 9, 10 à 19, 20 à 49, 50 et plus) et la livraison. La marge est la
-        différence avec ce que paie le client.
+        Ce que vous payez à Godot & Fils : la prime de chaque format (1 à 9 pièces), la remise selon la taille du lot
+        commandé (mêmes tranches pour tous : 1 à 9, 10 à 19, 20 à 49, 50 et plus) et la livraison. Orvia commande par
+        lots : chaque lot est enregistré au stock avec son prix, et les lingotins sortent du lot le plus ancien.
       </Hint>
       <View style={styles.head}>
         <Text style={[styles.col, { flexGrow: 1.4 }]}>Format</Text>
@@ -247,11 +247,11 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
             </Text>
             {margin !== null && (
               <View testID={`ranges-${p.id}`} style={{ gap: 6 }}>
-                <Text style={styles.tiers}>Marge par pièce selon la quantité commandée :</Text>
+                <Text style={styles.tiers}>Marge par pièce selon la taille du lot commandé à Godot & Fils :</Text>
                 <View style={styles.ranges}>
                   {QTY_RANGES.map((r, i) => {
                     const off = i === 0 ? 0 : Math.max(0, toRate(offs[p.id][i - 1] || '0'));
-                    const m = margin + off * value * (1 - PHYSICAL.clientDiscountShare);
+                    const m = margin + off * value;
                     const on = (range[p.id] ?? 0) === i;
                     return (
                       <Pressable
@@ -286,7 +286,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                       accessibilityLabel={`Remise du revendeur ${p.label} ${QTY_RANGES[range[p.id]].label} pièces`}
                     />
                     <Text style={styles.tiers}>
-                      La moitié de cette remise est reversée au client ; l’autre moitié améliore votre marge.
+                      Elle baisse le prix d’un lot de cette taille : tout reste à Orvia, le client paie la même
+                      fabrication.
                     </Text>
                   </View>
                 )}

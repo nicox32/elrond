@@ -14,6 +14,8 @@ export interface StockInput {
   source: 'maison' | 'pro';
   vault?: string;
   unitCost?: number;
+  /** Cours de l'or (€/g) au moment de l'achat du lot. */
+  goldPrice?: number;
   /** Numéros de série connus, un par exemplaire au plus (les autres seront notés à l'expédition). */
   serials?: string[];
   note?: string;
@@ -87,6 +89,7 @@ export function addStock(
     addedAt: now.toISOString(),
     ...(input.source === 'pro' && input.vault?.trim() ? { vault: input.vault.trim() } : {}),
     ...(input.unitCost !== undefined && Number.isFinite(input.unitCost) ? { unitCost: input.unitCost } : {}),
+    ...(input.goldPrice !== undefined && input.goldPrice > 0 ? { goldPriceAtEntry: input.goldPrice } : {}),
     ...(serials.length ? { serials } : {}),
     refs,
     ...(input.note?.trim() ? { note: input.note.trim() } : {}),

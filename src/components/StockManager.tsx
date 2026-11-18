@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { formatDate, parseAmount } from '../logic/format';
+import { formatDate, formatEur, parseAmount } from '../logic/format';
 import { LedgerError } from '../logic/ledger';
-import { BAR_PRODUCTS, productOf } from '../logic/physical';
+import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, productOf } from '../logic/physical';
 import {
   addSerialsToLot,
   addStock,
@@ -40,7 +40,7 @@ const shortName = (id: string) => productOf(id).label.replace(/ \(.*/, '');
 /** Société Orvia › Stock : lots de lingotins et de pièces (x1, x10, x100…), chez Orvia ou chez un pro (revendeur). */
 export function StockManager({ onBack }: { onBack: () => void }) {
   const account = useAccount();
-  const { updateAccount } = useBank();
+  const { updateAccount, quote } = useBank();
   const [product, setProduct] = useState(BAR_PRODUCTS[1].id);
   const [qty, setQty] = useState('10');
   const [source, setSource] = useState<'maison' | 'pro'>('maison');
@@ -57,6 +57,12 @@ export function StockManager({ onBack }: { onBack: () => void }) {
   const n = Math.floor(parseAmount(qty));
   const list = parseSerials(serials);
   const coin = productOf(product).coin;
+  const expectedLot = lotUnitCost(
+    product,
+    Number.isFinite(n) && n > 0 ? n : 1,
+    quote.prices.gold,
+    physicalFeesOf(account.settings),
+  );
 
   function add() {
     try {
@@ -67,6 +73,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           source,
           vault,
           unitCost: cost.trim() ? parseAmount(cost) : undefined,
+          goldPrice: quote.prices.gold,
           serials: list,
           note,
         }),
@@ -192,11 +199,23 @@ export function StockManager({ onBack }: { onBack: () => void }) {
             accessibilityLabel="Nom du pro (revendeur)"
           />
         )}
+        {source === 'pro' || source === 'maison' ? (
+          <Pressable
+            onPress={() => setCost(String(Math.round(expectedLot * 100) / 100).replace('.', ','))}
+            accessibilityRole="button"
+            testID="use-expected-lot-price"
+          >
+            <Text style={ui.link}>
+              Prix attendu chez Godot & Fils pour un lot de {Number.isFinite(n) && n > 0 ? n : 1} :{' '}
+              {formatEur(expectedLot)} par pièce, métal compris (utiliser)
+            </Text>
+          </Pressable>
+        ) : null}
         <TextInput
           value={cost}
           onChangeText={setCost}
           keyboardType="decimal-pad"
-          placeholder="Prix payé par pièce, métal compris"
+          placeholder="Prix payé par pièce, métal compris (facture)"
           placeholderTextColor={colors.textMuted}
           style={ui.input}
           accessibilityLabel="Prix payé par exemplaire"

@@ -14,6 +14,7 @@ import {
   vendorTierOff,
   fabricationProgress,
   normalizeDeliveryTiers,
+  lotUnitCost,
   QTY_RANGES,
   BAR_PRODUCTS,
   vendorDeliveryCost,
@@ -264,29 +265,28 @@ test('solde : retirer un lingotin ne fait pas baisser le total (le physique est 
   assert.equal(physicalValue(b, p), 0);
 });
 
-test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces, moitié reversée au client', () => {
+test('commande par lots : prix du lot selon sa tranche, prix client indépendant de la quantité retirée', () => {
   const def = physicalFeesOf();
   const g10 = productOf('g10');
+  // Les remises du revendeur dépendent de la taille du lot commandé : 9 pièces, pas de palier.
   assert.equal(vendorTierOff(g10, 9), 0);
   close(vendorTierOff(g10, 10), 0.0054, 1e-12);
   close(vendorTierOff(g10, 49), 0.008, 1e-12);
   close(vendorTierOff(g10, 50), 0.0161, 1e-12);
-  // 9 pièces : pas de palier ; prix client inchangé aux paliers.
-  const nine = quoteWithdrawal(p, { g10: 9 }, def);
-  assert.equal(nine.volume, false);
-  assert.equal(nine.vendorDiscount, 0);
-  const ten = quoteWithdrawal(p, { g10: 10 }, def);
-  assert.equal(ten.volume, true);
-  // La moitié de la remise du revendeur est reversée au client, l'autre moitié reste à Orvia.
-  close(ten.clientDiscount, 10 * 10 * p.gold * 0.0054 * 0.5, 0.01);
-  close(ten.premium, 10 * 10 * p.gold * (0.075 - 0.0027), 0.01);
-  close(nine.premium, 9 * 10 * p.gold * 0.075, 1e-6); // pas de palier : prix de base
-  // Marge d'Orvia par pièce : base + moitié de la remise.
-  close((ten.premium - (ten.cost! - def.vendorDelivery)) / 10, 10 * p.gold * (0.075 - 0.0652 + 0.0027), 0.01);
-  close(ten.vendorDiscount, 10 * 10 * p.gold * 0.0054, 0.01);
-  close(ten.cost!, 10 * 10 * p.gold * (0.0652 - 0.0054) + def.vendorDelivery, 0.01);
-  // Le palier se compte par produit : 5 g + 5 g + 10 g n'atteignent aucun palier.
-  assert.equal(quoteWithdrawal(p, { g5: 5, g10: 5 }, def).volume, false);
+  // Prix attendu d'un lot de 10 g : or du jour + prime de base moins la remise de la tranche.
+  close(lotUnitCost('g10', 9, p.gold, def), 10 * p.gold * (1 + 0.0652), 1e-9);
+  close(lotUnitCost('g10', 20, p.gold, def), 10 * p.gold * (1 + 0.0652 - 0.008), 1e-9);
+  close(lotUnitCost('g10', 50, p.gold, def), 10 * p.gold * (1 + 0.0652 - 0.0161), 1e-9);
+  // Le client paie la même fabrication quel que soit le nombre de pièces retirées : plus de remise de quantité.
+  const one = quoteWithdrawal(p, { g10: 1 }, def);
+  const fifty = quoteWithdrawal(p, { g10: 50 }, def);
+  close(one.premium / 1, 10 * p.gold * 0.075, 1e-9);
+  close(fifty.premium / 50, 10 * p.gold * 0.075, 1e-9);
+  assert.equal(fifty.volume, false);
+  assert.equal(fifty.clientDiscount, 0);
+  assert.equal(fifty.vendorDiscount, 0);
+  // Sans stock, chaque pièce est commandée à l'unité : coût de la prime de base, + livraison.
+  close(fifty.cost!, 50 * 10 * p.gold * 0.0652 + def.vendorDelivery, 1e-6);
   // Napoléon : mêmes tranches que les autres formats (1-9, 10-19, 20-49, 50 et plus).
   const nap = productOf('nap20');
   assert.equal(vendorTierOff(nap, 9), 0);
@@ -306,7 +306,7 @@ test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces,
     );
   // Réglage de la société : la remise d'une tranche se change pour un produit.
   const fees = physicalFeesOf({ physicalFees: { vendorTiers: { g10: [{ from: 10, off: 0.01 }] } } });
-  assert.equal(quoteWithdrawal(p, { g10: 10 }, fees).vendorDiscount, Math.round(10 * 10 * p.gold * 0.01 * 100) / 100);
+  close(lotUnitCost('g10', 10, p.gold, fees), 10 * p.gold * (1 + 0.0652 - 0.01), 1e-9);
   assert.equal(fees.vendorTiers.g5.length, 3); // les autres produits gardent leurs valeurs
 });
 
@@ -508,4 +508,37 @@ test('livraison payée au vendeur : selon la valeur de la commande, par paliers 
     0,
     1e-9,
   );
+});
+
+test('retrait servi du stock : le lot le plus ancien part en premier, coût de la prime pris sur le lot', async () => {
+  const { addStock } = await import('../src/logic/stock.ts');
+  let acc = createAccount('T', new Date('2020-01-01'));
+  acc = buy(acc, p, 'gold', { unit: 'g', value: 30 }, new Date('2020-03-01T12:00:00'));
+  acc = creditCash(acc, 1000);
+  // Lot récent saisi en premier, lot ancien ensuite : le plus ancien (par date d'entrée) doit sortir d'abord.
+  acc = addStock(
+    acc,
+    { product: 'g5', qty: 1, source: 'maison', unitCost: 5 * 90 * 1.05, goldPrice: 90 },
+    new Date('2026-11-10T10:00:00'),
+  );
+  acc = addStock(
+    acc,
+    { product: 'g5', qty: 1, source: 'maison', unitCost: 5 * 100 * 1.08, goldPrice: 100 },
+    new Date('2026-11-01T10:00:00'),
+  );
+  const [recent, old] = acc.stock!.map((l) => l.id);
+  const out = withdrawPhysical(acc, p, { g5: 1 }, new Date('2026-11-18T10:00:00'));
+  assert.equal(out.homeVault![0].lotId, old);
+  assert.equal(out.stock!.find((l) => l.id === old)!.qty, 0);
+  assert.equal(out.stock!.find((l) => l.id === recent)!.qty, 1);
+  // Coût de la prime = prix du lot ancien moins le métal à la date d'achat : 5 × 100 × 1,08 − 5 × 100 = 40 €.
+  close(out.transactions[0].costEur!, 40, 0.01);
+  // Le lot suivant sert le retrait d'après, à son propre prix : 5 × 90 × 1,05 − 5 × 90 = 22,5 €.
+  const out2 = withdrawPhysical(out, p, { g5: 1 }, new Date('2026-11-19T10:00:00'));
+  assert.equal(out2.homeVault![1].lotId, recent);
+  close(out2.transactions[0].costEur!, 22.5, 0.01);
+  // Sans stock : commande à l'unité au prix de base, avec la livraison du vendeur.
+  const out3 = withdrawPhysical(out2, p, { g5: 1 }, new Date('2026-11-20T10:00:00'));
+  assert.equal(out3.homeVault![2].origin, 'commande');
+  close(out3.transactions[0].costEur!, 5 * p.gold * 0.0901 + 7, 0.01);
 });

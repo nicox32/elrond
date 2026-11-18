@@ -251,6 +251,8 @@ export interface StockLot {
   vault?: string;
   /** Prix payé au vendeur par exemplaire, métal compris (€). Information : n'entre pas dans les comptes. */
   unitCost?: number;
+  /** Cours de l'or (€/g) au moment de l'entrée du lot : sépare, dans le prix payé, le métal et la prime du vendeur. */
+  goldPriceAtEntry?: number;
   /** Numéros de série connus et pas encore attribués, dans l'ordre de sortie. */
   serials?: string[];
   /** Références internes Orvia (aléatoires) des exemplaires restants, dans l'ordre de sortie. */
