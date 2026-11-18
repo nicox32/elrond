@@ -97,7 +97,7 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
       />
       <Hint>
         Suivi dans « Mon coffre maison » : commandé, en fabrication, en route vers le coffre, puis entré au coffre chez
-        Godot & Fils (8 jours environ).
+        Godot & Fils (8 jours environ). Leur garde est offerte jusqu’à ses 18 ans.
       </Hint>
       <Hint>
         {mode === 'locked'

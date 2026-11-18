@@ -31,9 +31,10 @@ export function ResellerStorageCard() {
           );
         })}
         <Hint>
-          Gardés en coffre sécurisé chez Godot & Fils, au nom de chaque client, assurés. La garde est à la charge
-          d’Orvia pour l’instant ; pour un enfant, elle l’est jusqu’à ses 18 ans, puis il la paie (
-          {(FEES.custodyYearly.gold * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} % par an, en or).
+          Gardés en coffre sécurisé chez Godot & Fils, au nom de chaque client, assurés. La garde est refacturée au coût
+          par Orvia : {FEES.vaultPerGramYear.toLocaleString('fr-FR')} € par an et par gramme (0,04 € par mois), prélevée
+          chaque mois en or sur votre compte, puis en euros sur le compte d’attente s’il n’y a plus d’or. Offerte à un
+          enfant jusqu’à ses 18 ans.
         </Hint>
       </Card>
     </>

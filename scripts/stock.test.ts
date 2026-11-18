@@ -329,15 +329,76 @@ test('garde des lingotins d’un enfant : offerte jusqu’à 18 ans, puis payée
   // Mineur : garde offerte, valeur chiffrée (grammes et lingotin), rien prélevé.
   const off = custodyOffered(a, getChild(a, id), p, t0);
   assert.equal(off.minor, true);
-  close(off.yearly, (15 + 5) * p.gold * FEES.custodyYearly.gold, 1e-6);
+  close(off.yearly, 15 * p.gold * FEES.custodyYearly.gold + 5 * FEES.vaultPerGramYear, 1e-6);
   const mid = applyDormancy(
-    { ...a, children: a.children.map((c) => ({ ...c, custodyChargedThrough: '2026-11-01T00:00:00.000Z' })) },
+    {
+      ...a,
+      children: a.children.map((c) => ({
+        ...c,
+        custodyChargedThrough: '2026-11-01T00:00:00.000Z',
+        vaultChargedThrough: '2026-11-01T00:00:00.000Z',
+      })),
+    },
     p,
     new Date('2026-12-02T10:00:00'),
   );
   // Après la majorité (décembre 2026), il paie sur ses grammes ET son lingotin, en or, sans dépasser ses grammes.
   const g0 = getChild(mid, id).holdings.gold;
   assert.ok(g0 < 15 - 1e-9, 'la garde de décembre est prélevée sur ses grammes');
-  close(15 - g0, (15 + 5) * (FEES.custodyYearly.gold / 12) * 1, 1e-6); // un mois, lingotin compris
+  // Un mois : 0,15 % par an sur ses 15 g, plus la garde refacturée du lingotin (0,48 € par gramme et par an).
+  close(15 - g0, 15 * (FEES.custodyYearly.gold / 12) + (5 * FEES.vaultPerGramYear) / 12 / p.gold, 1e-6);
   assert.equal(custodyOffered(mid, getChild(mid, id), p, new Date('2026-12-02T10:00:00')).yearly, 0);
+});
+
+test('coffre sécurisé refacturé : 0,04 € par mois et par gramme, en or puis en euros, jamais rétroactif ni pour un enfant mineur', async () => {
+  const { applyDormancy } = await import('../src/logic/ledger.ts');
+  const { FEES } = await import('../src/logic/fees.ts');
+  const t0 = new Date('2026-06-10T10:00:00');
+  let a = creditCash(buy(createAccount('T', new Date('2020-01-01')), p, 'gold', { unit: 'g', value: 20 }), 100);
+  // 10 g de lingotins en coffre sécurisé chez Godot & Fils, appartenant au titulaire.
+  a = {
+    ...a,
+    homeVault: [
+      {
+        id: 'v',
+        product: 'g10',
+        grams: 10,
+        orderedAt: t0.toISOString(),
+        status: 'received',
+        cost: 1000,
+        acquiredFrom: t0.toISOString(),
+        acquiredTo: t0.toISOString(),
+        txId: 't',
+        vault: true,
+      } as any,
+    ],
+  };
+  // Premier passage : le compteur démarre, rien n'est prélevé (pas de rattrapage).
+  const first = applyDormancy(a, p, new Date('2026-06-20T10:00:00'));
+  assert.equal(first.holdings.gold, a.holdings.gold);
+  assert.ok(first.vaultChargedThrough);
+  // Trois mois plus tard : 3 × 10 g × 0,04 € = 1,20 €, prélevés en or (au cours de 100 €/g : 0,012 g).
+  const later = applyDormancy(first, p, new Date('2026-09-05T10:00:00'));
+  // (s'y ajoutent les 3 mois de garde ordinaire de 0,15 % par an sur les grammes)
+  const vaultPart = (3 * (10 * FEES.vaultPerGramYear)) / 12 / p.gold;
+  const gramsPart = 3 * 20 * (FEES.custodyYearly.gold / 12);
+  close(a.holdings.gold - later.holdings.gold, vaultPart + gramsPart, 1e-5);
+  assert.equal(later.transactions.filter((t) => t.kind === 'fee_custody').length >= 3, true);
+  // Plus d'or du tout : la garde est prélevée en euros sur le compte d'attente.
+  const noGold = applyDormancy(
+    { ...first, holdings: { gold: 0, silver: 0, platinum: 0 }, cashEur: 50 },
+    p,
+    new Date('2026-08-05T10:00:00'),
+  );
+  close(50 - noGold.cashEur!, (2 * (10 * FEES.vaultPerGramYear)) / 12, 0.01);
+  // Aucun lingotin en coffre : aucune garde refacturée, et le compteur est remis à zéro.
+  const none = applyDormancy({ ...first, homeVault: [] }, p, new Date('2026-09-05T10:00:00'));
+  assert.equal(none.vaultChargedThrough, undefined);
+  // Désactivée par la société : rien n'est prélevé.
+  const off = applyDormancy(
+    { ...first, settings: { ...first.settings, custodyFees: false } },
+    p,
+    new Date('2026-09-05T10:00:00'),
+  );
+  assert.equal(off.holdings.gold, a.holdings.gold);
 });

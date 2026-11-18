@@ -199,8 +199,8 @@ export default function WithdrawScreen() {
             {vault && (
               <Text style={styles.sub} testID="vault-note">
                 Vos lingotins restent en coffre sécurisé chez Godot & Fils, à votre nom, sans livraison. Ils
-                apparaissent dans « Mon coffre maison » dès leur entrée au coffre. Leur garde est à la charge d’Orvia
-                pour l’instant.
+                apparaissent dans « Mon coffre maison » dès leur entrée au coffre. Leur garde est refacturée au coût par
+                Orvia : 0,04 € par mois et par gramme, prélevée chaque mois en or.
               </Text>
             )}
             <Line

@@ -5,6 +5,7 @@ import { gramsForNet, type SaleTax, saleTax } from './tax.ts';
 import {
   type Account,
   type ChildAccount,
+  type HomeBar,
   type BalancePoint,
   type Beneficiary,
   type Holdings,
@@ -1000,14 +1001,7 @@ const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
  * métal. Jamais rétroactif : la première fois, la garde démarre au mois suivant. Comptes enfants exonérés
  * jusqu'à 18 ans ; aucun frais si la société a désactivé la garde payante.
  */
-export function chargeCustody<W extends Wallet>(
-  wallet: W,
-  prices: Prices,
-  now = new Date(),
-  enabled = true,
-  /** Grammes d'or en lingotins appartenant à ce compte (enfant), gardés en coffre sécurisé : ils paient la garde aussi. */
-  barGrams = 0,
-): W {
+export function chargeCustody<W extends Wallet>(wallet: W, prices: Prices, now = new Date(), enabled = true): W {
   const thisMonth = monthStart(now);
   if (!wallet.custodyChargedThrough)
     return enabled ? { ...wallet, custodyChargedThrough: thisMonth.toISOString() } : wallet;
@@ -1028,9 +1022,7 @@ export function chargeCustody<W extends Wallet>(
       const byMetal: Partial<Record<Metal, number>> = {};
       let value = 0;
       for (const metal of METALS) {
-        // Les lingotins de l'enfant paient comme son or en grammes, prélevé sur ses grammes (jamais plus que ce qu'il a).
-        const base = result.holdings[metal] + (metal === 'gold' ? barGrams : 0);
-        const fee = Math.min(result.holdings[metal], base * (FEES.custodyYearly[metal] / 12));
+        const fee = result.holdings[metal] * (FEES.custodyYearly[metal] / 12);
         if (fee > 1e-9) {
           deltas[metal] = -fee;
           byMetal[metal] = fee * prices[metal];
@@ -1048,9 +1040,67 @@ export function chargeCustody<W extends Wallet>(
   return result;
 }
 
-/** Grammes d'or des lingotins et pièces qui appartiennent à un enfant (don ou conversion), gardés en coffre sécurisé. */
+/** Un lingotin gardé en coffre sécurisé chez Godot & Fils (donc concerné par la garde refacturée). */
+const inVault = (b: HomeBar) => !!b.vault || /godot/i.test(b.placeNote ?? '') || b.origin === 'pro';
+
+/** Grammes d'or des lingotins et pièces gardés en coffre sécurisé : à un enfant (`childId`) ou au titulaire (`null`). */
+export function vaultBarGrams(account: Pick<Account, 'homeVault'>, childId: string | null): number {
+  return (account.homeVault ?? [])
+    .filter((b) => inVault(b) && (childId === null ? !b.ownerChildId : b.ownerChildId === childId))
+    .reduce((s, b) => s + b.grams, 0);
+}
+
+/** Grammes d'or des lingotins et pièces qui appartiennent à un enfant (don ou conversion). */
 export function childBarGrams(account: Pick<Account, 'homeVault'>, childId: string): number {
   return (account.homeVault ?? []).filter((b) => b.ownerChildId === childId).reduce((s, b) => s + b.grams, 0);
+}
+
+/**
+ * Garde des lingotins en coffre sécurisé, refacturée au coût : chaque mois, 0,04 € par gramme d'or, prélevé en or sur le
+ * compte du propriétaire (jamais plus que ce qu'il a), puis en euros sur le compte d'attente du titulaire pour le reste.
+ * Gratuite pour un enfant mineur ; jamais rétroactive ; aucune si la société a désactivé la garde payante.
+ */
+function chargeVault<W extends Wallet>(
+  wallet: W,
+  grams: number,
+  prices: Prices,
+  now: Date,
+  enabled: boolean,
+  cash?: { eur: number },
+): W {
+  // Sans lingotin en coffre : rien à suivre (et le compteur repart de zéro au prochain dépôt, sans rien rattraper).
+  if (grams <= 0) return wallet.vaultChargedThrough ? { ...wallet, vaultChargedThrough: undefined } : wallet;
+  const thisMonth = monthStart(now);
+  if (!wallet.vaultChargedThrough) return { ...wallet, vaultChargedThrough: thisMonth.toISOString() };
+  const exempt = feesExemptUntil(wallet);
+  const free =
+    !enabled || grams <= 0 || (!!exempt && now < exempt) || !!(wallet as Partial<ChildAccount>).transferredAt;
+  let result = wallet;
+  for (let m = new Date(wallet.vaultChargedThrough); m < thisMonth; ) {
+    const next = new Date(m.getFullYear(), m.getMonth() + 1, 1);
+    if (!free) {
+      const label = `Garde en coffre sécurisé · ${m.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`;
+      const feeEur = (grams * FEES.vaultPerGramYear) / 12;
+      const feeGold = Math.min(result.holdings.gold, feeEur / prices.gold);
+      if (feeGold > 1e-9) {
+        result = tagByMetal(
+          apply(result, 'fee_custody', { gold: -feeGold }, feeGold * prices.gold, label, next, feeGold * prices.gold),
+          { gold: feeGold * prices.gold },
+        );
+      }
+      const rest = feeEur - feeGold * prices.gold;
+      if (cash && rest > 0.005 && cash.eur > 0) {
+        const paid = Math.min(rest, cash.eur);
+        cash.eur -= paid;
+        result = apply(result, 'fee_custody', {}, paid, `${label} (compte d’attente)`, next, paid);
+        const [tx, ...others] = result.transactions;
+        result = { ...result, transactions: [{ ...tx, cash: -paid }, ...others] };
+      }
+    }
+    result = { ...result, vaultChargedThrough: next.toISOString() };
+    m = next;
+  }
+  return result;
 }
 
 /**
@@ -1065,23 +1115,33 @@ export function custodyOffered(
 ) {
   const until = feesExemptUntil(child);
   const minor = !!until && now < until && !child.transferredAt;
-  const bars = childBarGrams(account, child.id);
-  const yearly = METALS.reduce(
-    (s, m) => s + (child.holdings[m] + (m === 'gold' ? bars : 0)) * prices[m] * FEES.custodyYearly[m],
-    0,
-  );
+  const bars = vaultBarGrams(account, child.id);
+  const yearly =
+    METALS.reduce((s, m) => s + child.holdings[m] * prices[m] * FEES.custodyYearly[m], 0) +
+    bars * FEES.vaultPerGramYear;
   return { minor, yearly: minor ? yearly : 0, barGrams: bars };
 }
 
 /** Applique les frais d'oxydation et de garde au compte principal et à chaque compte enfant. */
 export function applyDormancy(account: Account, prices: Prices, now = new Date()): Account {
   const custody = account.settings.custodyFees !== false;
-  const parent = chargeCustody(chargeDormancy(account, prices, now), prices, now, custody);
+  const cash = { eur: account.cashEur ?? 0 };
+  const cash0 = cash.eur;
+  const parent0 = chargeCustody(chargeDormancy(account, prices, now), prices, now, custody);
+  const parent = chargeVault(parent0, vaultBarGrams(account, null), prices, now, custody, cash);
   const children = account.children.map((c) =>
-    chargeCustody(chargeDormancy(c, prices, now), prices, now, custody, childBarGrams(account, c.id)),
+    chargeVault(
+      chargeCustody(chargeDormancy(c, prices, now), prices, now, custody),
+      vaultBarGrams(account, c.id),
+      prices,
+      now,
+      custody,
+    ),
   );
   const changed = parent !== account || children.some((c, i) => c !== account.children[i]);
-  return changed ? { ...parent, children } : account;
+  return changed
+    ? { ...parent, children, ...(cash.eur !== cash0 ? { cashEur: Math.round(cash.eur * 100) / 100 } : {}) }
+    : account;
 }
 
 // ——— Parrainage ——————————————————————————————————————————————————

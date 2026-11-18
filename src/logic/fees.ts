@@ -11,6 +11,12 @@ export const FEES = {
   buy: { gold: 0.028, silver: 0.068, platinum: 0.045 } as Record<Metal, number>,
   /** Garde en coffre, par an, en part du métal détenu ; prélevée en métal chaque mois (1/12). */
   custodyYearly: { gold: 0.0015, silver: 0.004, platinum: 0.002 } as Record<Metal, number>,
+  /**
+   * Garde d'un lingotin en coffre sécurisé chez Godot & Fils, refacturée au coût : 0,04 € par mois et par gramme d'or,
+   * soit 0,48 € par an. Prélevée chaque mois en or sur le compte du propriétaire (puis en euros sur le compte
+   * d'attente s'il n'a plus assez d'or). Gratuite pour un enfant mineur.
+   */
+  vaultPerGramYear: 0.48,
   /** Frais de gestion sur revente par virement vers un compte bancaire : aucune commission de revente. */
   sale: 0,
   /** Supplément fixe pour un virement vers un compte bancaire hors de France. */

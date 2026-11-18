@@ -311,6 +311,8 @@ export interface Wallet {
   custodyChargedThrough?: string;
   /** Aucun frais d'oxydation pour la période d'avant cette date : les 6 mois comptent à partir d'ici (ISO). */
   dormancyNotBefore?: string;
+  /** Garde des lingotins en coffre sécurisé prélevée jusqu'à ce début de mois (ISO). */
+  vaultChargedThrough?: string;
 }
 
 /** Motif obligatoire d'un retrait sur le compte d'un enfant : une dépense faite dans son intérêt. */
