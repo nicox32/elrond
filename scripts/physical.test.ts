@@ -11,6 +11,8 @@ import {
   quoteWithdrawal,
   receiveBar,
   vendorPremiumFrom,
+  vendorTierOff,
+  productOf,
   withdrawPhysical,
 } from '../src/logic/physical.ts';
 import { holdingLots } from '../src/logic/tax.ts';
@@ -160,28 +162,28 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   // Valeurs par défaut : 5 g à 11 % (prime vendeur 9,78 % relevée le 18/11/2026), livraison 12 € (7 € payés au vendeur).
   const def = physicalFeesOf();
   assert.equal(def.premiums.g5, 0.11);
-  assert.equal(def.vendor.g5, 0.0978);
+  assert.equal(def.vendor.g5, 0.0901);
   assert.equal(def.vendorDelivery, 7);
   assert.equal(def.delivery, 12);
   assert.equal(def.freeFromGrams, 20);
   const q5 = quoteWithdrawal(p, { g5: 1 }, def);
   close(q5.premium, 5 * 100 * 0.11, 1e-9);
   close(q5.fees, 55 + 12, 0.01);
-  close(q5.cost!, 5 * 100 * 0.0978 + 7, 1e-9); // lingotin payé au vendeur + sa livraison
+  close(q5.cost!, 5 * 100 * 0.0901 + 7, 1e-9); // lingotin payé au vendeur + sa livraison
   // Coût inconnu si un format sans prime vendeur : pas de coût calculé.
-  assert.equal(def.vendor.g10, 0.064);
-  assert.equal(def.vendor.g20, 0.0653);
-  assert.equal(def.vendor.oz1, 0.0519);
-  assert.equal(def.vendor.nap20, 0.0653);
-  close(quoteWithdrawal(p, { nap20: 1 }, def).cost!, 5.806 * 100 * 0.0653 + 7, 0.01);
-  close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0978 + 10 * 100 * 0.064 + 7, 1e-9);
+  assert.equal(def.vendor.g10, 0.0652);
+  assert.equal(def.vendor.g20, 0.05);
+  assert.equal(def.vendor.oz1, 0.0409);
+  assert.equal(def.vendor.nap20, 0.0528);
+  close(quoteWithdrawal(p, { nap20: 1 }, def).cost!, 5.806 * 100 * 0.0528 + 7, 0.01);
+  close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0901 + 10 * 100 * 0.0652 + 7, 1e-9);
   // Réglages de Société Orvia : fabrication, livraison, seuil.
   const custom = physicalFeesOf({
     physicalFees: { premiums: { g5: 0.08 }, vendor: { g10: 0.05 }, delivery: 20, freeFromGrams: 50 },
   });
   assert.equal(custom.premiums.g5, 0.08);
   assert.equal(custom.premiums.g10, 0.075); // inchangé
-  assert.equal(custom.vendor.g5, 0.0978); // valeur par défaut gardée
+  assert.equal(custom.vendor.g5, 0.0901); // valeur par défaut gardée
   assert.equal(custom.vendor.g10, 0.05);
   const q = quoteWithdrawal(p, { g10: 2 }, custom); // 20 g : livraison offerte seulement dès 50 g
   assert.equal(q.delivery, 20);
@@ -201,9 +203,9 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   a = { ...a, settings: { ...a.settings, physicalFees: { premiums: { g5: 0.1 } } } };
   a = withdrawPhysical(a, p, { g5: 1 }, new Date('2026-11-16T12:00:00'));
   close(a.transactions[0].fees!, 50 + 12, 0.01);
-  close(a.transactions[0].costEur!, 5 * 100 * 0.0978 + 7, 0.01);
+  close(a.transactions[0].costEur!, 5 * 100 * 0.0901 + 7, 0.01);
   const r = companyReport(a, p, 'all', new Date('2026-11-17T12:00:00'));
-  close(r.costs.physical, 5 * 100 * 0.0978 + 7, 0.01);
+  close(r.costs.physical, 5 * 100 * 0.0901 + 7, 0.01);
   close(r.revenue.physical, 62, 0.01);
   // Grille des Tarifs avec les frais en vigueur.
   const rows = physicalFeeRows(physicalFeesOf(a.settings));
@@ -253,26 +255,25 @@ test('solde : retirer un lingotin ne fait pas baisser le total (le physique est 
   assert.equal(physicalValue(b, p), 0);
 });
 
-test('remise du revendeur : prime −0,15 point dès 5 pièces commandées, coût en moins pour Orvia, prix client inchangé', () => {
+test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces, coût en moins pour Orvia', () => {
   const def = physicalFeesOf();
-  assert.equal(def.volumeFrom, 5);
-  close(def.volumeDiscount, 0.0015, 1e-12);
-  // 4 pièces : pas de remise du revendeur.
-  const four = quoteWithdrawal(p, { g10: 4 }, def);
-  assert.equal(four.volume, false);
-  assert.equal(four.vendorDiscount, 0);
-  close(four.premium, 4 * 10 * 100 * 0.075, 1e-9); // prix client : 7,5 %
-  close(four.cost!, 4 * 10 * 100 * 0.064 + 7, 1e-9);
-  // 5 pièces : le client paie toujours 7,5 %, mais la prime du vendeur passe de 6,4 % à 6,25 %.
-  const five = quoteWithdrawal(p, { g10: 5 }, def);
-  assert.equal(five.volume, true);
-  close(five.premium, 5 * 10 * 100 * 0.075, 1e-9);
-  close(five.cost!, 5 * 10 * 100 * (0.064 - 0.0015) + 7, 1e-9);
-  close(five.vendorDiscount, 5 * 10 * 100 * 0.0015, 0.01);
-  close(five.fees, (four.fees / 4) * 5, 0.01); // frais du client proportionnels : pas de remise pour lui
-  // Les pièces de formats différents comptent ensemble ; la remise se règle.
-  assert.equal(quoteWithdrawal(p, { g5: 2, g10: 2, nap20: 1 }, def).pieces, 5);
-  assert.equal(quoteWithdrawal(p, { g10: 5 }, { ...def, volumeDiscount: 0 }).volume, false);
-  const custom = physicalFeesOf({ physicalFees: { volumeFrom: 3, volumeDiscount: 0.002 } });
-  assert.equal(quoteWithdrawal(p, { g10: 3 }, custom).volume, true);
+  const g10 = productOf('g10');
+  assert.equal(vendorTierOff(g10, 9), 0);
+  close(vendorTierOff(g10, 10), 0.0054, 1e-12);
+  close(vendorTierOff(g10, 49), 0.008, 1e-12);
+  close(vendorTierOff(g10, 50), 0.0161, 1e-12);
+  // 9 pièces : pas de palier ; prix client inchangé aux paliers.
+  const nine = quoteWithdrawal(p, { g10: 9 }, def);
+  assert.equal(nine.volume, false);
+  assert.equal(nine.vendorDiscount, 0);
+  const ten = quoteWithdrawal(p, { g10: 10 }, def);
+  assert.equal(ten.volume, true);
+  close(ten.premium, 10 * 10 * p.gold * 0.075, 1e-6); // le client paie toujours 7,5 %
+  close(ten.vendorDiscount, 10 * 10 * p.gold * 0.0054, 0.01);
+  close(ten.cost!, 10 * 10 * p.gold * (0.0652 - 0.0054) + def.vendorDelivery, 0.01);
+  // Le palier se compte par produit : 5 g + 5 g + 10 g n'atteignent aucun palier.
+  assert.equal(quoteWithdrawal(p, { g5: 5, g10: 5 }, def).volume, false);
+  // Napoléon : paliers à 10, 50, 100 et 500 pièces.
+  assert.equal(vendorTierOff(productOf('nap20'), 100), 0.0039);
+  assert.equal(vendorTierOff(productOf('nap20'), 500), 0.0069);
 });

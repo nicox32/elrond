@@ -24,8 +24,6 @@ export function PhysicalFeesEditor() {
   );
   const [delivery, setDelivery] = useState(String(fees.delivery).replace('.', ','));
   const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
-  const [volFrom, setVolFrom] = useState(String(fees.volumeFrom));
-  const [volPts, setVolPts] = useState(toText(fees.volumeDiscount));
   const [vDelivery, setVDelivery] = useState(String(fees.vendorDelivery).replace('.', ','));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [calcId, setCalcId] = useState(BAR_PRODUCTS[BAR_PRODUCTS.length - 1].id);
@@ -48,10 +46,6 @@ export function PhysicalFeesEditor() {
     parseAmount(delivery) <= 200 &&
     parseAmount(free) >= 0 &&
     parseAmount(free) <= 1000 &&
-    parseAmount(volFrom) >= 1 &&
-    parseAmount(volFrom) <= 1000 &&
-    toRate(volPts) >= 0 &&
-    toRate(volPts) <= 0.05 &&
     parseAmount(vDelivery) >= 0 &&
     parseAmount(vDelivery) <= 200;
 
@@ -69,8 +63,6 @@ export function PhysicalFeesEditor() {
         delivery: parseAmount(delivery),
         vendorDelivery: parseAmount(vDelivery),
         freeFromGrams: parseAmount(free),
-        volumeFrom: Math.max(1, Math.floor(parseAmount(volFrom))),
-        volumeDiscount: toRate(volPts),
       },
     });
     setMsg({
@@ -85,8 +77,6 @@ export function PhysicalFeesEditor() {
     setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(physicalFeesOf().vendor[p.id])])));
     setDelivery(String(PHYSICAL.delivery));
     setFree(String(PHYSICAL.freeDeliveryFromGrams));
-    setVolFrom(String(PHYSICAL.volumeFromQty));
-    setVolPts(toText(PHYSICAL.volumeDiscount));
     setVDelivery(String(PHYSICAL.vendorDelivery));
     setMsg({ ok: true, text: 'Valeurs par défaut rétablies.' });
   }
@@ -165,32 +155,6 @@ export function PhysicalFeesEditor() {
           />
         </View>
       </View>
-      <View style={{ flexDirection: 'row', gap: 10 }}>
-        <View style={{ flex: 1, gap: 5 }}>
-          <Label>Remise du revendeur dès (pièces)</Label>
-          <TextInput
-            value={volFrom}
-            onChangeText={setVolFrom}
-            keyboardType="number-pad"
-            style={ui.input}
-            accessibilityLabel="Remise du revendeur dès"
-          />
-        </View>
-        <View style={{ flex: 1, gap: 5 }}>
-          <Label>Remise (points de %)</Label>
-          <TextInput
-            value={volPts}
-            onChangeText={setVolPts}
-            keyboardType="decimal-pad"
-            style={ui.input}
-            accessibilityLabel="Remise du revendeur en points"
-          />
-        </View>
-      </View>
-      <Hint>
-        Remise du revendeur : à partir de ce nombre de pièces dans une même commande chez lui, sa prime baisse de ce
-        nombre de points (0,15 = 0,15 point). C’est un coût en moins pour vous ; le prix du client ne change pas.
-      </Hint>
       <View style={{ gap: 5 }}>
         <Label>Livraison payée au vendeur, par commande (€)</Label>
         <TextInput

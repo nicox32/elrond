@@ -21,6 +21,11 @@ export interface BarProduct {
   spec?: BarSpec;
   /** Prime payée au vendeur, en part de la valeur de l'or, quand elle est connue (relevé de prix). */
   vendorPremium?: number;
+  /**
+   * Remises de quantité du revendeur, par produit : dès `from` pièces du même produit dans une commande, sa prime
+   * baisse de `off` (en part de la valeur de l'or). C'est un coût en moins pour Orvia, pas une remise client.
+   */
+  vendorTiers?: { from: number; off: number }[];
 }
 
 export interface BarSpec {
@@ -113,7 +118,12 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 : 621,01 € TTC pour 1 lingotin + 7 € de livraison. Les frais du vendeur (8,91 % du prix)
     // font 9,78 % de la valeur de l'or ; facturée 11 % au client, soit environ 1,2 point de marge (≈ 7 €).
     premium: 0.11,
-    vendorPremium: 0.0978,
+    vendorPremium: 0.0901, // relevé du 18/11/2026 : 612,50 € l'unité pour 561,86 € d'or
+    vendorTiers: [
+      { from: 10, off: 0.0062 },
+      { from: 20, off: 0.0089 },
+      { from: 50, off: 0.0169 },
+    ],
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
@@ -131,7 +141,12 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 : 1 lingotin 1 199,83 € à la commande (+ 7 € de livraison) pour 1 127,83 € d'or, soit
     // 6,4 % de prime (le tableau de prix du vendeur affichait +4,80 %). Facturée 7,5 % au client : ≈ 1,1 point (≈ 12 €).
     premium: 0.075,
-    vendorPremium: 0.064,
+    vendorPremium: 0.0652, // Godot & Fils, 18/11/2026 : 1 191 € pour 1 118,08 € d'or
+    vendorTiers: [
+      { from: 10, off: 0.0054 },
+      { from: 20, off: 0.008 },
+      { from: 50, off: 0.0161 },
+    ],
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
@@ -149,7 +164,12 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 2 259,61 €, frais 147,57 € = 6,53 % ; 7 € de livraison.
     // Facturée 7,5 % : environ 1 point de marge (≈ 22 €), la livraison étant offerte dès 20 g (7 € à votre charge).
     premium: 0.075,
-    vendorPremium: 0.0653,
+    vendorPremium: 0.05, // Godot & Fils, 18/11/2026 : 2 348 € pour 2 236,16 € d'or
+    vendorTiers: [
+      { from: 10, off: 0.0027 },
+      { from: 20, off: 0.0054 },
+      { from: 50, off: 0.0105 },
+    ],
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
@@ -167,7 +187,12 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 3 508,47 €, frais 182,03 € = 5,19 % ; 7 € de livraison.
     // Facturée 6 % : environ 0,8 point de marge (≈ 28 €), moins les 7 € de livraison offerte dès 20 g.
     premium: 0.06,
-    vendorPremium: 0.0519,
+    vendorPremium: 0.0409, // Godot & Fils, 18/11/2026 : 3 620 € pour 3 477,62 € d'or
+    vendorTiers: [
+      { from: 10, off: 0.0027 },
+      { from: 20, off: 0.0053 },
+      { from: 50, off: 0.0105 },
+    ],
     spec: {
       veriscan: true,
       producer: 'PAMP Suisse',
@@ -183,7 +208,13 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Napoléon 20 F (5,81 g d’or fin)',
     grams: NAPOLEON_FINE_GRAMS,
     premium: 0.075,
-    vendorPremium: 0.0653, // relevé du 18/11/2026 livré en France : 698,91 € dont 42,83 € de frais (6,53 % de l’or), + 7 € de livraison
+    vendorPremium: 0.0528, // Godot & Fils, 18/11/2026 : 683,50 € pour 649,21 € d'or
+    vendorTiers: [
+      { from: 10, off: 0.0015 },
+      { from: 50, off: 0.0023 },
+      { from: 100, off: 0.0039 },
+      { from: 500, off: 0.0069 },
+    ],
     coin: true,
     // Pièce de 6,45 g à 900 ‰, frappée en France (Monnaie de Paris) de 1803 à 1914.
     spec: { producer: 'Monnaie de Paris', purity: '900 ‰', diameterMm: 21 },
@@ -210,9 +241,6 @@ export const PHYSICAL = {
   vendorDelivery: 7,
   /** TVA due à la sortie du port franc pour l'argent et le platine (l'or d'investissement en est exonéré). */
   vatSilverPlatinum: 0.2,
-  /** Remise du revendeur : dès 5 pièces dans une même commande chez lui, sa prime baisse de 0,15 point (coût d'Orvia). */
-  volumeFromQty: 5,
-  volumeDiscount: 0.0015,
   /** Délai indicatif de livraison, en jours ouvrés. */
   delayDays: '5 à 10',
 } as const;
@@ -228,9 +256,6 @@ export interface PhysicalFees {
   /** Livraison payée au vendeur, par commande. */
   vendorDelivery: number;
   freeFromGrams: number;
-  /** Remise du revendeur : nombre de pièces dans la commande, et points de prime vendeur retirés (baisse du coût). */
-  volumeFrom: number;
-  volumeDiscount: number;
 }
 
 export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
@@ -248,8 +273,6 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
     delivery: s.delivery ?? PHYSICAL.delivery,
     vendorDelivery: s.vendorDelivery ?? PHYSICAL.vendorDelivery,
     freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
-    volumeFrom: s.volumeFrom ?? PHYSICAL.volumeFromQty,
-    volumeDiscount: s.volumeDiscount ?? PHYSICAL.volumeDiscount,
   };
 }
 
@@ -280,17 +303,22 @@ export function productOf(id: string): BarProduct {
   return p;
 }
 
+/** Baisse de prime accordée par le revendeur pour `qty` pièces du même produit (0 sans palier atteint). */
+export function vendorTierOff(p: BarProduct, qty: number): number {
+  let off = 0;
+  for (const t of p.vendorTiers ?? []) if (qty >= t.from) off = Math.max(off, t.off);
+  return off;
+}
+
 /** Détail chiffré d'un retrait : grammes pris au coffre, surcoût de fabrication, livraison. */
 export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalFees = physicalFeesOf()) {
   const pieces = BAR_PRODUCTS.reduce((s, p) => s + Math.max(0, Math.floor(order[p.id] ?? 0)), 0);
-  // Remise du revendeur : dès N pièces dans la même commande chez lui, sa prime baisse de quelques points. C'est un
-  // coût en moins pour Orvia : le prix facturé au client ne change pas.
-  const volume = fees.volumeDiscount > 0 && pieces >= fees.volumeFrom;
   const lines = BAR_PRODUCTS.filter((p) => (order[p.id] ?? 0) > 0).map((p) => {
     const qty = Math.floor(order[p.id]);
     const value = qty * p.grams * prices.gold;
     const v = fees.vendor[p.id];
-    const applied = volume && v !== undefined ? Math.min(v, fees.volumeDiscount) : 0;
+    // Remise de quantité du revendeur sur ce produit : un coût en moins pour Orvia, le prix client ne change pas.
+    const applied = v !== undefined ? Math.min(v, vendorTierOff(p, qty)) : 0;
     return {
       product: p,
       qty,
@@ -322,7 +350,7 @@ export function quoteWithdrawal(prices: Prices, order: BarOrder, fees: PhysicalF
     feesPct: value ? total / value : 0,
     cost,
     pieces,
-    volume,
+    volume: vendorDiscount > 0,
     vendorDiscount: Math.round(vendorDiscount * 100) / 100,
   };
 }

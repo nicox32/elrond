@@ -137,10 +137,6 @@ export interface Settings {
     vendorDelivery?: number;
     /** Livraison offerte à partir de ce poids d'or dans l'envoi (g). */
     freeFromGrams?: number;
-    /** Remise du revendeur : à partir de ce nombre de pièces dans une même commande chez lui… */
-    volumeFrom?: number;
-    /** … sa prime baisse de ce nombre de points (0,0015 = 0,15 point) : un coût en moins pour Orvia. */
-    volumeDiscount?: number;
   };
   /** Marges des contrôles de lingots (Société Orvia) : pesée en grammes, dimensions en millimètres. */
   barTolerance?: { weightG: number; dimMm: number };
