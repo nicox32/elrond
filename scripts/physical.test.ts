@@ -435,3 +435,25 @@ test('retrait d’un lingotin gardé en coffre : à domicile (12 €) ou en agen
   const child = { ...acc, homeVault: acc.homeVault!.map((b) => (b.id === b5 ? { ...b, ownerChildId: 'c1' } : b)) };
   assert.throws(() => requestVaultExit(child, b5, 'home', undefined, t0), /enfant/);
 });
+
+test('coffre personnel : livré à l’agence, sans frais de livraison, lingotin marqué, aucune garde pour Orvia', async () => {
+  const { companyReport } = await import('../src/logic/company.ts');
+  let acc = createAccount('T', new Date('2020-01-01'));
+  acc = buy(acc, p, 'gold', { unit: 'g', value: 12 }, new Date('2020-03-01T12:00:00'));
+  acc = creditCash(acc, 500);
+  const now = new Date('2026-11-18T10:00:00');
+  assert.throws(() => withdrawPhysical(acc, p, { g5: 1 }, now, undefined, false, true), /agence/i);
+  const out = withdrawPhysical(acc, p, { g5: 1 }, now, 'Lyon', false, true);
+  const bar = out.homeVault![0];
+  assert.equal(bar.privateVault, true);
+  assert.equal(bar.pickupAgency, 'Lyon');
+  assert.equal(bar.vault, undefined);
+  assert.match(bar.placeNote!, /Coffre personnel.*Lyon/);
+  assert.match(out.transactions[0].label, /coffre personnel/);
+  // Pas de livraison facturée (comme un retrait en agence).
+  close(500 - out.cashEur!, quoteWithdrawal(p, { g5: 1 }, physicalFeesOf(), true).fees, 0.01);
+  // Orvia ne paie aucune garde : le lingotin n'est pas dans le coffre mutualisé.
+  const r = companyReport(out, p, 'year', new Date('2027-11-18T10:00:00'));
+  const base = companyReport(acc, p, 'year', new Date('2027-11-18T10:00:00'));
+  assert.ok(r.costs.custody <= base.costs.custody + 1e-6);
+});

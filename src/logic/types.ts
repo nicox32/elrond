@@ -195,6 +195,8 @@ export interface HomeBar {
   pickupAgency?: string;
   /** Lingotin gardé en coffre sécurisé chez le revendeur (jamais livré chez le client). */
   vault?: boolean;
+  /** Lingotin déposé dans le coffre personnel (Coffre-Fort Privé) que le client loue chez Godot & Fils. */
+  privateVault?: boolean;
   /** Retrait demandé d'un lingotin gardé en coffre : livraison à domicile ou retrait en agence. */
   exitRequest?: { mode: 'home' | 'agency'; agency?: string; at: string };
   /** Date à laquelle le lingotin est sorti du coffre et remis au client. */
