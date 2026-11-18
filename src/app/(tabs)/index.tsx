@@ -5,6 +5,7 @@ import { BalanceChart } from '../../components/BalanceChart';
 import { CustodyNote } from '../../components/Custody';
 import { DormancyNotice } from '../../components/DormancyNotice';
 import { OrviaCard } from '../../components/OrviaCard';
+import { VaultLogo } from '../../components/VaultLogo';
 import { LivePrices } from '../../components/LivePrices';
 import { PriceStatus } from '../../components/PriceStatus';
 import { TransactionRow } from '../../components/TransactionRow';
@@ -282,6 +283,24 @@ export default function AccountScreen() {
         Mes coffres
       </SectionTitle>
       <Card style={{ paddingVertical: 4 }}>
+        <Pressable
+          onPress={() => router.push('/coffre-maison')}
+          style={styles.vaultHead}
+          accessibilityRole="button"
+          accessibilityLabel="Ouvrir mon coffre maison"
+          testID="vaults-summary"
+        >
+          <VaultLogo size={60} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.vaultName}>Total des coffres</Text>
+            <Text style={styles.vaultHeadValue}>{eur(total + home.value)}</Text>
+            <Text style={styles.vaultPrice}>
+              dont lingots et pièces : {eur(home.value)} ({home.count})
+            </Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+        <View style={styles.vaultBorder} />
         {METALS.map((m, i) => (
           <Pressable
             key={m}
@@ -329,7 +348,7 @@ export default function AccountScreen() {
           </Pressable>
         )}
       </Card>
-      <CustodyNote />
+      <CustodyNote logo={false} />
 
       <SectionTitle
         right={
@@ -354,6 +373,8 @@ export default function AccountScreen() {
 }
 
 const styles = StyleSheet.create({
+  vaultHead: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
+  vaultHeadValue: { color: colors.gold, fontSize: 22, fontWeight: '800' },
   loyalty: { color: colors.gold, fontSize: 13, fontWeight: '700', marginTop: 4 },
   taxRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   taxText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },

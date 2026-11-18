@@ -7,10 +7,10 @@ import { VaultLogo } from './VaultLogo';
  * Rappel court : métal gardé par Orvia en port franc, mais propriété du client. Lien vers l'explication.
  * Pour un compte enfant, `name` adapte le texte : le métal appartient à l'enfant.
  */
-export function CustodyNote({ name }: { name?: string }) {
+export function CustodyNote({ name, logo = true }: { name?: string; logo?: boolean }) {
   return (
     <Banner
-      icon={<VaultLogo size={58} />}
+      icon={logo ? <VaultLogo size={58} /> : undefined}
       title={name ? `Le métal de ${name} lui appartient` : 'Votre métal vous appartient'}
       onPress={() => router.push('/or-fractionne')}
       testID="custody-note"
