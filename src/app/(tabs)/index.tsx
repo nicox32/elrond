@@ -287,15 +287,16 @@ export default function AccountScreen() {
           onPress={() => router.push('/coffre-maison')}
           style={styles.vaultHead}
           accessibilityRole="button"
-          accessibilityLabel="Ouvrir mon coffre maison"
+          accessibilityLabel="Ouvrir mon coffre maison : mes lingots et pièces"
           testID="vaults-summary"
         >
           <VaultLogo size={60} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.vaultName}>Total des coffres</Text>
-            <Text style={styles.vaultHeadValue}>{eur(total + home.value)}</Text>
+            <Text style={styles.vaultName}>Mes lingots et pièces</Text>
+            <Text style={styles.vaultHeadValue}>{eur(home.value)}</Text>
             <Text style={styles.vaultPrice}>
-              dont lingots et pièces : {eur(home.value)} ({home.count})
+              {home.count} lingotin{home.count > 1 ? 's' : ''} ou pièce{home.count > 1 ? 's' : ''}
+              {discreet ? '' : ` · ${formatWeight(home.grams, 'g', 'gold')}`}
             </Text>
           </View>
           <Text style={styles.chevron}>›</Text>
