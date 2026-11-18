@@ -209,11 +209,12 @@ export const BAR_PRODUCTS: BarProduct[] = [
     grams: NAPOLEON_FINE_GRAMS,
     premium: 0.075,
     vendorPremium: 0.0485, // Godot & Fils, 18/11/2026 : prime affichée par le revendeur
+    // Mêmes paliers que les autres formats (10, 20, 50 pièces). Le revendeur en a deux de plus à 100 et 500 pièces,
+    // non repris ici : 0,39 point dès 100 et 0,69 point dès 500.
     vendorTiers: [
       { from: 10, off: 0.0015 },
+      { from: 20, off: 0.0015 },
       { from: 50, off: 0.0023 },
-      { from: 100, off: 0.0039 },
-      { from: 500, off: 0.0069 },
     ],
     coin: true,
     // Pièce de 6,45 g à 900 ‰, frappée en France (Monnaie de Paris) de 1803 à 1914.
@@ -260,7 +261,17 @@ export interface PhysicalFees {
   /** Livraison payée au vendeur par palier de valeur de commande (le premier palier commence à 0 €). */
   vendorDeliveryTiers: { fromEur: number; cost: number }[];
   freeFromGrams: number;
+  /** Remises de quantité du revendeur, par produit. */
+  vendorTiers: Record<string, { from: number; off: number }[]>;
 }
+
+/** Les tranches de quantité d'une commande, les mêmes pour tous les lingotins et pièces. */
+export const QTY_RANGES = [
+  { from: 1, to: 9, label: '1 à 9' },
+  { from: 10, to: 19, label: '10 à 19' },
+  { from: 20, to: 49, label: '20 à 49' },
+  { from: 50, to: null, label: '50 et plus' },
+] as const;
 
 /** Paliers triés, sans doublon, dont le premier commence à 0 € ; à défaut, un seul palier au coût fixe. */
 export function normalizeDeliveryTiers(
@@ -286,10 +297,12 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
   const s = settings?.physicalFees ?? {};
   const premiums: Record<string, number> = {};
   const vendor: Record<string, number> = {};
+  const vendorTiers: Record<string, { from: number; off: number }[]> = {};
   for (const p of BAR_PRODUCTS) {
     premiums[p.id] = s.premiums?.[p.id] ?? p.premium;
     const v = s.vendor?.[p.id] ?? p.vendorPremium;
     if (v !== undefined) vendor[p.id] = v;
+    vendorTiers[p.id] = s.vendorTiers?.[p.id] ?? p.vendorTiers ?? [];
   }
   const flat = s.vendorDelivery ?? PHYSICAL.vendorDelivery;
   const tiers = normalizeDeliveryTiers(s.vendorDeliveryTiers, flat);
@@ -299,6 +312,7 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
     delivery: s.delivery ?? PHYSICAL.delivery,
     vendorDelivery: tiers[0].cost,
     vendorDeliveryTiers: tiers,
+    vendorTiers,
     freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
   };
 }
@@ -332,7 +346,7 @@ export function productOf(id: string): BarProduct {
 }
 
 /** Baisse de prime accordée par le revendeur pour `qty` pièces du même produit (0 sans palier atteint). */
-export function vendorTierOff(p: BarProduct, qty: number): number {
+export function vendorTierOff(p: Pick<BarProduct, 'vendorTiers'>, qty: number): number {
   let off = 0;
   for (const t of p.vendorTiers ?? []) if (qty >= t.from) off = Math.max(off, t.off);
   return off;
@@ -352,7 +366,7 @@ export function quoteWithdrawal(
     const value = qty * p.grams * prices.gold;
     const v = fees.vendor[p.id];
     // Remise de quantité du revendeur sur ce produit : un coût en moins pour Orvia, le prix client ne change pas.
-    const applied = v !== undefined ? Math.min(v, vendorTierOff(p, qty)) : 0;
+    const applied = v !== undefined ? Math.min(v, vendorTierOff({ vendorTiers: fees.vendorTiers[p.id] }, qty)) : 0;
     return {
       product: p,
       qty,

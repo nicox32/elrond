@@ -135,6 +135,8 @@ export interface Settings {
     delivery?: number;
     /** Livraison payée au vendeur par commande, en euros (sert au coût dans Société Orvia). */
     vendorDelivery?: number;
+    /** Remises de quantité du revendeur par produit (mêmes paliers pour tous : 10, 20 et 50 pièces), en part de l'or. */
+    vendorTiers?: Record<string, { from: number; off: number }[]>;
     /** Livraison payée au vendeur selon la valeur de la commande : à partir de `fromEur`, elle coûte `cost` euros. */
     vendorDeliveryTiers?: { fromEur: number; cost: number }[];
     /** Livraison offerte à partir de ce poids d'or dans l'envoi (g). */

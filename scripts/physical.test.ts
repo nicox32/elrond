@@ -14,6 +14,8 @@ import {
   vendorTierOff,
   fabricationProgress,
   normalizeDeliveryTiers,
+  QTY_RANGES,
+  BAR_PRODUCTS,
   vendorDeliveryCost,
   requestVaultExit,
   confirmVaultExit,
@@ -285,9 +287,27 @@ test('remise de quantité du revendeur : par produit, dès 10 / 20 / 50 pièces,
   close(ten.cost!, 10 * 10 * p.gold * (0.0652 - 0.0054) + def.vendorDelivery, 0.01);
   // Le palier se compte par produit : 5 g + 5 g + 10 g n'atteignent aucun palier.
   assert.equal(quoteWithdrawal(p, { g5: 5, g10: 5 }, def).volume, false);
-  // Napoléon : paliers à 10, 50, 100 et 500 pièces.
-  assert.equal(vendorTierOff(productOf('nap20'), 100), 0.0039);
-  assert.equal(vendorTierOff(productOf('nap20'), 500), 0.0069);
+  // Napoléon : mêmes tranches que les autres formats (1-9, 10-19, 20-49, 50 et plus).
+  const nap = productOf('nap20');
+  assert.equal(vendorTierOff(nap, 9), 0);
+  assert.equal(vendorTierOff(nap, 10), 0.0015);
+  assert.equal(vendorTierOff(nap, 49), 0.0015);
+  assert.equal(vendorTierOff(nap, 50), 0.0023);
+  assert.equal(vendorTierOff(nap, 500), 0.0023);
+  // Les mêmes quatre tranches pour tous les lingotins et pièces.
+  assert.deepEqual(
+    QTY_RANGES.map((r) => r.label),
+    ['1 à 9', '10 à 19', '20 à 49', '50 et plus'],
+  );
+  for (const x of BAR_PRODUCTS)
+    assert.deepEqual(
+      x.vendorTiers!.map((t) => t.from),
+      [10, 20, 50],
+    );
+  // Réglage de la société : la remise d'une tranche se change pour un produit.
+  const fees = physicalFeesOf({ physicalFees: { vendorTiers: { g10: [{ from: 10, off: 0.01 }] } } });
+  assert.equal(quoteWithdrawal(p, { g10: 10 }, fees).vendorDiscount, Math.round(10 * 10 * p.gold * 0.01 * 100) / 100);
+  assert.equal(fees.vendorTiers.g5.length, 3); // les autres produits gardent leurs valeurs
 });
 
 test('retrait en agence : pas de livraison, ni facturée au client ni payée au revendeur, agence notée sur les lingotins', () => {

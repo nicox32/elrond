@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
-import { BAR_PRODUCTS, normalizeDeliveryTiers, physicalFeesOf, PHYSICAL, vendorPremiumFrom } from '../logic/physical';
+import {
+  BAR_PRODUCTS,
+  normalizeDeliveryTiers,
+  physicalFeesOf,
+  PHYSICAL,
+  QTY_RANGES,
+  vendorPremiumFrom,
+} from '../logic/physical';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
@@ -24,6 +31,15 @@ export function PhysicalFeesEditor() {
   const [vendor, setVendor] = useState<Record<string, string>>(() =>
     Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(fees.vendor[p.id])])),
   );
+  // Remise du revendeur (points de %) pour chaque tranche de quantité : 10 à 19, 20 à 49, 50 et plus.
+  const offsOf = (id: string) => {
+    const t = fees.vendorTiers[id] ?? [];
+    return QTY_RANGES.slice(1).map((r) => toText(t.find((x) => x.from === r.from)?.off ?? 0));
+  };
+  const [offs, setOffs] = useState<Record<string, string[]>>(() =>
+    Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, offsOf(p.id)])),
+  );
+  const [range, setRange] = useState<Record<string, number>>({});
   const [delivery, setDelivery] = useState(String(fees.delivery).replace('.', ','));
   const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
   const [tiers, setTiers] = useState<{ from: string; cost: string }[]>(() =>
@@ -66,6 +82,12 @@ export function PhysicalFeesEditor() {
       physicalFees: {
         premiums: prem,
         vendor: vend,
+        vendorTiers: Object.fromEntries(
+          BAR_PRODUCTS.map((p) => [
+            p.id,
+            QTY_RANGES.slice(1).map((r, i) => ({ from: r.from, off: Math.max(0, toRate(offs[p.id][i] || '0')) })),
+          ]),
+        ),
         delivery: parseAmount(delivery),
         vendorDeliveryTiers: normalizeDeliveryTiers(
           tiers.map((t) => ({ fromEur: parseAmount(t.from), cost: parseAmount(t.cost) })),
@@ -84,6 +106,14 @@ export function PhysicalFeesEditor() {
     updateSettings({ physicalFees: undefined });
     setPremiums(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(physicalFeesOf().premiums[p.id])])));
     setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(physicalFeesOf().vendor[p.id])])));
+    setOffs(
+      Object.fromEntries(
+        BAR_PRODUCTS.map((p) => [
+          p.id,
+          QTY_RANGES.slice(1).map((r) => toText(p.vendorTiers?.find((x) => x.from === r.from)?.off ?? 0)),
+        ]),
+      ),
+    );
     setDelivery(String(PHYSICAL.delivery));
     setFree(String(PHYSICAL.freeDeliveryFromGrams));
     setTiers(
@@ -144,16 +174,53 @@ export function PhysicalFeesEditor() {
                     100
                   ).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} pt)`}
             </Text>
-            {margin !== null && p.vendorTiers?.length ? (
-              <Text style={styles.tiers}>
-                {p.vendorTiers
-                  .map(
-                    (t) => `dès ${t.from} : ${formatEur(margin + t.off * value * (1 - PHYSICAL.clientDiscountShare))}`,
-                  )
-                  .join(' · ')}
-                {' (marge par pièce ; la moitié de la remise du revendeur est reversée au client)'}
-              </Text>
-            ) : null}
+            {margin !== null && (
+              <View testID={`ranges-${p.id}`} style={{ gap: 6 }}>
+                <Text style={styles.tiers}>Marge par pièce selon la quantité commandée :</Text>
+                <View style={styles.ranges}>
+                  {QTY_RANGES.map((r, i) => {
+                    const off = i === 0 ? 0 : Math.max(0, toRate(offs[p.id][i - 1] || '0'));
+                    const m = margin + off * value * (1 - PHYSICAL.clientDiscountShare);
+                    const on = (range[p.id] ?? 0) === i;
+                    return (
+                      <Pressable
+                        key={r.label}
+                        onPress={() => setRange((x) => ({ ...x, [p.id]: i }))}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                        accessibilityLabel={`${p.label} : ${r.label} pièces`}
+                        style={[styles.rangeBtn, on && { borderColor: colors.gold }]}
+                      >
+                        <Text style={[styles.rangeLabel, on && { color: colors.gold }]}>{r.label}</Text>
+                        <Text style={styles.rangeValue}>{formatEur(m)}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {(range[p.id] ?? 0) === 0 ? (
+                  <Text style={styles.tiers}>1 à 9 pièces : prix de base, colonne « Vendeur % ».</Text>
+                ) : (
+                  <View style={{ gap: 4 }}>
+                    <Label>Remise du revendeur de {QTY_RANGES[range[p.id]].label} pièces (points de %)</Label>
+                    <TextInput
+                      value={offs[p.id][range[p.id] - 1]}
+                      onChangeText={(t) =>
+                        setOffs((x) => ({
+                          ...x,
+                          [p.id]: x[p.id].map((v, j) => (j === range[p.id] - 1 ? t : v)),
+                        }))
+                      }
+                      keyboardType="decimal-pad"
+                      style={ui.input}
+                      accessibilityLabel={`Remise du revendeur ${p.label} ${QTY_RANGES[range[p.id]].label} pièces`}
+                    />
+                    <Text style={styles.tiers}>
+                      La moitié de cette remise est reversée au client ; l’autre moitié améliore votre marge.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         );
       })}
@@ -340,4 +407,16 @@ const styles = StyleSheet.create({
   result: { color: colors.text, fontSize: 14, fontWeight: '700' },
   margin: { color: colors.textMuted, fontSize: 12 },
   tiers: { color: colors.textMuted, fontSize: 11 },
+  ranges: { flexDirection: 'row', gap: 6 },
+  rangeBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 8,
+    alignItems: 'center',
+    gap: 2,
+  },
+  rangeLabel: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600', textAlign: 'center' },
+  rangeValue: { color: colors.text, fontSize: 12.5, fontWeight: '700' },
 });
