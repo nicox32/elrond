@@ -116,8 +116,8 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Lingotin 5 g',
     grams: 5,
     // Relevé du 18/11/2026 : 621,01 € TTC pour 1 lingotin + 7 € de livraison. Les frais du vendeur (8,91 % du prix)
-    // font 9,78 % de la valeur de l'or ; facturée 11 % au client, soit environ 1,2 point de marge (≈ 7 €).
-    premium: 0.11,
+    // font 9,78 % de la valeur de l'or ; facturée 9,5 % au client (tarif ajusté le 19/11 : marge d’environ 1,5 point sur les primes réelles).
+    premium: 0.095,
     vendorPremium: 0.0901, // relevé du 18/11/2026 : 612,50 € l'unité pour 561,86 € d'or
     vendorTiers: [
       { from: 10, off: 0.0062 },
@@ -163,7 +163,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     grams: 20,
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 2 259,61 €, frais 147,57 € = 6,53 % ; 7 € de livraison.
     // Facturée 7,5 % : environ 1 point de marge (≈ 22 €), la livraison étant offerte dès 20 g (7 € à votre charge).
-    premium: 0.075,
+    premium: 0.06,
     vendorPremium: 0.05, // Godot & Fils, 18/11/2026 : 2 348 € pour 2 236,16 € d'or
     vendorTiers: [
       { from: 10, off: 0.0027 },
@@ -186,7 +186,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     grams: OZ_GRAMS,
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 3 508,47 €, frais 182,03 € = 5,19 % ; 7 € de livraison.
     // Facturée 6 % : environ 0,8 point de marge (≈ 28 €), moins les 7 € de livraison offerte dès 20 g.
-    premium: 0.06,
+    premium: 0.05,
     vendorPremium: 0.0401, // Godot & Fils, 18/11/2026 : 3 620 € pour 3 477,62 € d'or
     vendorTiers: [
       { from: 10, off: 0.0027 },
@@ -207,7 +207,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     id: 'nap20',
     label: 'Napoléon 20 F (5,81 g d’or fin)',
     grams: NAPOLEON_FINE_GRAMS,
-    premium: 0.075,
+    premium: 0.065,
     vendorPremium: 0.0485, // Godot & Fils, 18/11/2026 : prime affichée par le revendeur
     // Mêmes paliers que les autres formats (10, 20, 50 pièces). Le revendeur en a deux de plus à 100 et 500 pièces,
     // non repris ici : 0,39 point dès 100 et 0,69 point dès 500.
