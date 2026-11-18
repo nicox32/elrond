@@ -1404,3 +1404,31 @@ test('alertes de ratio : or/argent et or/platine, pour les achats manuels, compr
   const json = JSON.parse(readFileSync(new URL('../server/alerts.json', import.meta.url), 'utf8'));
   assert.equal(parseConfig(json).filter((c) => c.kind.startsWith('ratio')).length, 7);
 });
+
+test('numéro de membre du compte enfant : aléatoire, unique, ajouté aux anciens comptes', async () => {
+  const { addChild, newMemberNumber, migrateAccount } = await import('../src/logic/ledger.ts');
+  let acc = createAccount('T', new Date('2020-01-01'));
+  const a = addChild(acc, 'Théo', '2015-06-01');
+  const b = addChild(a.account, 'Léa', '2018-01-01');
+  assert.match(a.child.memberNumber!, /^OV-E-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  assert.notEqual(a.child.memberNumber, b.child.memberNumber);
+  // Jamais un numéro prévisible : deux tirages avec le même générateur ne se répètent pas dans le même lot.
+  const taken = new Set<string>();
+  const seq = [0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+  let i = 0;
+  const rnd = () => seq[i++ % seq.length];
+  const n1 = newMemberNumber(taken, rnd);
+  const n2 = newMemberNumber(taken, rnd);
+  assert.notEqual(n1, n2);
+  // Ancien compte sans numéro : il en reçoit un à l'ouverture, qui ne change plus ensuite.
+  const old = JSON.parse(JSON.stringify(b.account));
+  for (const c of old.children) delete c.memberNumber;
+  const m = migrateAccount(old)!;
+  assert.ok(m.children.every((c) => /^OV-E-/.test(c.memberNumber!)));
+  assert.notEqual(m.children[0].memberNumber, m.children[1].memberNumber);
+  const again = migrateAccount(JSON.parse(JSON.stringify(m)))!;
+  assert.deepEqual(
+    again.children.map((c) => c.memberNumber),
+    m.children.map((c) => c.memberNumber),
+  );
+});

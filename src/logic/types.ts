@@ -331,6 +331,8 @@ export interface CoParent {
 export interface ChildAccount extends Wallet {
   id: string;
   name: string;
+  /** Numéro de membre Orvia du compte enfant, aléatoire : « OV-E-XXXX-XXXX » (jamais un numéro officiel). */
+  memberNumber?: string;
   /** Date de naissance (AAAA-MM-JJ). Aucun frais avant les 18 ans ; sans date, le compte reste exonéré. */
   birthDate?: string;
   /** Autorité parentale : partagée (retraits validés par les deux parents) ou exercée seul. */

@@ -213,13 +213,13 @@ export function migrateAccount(raw: unknown): Account | null {
   const a = raw as Record<string, any>;
   if (a.version === 2) {
     // Champs ajoutés au fil des versions.
-    return {
+    return ensureMemberNumbers({
       ...safely(a as Account, (acc) => renameReseller(compactHistory(removeHistory2021(retireGoldOria(acc))))),
       children: Array.isArray(a.children)
         ? a.children.map((c: ChildAccount) => safely(c, (w) => compactHistory(retireGoldOria(w))))
         : [],
       referral: a.referral && typeof a.referral.code === 'string' ? a.referral : { code: generateReferralCode() },
-    };
+    });
   }
   if (typeof a.holder !== 'string') return null;
 
@@ -678,12 +678,38 @@ export function majorityDate(birthDate: string): Date {
   return new Date(Date.UTC(y + MAJORITY_AGE, mo - 1, d));
 }
 
+const MEMBER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/** Numéro de membre d'un compte enfant : « OV-E-XXXX-XXXX », aléatoire et unique parmi les comptes de la famille. */
+export function newMemberNumber(taken: Set<string> = new Set(), random: () => number = Math.random): string {
+  for (;;) {
+    let r = '';
+    for (let i = 0; i < 8; i++) r += MEMBER_ALPHABET[Math.floor(random() * MEMBER_ALPHABET.length)];
+    const n = `OV-E-${r.slice(0, 4)}-${r.slice(4)}`;
+    if (!taken.has(n)) {
+      taken.add(n);
+      return n;
+    }
+  }
+}
+
+/** Donne un numéro de membre aux comptes enfants qui n'en ont pas encore (comptes créés avant cette version). */
+export function ensureMemberNumbers(account: Account): Account {
+  if (account.children.every((c) => c.memberNumber)) return account;
+  const taken = new Set(account.children.flatMap((c) => (c.memberNumber ? [c.memberNumber] : [])));
+  return {
+    ...account,
+    children: account.children.map((c) => (c.memberNumber ? c : { ...c, memberNumber: newMemberNumber(taken) })),
+  };
+}
+
 export function addChild(account: Account, name: string, birthDate?: string, now = new Date()) {
   const clean = name.trim();
   if (!clean) throw new LedgerError('Indiquez le prénom de l’enfant.');
   const child: ChildAccount = {
     id: newId(),
     name: clean,
+    memberNumber: newMemberNumber(new Set(account.children.flatMap((c) => (c.memberNumber ? [c.memberNumber] : [])))),
     createdAt: now.toISOString(),
     holdings: emptyHoldings(),
     transactions: [],

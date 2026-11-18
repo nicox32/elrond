@@ -243,6 +243,11 @@ export default function ChildScreen() {
           <Text style={styles.avatarText}>{name.slice(0, 1).toUpperCase()}</Text>
         </View>
         <Text style={styles.heroName}>{name}</Text>
+        {child.memberNumber ? (
+          <Text style={styles.memberNumber} selectable testID="child-member-number">
+            N° de membre {child.memberNumber}
+          </Text>
+        ) : null}
         <Text style={styles.heroValue}>{formatEur(value.total)}</Text>
         {tax.cost > 0 && (
           <Pressable
@@ -624,6 +629,7 @@ export default function ChildScreen() {
 }
 
 const styles = StyleSheet.create({
+  memberNumber: { color: colors.textMuted, fontSize: 12.5, letterSpacing: 1 },
   barsSummary: {
     flexDirection: 'row',
     alignItems: 'center',

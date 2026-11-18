@@ -101,7 +101,7 @@ export function childStatementHtml(account: Account, child: ChildAccount, prices
   </div>
 
   <h1>Relevé d’épargne de ${esc(child.name)}</h1>
-  <p class="sub">Compte ouvert le ${day(opened)}${child.birthDate ? ` · né(e) le ${day(child.birthDate)}` : ''}${majority ? ` · majorité le ${day(majority)}` : ''}</p>
+  <p class="sub">${child.memberNumber ? `N° de membre ${esc(child.memberNumber)} · ` : ''}Compte ouvert le ${day(opened)}${child.birthDate ? ` · né(e) le ${day(child.birthDate)}` : ''}${majority ? ` · majorité le ${day(majority)}` : ''}</p>
 
   <div class="kpis">
     <div class="kpi"><div class="k">Valeur du compte</div><div class="v">${formatEur(value.total)}</div><div class="s">au cours du ${day(now)}</div></div>
