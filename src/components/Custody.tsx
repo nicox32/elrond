@@ -10,7 +10,7 @@ import { VaultLogo } from './VaultLogo';
 export function CustodyNote({ name }: { name?: string }) {
   return (
     <Banner
-      icon={<VaultLogo size={46} />}
+      icon={<VaultLogo size={58} />}
       title={name ? `Le métal de ${name} lui appartient` : 'Votre métal vous appartient'}
       onPress={() => router.push('/or-fractionne')}
       testID="custody-note"

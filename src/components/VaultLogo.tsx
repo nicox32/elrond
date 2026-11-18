@@ -5,7 +5,7 @@ export function VaultLogo({ size = 44 }: { size?: number }) {
   return (
     <Image
       source={require('../../assets/vault.png')}
-      style={{ width: size, height: size * (250 / 256) }}
+      style={{ width: size, height: size * (290 / 320) }}
       resizeMode="contain"
       accessibilityLabel="Coffre sécurisé"
     />
