@@ -14,6 +14,8 @@ import {
   vendorTierOff,
   fabricationProgress,
   normalizeDeliveryTiers,
+  estimateDelayDays,
+  leadDaysFor,
   lotUnitCost,
   QTY_RANGES,
   BAR_PRODUCTS,
@@ -541,4 +543,41 @@ test('retrait servi du stock : le lot le plus ancien part en premier, coût de l
   const out3 = withdrawPhysical(out2, p, { g5: 1 }, new Date('2026-11-20T10:00:00'));
   assert.equal(out3.homeVault![2].origin, 'commande');
   close(out3.transactions[0].costEur!, 5 * p.gold * 0.0901 + 7, 0.01);
+});
+
+test('délai de livraison : plus court quand le lingotin est en stock chez Orvia, suivi adapté', async () => {
+  const { addStock } = await import('../src/logic/stock.ts');
+  const def = physicalFeesOf();
+  assert.deepEqual(def.leadDays, { maison: 3, pro: 5, commande: 8 });
+  assert.equal(leadDaysFor('maison', def), 3);
+  assert.equal(leadDaysFor('commande', def), 8);
+  assert.equal(leadDaysFor(undefined, def), 8);
+  let acc = createAccount('T', new Date('2020-01-01'));
+  // Sans stock : tout est à commander.
+  assert.equal(estimateDelayDays(acc, { g10: 2 }), 8);
+  assert.equal(estimateDelayDays(acc, {}), 0);
+  // 2 × 10 g chez Orvia et 1 × 5 g chez le revendeur.
+  acc = addStock(acc, { product: 'g10', qty: 2, source: 'maison' });
+  acc = addStock(acc, { product: 'g5', qty: 1, source: 'pro', vault: 'Godot & Fils' });
+  assert.equal(estimateDelayDays(acc, { g10: 2 }), 3);
+  assert.equal(estimateDelayDays(acc, { g10: 1 }), 3);
+  assert.equal(estimateDelayDays(acc, { g5: 1 }), 5);
+  // Un seul exemplaire manque : le retrait attend le plus lent (la commande).
+  assert.equal(estimateDelayDays(acc, { g10: 3 }), 8);
+  assert.equal(estimateDelayDays(acc, { g10: 2, g5: 1 }), 5);
+  // Délais réglables par la société.
+  const fast = { ...acc, settings: { ...acc.settings, physicalFees: { leadDays: { maison: 1, commande: 10 } } } };
+  assert.equal(estimateDelayDays(fast, { g10: 2 }), 1);
+  assert.equal(estimateDelayDays(fast, { g10: 3 }), 10);
+  // Suivi sur 3 jours : arrivé au bout du 3e jour, étapes proportionnelles, « préparation » au lieu de « fabrication ».
+  const t = '2026-11-16T10:00:00';
+  assert.equal(fabricationProgress(t, new Date('2026-11-16T18:00:00'), false, false, 3, true).step, 0);
+  assert.equal(fabricationProgress(t, new Date('2026-11-17T10:00:00'), false, false, 3, true).step, 1);
+  assert.equal(fabricationProgress(t, new Date('2026-11-18T10:00:00'), false, false, 3, true).step, 2);
+  const done = fabricationProgress(t, new Date('2026-11-19T10:00:00'), false, false, 3, true);
+  assert.equal(done.step, 3);
+  assert.equal(done.ratio, 1);
+  assert.ok(done.labels.includes('En préparation') && !done.labels.includes('En fabrication'));
+  // Le même jour 3 sur un délai de 8 jours : pas encore arrivé.
+  assert.equal(fabricationProgress(t, new Date('2026-11-19T10:00:00')).step, 1);
 });

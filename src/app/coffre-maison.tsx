@@ -13,6 +13,8 @@ import {
   type BarPlace,
   confirmVaultExit,
   fabricationProgress,
+  leadDaysFor,
+  physicalFeesOf,
   homeVaultTotal,
   isLocked,
   placeLabel,
@@ -115,7 +117,8 @@ function BarCard({
   const [pickedUp, setPickedUp] = useState(false);
   const toCollect = !!bar.pickupAgency || !!bar.vault;
   const waitingAgency = bar.status === 'preparing' && toCollect && !pickedUp && !bar.serial;
-  const readyAtAgency = fabricationProgress(bar.orderedAt, new Date(), true, !!bar.vault).step >= 3;
+  const lead = leadDaysFor(bar.origin, physicalFeesOf(useAccount().settings));
+  const readyAtAgency = fabricationProgress(bar.orderedAt, new Date(), true, !!bar.vault, lead).step >= 3;
   const arrived = bar.status === 'preparing' && readyAtAgency;
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const p = productOf(bar.product);
@@ -148,7 +151,13 @@ function BarCard({
         </Text>
       </View>
       {bar.status === 'preparing' && (
-        <BarFabrication orderedAt={bar.orderedAt} pickup={!!bar.pickupAgency} vault={!!bar.vault} />
+        <BarFabrication
+          orderedAt={bar.orderedAt}
+          pickup={!!bar.pickupAgency}
+          vault={!!bar.vault}
+          totalDays={lead}
+          fromStock={bar.origin === 'maison' || bar.origin === 'pro'}
+        />
       )}
       {isLocked(bar) ? (
         <Text style={styles.controlled} testID={`bar-lock-${bar.id}`}>

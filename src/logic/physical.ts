@@ -246,6 +246,8 @@ export const PHYSICAL = {
   vatSilverPlatinum: 0.2,
   /** Délai de livraison constaté, en jours réels. */
   delayDays: '8',
+  /** Délai de livraison en jours : lingotin en stock chez Orvia, en stock chez le revendeur, ou à commander. */
+  leadDays: { maison: 3, pro: 5, commande: 8 },
 } as const;
 
 export type BarOrder = Record<string, number>;
@@ -260,6 +262,8 @@ export interface PhysicalFees {
   vendorDelivery: number;
   /** Livraison payée au vendeur par palier de valeur de commande (le premier palier commence à 0 €). */
   vendorDeliveryTiers: { fromEur: number; cost: number }[];
+  /** Délai de livraison en jours selon l'origine du lingotin. */
+  leadDays: { maison: number; pro: number; commande: number };
   freeFromGrams: number;
   /** Remises de quantité du revendeur, par produit. */
   vendorTiers: Record<string, { from: number; off: number }[]>;
@@ -324,6 +328,11 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
     delivery: s.delivery ?? PHYSICAL.delivery,
     vendorDelivery: tiers[0].cost,
     vendorDeliveryTiers: tiers,
+    leadDays: {
+      maison: s.leadDays?.maison ?? PHYSICAL.leadDays.maison,
+      pro: s.leadDays?.pro ?? PHYSICAL.leadDays.pro,
+      commande: s.leadDays?.commande ?? PHYSICAL.leadDays.commande,
+    },
     vendorTiers,
     freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
   };
@@ -871,15 +880,26 @@ export const FABRICATION_STEPS = ['Commandé', 'En fabrication', 'En route', 'Ar
  */
 export const FABRICATION_DAYS = 8;
 
-export function fabricationProgress(orderedAt: string, now = new Date(), pickup = false, vault = false) {
+export function fabricationProgress(
+  orderedAt: string,
+  now = new Date(),
+  pickup = false,
+  vault = false,
+  /** Délai total en jours : plus court quand le lingotin est déjà chez Orvia. */
+  totalDays = FABRICATION_DAYS,
+  /** Lingotin déjà en stock : il n'est pas à fabriquer, seulement à préparer et expédier. */
+  fromStock = false,
+) {
   const days = daysBetween(new Date(orderedAt), now);
-  const step = days < 1 ? 0 : days < 4 ? 1 : days < FABRICATION_DAYS ? 2 : 3;
+  // Mêmes proportions que pour 8 jours : commandé 1/8 du délai, en préparation jusqu'à la moitié, en route ensuite.
+  const step = days < totalDays / 8 ? 0 : days < totalDays / 2 ? 1 : days < totalDays ? 2 : 3;
   const labels = vault
     ? ['Commandé', 'En fabrication', 'En route vers le coffre', 'Entré au coffre']
     : pickup
       ? ['Commandé', 'En fabrication', 'En route vers l’agence', 'Prêt en agence']
       : [...FABRICATION_STEPS];
-  return { days, step, ratio: Math.min(1, days / FABRICATION_DAYS), label: labels[step], labels };
+  const shown = fromStock ? labels.map((l) => (l === 'En fabrication' ? 'En préparation' : l)) : labels;
+  return { days, step, ratio: Math.min(1, days / totalDays), label: shown[step], labels: shown };
 }
 
 /**
@@ -989,4 +1009,37 @@ export function confirmVaultExit(account: Account, barId: string, now = new Date
       return { ...rest, place: 'maison' as const, exitedAt: now.toISOString() };
     }),
   };
+}
+
+/** Délai de livraison en jours d'un lingotin selon d'où il part. */
+export function leadDaysFor(
+  origin: 'maison' | 'pro' | 'commande' | undefined,
+  fees: Pick<PhysicalFees, 'leadDays'>,
+): number {
+  return fees.leadDays[origin ?? 'commande'];
+}
+
+/**
+ * Délai estimé d'un retrait avant de le commander : chaque lingotin part du stock d'Orvia si un exemplaire y est
+ * disponible (le plus rapide), sinon du stock du revendeur, sinon il est commandé ; le retrait attend le plus lent.
+ */
+export function estimateDelayDays(account: Pick<Account, 'stock' | 'settings'>, order: BarOrder): number {
+  const fees = physicalFeesOf(account.settings);
+  let slowest = 0;
+  for (const p of BAR_PRODUCTS) {
+    let left = Math.max(0, Math.floor(order[p.id] ?? 0));
+    if (!left) continue;
+    const have = (src: 'maison' | 'pro') =>
+      (account.stock ?? [])
+        .filter((l) => l.product === p.id && l.source === src)
+        .reduce((t, l) => t + Math.max(0, l.qty), 0);
+    const fromMaison = Math.min(left, have('maison'));
+    left -= fromMaison;
+    const fromPro = Math.min(left, have('pro'));
+    left -= fromPro;
+    if (fromMaison) slowest = Math.max(slowest, fees.leadDays.maison);
+    if (fromPro) slowest = Math.max(slowest, fees.leadDays.pro);
+    if (left) slowest = Math.max(slowest, fees.leadDays.commande);
+  }
+  return slowest;
 }

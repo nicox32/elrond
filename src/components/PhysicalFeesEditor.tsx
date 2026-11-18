@@ -36,6 +36,11 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, offsOf(p.id)])),
   );
   const [range, setRange] = useState<Record<string, number>>({});
+  const [lead, setLead] = useState({
+    maison: String(fees.leadDays.maison),
+    pro: String(fees.leadDays.pro),
+    commande: String(fees.leadDays.commande),
+  });
   const [delivery, setDelivery] = useState(String(fees.delivery).replace('.', ','));
   const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
   const [tiers, setTiers] = useState<{ from: string; cost: string }[]>(() =>
@@ -77,7 +82,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     parseAmount(delivery) >= 0 &&
     parseAmount(delivery) <= 200 &&
     parseAmount(free) >= 0 &&
-    parseAmount(free) <= 1000;
+    parseAmount(free) <= 1000 &&
+    Object.values(lead).every((v) => parseAmount(v) >= 1 && parseAmount(v) <= 60);
   const validVendor =
     BAR_PRODUCTS.every((p) => {
       const v = vendor[p.id].trim() ? toRate(vendor[p.id]) : 0;
@@ -90,7 +96,17 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
       const prem: Record<string, number> = {};
       for (const p of BAR_PRODUCTS) prem[p.id] = toRate(premiums[p.id]);
       updateSettings({
-        physicalFees: { ...cur, premiums: prem, delivery: parseAmount(delivery), freeFromGrams: parseAmount(free) },
+        physicalFees: {
+          ...cur,
+          premiums: prem,
+          delivery: parseAmount(delivery),
+          freeFromGrams: parseAmount(free),
+          leadDays: {
+            maison: Math.round(parseAmount(lead.maison)),
+            pro: Math.round(parseAmount(lead.pro)),
+            commande: Math.round(parseAmount(lead.commande)),
+          },
+        },
       });
       setMsg({
         ok: true,
@@ -123,7 +139,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     const cur: Record<string, unknown> = { ...(account.settings.physicalFees ?? {}) };
     const drop =
       part === 'client'
-        ? ['premiums', 'delivery', 'freeFromGrams']
+        ? ['premiums', 'delivery', 'freeFromGrams', 'leadDays']
         : ['vendor', 'vendorTiers', 'vendorDeliveryTiers', 'vendorDelivery'];
     for (const k of drop) delete cur[k];
     updateSettings({
@@ -134,6 +150,11 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
       setPremiums(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(d.premiums[p.id])])));
       setDelivery(String(PHYSICAL.delivery));
       setFree(String(PHYSICAL.freeDeliveryFromGrams));
+      setLead({
+        maison: String(PHYSICAL.leadDays.maison),
+        pro: String(PHYSICAL.leadDays.pro),
+        commande: String(PHYSICAL.leadDays.commande),
+      });
     } else {
       setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(d.vendor[p.id])])));
       setOffs(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, offsFrom(d.vendorTiers[p.id])])));
@@ -208,6 +229,31 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
             />
           </View>
         </View>
+        <Label>Délai de livraison (jours)</Label>
+        <View style={{ flexDirection: 'row', gap: 8 }} testID="lead-days">
+          {(
+            [
+              ['maison', 'En stock Orvia'],
+              ['pro', 'Stock revendeur'],
+              ['commande', 'À commander'],
+            ] as const
+          ).map(([k, label]) => (
+            <View key={k} style={{ flex: 1, gap: 4 }}>
+              <Text style={styles.tiers}>{label}</Text>
+              <TextInput
+                value={lead[k]}
+                onChangeText={(t) => setLead((x) => ({ ...x, [k]: t }))}
+                keyboardType="number-pad"
+                style={[ui.input, { minWidth: 0 }]}
+                accessibilityLabel={`Délai ${label}`}
+              />
+            </View>
+          ))}
+        </View>
+        <Hint>
+          La livraison est plus rapide quand les lingotins sont déjà chez Orvia. Le client voit le délai le plus long de
+          sa commande avant de la passer, et le suivi s’y adapte.
+        </Hint>
         <Button title="Enregistrer les frais" onPress={save} disabled={!validClient} />
         <Button title="Rétablir les valeurs par défaut" variant="ghost" onPress={reset} />
         {msg ? <Message {...msg} /> : null}

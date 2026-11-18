@@ -8,8 +8,21 @@ import { colors, metalColor } from '../theme';
  * Lingotin « en fabrication » : un lingot qui se remplit d'or selon l'avancement estimé de la commande, avec ses
  * quatre étapes. L'avancement est une estimation (jours écoulés), pas un suivi du revendeur.
  */
-export function BarFabrication({ orderedAt, pickup, vault }: { orderedAt: string; pickup?: boolean; vault?: boolean }) {
-  const p = fabricationProgress(orderedAt, new Date(), !!pickup, !!vault);
+export function BarFabrication({
+  orderedAt,
+  pickup,
+  vault,
+  totalDays,
+  fromStock,
+}: {
+  orderedAt: string;
+  pickup?: boolean;
+  vault?: boolean;
+  /** Délai total en jours (plus court si le lingotin part du stock d'Orvia). */
+  totalDays?: number;
+  fromStock?: boolean;
+}) {
+  const p = fabricationProgress(orderedAt, new Date(), !!pickup, !!vault, totalDays, !!fromStock);
   const [pulse] = useState(() => new Animated.Value(0.55));
   useEffect(() => {
     const loop = Animated.loop(
@@ -51,7 +64,7 @@ export function BarFabrication({ orderedAt, pickup, vault }: { orderedAt: string
       <Text style={[styles.note, done && { color: colors.up }]}>
         {done
           ? 'Arrivé : à vous de le noter dès que vous l’avez en main.'
-          : 'Avancement estimé d’après les jours écoulés (8 jours en tout).'}
+          : `Avancement estimé d’après les jours écoulés (${totalDays ?? 8} jours en tout).`}
       </Text>
     </View>
   );

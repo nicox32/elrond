@@ -11,6 +11,7 @@ import { LedgerError } from '../logic/ledger';
 import {
   BAR_PRODUCTS,
   type BarOrder,
+  estimateDelayDays,
   PHYSICAL,
   physicalFeesOf,
   quoteWithdrawal,
@@ -43,7 +44,8 @@ export default function WithdrawScreen() {
   const noCash = q.fees > cash + 0.005;
 
   const missingGrams = Math.max(0, q.grams - gold);
-  const summary = `${q.pieces} ${q.pieces > 1 ? 'lingotins' : 'lingotin'} · ${pickup ? 'retrait en agence' : vault ? 'gardés en coffre chez Godot & Fils' : 'livraison à domicile'} · ${formatEur(q.fees)} de frais`;
+  const delayDays = estimateDelayDays(account, order);
+  const summary = `${q.pieces} ${q.pieces > 1 ? 'lingotins' : 'lingotin'} · ${pickup ? 'retrait en agence' : vault ? 'gardés en coffre chez Godot & Fils' : 'livraison à domicile'} · ${formatEur(q.fees)} de frais${delayDays ? ` · délai ${delayDays} jour${delayDays > 1 ? 's' : ''}` : ''}`;
   // Un seul bouton d'action : il dit ce qui manque et y mène, plutôt que de rester grisé.
   const cta: { title: string; action: 'none' | 'buy' | 'credit' | 'order'; disabled?: boolean; hint?: string } = !q
     .lines.length
@@ -71,6 +73,7 @@ export default function WithdrawScreen() {
 
   function submit() {
     setConfirm(false);
+    const delay = estimateDelayDays(account, order);
     try {
       const city = agency.trim();
       commit((a, p) => withdrawPhysical(a, p, order, new Date(), pickup ? city : undefined, vault));
@@ -81,7 +84,7 @@ export default function WithdrawScreen() {
           ? 'Commande enregistrée : vos lingotins seront gardés en coffre sécurisé chez Godot & Fils, à votre nom. Vous pourrez noter leur numéro de série dès leur entrée au coffre, dans « Mon coffre maison ».'
           : pickup
             ? `Retrait enregistré : vous serez prévenu dès que vos lingotins sont disponibles à l’agence Godot & Fils (${city}). Apportez une pièce d’identité et signez le bon de remise. Notez ensuite le numéro de série de chaque lingotin dans « Mon coffre maison ».`
-            : `Retrait enregistré : livraison assurée sous ${PHYSICAL.delayDays} jours environ. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
+            : `Retrait enregistré : livraison assurée sous ${delay} jour${delay > 1 ? 's' : ''} environ. Notez le numéro de série de chaque lingotin à réception, dans « Mon coffre maison ».`,
       });
     } catch (e) {
       setMessage({ ok: false, text: e instanceof LedgerError ? e.message : 'Retrait impossible.' });
