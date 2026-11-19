@@ -2,65 +2,33 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
-import {
-  BAR_PRODUCTS,
-  MARGIN_PT,
-  normalizeDeliveryTiers,
-  physicalFeesOf,
-  PHYSICAL,
-  PREMIUM_TARGET,
-  QTY_RANGES,
-} from '../logic/physical';
-import { useAccount, useBank } from '../state/BankProvider';
 import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
+import { BAR_PRODUCTS, physicalFeesOf, PREMIUM_TARGET, QTY_RANGES } from '../logic/physical';
 import { addStock, assertInsuranceRoom } from '../logic/stock';
+import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { InsuranceMeter } from './InsuranceMeter';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
 
 const PREMIUM_CALCULATOR_URL = 'https://lingot-dor.fr/calculateur-prime-or';
 
+const pct = (n: number | undefined) =>
+  n === undefined ? '—' : `${(Math.round(n * 10000) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`;
 const toText = (n: number | undefined) =>
   n === undefined ? '' : (Math.round(n * 10000) / 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 const perGram = (g: number) => g.toLocaleString('fr-FR', { maximumFractionDigits: 3 });
-const toRate = (t: string) => Math.round(parseAmount(t) * 100) / 10000;
+const shortName = (label: string) => label.replace(/ \(.*/, '');
 
-/** Société Orvia : frais du retrait physique (fabrication par format, prime du vendeur, livraison), réglables. */
+/**
+ * Société Orvia : tarifs du retrait physique, verrouillés (non modifiables à la main), et commande à Godot & Fils par
+ * lots avec son calculateur de prime.
+ */
 export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const account = useAccount();
-  const { quote, updateSettings, updateAccount } = useBank();
+  const { quote, updateAccount } = useBank();
   const fees = physicalFeesOf(account.settings);
-  const [premiums, setPremiums] = useState<Record<string, string>>(() =>
-    Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(fees.premiums[p.id])])),
-  );
-  const [vendor, setVendor] = useState<Record<string, string>>(() =>
-    Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(fees.vendor[p.id])])),
-  );
-  // Remise du revendeur (points de %) pour chaque tranche de quantité : 10 à 19, 20 à 49, 50 et plus.
-  const offsFrom = (t: { from: number; off: number }[] = []) =>
-    QTY_RANGES.slice(1).map((r) => toText(t.find((x) => x.from === r.from)?.off ?? 0));
-  const offsOf = (id: string) => offsFrom(fees.vendorTiers[id]);
-  const [offs, setOffs] = useState<Record<string, string[]>>(() =>
-    Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, offsOf(p.id)])),
-  );
-  const [range, setRange] = useState<Record<string, number>>({});
-  const [lead, setLead] = useState({
-    maison: String(fees.leadDays.maison),
-    pro: String(fees.leadDays.pro),
-    commande: String(fees.leadDays.commande),
-  });
-  const [mMin, setMMin] = useState(String(Math.round(fees.margin.min * 10000) / 100).replace('.', ','));
-  const [mMax, setMMax] = useState(String(Math.round(fees.margin.max * 10000) / 100).replace('.', ','));
-  const [delivery, setDelivery] = useState(String(fees.delivery).replace('.', ','));
-  const [free, setFree] = useState(String(fees.freeFromGrams).replace('.', ','));
-  const [tiers, setTiers] = useState<{ from: string; cost: string }[]>(() =>
-    fees.vendorDeliveryTiers.map((t) => ({
-      from: String(t.fromEur).replace('.', ','),
-      cost: String(t.cost).replace('.', ','),
-    })),
-  );
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  // Calculateur de commande Godot & Fils : relevé de prix par tranche, cours de l'or et date.
+  // Calculateur de prime et de lot : relevé de prix par tranche, cours de l'or et date.
   const [calcId, setCalcId] = useState(BAR_PRODUCTS[1].id);
   const [calcDate, setCalcDate] = useState(() => formatDay(new Date()));
   // Valeur intrinsèque de la fiche (le métal d'une pièce, selon Godot & Fils) : le cours de l'or en découle.
@@ -84,247 +52,49 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     }
   })();
 
-  const marginLo = parseAmount(mMin) / 100;
-  const marginHi = parseAmount(mMax) / 100;
-  const marginOk =
-    Number.isFinite(marginLo) && Number.isFinite(marginHi) && marginLo >= 0 && marginHi >= marginLo && marginHi <= 0.2;
-  // Fabrication facturée hors de la fourchette (prime vendeur + marge mini / maxi) : l'enregistrement est bloqué.
-  const outOfRange = BAR_PRODUCTS.filter((p) => {
-    const v = fees.vendor[p.id];
-    const r = toRate(premiums[p.id]);
-    return marginOk && v !== undefined && Number.isFinite(r) && (r < v + marginLo - 1e-9 || r > v + marginHi + 1e-9);
-  });
-  const validClient =
-    marginOk &&
-    outOfRange.length === 0 &&
-    BAR_PRODUCTS.every((p) => {
-      const r = toRate(premiums[p.id]);
-      return r >= 0 && r <= 0.5;
-    }) &&
-    parseAmount(delivery) >= 0 &&
-    parseAmount(delivery) <= 200 &&
-    parseAmount(free) >= 0 &&
-    parseAmount(free) <= 1000 &&
-    Object.values(lead).every((v) => parseAmount(v) >= 1 && parseAmount(v) <= 60);
-  const validVendor =
-    BAR_PRODUCTS.every((p) => {
-      const v = vendor[p.id].trim() ? toRate(vendor[p.id]) : 0;
-      return v >= 0 && v <= 0.5;
-    }) && tiers.every((t) => parseAmount(t.cost) >= 0 && parseAmount(t.cost) <= 500 && parseAmount(t.from) >= 0);
-
-  function save() {
-    const cur = account.settings.physicalFees ?? {};
-    if (part === 'client') {
-      const prem: Record<string, number> = {};
-      for (const p of BAR_PRODUCTS) prem[p.id] = toRate(premiums[p.id]);
-      updateSettings({
-        physicalFees: {
-          ...cur,
-          premiums: prem,
-          marginMinPt: parseAmount(mMin),
-          marginMaxPt: parseAmount(mMax),
-          delivery: parseAmount(delivery),
-          freeFromGrams: parseAmount(free),
-          leadDays: {
-            maison: Math.round(parseAmount(lead.maison)),
-            pro: Math.round(parseAmount(lead.pro)),
-            commande: Math.round(parseAmount(lead.commande)),
-          },
-        },
-      });
-      setMsg({
-        ok: true,
-        text: 'Frais enregistrés : ils s’appliquent aux prochains retraits, aux Tarifs et à l’accueil.',
-      });
-      return;
-    }
-    const vend: Record<string, number> = {};
-    for (const p of BAR_PRODUCTS) if (vendor[p.id].trim()) vend[p.id] = toRate(vendor[p.id]);
-    updateSettings({
-      physicalFees: {
-        ...cur,
-        vendor: vend,
-        vendorTiers: Object.fromEntries(
-          BAR_PRODUCTS.map((p) => [
-            p.id,
-            QTY_RANGES.slice(1).map((r, i) => ({ from: r.from, off: Math.max(0, toRate(offs[p.id][i] || '0')) })),
-          ]),
-        ),
-        vendorDeliveryTiers: normalizeDeliveryTiers(
-          tiers.map((t) => ({ fromEur: parseAmount(t.from), cost: parseAmount(t.cost) })),
-          PHYSICAL.vendorDelivery,
-        ),
-      },
-    });
-    setMsg({ ok: true, text: 'Commande Godot & Fils enregistrée : elle sert au coût et à la marge.' });
-  }
-
-  function reset() {
-    const cur: Record<string, unknown> = { ...(account.settings.physicalFees ?? {}) };
-    const drop =
-      part === 'client'
-        ? ['premiums', 'delivery', 'freeFromGrams', 'leadDays', 'marginMinPt', 'marginMaxPt']
-        : ['vendor', 'vendorTiers', 'vendorDeliveryTiers', 'vendorDelivery'];
-    for (const k of drop) delete cur[k];
-    updateSettings({
-      physicalFees: Object.keys(cur).length ? (cur as typeof account.settings.physicalFees) : undefined,
-    });
-    const d = physicalFeesOf({ physicalFees: cur as typeof account.settings.physicalFees });
-    if (part === 'client') {
-      setPremiums(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(d.premiums[p.id])])));
-      setMMin(String(MARGIN_PT.min).replace('.', ','));
-      setMMax(String(MARGIN_PT.max).replace('.', ','));
-      setDelivery(String(PHYSICAL.delivery));
-      setFree(String(PHYSICAL.freeDeliveryFromGrams));
-      setLead({
-        maison: String(PHYSICAL.leadDays.maison),
-        pro: String(PHYSICAL.leadDays.pro),
-        commande: String(PHYSICAL.leadDays.commande),
-      });
-    } else {
-      setVendor(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, toText(d.vendor[p.id])])));
-      setOffs(Object.fromEntries(BAR_PRODUCTS.map((p) => [p.id, offsFrom(d.vendorTiers[p.id])])));
-      setTiers(
-        d.vendorDeliveryTiers.map((t) => ({
-          from: String(t.fromEur).replace('.', ','),
-          cost: String(t.cost).replace('.', ','),
-        })),
-      );
-    }
-    setMsg({ ok: true, text: 'Valeurs par défaut rétablies.' });
-  }
-
   if (part === 'client') {
     return (
-      <Card style={{ gap: 12 }}>
-        <Text style={styles.title}>Frais du retrait physique</Text>
+      <Card style={{ gap: 10 }}>
+        <Text style={styles.title}>🔒 Tarifs du retrait physique (verrouillés)</Text>
         <Hint>
-          Ce que paie le client pour chaque format (fabrication ou prime, en % de la valeur de l’or), la livraison et le
-          seuil de livraison offerte. Ce que vous payez à Godot & Fils se règle dans « Commande Godot & Fils ».
+          Ces valeurs ne se modifient pas à la main. Le prix client est plafonné à la fourchette visée et ne descend
+          jamais sous la prime de Godot & Fils + {pct(fees.margin.min)} (jamais de vente à perte). La prime de Godot &
+          Fils se calcule dans « Commande Godot & Fils ».
         </Hint>
         <View style={styles.head}>
           <Text style={[styles.col, { flexGrow: 1.4 }]}>Format</Text>
-          <Text style={styles.col}>Client %</Text>
+          <Text style={styles.col}>Client</Text>
+          <Text style={styles.col}>Godot & Fils</Text>
         </View>
         {BAR_PRODUCTS.map((p) => {
-          const client = toRate(premiums[p.id]);
+          const client = fees.premiums[p.id];
           const vend = fees.vendor[p.id];
           const value = p.grams * quote.prices.gold;
-          const margin = vend === undefined || !Number.isFinite(client) ? null : value * (client - vend);
+          const target = PREMIUM_TARGET[p.id];
           return (
-            <View key={p.id} style={{ gap: 4 }}>
+            <View key={p.id} style={{ gap: 2 }} testID={`locked-${p.id}`}>
               <View style={styles.line}>
-                <Text style={[styles.name, { flexGrow: 1.4, flexBasis: 0, minWidth: 0 }]}>
-                  {p.label.replace(/ \(.*/, '')}
-                </Text>
-                <TextInput
-                  value={premiums[p.id]}
-                  onChangeText={(t) => setPremiums((x) => ({ ...x, [p.id]: t }))}
-                  keyboardType="decimal-pad"
-                  style={[ui.input, styles.input]}
-                  accessibilityLabel={`Frais client ${p.label}`}
-                />
+                <Text style={[styles.name, { flexGrow: 1.4, flexBasis: 0, minWidth: 0 }]}>{shortName(p.label)}</Text>
+                <Text style={[styles.name, styles.cell]}>{pct(client)}</Text>
+                <Text style={[styles.name, styles.cell]}>{pct(vend)}</Text>
               </View>
-              <Text style={[styles.margin, margin !== null && { color: margin >= 0 ? colors.up : colors.down }]}>
-                {margin === null
-                  ? 'Prime de Godot & Fils inconnue : marge non calculée'
-                  : `Marge de base ${margin >= 0 ? '+' : '−'}${formatEur(Math.abs(margin))} par ${p.coin ? 'pièce' : 'lingotin'} · autorisé de ${((vend + marginLo) * 100).toFixed(2).replace('.', ',')} % à ${((vend + marginHi) * 100).toFixed(2).replace('.', ',')} %`}
+              <Text style={styles.margin}>
+                {vend === undefined
+                  ? 'Prime de Godot & Fils inconnue'
+                  : `Marge +${formatEur(value * (client - vend))} par ${p.coin ? 'pièce' : 'lingotin'} (${(
+                      (client - vend) *
+                      100
+                    ).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} pt)`}
+                {target ? ` · prix max ${formatEur(value * (1 + target.max))} (${pct(target.max)})` : ''}
               </Text>
-              {PREMIUM_TARGET[p.id] ? (
-                <Text style={styles.tiers}>
-                  Fourchette visée {(PREMIUM_TARGET[p.id].min * 100).toLocaleString('fr-FR')} à{' '}
-                  {(PREMIUM_TARGET[p.id].max * 100).toLocaleString('fr-FR')} % · prix maximum{' '}
-                  {formatEur(value * (1 + PREMIUM_TARGET[p.id].max))} au cours du jour, hors livraison. Jamais sous la
-                  prime de Godot & Fils + {mMin} point.
-                </Text>
-              ) : null}
             </View>
           );
         })}
-        <Label>Marge autorisée sur la prime de Godot & Fils (points de %)</Label>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={styles.tiers}>Minimum</Text>
-            <TextInput
-              value={mMin}
-              onChangeText={setMMin}
-              keyboardType="decimal-pad"
-              style={ui.input}
-              accessibilityLabel="Marge minimum"
-            />
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={styles.tiers}>Maximum</Text>
-            <TextInput
-              value={mMax}
-              onChangeText={setMMax}
-              keyboardType="decimal-pad"
-              style={ui.input}
-              accessibilityLabel="Marge maximum"
-            />
-          </View>
-        </View>
-        {outOfRange.length > 0 ? (
-          <Message
-            ok={false}
-            text={`Hors fourchette : ${outOfRange.map((p) => p.label.replace(/ \(.*/, '')).join(', ')}. La fabrication doit rester entre la prime de Godot & Fils + ${mMin} point et + ${mMax} points.`}
-          />
-        ) : (
-          <Hint>
-            La fabrication facturée ne peut pas passer sous la prime de Godot & Fils + le minimum (jamais à perte), ni
-            au-dessus du maximum (pas de prix excessif).
-          </Hint>
-        )}
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1, gap: 5 }}>
-            <Label>Livraison par envoi (€)</Label>
-            <TextInput
-              value={delivery}
-              onChangeText={setDelivery}
-              keyboardType="decimal-pad"
-              style={ui.input}
-              accessibilityLabel="Livraison par envoi"
-            />
-          </View>
-          <View style={{ flex: 1, gap: 5 }}>
-            <Label>Offerte dès (g d’or)</Label>
-            <TextInput
-              value={free}
-              onChangeText={setFree}
-              keyboardType="decimal-pad"
-              style={ui.input}
-              accessibilityLabel="Livraison offerte dès"
-            />
-          </View>
-        </View>
-        <Label>Délai de livraison (jours)</Label>
-        <View style={{ flexDirection: 'row', gap: 8 }} testID="lead-days">
-          {(
-            [
-              ['maison', 'En stock Orvia'],
-              ['pro', 'Stock Godot & Fils'],
-              ['commande', 'À commander'],
-            ] as const
-          ).map(([k, label]) => (
-            <View key={k} style={{ flex: 1, gap: 4 }}>
-              <Text style={styles.tiers}>{label}</Text>
-              <TextInput
-                value={lead[k]}
-                onChangeText={(t) => setLead((x) => ({ ...x, [k]: t }))}
-                keyboardType="number-pad"
-                style={[ui.input, { minWidth: 0 }]}
-                accessibilityLabel={`Délai ${label}`}
-              />
-            </View>
-          ))}
-        </View>
-        <Hint>
-          La livraison est plus rapide quand les lingotins sont déjà chez Orvia. Le client voit le délai le plus long de
-          sa commande avant de la passer, et le suivi s’y adapte.
-        </Hint>
-        <Button title="Enregistrer les frais" onPress={save} disabled={!validClient} />
-        <Button title="Rétablir les valeurs par défaut" variant="ghost" onPress={reset} />
-        {msg ? <Message {...msg} /> : null}
+        <Text style={styles.margin}>
+          Livraison {fees.delivery} € par envoi, offerte dès {fees.freeFromGrams} g d’or · délais :{' '}
+          {fees.leadDays.maison} j en stock Orvia, {fees.leadDays.pro} j stock Godot & Fils, {fees.leadDays.commande} j
+          à commander.
+        </Text>
       </Card>
     );
   }
@@ -333,144 +103,12 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
     <Card style={{ gap: 12 }}>
       <Text style={styles.title}>Commande Godot & Fils</Text>
       <Hint>
-        Ce que vous payez à Godot & Fils : la prime de chaque format (1 à 9 pièces), la remise selon la taille du lot
-        commandé (mêmes tranches pour tous : 1 à 9, 10 à 19, 20 à 49, 50 et plus) et la livraison. Orvia commande par
-        lots : chaque lot est enregistré au stock avec son prix, et les lingotins sortent du lot le plus ancien.
+        Orvia commande par lots (1 à 9, 10 à 19, 20 à 49, 50 et plus). Calculez la prime d’après la fiche de Godot &
+        Fils, puis enregistrez le lot acheté : il entre au stock avec son prix, et les lingotins sortent du lot le plus
+        ancien. Les primes et les tarifs sont verrouillés : le calcul ne les modifie pas.
       </Hint>
-      <View style={styles.head}>
-        <Text style={[styles.col, { flexGrow: 1.4 }]}>Format</Text>
-        <Text style={styles.col}>Prime vendeur %</Text>
-      </View>
-      {BAR_PRODUCTS.map((p) => {
-        const client = fees.premiums[p.id];
-        const vend = vendor[p.id].trim() ? toRate(vendor[p.id]) : null;
-        const value = p.grams * quote.prices.gold;
-        const margin = vend === null || !Number.isFinite(client) ? null : value * (client - vend);
-        return (
-          <View key={p.id} style={{ gap: 4 }}>
-            <View style={styles.line}>
-              <Text style={[styles.name, { flexGrow: 1.4, flexBasis: 0, minWidth: 0 }]}>
-                {p.label.replace(/ \(.*/, '')}
-              </Text>
-              <TextInput
-                value={vendor[p.id]}
-                onChangeText={(t) => setVendor((x) => ({ ...x, [p.id]: t }))}
-                keyboardType="decimal-pad"
-                placeholder="—"
-                placeholderTextColor={colors.textMuted}
-                style={[ui.input, styles.input]}
-                accessibilityLabel={`Prime vendeur ${p.label}`}
-              />
-            </View>
-            <Text style={[styles.margin, margin !== null && { color: margin >= 0 ? colors.up : colors.down }]}>
-              {margin === null
-                ? 'Prime vendeur inconnue : marge non calculée'
-                : `Marge ${margin >= 0 ? '+' : '−'}${formatEur(Math.abs(margin))} par ${p.coin ? 'pièce' : 'lingotin'} (${(
-                    (client - (vend ?? 0)) *
-                    100
-                  ).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} pt)`}
-            </Text>
-            {margin !== null && (
-              <View testID={`ranges-${p.id}`} style={{ gap: 6 }}>
-                <Text style={styles.tiers}>Marge par pièce selon la taille du lot commandé à Godot & Fils :</Text>
-                <View style={styles.ranges}>
-                  {QTY_RANGES.map((r, i) => {
-                    const off = i === 0 ? 0 : Math.max(0, toRate(offs[p.id][i - 1] || '0'));
-                    const m = margin + off * value;
-                    const on = (range[p.id] ?? 0) === i;
-                    return (
-                      <Pressable
-                        key={r.label}
-                        onPress={() => setRange((x) => ({ ...x, [p.id]: i }))}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: on }}
-                        accessibilityLabel={`${p.label} : ${r.label} pièces`}
-                        style={[styles.rangeBtn, on && { borderColor: colors.gold }]}
-                      >
-                        <Text style={[styles.rangeLabel, on && { color: colors.gold }]}>{r.label}</Text>
-                        <Text style={styles.rangeValue}>{formatEur(m)}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-                {(range[p.id] ?? 0) === 0 ? (
-                  <Text style={styles.tiers}>1 à 9 pièces : prix de base, colonne « Prime vendeur % ».</Text>
-                ) : (
-                  <View style={{ gap: 4 }}>
-                    <Label>Remise de Godot & Fils de {QTY_RANGES[range[p.id]].label} pièces (points de %)</Label>
-                    <TextInput
-                      value={offs[p.id][range[p.id] - 1]}
-                      onChangeText={(t) =>
-                        setOffs((x) => ({
-                          ...x,
-                          [p.id]: x[p.id].map((v, j) => (j === range[p.id] - 1 ? t : v)),
-                        }))
-                      }
-                      keyboardType="decimal-pad"
-                      style={ui.input}
-                      accessibilityLabel={`Remise de Godot & Fils ${p.label} ${QTY_RANGES[range[p.id]].label} pièces`}
-                    />
-                    <Text style={styles.tiers}>
-                      Elle baisse le prix d’un lot de cette taille : tout reste à Orvia, le client paie la même
-                      fabrication.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-        );
-      })}
-      <View style={{ gap: 6 }} testID="vendor-delivery-tiers">
-        <Label>Livraison payée au vendeur, selon la valeur de la commande</Label>
-        {tiers.map((t, i) => (
-          <View key={i} style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <TextInput
-              value={i === 0 ? '0' : t.from}
-              editable={i > 0}
-              onChangeText={(v) => setTiers((all) => all.map((x, j) => (j === i ? { ...x, from: v } : x)))}
-              keyboardType="decimal-pad"
-              placeholder="À partir de (€)"
-              placeholderTextColor={colors.textMuted}
-              style={[ui.input, { flex: 1, minWidth: 0 }, i === 0 && { opacity: 0.6 }]}
-              accessibilityLabel={`Palier ${i + 1} : à partir de (euros)`}
-            />
-            <TextInput
-              value={t.cost}
-              onChangeText={(v) => setTiers((all) => all.map((x, j) => (j === i ? { ...x, cost: v } : x)))}
-              keyboardType="decimal-pad"
-              placeholder="Coût (€)"
-              placeholderTextColor={colors.textMuted}
-              style={[ui.input, { flex: 1, minWidth: 0 }]}
-              accessibilityLabel={`Palier ${i + 1} : coût de la livraison (euros)`}
-            />
-            {i > 0 ? (
-              <Pressable
-                onPress={() => setTiers((all) => all.filter((_, j) => j !== i))}
-                accessibilityLabel={`Retirer le palier ${i + 1}`}
-              >
-                <Text style={ui.link}>✕</Text>
-              </Pressable>
-            ) : (
-              <View style={{ width: 16 }} />
-            )}
-          </View>
-        ))}
-        <Pressable
-          onPress={() => setTiers((all) => [...all, { from: '', cost: '' }])}
-          accessibilityRole="button"
-          testID="add-delivery-tier"
-        >
-          <Text style={ui.link}>+ Ajouter un palier</Text>
-        </Pressable>
-        <Hint>
-          Chaque ligne : à partir de ce montant de commande (l’or et sa prime payés au vendeur), la livraison vous coûte
-          tant. Avec 12 € facturés au client, elle laisse la différence de marge (rien si elle est offerte ou en
-          agence).
-        </Hint>
-      </View>
       <View style={styles.calc} testID="godot-calculator">
-        <Text style={styles.title}>Calculateur de commande</Text>
+        <Text style={styles.title}>Calcul de prime</Text>
         <Pressable
           onPress={() => Linking.openURL(PREMIUM_CALCULATOR_URL).catch(() => {})}
           accessibilityRole="link"
@@ -481,8 +119,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
         </Pressable>
         <Hint>
           Relevez sur la fiche de Godot & Fils la « valeur intrinsèque » du format et son prix pour chaque tranche. Le
-          calculateur règle la prime de base et la remise de chaque tranche, et peut enregistrer un lot acheté avec sa
-          date et son prix.
+          calcul donne la prime de base et la remise de chaque tranche, comparées à la prime verrouillée.
         </Hint>
         <View style={styles.chips}>
           {BAR_PRODUCTS.map((p) => (
@@ -494,8 +131,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               accessibilityState={{ selected: p.id === calcId }}
             >
               <Text style={[styles.chipText, p.id === calcId && { color: colors.gold }]}>
-                {p.label
-                  .replace(/ \(.*/, '')
+                {shortName(p.label)
                   .replace('Lingotin ', '')
                   .replace('Lingot ', '')
                   .replace('Napoléon 20 F', 'Napoléon')}
@@ -533,7 +169,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           {calcProduct.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin)
           {calcIntrinsic.trim() ? '' : ' · valeur du cours Orvia, à remplacer par celle de la fiche'}
         </Text>
-        <Label>Prix de {calcProduct.label.replace(/ \(.*/, '')} par pièce, métal compris (€)</Label>
+        <Label>Prix de {shortName(calcProduct.label)} par pièce, métal compris (€)</Label>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {QTY_RANGES.map((r, i) => (
             <View key={r.label} style={{ flexBasis: '47%', flexGrow: 1, gap: 4 }}>
@@ -557,6 +193,9 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               Remises : 10 à 19 : {toText(calc.result.offs[0])} pt · 20 à 49 : {toText(calc.result.offs[1])} pt · 50 et
               plus : {toText(calc.result.offs[2])} pt
             </Text>
+            <Text style={styles.tiers}>
+              Prime verrouillée de l’appli : {pct(fees.vendor[calcId])} · prix client : {pct(fees.premiums[calcId])}
+            </Text>
             {calc.result.warnings.map((w) => (
               <Text key={w} style={[styles.tiers, { color: colors.warning }]}>
                 {w}
@@ -566,21 +205,6 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
         ) : (
           <Text style={styles.tiers}>{calc.error}</Text>
         )}
-        <Button
-          title={`Régler ${calcProduct.label.replace(/ \(.*/, '')} avec ce relevé`}
-          variant="ghost"
-          disabled={!calc.result}
-          onPress={() => {
-            const r = calc.result;
-            if (!r) return;
-            setVendor((x) => ({ ...x, [calcId]: toText(r.premium) }));
-            setOffs((x) => ({ ...x, [calcId]: r.offs.map((o) => toText(o)) }));
-            setMsg({
-              ok: true,
-              text: 'Prime et remises réglées pour ce format. Appuyez sur Enregistrer pour les garder.',
-            });
-          }}
-        />
         <Label>Enregistrer un lot acheté à ce relevé</Label>
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
           <TextInput
@@ -648,8 +272,6 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           }}
         />
       </View>
-      <Button title="Enregistrer" onPress={save} disabled={!validVendor} />
-      <Button title="Rétablir les valeurs par défaut" variant="ghost" onPress={reset} />
       {msg ? <Message {...msg} /> : null}
     </Card>
   );
@@ -669,7 +291,7 @@ const styles = StyleSheet.create({
   },
   line: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  input: { flexGrow: 1, flexBasis: 0, minWidth: 0, paddingVertical: 9, paddingHorizontal: 10, fontSize: 15 },
+  cell: { flexGrow: 1, flexBasis: 0, minWidth: 0, textAlign: 'right' },
   link: { color: colors.gold, fontSize: 13, fontWeight: '600' },
   calc: { gap: 8, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

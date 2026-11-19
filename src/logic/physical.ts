@@ -118,7 +118,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 : 621,01 € TTC pour 1 lingotin + 7 € de livraison. Les frais du vendeur (8,91 % du prix)
     // font 9,78 % de la valeur de l'or ; visée à 5-7 % au client (fourchette compétitive du 19/11), mais jamais sous la prime du vendeur + la marge minimale.
     premium: 0.07,
-    vendorPremium: 0.0901, // relevé du 18/11/2026 : 612,50 € l'unité pour 561,86 € d'or
+    vendorPremium: 0.0815, // relevé du 18/11/2026 : 612,50 € l'unité pour 561,86 € d'or
     vendorTiers: [
       { from: 10, off: 0.0062 },
       { from: 20, off: 0.0089 },
@@ -141,7 +141,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 : 1 lingotin 1 199,83 € à la commande (+ 7 € de livraison) pour 1 127,83 € d'or, soit
     // 6,4 % de prime (le tableau de prix du vendeur affichait +4,80 %). Facturée 7,5 % au client : ≈ 1,1 point (≈ 12 €).
     premium: 0.075,
-    vendorPremium: 0.0652, // Godot & Fils, 18/11/2026 : 1 191 € pour 1 118,08 € d'or
+    vendorPremium: 0.062, // Godot & Fils, 18/11/2026 : 1 191 € pour 1 118,08 € d'or
     vendorTiers: [
       { from: 10, off: 0.0054 },
       { from: 20, off: 0.008 },
@@ -164,7 +164,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 2 259,61 €, frais 147,57 € = 6,53 % ; 7 € de livraison.
     // Facturée 7,5 % : environ 1 point de marge (≈ 22 €), la livraison étant offerte dès 20 g (7 € à votre charge).
     premium: 0.06,
-    vendorPremium: 0.05, // Godot & Fils, 18/11/2026 : 2 348 € pour 2 236,16 € d'or
+    vendorPremium: 0.0474, // Godot & Fils, 18/11/2026 : 2 348 € pour 2 236,16 € d'or
     vendorTiers: [
       { from: 10, off: 0.0027 },
       { from: 20, off: 0.0054 },
@@ -187,7 +187,7 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 3 508,47 €, frais 182,03 € = 5,19 % ; 7 € de livraison.
     // Facturée 6 % : environ 0,8 point de marge (≈ 28 €), moins les 7 € de livraison offerte dès 20 g.
     premium: 0.05,
-    vendorPremium: 0.0401, // Godot & Fils, 18/11/2026 : 3 620 € pour 3 477,62 € d'or
+    vendorPremium: 0.0376, // Godot & Fils, 18/11/2026 : 3 620 € pour 3 477,62 € d'or
     vendorTiers: [
       { from: 10, off: 0.0027 },
       { from: 20, off: 0.0053 },
@@ -333,24 +333,23 @@ export function premiumRange(vendorPremium: number, margin: { min: number; max: 
 
 const r6 = (n: number) => Math.round(n * 1e6) / 1e6;
 
-export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
-  const s = settings?.physicalFees ?? {};
+/**
+ * Tarifs du retrait physique, verrouillés : ils viennent du code, pas des réglages de l'appli (d'anciens réglages
+ * enregistrés sont ignorés). Seuls le calcul de prime et la commande par lots restent dans Société Orvia.
+ */
+export function physicalFeesOf(_settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
   const premiums: Record<string, number> = {};
   const vendor: Record<string, number> = {};
   const vendorTiers: Record<string, { from: number; off: number }[]> = {};
-  for (const p of BAR_PRODUCTS) {
-    premiums[p.id] = s.premiums?.[p.id] ?? p.premium;
-    const v = s.vendor?.[p.id] ?? p.vendorPremium;
-    if (v !== undefined) vendor[p.id] = v;
-    vendorTiers[p.id] = s.vendorTiers?.[p.id] ?? p.vendorTiers ?? [];
-  }
-  const flat = s.vendorDelivery ?? PHYSICAL.vendorDelivery;
-  const tiers = normalizeDeliveryTiers(s.vendorDeliveryTiers, flat);
+  const tiers = normalizeDeliveryTiers(undefined, PHYSICAL.vendorDelivery);
   // Marge bloquée entre un minimum et un maximum : la fabrication facturée reste dans la fourchette de la prime vendeur.
-  const lo = Math.max(0, s.marginMinPt ?? MARGIN_PT.min) / 100;
-  const hi = Math.max(lo, (s.marginMaxPt ?? MARGIN_PT.max) / 100);
+  const lo = MARGIN_PT.min / 100;
+  const hi = MARGIN_PT.max / 100;
   for (const p of BAR_PRODUCTS) {
-    const v = vendor[p.id];
+    const v = p.vendorPremium;
+    premiums[p.id] = p.premium;
+    if (v !== undefined) vendor[p.id] = v;
+    vendorTiers[p.id] = p.vendorTiers ?? [];
     const cap = PREMIUM_TARGET[p.id]?.max;
     if (cap !== undefined) premiums[p.id] = Math.min(premiums[p.id], cap);
     if (v !== undefined) premiums[p.id] = r6(Math.min(v + hi, Math.max(v + lo, premiums[p.id])));
@@ -359,16 +358,12 @@ export function physicalFeesOf(settings?: Pick<Settings, 'physicalFees'>): Physi
     margin: { min: lo, max: hi },
     premiums,
     vendor,
-    delivery: s.delivery ?? PHYSICAL.delivery,
+    delivery: PHYSICAL.delivery,
     vendorDelivery: tiers[0].cost,
     vendorDeliveryTiers: tiers,
-    leadDays: {
-      maison: s.leadDays?.maison ?? PHYSICAL.leadDays.maison,
-      pro: s.leadDays?.pro ?? PHYSICAL.leadDays.pro,
-      commande: s.leadDays?.commande ?? PHYSICAL.leadDays.commande,
-    },
+    leadDays: { ...PHYSICAL.leadDays },
     vendorTiers,
-    freeFromGrams: s.freeFromGrams ?? PHYSICAL.freeDeliveryFromGrams,
+    freeFromGrams: PHYSICAL.freeDeliveryFromGrams,
   };
 }
 

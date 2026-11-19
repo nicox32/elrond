@@ -290,7 +290,7 @@ test('compte enfant : or converti en lingotin gardé chez le revendeur, fabricat
   close(getChild(s, id).holdings.gold, 15, 1e-9); // 5 g retirés de l'or de l'enfant
   assert.equal(s.holdings.gold, a.holdings.gold); // pas de l'or du parent
   // Fabrication seule (pas de livraison), payée depuis le compte d'attente du parent : 9,6 % de 500 €.
-  close(cash - (s.cashEur ?? 0), 47.55, 0.01);
+  close(cash - (s.cashEur ?? 0), 43.25, 0.01);
   assert.ok(!/livraison/i.test(s.transactions[0].label));
   // Sécurité maximale : verrouillé jusqu'à la majorité (1er juin 2033).
   const l = convertChildToBars(a, p, id, { g5: 1 }, true, t0);
@@ -430,7 +430,7 @@ test('assurance du stock : plafond de 250 000 €, lot refusé s’il le fait d�
   a = addStock(a, { product: 'g10', qty: 20, source: 'maison', unitCost: 1182 });
   a = addStock(a, { product: 'g5', qty: 10, source: 'maison' });
   const gold = 100;
-  const expected = 20 * 1182 + 10 * (5 * gold * (1 + 0.0901));
+  const expected = 20 * 1182 + 10 * (5 * gold * (1 + 0.0815));
   close(stockInsuredValue(a, gold), expected, 1e-6);
   const st = insuranceStatus(a, gold);
   assert.equal(st.cap, 250_000);

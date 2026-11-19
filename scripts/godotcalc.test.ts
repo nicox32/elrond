@@ -32,12 +32,12 @@ test('calculateur Godot & Fils : prime de base et remises déduites du relevé d
   assert.equal(lotPriceOf(sheet, 50), 1173);
   assert.equal(lotPriceOf(sheet, 500), 1173);
   // Les valeurs calculées règlent le prix attendu d'un lot : on retrouve les prix du relevé (au cours du relevé).
-  const fees = physicalFeesOf({
-    physicalFees: {
-      vendor: { g10: r.premium },
-      vendorTiers: { g10: [10, 20, 50].map((from, i) => ({ from, off: r.offs[i] })) },
-    },
-  });
+  const base = physicalFeesOf();
+  const fees = {
+    ...base,
+    vendor: { ...base.vendor, g10: r.premium },
+    vendorTiers: { ...base.vendorTiers, g10: [10, 20, 50].map((from, i) => ({ from, off: r.offs[i] })) },
+  };
   close(lotUnitCost('g10', 20, 111.808, fees), 1182, 0.01);
   close(lotUnitCost('g10', 50, 111.808, fees), 1173, 0.01);
   close(lotUnitCost('g10', 3, 111.808, fees), 1191, 0.01);
