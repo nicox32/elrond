@@ -26,6 +26,14 @@ export interface BarProduct {
    * baisse de `off` (en part de la valeur de l'or). C'est un coût en moins pour Orvia, pas une remise client.
    */
   vendorTiers?: { from: number; off: number }[];
+  /** Tranches de quantité propres à ce produit (sinon `QTY_RANGES`). */
+  ranges?: readonly QtyRange[];
+}
+
+export interface QtyRange {
+  from: number;
+  to: number | null;
+  label: string;
 }
 
 export interface BarSpec {
@@ -209,12 +217,20 @@ export const BAR_PRODUCTS: BarProduct[] = [
     grams: NAPOLEON_FINE_GRAMS,
     premium: 0.04,
     vendorPremium: 0.0283, // Godot & Fils, 19/11/2026 : prime proposée de 18 € sur 635 € d’or (2,83 %)
-    // Mêmes paliers que les autres formats (10, 20, 50 pièces). Le revendeur en a deux de plus à 100 et 500 pièces,
-    // non repris ici : 0,39 point dès 100 et 0,69 point dès 500.
+    // Tranches de Godot & Fils pour le 20 F (relevé du 19/11/2026, prix unitaire net : 666,50 / 665,50 / 665 / 664 /
+    // 662,50 €) : 1 à 9, 10 à 49, 50 à 99, 100 à 499, 500 et plus. Remises en part de la valeur de l'or.
+    ranges: [
+      { from: 1, to: 9, label: '1 à 9' },
+      { from: 10, to: 49, label: '10 à 49' },
+      { from: 50, to: 99, label: '50 à 99' },
+      { from: 100, to: 499, label: '100 à 499' },
+      { from: 500, to: null, label: '500 et plus' },
+    ],
     vendorTiers: [
       { from: 10, off: 0.0015 },
-      { from: 20, off: 0.0015 },
       { from: 50, off: 0.0023 },
+      { from: 100, off: 0.0039 },
+      { from: 500, off: 0.0062 },
     ],
     coin: true,
     // Pièce de 6,45 g à 900 ‰, frappée en France (Monnaie de Paris) de 1803 à 1914.
@@ -276,6 +292,11 @@ export const QTY_RANGES = [
   { from: 20, to: 49, label: '20 à 49' },
   { from: 50, to: null, label: '50 et plus' },
 ] as const;
+
+/** Tranches de quantité d'un produit : les siennes, sinon les quatre communes. */
+export function rangesOf(productId: string): readonly QtyRange[] {
+  return productOf(productId).ranges ?? QTY_RANGES;
+}
 
 /**
  * Prix attendu d'un lot chez le revendeur : l'or du jour plus sa prime, diminuée de la remise de la tranche du lot

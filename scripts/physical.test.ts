@@ -18,6 +18,7 @@ import {
   leadDaysFor,
   lotUnitCost,
   QTY_RANGES,
+  rangesOf,
   BAR_PRODUCTS,
   vendorDeliveryCost,
   requestVaultExit,
@@ -294,19 +295,25 @@ test('commande par lots : prix du lot selon sa tranche, prix client indépendant
   assert.equal(fifty.vendorDiscount, 0);
   // Sans stock, chaque pièce est commandée à l'unité : coût de la prime de base, + livraison.
   close(fifty.cost!, 50 * 10 * p.gold * 0.062 + def.vendorDelivery, 1e-6);
-  // Napoléon : mêmes tranches que les autres formats (1-9, 10-19, 20-49, 50 et plus).
+  // Napoléon : tranches propres à Godot & Fils (1-9, 10-49, 50-99, 100-499, 500 et plus).
   const nap = productOf('nap20');
+  assert.deepEqual(
+    rangesOf('nap20').map((r) => r.label),
+    ['1 à 9', '10 à 49', '50 à 99', '100 à 499', '500 et plus'],
+  );
   assert.equal(vendorTierOff(nap, 9), 0);
   assert.equal(vendorTierOff(nap, 10), 0.0015);
   assert.equal(vendorTierOff(nap, 49), 0.0015);
   assert.equal(vendorTierOff(nap, 50), 0.0023);
-  assert.equal(vendorTierOff(nap, 500), 0.0023);
-  // Les mêmes quatre tranches pour tous les lingotins et pièces.
+  assert.equal(vendorTierOff(nap, 99), 0.0023);
+  assert.equal(vendorTierOff(nap, 100), 0.0039);
+  assert.equal(vendorTierOff(nap, 500), 0.0062);
+  // Les lingotins et le lingot d'une once : les quatre tranches communes.
   assert.deepEqual(
     QTY_RANGES.map((r) => r.label),
     ['1 à 9', '10 à 19', '20 à 49', '50 et plus'],
   );
-  for (const x of BAR_PRODUCTS)
+  for (const x of BAR_PRODUCTS.filter((x) => x.id !== 'nap20'))
     assert.deepEqual(
       x.vendorTiers!.map((t) => t.from),
       [10, 20, 50],

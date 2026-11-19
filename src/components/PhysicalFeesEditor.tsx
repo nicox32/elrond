@@ -3,7 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-nat
 
 import { formatEur, parseAmount } from '../logic/format';
 import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
-import { BAR_PRODUCTS, physicalFeesOf, PREMIUM_TARGET, QTY_RANGES } from '../logic/physical';
+import { BAR_PRODUCTS, physicalFeesOf, PREMIUM_TARGET, rangesOf } from '../logic/physical';
 import { addStock, assertInsuranceRoom } from '../logic/stock';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
@@ -33,9 +33,10 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const [calcDate, setCalcDate] = useState(() => formatDay(new Date()));
   // Valeur intrinsèque de la fiche (le métal d'une pièce, selon Godot & Fils) : le cours de l'or en découle.
   const [calcIntrinsic, setCalcIntrinsic] = useState('');
-  const [calcPrices, setCalcPrices] = useState<string[]>(['', '', '', '']);
+  const [calcPrices, setCalcPrices] = useState<string[]>(['', '', '', '', '']);
   const [lotQty, setLotQty] = useState('10');
   const calcProduct = BAR_PRODUCTS.find((p) => p.id === calcId) ?? BAR_PRODUCTS[0];
+  const calcRanges = rangesOf(calcId);
   const defaultIntrinsic = Math.round(calcProduct.grams * quote.prices.gold * 100) / 100;
   const intrinsic = calcIntrinsic.trim() ? parseAmount(calcIntrinsic) : defaultIntrinsic;
   const calcGold = Math.round((intrinsic / calcProduct.grams) * 10000) / 10000;
@@ -44,7 +45,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
       const sheet = {
         productId: calcId,
         gold: calcGold,
-        prices: calcPrices.map((x) => parseAmount(x)) as [number, number, number, number],
+        prices: calcPrices.slice(0, calcRanges.length).map((x) => parseAmount(x)),
       };
       return { sheet, result: sheetResult(sheet), error: null as string | null };
     } catch (e) {
@@ -175,7 +176,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
         </Text>
         <Label>Prix de {shortName(calcProduct.label)} par pièce, métal compris (€)</Label>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {QTY_RANGES.map((r, i) => (
+          {calcRanges.map((r, i) => (
             <View key={r.label} style={{ flexBasis: '47%', flexGrow: 1, gap: 4 }}>
               <Text style={styles.tiers}>{r.label} pièces</Text>
               <TextInput
@@ -194,8 +195,11 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           <View style={{ gap: 3 }} testID="godot-calc-result">
             <Text style={styles.result}>Prime de base : {toText(calc.result.premium)} % de la valeur de l’or</Text>
             <Text style={styles.tiers}>
-              Remises : 10 à 19 : {toText(calc.result.offs[0])} pt · 20 à 49 : {toText(calc.result.offs[1])} pt · 50 et
-              plus : {toText(calc.result.offs[2])} pt
+              Remises :{' '}
+              {calcRanges
+                .slice(1)
+                .map((r, k) => `${r.label} : ${toText(calc.result?.offs[k])} pt`)
+                .join(' · ')}
             </Text>
             <Text style={styles.tiers}>
               Prime verrouillée de l’appli : {pct(fees.vendor[calcId])} · prix client : {pct(fees.premiums[calcId])}
@@ -221,10 +225,10 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           <Text style={[styles.tiers, { flex: 2 }]}>
             {calc.sheet && Number(lotQty) > 0
               ? `${formatEur(lotPriceOf(calc.sheet, Math.floor(Number(lotQty))))} par pièce (tranche ${
-                  QTY_RANGES[
+                  calcRanges[
                     Math.max(
                       0,
-                      QTY_RANGES.findIndex(
+                      calcRanges.findIndex(
                         (r) =>
                           Math.floor(Number(lotQty)) >= r.from && (r.to === null || Math.floor(Number(lotQty)) <= r.to),
                       ),

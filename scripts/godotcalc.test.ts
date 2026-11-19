@@ -71,3 +71,18 @@ test('calculateur Godot & Fils : prix absurdes, prix de tranche plus élevé, da
   assert.equal(acc.stock![0].goldPriceAtEntry, 111.808);
   assert.equal(acc.stock![0].unitCost, 1182);
 });
+
+test('calculateur : le 20 F a cinq tranches (relevé Godot & Fils du 19/11/2026)', () => {
+  const sheet = { productId: 'nap20', gold: 111.6, prices: [666.5, 665.5, 665, 664, 662.5] };
+  const r = sheetResult(sheet);
+  assert.equal(r.offs.length, 4);
+  close(r.offs[0], 1 / (5.806 * 111.6), 1e-5);
+  close(r.offs[3], 4 / (5.806 * 111.6), 1e-5);
+  assert.equal(lotPriceOf(sheet, 9), 666.5);
+  assert.equal(lotPriceOf(sheet, 10), 665.5);
+  assert.equal(lotPriceOf(sheet, 49), 665.5);
+  assert.equal(lotPriceOf(sheet, 99), 665);
+  assert.equal(lotPriceOf(sheet, 499), 664);
+  assert.equal(lotPriceOf(sheet, 500), 662.5);
+  assert.throws(() => sheetResult({ ...sheet, prices: [666.5, 665.5, 665, 664] }), /cinq tranches/);
+});
