@@ -3,7 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-nat
 
 import { formatEur, parseAmount } from '../logic/format';
 import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
-import { BAR_PRODUCTS, physicalFeesOf, PREMIUM_TARGET, rangesOf } from '../logic/physical';
+import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, PREMIUM_TARGET, rangesOf } from '../logic/physical';
 import { addStock, assertInsuranceRoom } from '../logic/stock';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
@@ -41,12 +41,22 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const defaultIntrinsic = Math.round(calcProduct.grams * quote.prices.gold * 100) / 100;
   const intrinsic = calcIntrinsic.trim() ? parseAmount(calcIntrinsic) : defaultIntrinsic;
   const calcGold = Math.round((intrinsic / calcProduct.grams) * 10000) / 10000;
+  // Prix de chaque tranche calculés seuls : cours de l'or en direct, prime et remises verrouillées. Un prix saisi (devis
+  // de l'affineur) le remplace.
+  const autoPrices = calcRanges.map(
+    (r) =>
+      Math.round(lotUnitCost(calcId, r.from, Number.isFinite(calcGold) ? calcGold : quote.prices.gold, fees) * 100) /
+      100,
+  );
+  const effectivePrices = calcRanges.map((_, i) =>
+    calcPrices[i]?.trim() ? parseAmount(calcPrices[i]) : autoPrices[i],
+  );
   const calc = (() => {
     try {
       const sheet = {
         productId: calcId,
         gold: calcGold,
-        prices: calcPrices.slice(0, calcRanges.length).map((x) => parseAmount(x)),
+        prices: effectivePrices,
       };
       return { sheet, result: sheetResult(sheet), error: null as string | null };
     } catch (e) {
@@ -176,6 +186,10 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           {calcIntrinsic.trim() ? '' : ' · valeur du cours Orvia, à remplacer par celle de la fiche'}
         </Text>
         <Label>Prix de {shortName(calcProduct.label)} par pièce, métal compris (€)</Label>
+        <Text style={styles.tiers} testID="godot-calc-auto">
+          Calculés seuls d’après le cours de l’or en direct, la prime et les remises de Godot & Fils. Saisissez les prix
+          de votre devis pour les remplacer.
+        </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {calcRanges.map((r, i) => (
             <View key={r.label} style={{ flexBasis: '47%', flexGrow: 1, gap: 4 }}>
@@ -184,7 +198,7 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                 value={calcPrices[i]}
                 onChangeText={(t) => setCalcPrices((all) => all.map((v, j) => (j === i ? t : v)))}
                 keyboardType="decimal-pad"
-                placeholder="€"
+                placeholder={String(autoPrices[i]).replace('.', ',')}
                 placeholderTextColor={colors.textMuted}
                 style={[ui.input, { minWidth: 0 }]}
                 accessibilityLabel={`Prix ${r.label} pièces`}
