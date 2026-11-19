@@ -311,15 +311,16 @@ export function vendorDeliveryCost(goodsEur: number, fees: Pick<PhysicalFees, 'v
 
 /**
 
- * Prix maximum « tout compris » (fabrication + commission + livraison éventuelle) facturé au client, en part de la valeur
- * de l'or, et marge visée. Le prix client est toujours égal à ce maximum.
+ * Prix « tout compris » (fabrication + commission + livraison éventuelle) facturé au client, en part de la valeur de
+ * l'or : le maximum est le prix appliqué (tableau du 19/11 : prix de revient + 0,5 point), le minimum est le prix de revient
+ * (prime du vendeur + sa livraison de 7 € sur une pièce seule).
  */
 export const PREMIUM_TARGET: Record<string, { min: number; max: number }> = {
-  nap20: { min: 0.03, max: 0.045 },
-  g5: { min: 0.05, max: 0.07 },
-  g10: { min: 0.035, max: 0.05 },
-  g20: { min: 0.025, max: 0.04 },
-  oz1: { min: 0.02, max: 0.035 },
+  nap20: { min: 0.0393, max: 0.045 },
+  g5: { min: 0.0943, max: 0.099 },
+  g10: { min: 0.0684, max: 0.073 },
+  g20: { min: 0.0506, max: 0.055 },
+  oz1: { min: 0.0397, max: 0.045 },
 };
 
 /**

@@ -289,8 +289,8 @@ test('compte enfant : or converti en lingotin gardé chez le revendeur, fabricat
   assert.equal(bar.lockedUntil, undefined);
   close(getChild(s, id).holdings.gold, 15, 1e-9); // 5 g retirés de l'or de l'enfant
   assert.equal(s.holdings.gold, a.holdings.gold); // pas de l'or du parent
-  // Fabrication seule (pas de livraison), payée depuis le compte d'attente du parent : 7 % de 500 €.
-  close(cash - (s.cashEur ?? 0), 35, 0.01);
+  // Fabrication seule (pas de livraison), payée depuis le compte d'attente du parent : 9,9 % de 500 €.
+  close(cash - (s.cashEur ?? 0), 49.5, 0.01);
   assert.ok(!/livraison/i.test(s.transactions[0].label));
   // Sécurité maximale : verrouillé jusqu'à la majorité (1er juin 2033).
   const l = convertChildToBars(a, p, id, { g5: 1 }, true, t0);
