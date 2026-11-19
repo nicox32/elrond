@@ -310,6 +310,32 @@ export function lotUnitCost(productId: string, lotQty: number, goldEurPerGram: n
   return p.grams * goldEurPerGram * (1 + Math.max(0, v - off));
 }
 
+/** Marge minimale d'un lot, en points de la valeur de l'or : en dessous, alerte. */
+export const MARGIN_ALERT_PT = 0.5;
+
+/**
+ * Marge d'Orvia sur un lot acheté `unitCost` € la pièce (métal compris), vendu au prix client verrouillé : prix client
+ * moins prix d'achat moins la livraison du vendeur répartie sur le lot. `level` : « ok », « low » (sous 0,5 point) ou
+ * « loss » (perte).
+ */
+export function lotMargin(
+  productId: string,
+  unitCost: number,
+  qty: number,
+  goldEurPerGram: number,
+  fees: PhysicalFees = physicalFeesOf(),
+) {
+  const p = productOf(productId);
+  const metal = p.grams * goldEurPerGram;
+  const client = metal * (1 + (fees.premiums[productId] ?? p.premium));
+  const q = Math.max(1, Math.floor(qty));
+  const deliveryEach = vendorDeliveryCost(unitCost * q, fees) / q;
+  const eur = Math.round((client - unitCost - deliveryEach) * 100) / 100;
+  const pt = metal > 0 ? Math.round((eur / metal) * 10000) / 100 : 0;
+  const level: 'ok' | 'low' | 'loss' = eur < 0 ? 'loss' : pt < MARGIN_ALERT_PT ? 'low' : 'ok';
+  return { eur, pt, level, client: Math.round(client * 100) / 100 };
+}
+
 /** Paliers triés, sans doublon, dont le premier commence à 0 € ; à défaut, un seul palier au coût fixe. */
 export function normalizeDeliveryTiers(
   raw: { fromEur: number; cost: number }[] | undefined,

@@ -595,3 +595,21 @@ test('délai de livraison : plus court quand le lingotin est en stock chez Orvia
   // Le même jour 3 sur un délai de 8 jours : pas encore arrivé.
   assert.equal(fabricationProgress(t, new Date('2026-11-19T10:00:00')).step, 1);
 });
+
+test('alerte de marge d’un lot : sous 0,5 point ou à perte, au prix client verrouillé', async () => {
+  const { lotMargin, MARGIN_ALERT_PT } = await import('../src/logic/physical.ts');
+  assert.equal(MARGIN_ALERT_PT, 0.5);
+  const gold = 107.99;
+  // 5 g, lot de 50 à 560 € : prix client 9,9 % → 593,41 € ; livraison 7 € répartie sur 50 pièces.
+  const good = lotMargin('g5', 560, 50, gold);
+  close(good.client, 593.41, 0.01);
+  close(good.eur, 593.41 - 560 - 7 / 50, 0.01);
+  assert.equal(good.level, 'ok');
+  // Même lot à 591 € : marge de quelques euros, sous 0,5 point de la valeur de l'or (2,70 €).
+  const low = lotMargin('g5', 591, 50, gold);
+  assert.equal(low.level, 'low');
+  // Napoléon à 660 € pour 50 pièces : prix client 655,20 € → perte.
+  const loss = lotMargin('nap20', 660, 50, gold);
+  assert.equal(loss.level, 'loss');
+  assert.ok(loss.eur < 0);
+});

@@ -8,6 +8,7 @@ import { addStock, assertInsuranceRoom } from '../logic/stock';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { InsuranceMeter } from './InsuranceMeter';
+import { MarginAlert } from './MarginAlert';
 import { Button, Card, Hint, Label, Message, styles as ui } from './ui';
 
 const PREMIUM_CALCULATOR_URL = 'https://lingot-dor.fr/calculateur-prime-or';
@@ -238,6 +239,14 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               : ''}
           </Text>
         </View>
+        {calc.sheet && Number(lotQty) > 0 ? (
+          <MarginAlert
+            productId={calcId}
+            unitCost={lotPriceOf(calc.sheet, Math.floor(Number(lotQty)))}
+            qty={Math.floor(Number(lotQty))}
+            gold={calc.sheet.gold}
+          />
+        ) : null}
         <InsuranceMeter
           extraEur={
             calc.sheet && Number(lotQty) > 0

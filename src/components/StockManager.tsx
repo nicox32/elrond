@@ -21,6 +21,7 @@ import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { BarImage } from './BarImage';
 import { InsuranceMeter } from './InsuranceMeter';
+import { MarginAlert } from './MarginAlert';
 import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, Label, Message, SectionTitle, styles as ui } from './ui';
 
@@ -251,6 +252,14 @@ export function StockManager({ onBack }: { onBack: () => void }) {
         <InsuranceMeter
           extraEur={(Number.isFinite(n) && n > 0 ? n : 0) * (cost.trim() ? parseAmount(cost) || 0 : expectedLot)}
         />
+        {source === 'pro' || cost.trim() ? (
+          <MarginAlert
+            productId={product}
+            unitCost={cost.trim() ? parseAmount(cost) : expectedLot}
+            qty={Number.isFinite(n) ? n : 0}
+            gold={quote.prices.gold}
+          />
+        ) : null}
         <Label>
           {coin ? 'Millésimes connus (un par ligne, facultatif)' : 'Numéros de série connus (un par ligne)'}
         </Label>
