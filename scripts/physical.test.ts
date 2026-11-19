@@ -39,9 +39,13 @@ test('retrait physique : lingotins d’or, frais depuis le compte d’attente, r
   a = buy(a, p, 'gold', { unit: 'g', value: 20 }, new Date('2024-06-01T12:00:00'));
   const q = quoteWithdrawal(p, { g10: 2, g5: 1 });
   assert.equal(q.grams, 25);
-  close(q.premium, 10 * 100 * 0.067 * 2 + 5 * 100 * 0.0865);
-  close(q.fees, 134 + 43.25, 0.01); // 25 g : livraison offerte (dès 20 g)
-  close(quoteWithdrawal(p, { g10: 1 }).fees, 67 + 12, 0.01); // 10 g seul : livraison 12 €
+  close(q.premium, 10 * 100 * 0.05 * 2 + 5 * 100 * 0.07);
+  close(q.fees, 135, 0.01); // 25 g : livraison offerte (dès 20 g)
+  // 10 g seul : prix maximum tout compris de 5 % (50 €), dont 12 € de livraison.
+  const one10 = quoteWithdrawal(p, { g10: 1 });
+  close(one10.fees, 50, 0.01);
+  close(one10.delivery, 12, 0.01);
+  close(one10.premium, 38, 0.01);
   // Frais à payer depuis le compte d'attente : vide → refusé (payer en or serait une vente imposée).
   assert.throws(() => withdrawPhysical(a, p, { g10: 2, g5: 1 }), LedgerError);
   a = creditCash(a, 250);
@@ -112,7 +116,7 @@ test('Napoléon 20 F : 5,806 g d’or fin, prime indicative, millésime au coffr
   const { napoleonPrice } = await import('../src/logic/physical.ts');
   const n = napoleonPrice(100);
   close(n.metal, 580.6);
-  close(n.withPremium, 580.6 * 1.04);
+  close(n.withPremium, 580.6 * 1.045);
   // 4 Napoléons = 23,2 g d'or : livraison offerte (dès 20 g).
   const q = quoteWithdrawal(p, { nap20: 4 });
   close(q.grams, 23.224);
@@ -173,14 +177,15 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   const { companyReport } = await import('../src/logic/company.ts');
   // Valeurs par défaut : 5 g à 11 % (prime vendeur 9,78 % relevée le 18/11/2026), livraison 12 € (7 € payés au vendeur).
   const def = physicalFeesOf();
-  assert.equal(def.premiums.g5, 0.0865);
+  assert.equal(def.premiums.g5, 0.07); // prix maximum tout compris, livraison éventuelle comprise
   assert.equal(def.vendor.g5, 0.0815);
   assert.equal(def.vendorDelivery, 7);
   assert.equal(def.delivery, 12);
   assert.equal(def.freeFromGrams, 20);
   const q5 = quoteWithdrawal(p, { g5: 1 }, def);
-  close(q5.premium, 5 * 100 * 0.0865, 1e-9);
-  close(q5.fees, 43.25 + 12, 0.01);
+  close(q5.fees, 5 * 100 * 0.07, 1e-9);
+  close(q5.delivery, 12, 1e-9);
+  close(q5.premium, 35 - 12, 1e-9);
   close(q5.cost!, 5 * 100 * 0.0815 + 7, 1e-9); // lingotin payé au vendeur + sa livraison
   // Coût inconnu si un format sans prime vendeur : pas de coût calculé.
   assert.equal(def.vendor.g10, 0.062);
@@ -196,13 +201,11 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   assert.deepEqual(ignored, def);
   assert.equal(ignored.delivery, 12);
   assert.equal(ignored.freeFromGrams, 20);
-  // Marge bloquée : le prix client reste entre la prime vendeur + 0,5 point et + 3 points, et sous le plafond visé.
-  for (const x of BAR_PRODUCTS) {
-    const v = def.vendor[x.id];
-    assert.ok(def.premiums[x.id] >= v + 0.005 - 1e-9 && def.premiums[x.id] <= v + 0.03 + 1e-9, x.id);
-  }
-  close(def.premiums.nap20, 0.04, 1e-9); // prime vendeur 2,83 % : le prix visé de 4 % tient
-  close(def.premiums.g5, 0.0815 + 0.005, 1e-9); // plafonné à 7 %, ramené au plancher de marge
+  // Prix maximum tout compris : le client paie toujours au plus ce plafond, quel que soit le coût du vendeur.
+  assert.equal(def.premiums.nap20, 0.045);
+  assert.equal(def.premiums.g10, 0.05);
+  assert.equal(def.premiums.g20, 0.04);
+  assert.equal(def.premiums.oz1, 0.035);
   close(productPrice(productOf('g5'), 100, 0.08).withPremium, 540);
   // Retrait enregistré avec ses frais réglés et son coût pour Orvia.
   let a = creditCash(
@@ -216,14 +219,14 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
     100,
   );
   a = withdrawPhysical(a, p, { g5: 1 }, new Date('2026-11-16T12:00:00'));
-  close(a.transactions[0].fees!, 43.25 + 12, 0.01); // 10 % demandé, plafonné à 7 % puis au plancher de marge
+  close(a.transactions[0].fees!, 35, 0.01); // 5 g : prix maximum de 7 % tout compris
   close(a.transactions[0].costEur!, 5 * 100 * 0.0815 + 7, 0.01);
   const r = companyReport(a, p, 'all', new Date('2026-11-17T12:00:00'));
   close(r.costs.physical, 5 * 100 * 0.0815 + 7, 0.01);
-  close(r.revenue.physical, 55.25, 0.01);
+  close(r.revenue.physical, 35, 0.01);
   // Grille des Tarifs avec les frais en vigueur.
   const rows = physicalFeeRows(physicalFeesOf(a.settings));
-  assert.equal(rows[0].orvia, 'Fabrication 8,65 %');
+  assert.equal(rows[0].orvia, 'Frais 7 % tout compris');
   assert.match(rows[5].orvia, /12 € par envoi, offerte dès 20 g/);
 });
 
@@ -284,8 +287,8 @@ test('commande par lots : prix du lot selon sa tranche, prix client indépendant
   // Le client paie la même fabrication quel que soit le nombre de pièces retirées : plus de remise de quantité.
   const one = quoteWithdrawal(p, { g10: 1 }, def);
   const fifty = quoteWithdrawal(p, { g10: 50 }, def);
-  close(one.premium / 1, 10 * p.gold * 0.067, 1e-9);
-  close(fifty.premium / 50, 10 * p.gold * 0.067, 1e-9);
+  close(one.fees / 1, 10 * p.gold * 0.05, 1e-9);
+  close(fifty.fees / 50, 10 * p.gold * 0.05, 1e-9);
   assert.equal(fifty.volume, false);
   assert.equal(fifty.clientDiscount, 0);
   assert.equal(fifty.vendorDiscount, 0);
@@ -321,7 +324,7 @@ test('retrait en agence : pas de livraison, ni facturée au client ni payée au 
   assert.equal(home.delivery, def.delivery);
   assert.equal(agency.delivery, 0);
   assert.equal(agency.pickup, true);
-  close(home.fees - agency.fees, def.delivery, 1e-9);
+  close(home.fees, agency.fees, 1e-9); // prix maximum tout compris : le même, livraison comprise ou non
   close(home.cost! - agency.cost!, def.vendorDelivery, 1e-9);
   let acc = createAccount('T', new Date('2020-01-01'));
   acc = buy(acc, p, 'gold', { unit: 'g', value: 12 }, new Date('2020-03-01T12:00:00'));

@@ -57,9 +57,9 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
       <Card style={{ gap: 10 }}>
         <Text style={styles.title}>🔒 Tarifs du retrait physique (verrouillés)</Text>
         <Hint>
-          Ces valeurs ne se modifient pas à la main. Le prix client est plafonné à la fourchette visée et ne descend
-          jamais sous la prime de Godot & Fils + {pct(fees.margin.min)} (jamais de vente à perte). La prime de Godot &
-          Fils se calcule dans « Commande Godot & Fils ».
+          Ces valeurs ne se modifient pas à la main. Le client paie au plus le prix maximum tout compris de chaque
+          format (fabrication, commission et livraison éventuelle comprises). La prime de Godot & Fils se calcule dans «
+          Commande Godot & Fils ».
         </Hint>
         <View style={styles.head}>
           <Text style={[styles.col, { flexGrow: 1.4 }]}>Format</Text>
@@ -78,15 +78,19 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                 <Text style={[styles.name, styles.cell]}>{pct(client)}</Text>
                 <Text style={[styles.name, styles.cell]}>{pct(vend)}</Text>
               </View>
-              <Text style={styles.margin}>
-                {vend === undefined
-                  ? 'Prime de Godot & Fils inconnue'
-                  : `Marge +${formatEur(value * (client - vend))} par ${p.coin ? 'pièce' : 'lingotin'} (${(
-                      (client - vend) *
-                      100
-                    ).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} pt)`}
-                {target ? ` · prix max ${formatEur(value * (1 + target.max))} (${pct(target.max)})` : ''}
-              </Text>
+              {(() => {
+                if (vend === undefined) return <Text style={styles.margin}>Prime de Godot & Fils inconnue</Text>;
+                // Une pièce seule : prix client moins prix payé à Godot & Fils et sa livraison.
+                const net = value * (client - vend) - fees.vendorDelivery;
+                return (
+                  <Text style={[styles.margin, { color: net >= 0 ? colors.up : colors.down }]}>
+                    {net >= 0 ? 'Marge' : 'Perte'} {net >= 0 ? '+' : '−'}
+                    {formatEur(Math.abs(net))} par {p.coin ? 'pièce' : 'lingotin'} seul (livraison payée à Godot & Fils
+                    comprise)
+                    {target ? ` · prix max ${formatEur(value * (1 + target.max))} (${pct(target.max)})` : ''}
+                  </Text>
+                );
+              })()}
             </View>
           );
         })}

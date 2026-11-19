@@ -265,8 +265,6 @@ export interface PhysicalFees {
   /** Délai de livraison en jours selon l'origine du lingotin. */
   leadDays: { maison: number; pro: number; commande: number };
   freeFromGrams: number;
-  /** Marge d'Orvia autorisée sur la prime du vendeur, en part de la valeur de l'or (0,005 = 0,5 point). */
-  margin: { min: number; max: number };
   /** Remises de quantité du revendeur, par produit. */
   vendorTiers: Record<string, { from: number; off: number }[]>;
 }
@@ -311,13 +309,10 @@ export function vendorDeliveryCost(goodsEur: number, fees: Pick<PhysicalFees, 'v
   return cost;
 }
 
-/** Marge autorisée par défaut : de 0,5 à 3 points de % au-dessus de la prime payée au vendeur. */
-export const MARGIN_PT = { min: 0.5, max: 3 } as const;
-
-/** Fourchette de la fabrication facturée au client pour une prime vendeur donnée. */
 /**
- * Fourchette compétitive visée pour la fabrication ou la prime facturée au client (part de la valeur de l'or), quand elle
- * est connue. Elle plafonne le prix ; le plancher de marge sur la prime du vendeur passe avant (jamais de vente à perte).
+
+ * Prix maximum « tout compris » (fabrication + commission + livraison éventuelle) facturé au client, en part de la valeur
+ * de l'or, et marge visée. Le prix client est toujours égal à ce maximum.
  */
 export const PREMIUM_TARGET: Record<string, { min: number; max: number }> = {
   nap20: { min: 0.03, max: 0.045 },
@@ -327,35 +322,22 @@ export const PREMIUM_TARGET: Record<string, { min: number; max: number }> = {
   oz1: { min: 0.02, max: 0.035 },
 };
 
-export function premiumRange(vendorPremium: number, margin: { min: number; max: number }) {
-  return { min: vendorPremium + margin.min, max: vendorPremium + margin.max };
-}
-
-const r6 = (n: number) => Math.round(n * 1e6) / 1e6;
-
 /**
  * Tarifs du retrait physique, verrouillés : ils viennent du code, pas des réglages de l'appli (d'anciens réglages
- * enregistrés sont ignorés). Seuls le calcul de prime et la commande par lots restent dans Société Orvia.
+ * enregistrés sont ignorés). Le client paie au plus le prix maximum « tout compris » de chaque format (fabrication,
+ * commission et livraison éventuelle comprises), exprimé en part de la valeur de l'or.
  */
 export function physicalFeesOf(_settings?: Pick<Settings, 'physicalFees'>): PhysicalFees {
   const premiums: Record<string, number> = {};
   const vendor: Record<string, number> = {};
   const vendorTiers: Record<string, { from: number; off: number }[]> = {};
   const tiers = normalizeDeliveryTiers(undefined, PHYSICAL.vendorDelivery);
-  // Marge bloquée entre un minimum et un maximum : la fabrication facturée reste dans la fourchette de la prime vendeur.
-  const lo = MARGIN_PT.min / 100;
-  const hi = MARGIN_PT.max / 100;
   for (const p of BAR_PRODUCTS) {
-    const v = p.vendorPremium;
-    premiums[p.id] = p.premium;
-    if (v !== undefined) vendor[p.id] = v;
+    if (p.vendorPremium !== undefined) vendor[p.id] = p.vendorPremium;
     vendorTiers[p.id] = p.vendorTiers ?? [];
-    const cap = PREMIUM_TARGET[p.id]?.max;
-    if (cap !== undefined) premiums[p.id] = Math.min(premiums[p.id], cap);
-    if (v !== undefined) premiums[p.id] = r6(Math.min(v + hi, Math.max(v + lo, premiums[p.id])));
+    premiums[p.id] = PREMIUM_TARGET[p.id]?.max ?? p.premium;
   }
   return {
-    margin: { min: lo, max: hi },
     premiums,
     vendor,
     delivery: PHYSICAL.delivery,
@@ -372,7 +354,9 @@ export function physicalFeeRows(fees: PhysicalFees): { label: string; orvia: str
   const pct = (n: number) => `${(n * 100).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} %`;
   const row = (id: string, label: string) => ({
     label,
-    orvia: productOf(id).coin ? `Prime ≈ ${pct(fees.premiums[id])}, variable` : `Fabrication ${pct(fees.premiums[id])}`,
+    orvia: productOf(id).coin
+      ? `Prime ≈ ${pct(fees.premiums[id])} tout compris`
+      : `Frais ${pct(fees.premiums[id])} tout compris`,
   });
   return [
     row('g5', 'Lingotin 5 g (PAMP Suisse, numéro de série, certificat, VERISCAN)'),
@@ -382,7 +366,7 @@ export function physicalFeeRows(fees: PhysicalFees): { label: string; orvia: str
     row('nap20', 'Napoléon 20 F (5,81 g d’or fin)'),
     {
       label: 'Livraison assurée, remise contre signature',
-      orvia: `${fees.delivery.toLocaleString('fr-FR')} € par envoi, offerte dès ${fees.freeFromGrams.toLocaleString('fr-FR')} g`,
+      orvia: `Comprise dans le prix ci-dessus (${fees.delivery.toLocaleString('fr-FR')} € par envoi, offerte dès ${fees.freeFromGrams.toLocaleString('fr-FR')} g)`,
     },
     { label: 'Argent et platine', orvia: 'Non retirables (20 % de TVA)' },
   ];
@@ -435,8 +419,10 @@ export function quoteWithdrawal(
   const premium = lines.reduce((s, l) => s + l.premium, 0);
   const vendorDiscount = lines.reduce((s, l) => s + l.vendorDiscount, 0);
   const clientDiscount = lines.reduce((s, l) => s + l.clientDiscount, 0);
-  const delivery = pickup || !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
-  const total = Math.round((premium + delivery) * 100) / 100;
+  const deliveryNominal = pickup || !lines.length || grams >= fees.freeFromGrams - 1e-9 ? 0 : fees.delivery;
+  // Prix maximum tout compris : la livraison éventuelle est comprise dans le plafond, pas ajoutée par-dessus.
+  const total = Math.round(premium * 100) / 100;
+  const delivery = Math.min(deliveryNominal, total);
   // Coût pour Orvia : lingotins payés au vendeur (si toutes les primes sont connues) et sa livraison, par commande.
   const cost =
     lines.length && lines.every((l) => l.vendorCost !== undefined)
@@ -446,7 +432,7 @@ export function quoteWithdrawal(
     lines,
     grams,
     value,
-    premium,
+    premium: Math.round((total - delivery) * 100) / 100,
     delivery,
     pickup,
     fees: total,
@@ -807,7 +793,7 @@ export function convertChildToBars(
   if (lock && !majority) {
     throw new LedgerError('La sécurité maximale demande la date de naissance de l’enfant : renseignez-la d’abord.');
   }
-  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings));
+  const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), true);
   if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
   if (q.grams > child.holdings.gold + 1e-9) {
     throw new LedgerError(

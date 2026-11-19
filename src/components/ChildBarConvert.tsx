@@ -30,7 +30,7 @@ export function ChildBarConvert({ child }: { child: ChildAccount }) {
   const firstName = child.name.split(' ')[0];
   const [confirm, setConfirm] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const q = quoteWithdrawal(quote.prices, order, physicalFeesOf(account.settings));
+  const q = quoteWithdrawal(quote.prices, order, physicalFeesOf(account.settings), true);
   const fee = q.premium;
   const cash = account.cashEur ?? 0;
   const gold = child.holdings.gold;
