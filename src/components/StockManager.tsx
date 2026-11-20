@@ -50,6 +50,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
   const [source, setSource] = useState<'maison' | 'pro'>('maison');
   const [vault, setVault] = useState('');
   const [cost, setCost] = useState('');
+  const [total, setTotal] = useState('');
   const [serials, setSerials] = useState('');
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -70,9 +71,20 @@ export function StockManager({ onBack }: { onBack: () => void }) {
     physicalFeesOf(account.settings),
   );
 
+  // Prix d'une pièce : total de la facture du lot ÷ nombre de pièces, sinon prix saisi par pièce, sinon prix attendu.
+  const unitPaid = (): number | undefined => {
+    if (total.trim()) {
+      const t = parseAmount(total);
+      return t > 0 && n > 0 ? Math.round((t / n) * 10000) / 10000 : undefined;
+    }
+    return cost.trim() ? parseAmount(cost) : undefined;
+  };
+
   function add() {
     try {
-      const unit = cost.trim() ? parseAmount(cost) : expectedLot;
+      if (total.trim() && unitPaid() === undefined)
+        throw new LedgerError('Indiquez un total de facture et un nombre de pièces valides.');
+      const unit = unitPaid() ?? expectedLot;
       assertInsuranceRoom(account, quote.prices.gold, (Number.isFinite(n) ? n : 0) * unit);
       updateAccount((a) =>
         addStock(a, {
@@ -80,7 +92,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           qty: n,
           source,
           vault,
-          unitCost: cost.trim() ? parseAmount(cost) : undefined,
+          unitCost: unitPaid(),
           goldPrice: quote.prices.gold,
           serials: list,
           note,
@@ -92,6 +104,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
       });
       setSerials('');
       setNote('');
+      setTotal('');
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Ajout impossible.' });
     }
@@ -249,13 +262,29 @@ export function StockManager({ onBack }: { onBack: () => void }) {
           style={ui.input}
           accessibilityLabel="Prix payé par exemplaire"
         />
-        <InsuranceMeter
-          extraEur={(Number.isFinite(n) && n > 0 ? n : 0) * (cost.trim() ? parseAmount(cost) || 0 : expectedLot)}
+        <TextInput
+          value={total}
+          onChangeText={setTotal}
+          keyboardType="decimal-pad"
+          placeholder="ou Prix total de la facture du lot (livraison non comprise)"
+          placeholderTextColor={colors.textMuted}
+          style={ui.input}
+          accessibilityLabel="Prix total de la facture du lot"
         />
-        {source === 'pro' || cost.trim() ? (
+        {total.trim() && unitPaid() !== undefined ? (
+          <Text style={ui.hint} testID="stock-unit-from-total">
+            Soit {formatEur(unitPaid() ?? 0)} par pièce d’après la facture.
+          </Text>
+        ) : null}
+        <InsuranceMeter
+          extraEur={
+            (Number.isFinite(n) && n > 0 ? n : 0) * (unitPaid() ?? (cost.trim() ? parseAmount(cost) || 0 : expectedLot))
+          }
+        />
+        {source === 'pro' || cost.trim() || total.trim() ? (
           <MarginAlert
             productId={product}
-            unitCost={cost.trim() ? parseAmount(cost) : expectedLot}
+            unitCost={unitPaid() ?? expectedLot}
             qty={Number.isFinite(n) ? n : 0}
             gold={quote.prices.gold}
           />

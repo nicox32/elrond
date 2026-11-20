@@ -36,6 +36,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const [calcIntrinsic, setCalcIntrinsic] = useState('');
   const [calcPrices, setCalcPrices] = useState<string[]>(['', '', '', '', '']);
   const [lotQty, setLotQty] = useState('10');
+  // Total de la facture du lot : le prix de chaque pièce en est déduit (sinon, prix du relevé de la tranche).
+  const [lotTotal, setLotTotal] = useState('');
   // Prix saisis = prix publics de la fiche : la remise négociée (3 à 5 % selon le lot) s'applique.
   const [publicSheet, setPublicSheet] = useState(true);
   const calcProduct = BAR_PRODUCTS.find((p) => p.id === calcId) ?? BAR_PRODUCTS[0];
@@ -57,6 +59,20 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
         : parseAmount(calcPrices[i])
       : autoPrices[i],
   );
+  const lotQtyN = Math.floor(Number(lotQty));
+  const lotUnit = (() => {
+    if (!(lotQtyN > 0)) return 0;
+    if (lotTotal.trim()) {
+      const t = parseAmount(lotTotal);
+      return t > 0 ? Math.round((t / lotQtyN) * 10000) / 10000 : 0;
+    }
+    try {
+      const sheet = { productId: calcId, gold: calcGold, prices: effectivePrices };
+      return lotPriceOf(sheet, lotQtyN);
+    } catch {
+      return 0;
+    }
+  })();
   const calc = (() => {
     try {
       const sheet = {
@@ -285,56 +301,60 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           Saisissez les prix de toutes les tranches pour enregistrer la prime : elle remplace la prime verrouillée de ce
           format, avec sa date.
         </Text>
-        <Label>Enregistrer un lot acheté à ce relevé</Label>
-        <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-          <TextInput
-            value={lotQty}
-            onChangeText={setLotQty}
-            keyboardType="number-pad"
-            style={[ui.input, { flex: 1, minWidth: 0 }]}
-            accessibilityLabel="Nombre de pièces du lot"
-          />
-          <Text style={[styles.tiers, { flex: 2 }]}>
-            {calc.sheet && Number(lotQty) > 0
-              ? `${formatEur(lotPriceOf(calc.sheet, Math.floor(Number(lotQty))))} par pièce (tranche ${
+        <Label>Enregistrer un lot acheté</Label>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={styles.tiers}>Pièces du lot</Text>
+            <TextInput
+              value={lotQty}
+              onChangeText={setLotQty}
+              keyboardType="number-pad"
+              style={[ui.input, { minWidth: 0 }]}
+              accessibilityLabel="Nombre de pièces du lot"
+            />
+          </View>
+          <View style={{ flex: 2, gap: 4 }}>
+            <Text style={styles.tiers}>Prix total de la facture du lot (€)</Text>
+            <TextInput
+              value={lotTotal}
+              onChangeText={setLotTotal}
+              keyboardType="decimal-pad"
+              placeholder="facultatif"
+              placeholderTextColor={colors.textMuted}
+              style={[ui.input, { minWidth: 0 }]}
+              accessibilityLabel="Prix total de la facture du lot"
+            />
+          </View>
+        </View>
+        <Text style={styles.tiers} testID="lot-unit">
+          {lotUnit > 0
+            ? lotTotal.trim()
+              ? `${formatEur(lotUnit)} par pièce d’après la facture (prime ${toText(lotUnit / (calcProduct.grams * calcGold) - 1)} % sur l’or du ${calcDate})`
+              : `${formatEur(lotUnit)} par pièce d’après le relevé (tranche ${
                   calcRanges[
                     Math.max(
                       0,
-                      calcRanges.findIndex(
-                        (r) =>
-                          Math.floor(Number(lotQty)) >= r.from && (r.to === null || Math.floor(Number(lotQty)) <= r.to),
-                      ),
+                      calcRanges.findIndex((r) => lotQtyN >= r.from && (r.to === null || lotQtyN <= r.to)),
                     )
                   ].label
                 })`
-              : ''}
-          </Text>
-        </View>
-        {calc.sheet && Number(lotQty) > 0 ? (
-          <MarginAlert
-            productId={calcId}
-            unitCost={lotPriceOf(calc.sheet, Math.floor(Number(lotQty)))}
-            qty={Math.floor(Number(lotQty))}
-            gold={calc.sheet.gold}
-          />
-        ) : null}
-        <InsuranceMeter
-          extraEur={
-            calc.sheet && Number(lotQty) > 0
-              ? Math.floor(Number(lotQty)) * lotPriceOf(calc.sheet, Math.floor(Number(lotQty)))
-              : 0
-          }
-        />
+            : 'Saisissez le total de la facture, ou les prix du relevé ci-dessus.'}
+        </Text>
+        <Text style={styles.tiers}>
+          Total de la facture pour les pièces du lot, livraison non comprise : l’appli en déduit le prix de chaque
+          pièce.
+        </Text>
+        {lotUnit > 0 ? <MarginAlert productId={calcId} unitCost={lotUnit} qty={lotQtyN} gold={calcGold} /> : null}
+        <InsuranceMeter extraEur={lotUnit > 0 ? lotQtyN * lotUnit : 0} />
         <Button
           title="Enregistrer ce lot au stock"
           variant="ghost"
-          disabled={!calc.sheet || !(Math.floor(Number(lotQty)) > 0)}
+          disabled={!(lotUnit > 0) || !(lotQtyN > 0)}
           onPress={() => {
             try {
-              if (!calc.sheet) return;
               const when = parseDay(calcDate);
-              const q = Math.floor(Number(lotQty));
-              const unit = lotPriceOf(calc.sheet, q);
+              const q = lotQtyN;
+              const unit = lotUnit;
               assertInsuranceRoom(account, quote.prices.gold, q * unit);
               updateAccount((a) =>
                 addStock(
@@ -345,15 +365,16 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                     source: 'pro',
                     vault: 'Godot & Fils',
                     unitCost: unit,
-                    goldPrice: calc.sheet!.gold,
+                    goldPrice: calcGold,
                   },
                   when,
                 ),
               );
               setMsg({
                 ok: true,
-                text: `Lot de ${q} enregistré au stock : ${formatEur(unit)} par pièce, or à ${perGram(calc.sheet.gold)} €/g, le ${formatDay(when)}.`,
+                text: `Lot de ${q} enregistré au stock : ${formatEur(unit)} par pièce (${formatEur(q * unit)} au total), or à ${perGram(calcGold)} €/g, le ${formatDay(when)}.`,
               });
+              setLotTotal('');
             } catch (e) {
               setMsg({ ok: false, text: e instanceof Error ? e.message : 'Impossible d’enregistrer ce lot.' });
             }
