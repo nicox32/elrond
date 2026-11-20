@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatDate, formatEur, parseAmount } from '../logic/format';
+import { formatDay, parseDay } from '../logic/godotCalc';
 import { LedgerError } from '../logic/ledger';
 import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, productOf } from '../logic/physical';
 import {
@@ -51,6 +52,9 @@ export function StockManager({ onBack }: { onBack: () => void }) {
   const [vault, setVault] = useState('');
   const [cost, setCost] = useState('');
   const [total, setTotal] = useState('');
+  // Date de la facture et valeur de l'or de la fiche : le cours du jour de l'achat, pour une prime et une marge justes.
+  const [invDate, setInvDate] = useState(() => formatDay(new Date()));
+  const [intrinsic, setIntrinsic] = useState('');
   const [serials, setSerials] = useState('');
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -80,23 +84,32 @@ export function StockManager({ onBack }: { onBack: () => void }) {
     return cost.trim() ? parseAmount(cost) : undefined;
   };
 
+  const grams = productOf(product).grams;
+  // Cours de l'or du jour de la facture : celui déduit de la valeur intrinsèque de la fiche, sinon le cours en direct.
+  const invGold = intrinsic.trim() && parseAmount(intrinsic) > 0 ? parseAmount(intrinsic) / grams : quote.prices.gold;
+
   function add() {
     try {
+      const when = parseDay(invDate);
       if (total.trim() && unitPaid() === undefined)
         throw new LedgerError('Indiquez un total de facture et un nombre de pièces valides.');
       const unit = unitPaid() ?? expectedLot;
       assertInsuranceRoom(account, quote.prices.gold, (Number.isFinite(n) ? n : 0) * unit);
       updateAccount((a) =>
-        addStock(a, {
-          product,
-          qty: n,
-          source,
-          vault,
-          unitCost: unitPaid(),
-          goldPrice: quote.prices.gold,
-          serials: list,
-          note,
-        }),
+        addStock(
+          a,
+          {
+            product,
+            qty: n,
+            source,
+            vault,
+            unitCost: unitPaid(),
+            goldPrice: invGold,
+            serials: list,
+            note,
+          },
+          when,
+        ),
       );
       setMsg({
         ok: true,
@@ -105,6 +118,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
       setSerials('');
       setNote('');
       setTotal('');
+      setIntrinsic('');
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Ajout impossible.' });
     }
@@ -286,9 +300,35 @@ export function StockManager({ onBack }: { onBack: () => void }) {
             productId={product}
             unitCost={unitPaid() ?? expectedLot}
             qty={Number.isFinite(n) ? n : 0}
-            gold={quote.prices.gold}
+            gold={invGold}
           />
         ) : null}
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TextInput
+            value={invDate}
+            onChangeText={setInvDate}
+            placeholder="Date de la facture JJ/MM/AAAA"
+            placeholderTextColor={colors.textMuted}
+            style={[ui.input, { flex: 1, minWidth: 0 }]}
+            accessibilityLabel="Date de la facture"
+          />
+          <TextInput
+            value={intrinsic}
+            onChangeText={setIntrinsic}
+            keyboardType="decimal-pad"
+            placeholder="Valeur de l’or de la fiche (€)"
+            placeholderTextColor={colors.textMuted}
+            style={[ui.input, { flex: 1, minWidth: 0 }]}
+            accessibilityLabel="Valeur intrinsèque de la fiche"
+          />
+        </View>
+        <Text style={ui.hint}>
+          Cours de l’or retenu : {invGold.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} €/g
+          {intrinsic.trim()
+            ? ' (d’après la fiche)'
+            : ' (cours en direct : saisissez la valeur de la fiche pour être exact)'}
+          .
+        </Text>
         <Label>
           {coin ? 'Millésimes connus (un par ligne, facultatif)' : 'Numéros de série connus (un par ligne)'}
         </Label>
