@@ -613,3 +613,32 @@ test('alerte de marge d’un lot : sous 0,5 point ou à perte, au prix client ve
   assert.equal(loss.level, 'loss');
   assert.ok(loss.eur < 0);
 });
+
+test('prime relevée avec le calcul de prime : remplace la prime du code, avec sa date', async () => {
+  const { physicalFeesOf } = await import('../src/logic/physical.ts');
+  const def = physicalFeesOf();
+  assert.equal(def.vendorQuotedAt.nap20, '2026-11-20');
+  assert.equal(def.vendorQuotedAt.g5, '2026-11-18');
+  const at = '2026-11-25T10:00:00.000Z';
+  const f = physicalFeesOf({
+    vendorQuotes: { g10: { premium: 0.045, offs: [0.005, 0.01, 0.02], at } },
+  });
+  assert.equal(f.vendor.g10, 0.045);
+  assert.equal(f.vendorQuotedAt.g10, at);
+  assert.deepEqual(
+    f.vendorTiers.g10.map((t) => [t.from, t.off]),
+    [
+      [10, 0.005],
+      [20, 0.01],
+      [50, 0.02],
+    ],
+  );
+  // Les autres formats gardent leur prime ; le prix client ne dépend pas de la prime.
+  assert.equal(f.vendor.g5, def.vendor.g5);
+  assert.equal(f.premiums.g10, def.premiums.g10);
+  // Napoléon : 5 tranches, donc 4 remises ; un relevé incomplet est ignoré.
+  const ok = physicalFeesOf({ vendorQuotes: { nap20: { premium: 0.04, offs: [0.001, 0.002, 0.003, 0.004], at } } });
+  assert.equal(ok.vendor.nap20, 0.04);
+  const bad = physicalFeesOf({ vendorQuotes: { nap20: { premium: 0.04, offs: [0.001, 0.002], at } } });
+  assert.equal(bad.vendor.nap20, def.vendor.nap20);
+});

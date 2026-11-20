@@ -149,6 +149,11 @@ export interface Settings {
     marginMinPt?: number;
     marginMaxPt?: number;
   };
+  /**
+   * Primes de Godot & Fils relevées avec le calcul de prime (seul moyen de les changer) : prime nette de 1 à 9 pièces et
+   * remises des tranches suivantes, en part de la valeur de l'or, avec la date du relevé.
+   */
+  vendorQuotes?: Record<string, { premium: number; offs: number[]; at: string }>;
   /** Marges des contrôles de lingots (Société Orvia) : pesée en grammes, dimensions en millimètres. */
   barTolerance?: { weightG: number; dimMm: number };
   /** Délai passé en arrière-plan avant de redemander le code, en secondes (absent = 5 minutes ; 0 = tout de suite). */

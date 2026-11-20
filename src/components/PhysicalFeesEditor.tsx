@@ -26,7 +26,7 @@ const shortName = (label: string) => label.replace(/ \(.*/, '');
  */
 export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const account = useAccount();
-  const { quote, updateAccount } = useBank();
+  const { quote, updateAccount, updateSettings } = useBank();
   const fees = physicalFeesOf(account.settings);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // Calculateur de prime et de lot : relevé de prix par tranche, cours de l'or et date.
@@ -96,6 +96,18 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                 <Text style={[styles.name, styles.cell]}>{pct(client)}</Text>
                 <Text style={[styles.name, styles.cell]}>{pct(vend)}</Text>
               </View>
+              {(() => {
+                const at = fees.vendorQuotedAt[p.id];
+                if (!at) return null;
+                const d = new Date(at.length === 10 ? `${at}T12:00:00` : at);
+                const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+                return (
+                  <Text style={[styles.tiers, days > 7 && { color: colors.warning }]} testID={`quoted-${p.id}`}>
+                    Prime relevée le {formatDay(d)}
+                    {days > 7 ? ` · il y a ${days} jours : recalculez-la` : ''}
+                  </Text>
+                );
+              })()}
               {(() => {
                 if (vend === undefined) return <Text style={styles.margin}>Prime de Godot & Fils inconnue</Text>;
                 // Une pièce seule : prix client moins prix payé à Godot & Fils et sa livraison.
@@ -245,6 +257,34 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
         ) : (
           <Text style={styles.tiers}>{calc.error}</Text>
         )}
+        <Button
+          title={`Enregistrer cette prime (${shortName(calcProduct.label)})`}
+          variant="ghost"
+          disabled={!calc.result || calcRanges.some((_, i) => !calcPrices[i]?.trim())}
+          onPress={() => {
+            const r = calc.result;
+            if (!r) return;
+            try {
+              const at = parseDay(calcDate);
+              updateSettings({
+                vendorQuotes: {
+                  ...(account.settings.vendorQuotes ?? {}),
+                  [calcId]: { premium: r.premium, offs: r.offs, at: at.toISOString() },
+                },
+              });
+              setMsg({
+                ok: true,
+                text: `Prime de ${shortName(calcProduct.label)} enregistrée : ${toText(r.premium)} % (relevé du ${formatDay(at)}). Elle sert aux estimations de coût et de marge.`,
+              });
+            } catch (e) {
+              setMsg({ ok: false, text: e instanceof Error ? e.message : 'Impossible d’enregistrer cette prime.' });
+            }
+          }}
+        />
+        <Text style={styles.tiers}>
+          Saisissez les prix de toutes les tranches pour enregistrer la prime : elle remplace la prime verrouillée de ce
+          format, avec sa date.
+        </Text>
         <Label>Enregistrer un lot acheté à ce relevé</Label>
         <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
           <TextInput
