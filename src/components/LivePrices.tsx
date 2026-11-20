@@ -123,7 +123,9 @@ function NapoleonRow() {
   const { quote, priceHistory } = useBank();
   const trend = metalTrend(priceHistory, 'gold', quote.prices);
   const up = trend.changePct >= 0;
-  const value = napoleonPrice(quote.prices.gold).metal;
+  const nap = napoleonPrice(quote.prices.gold);
+  const value = nap.metal;
+  const premium = nap.withPremium - nap.metal;
   return (
     <Pressable
       onPress={() => router.push('/retrait')}
@@ -144,7 +146,9 @@ function NapoleonRow() {
       <Sparkline values={trend.values} color={metalColor.gold} />
       <View style={styles.prices}>
         <Text style={styles.price}>{formatEurShort(value)}</Text>
-        <Text style={styles.priceOther}>valeur de l’or · prime variable</Text>
+        <Text style={styles.priceOther} testID="napoleon-premium">
+          prime {formatPercent((premium / value) * 100).replace('+', '')} · +{formatEurShort(premium)}
+        </Text>
       </View>
     </Pressable>
   );
