@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { formatEur, parseAmount } from '../logic/format';
-import { formatDay, lotPriceOf, parseDay, sheetResult } from '../logic/godotCalc';
+import { formatDay, lotPriceOf, negotiatedPrice, parseDay, sheetResult } from '../logic/godotCalc';
 import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, PREMIUM_TARGET, rangesOf } from '../logic/physical';
 import { addStock, assertInsuranceRoom } from '../logic/stock';
 import { useAccount, useBank } from '../state/BankProvider';
@@ -36,6 +36,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const [calcIntrinsic, setCalcIntrinsic] = useState('');
   const [calcPrices, setCalcPrices] = useState<string[]>(['', '', '', '', '']);
   const [lotQty, setLotQty] = useState('10');
+  // Prix saisis = prix publics de la fiche : la remise négociée (3 à 5 % selon le lot) s'applique.
+  const [publicSheet, setPublicSheet] = useState(true);
   const calcProduct = BAR_PRODUCTS.find((p) => p.id === calcId) ?? BAR_PRODUCTS[0];
   const calcRanges = rangesOf(calcId);
   const defaultIntrinsic = Math.round(calcProduct.grams * quote.prices.gold * 100) / 100;
@@ -49,7 +51,11 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
       100,
   );
   const effectivePrices = calcRanges.map((_, i) =>
-    calcPrices[i]?.trim() ? parseAmount(calcPrices[i]) : autoPrices[i],
+    calcPrices[i]?.trim()
+      ? publicSheet
+        ? negotiatedPrice(parseAmount(calcPrices[i]), calcRanges.length, i)
+        : parseAmount(calcPrices[i])
+      : autoPrices[i],
   );
   const calc = (() => {
     try {
@@ -185,6 +191,17 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
           {calcProduct.grams.toLocaleString('fr-FR', { maximumFractionDigits: 3 })} g d’or fin)
           {calcIntrinsic.trim() ? '' : ' · valeur du cours Orvia, à remplacer par celle de la fiche'}
         </Text>
+        <Pressable
+          onPress={() => setPublicSheet((v) => !v)}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: publicSheet }}
+          testID="public-sheet-switch"
+        >
+          <Text style={styles.link}>
+            {publicSheet ? '☑' : '☐'} Prix saisis = prix publics de la fiche : remise de Godot & Fils de 3 % (petits
+            lots) à 5 % (gros lots)
+          </Text>
+        </Pressable>
         <Label>Prix de {shortName(calcProduct.label)} par pièce, métal compris (€)</Label>
         <Text style={styles.tiers} testID="godot-calc-auto">
           Calculés seuls d’après le cours de l’or en direct, la prime et les remises de Godot & Fils. Saisissez les prix

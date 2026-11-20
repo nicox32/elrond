@@ -6,6 +6,23 @@
 import { LedgerError } from './ledger.ts';
 import { productOf, rangesOf } from './physical.ts';
 
+/**
+ * Remise négociée avec Godot & Fils sur ses prix publics, selon la taille du lot : de 3 % pour la plus petite tranche à
+ * 5 % pour la plus grande, en progression régulière entre les deux.
+ */
+export const NEGOTIATED_DISCOUNT = { min: 0.03, max: 0.05 } as const;
+
+/** Remise de la tranche `i` (0 = la plus petite) parmi `n` tranches. */
+export function tierDiscount(n: number, i: number): number {
+  if (n <= 1) return NEGOTIATED_DISCOUNT.min;
+  return NEGOTIATED_DISCOUNT.min + ((NEGOTIATED_DISCOUNT.max - NEGOTIATED_DISCOUNT.min) * i) / (n - 1);
+}
+
+/** Prix net payé par Orvia pour la tranche `i` d'un format qui en compte `n`, d'après le prix public de la fiche. */
+export function negotiatedPrice(publicPrice: number, n: number, i: number): number {
+  return Math.round(publicPrice * (1 - tierDiscount(n, i)) * 100) / 100;
+}
+
 export interface PriceSheet {
   productId: string;
   /** Cours de l'or (€/g) à la date du relevé ou de l'achat. */

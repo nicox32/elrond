@@ -86,3 +86,30 @@ test('calculateur : le 20 F a cinq tranches (relevé Godot & Fils du 19/11/2026)
   assert.equal(lotPriceOf(sheet, 500), 662.5);
   assert.throws(() => sheetResult({ ...sheet, prices: [666.5, 665.5, 665, 664] }), /cinq tranches/);
 });
+
+test('remise négociée par lot : 3 % (petits lots) à 5 % (gros lots) sur les prix publics de Godot & Fils', async () => {
+  const { tierDiscount, negotiatedPrice, NEGOTIATED_DISCOUNT } = await import('../src/logic/godotCalc.ts');
+  assert.deepEqual({ ...NEGOTIATED_DISCOUNT }, { min: 0.03, max: 0.05 });
+  // Napoléon, 5 tranches : 3 %, 3,5 %, 4 %, 4,5 %, 5 %.
+  assert.deepEqual(
+    [0, 1, 2, 3, 4].map((i) => Math.round(tierDiscount(5, i) * 10000) / 10000),
+    [0.03, 0.035, 0.04, 0.045, 0.05],
+  );
+  // Lingotins, 4 tranches : de 3 % à 5 %.
+  close(tierDiscount(4, 0), 0.03, 1e-12);
+  close(tierDiscount(4, 3), 0.05, 1e-12);
+  // Prix publics du 20/11/2026 (Napoléon) → prix nets.
+  const pub = [659, 658, 657.5, 656.5, 655];
+  assert.deepEqual(
+    pub.map((p, i) => negotiatedPrice(p, 5, i)),
+    [639.23, 634.97, 631.2, 626.96, 622.25],
+  );
+  // Calculé comme prime : 5,00 % pour 1 à 9 pièces, d'après la valeur de l'or de la fiche.
+  const r = sheetResult({
+    productId: 'nap20',
+    gold: 608.79 / 5.806,
+    prices: pub.map((p, i) => negotiatedPrice(p, 5, i)),
+  });
+  close(r.premium, 0.05, 1e-4);
+  close(r.offs[3], 0.0279, 1e-3);
+});

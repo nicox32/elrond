@@ -190,10 +190,10 @@ test('frais du retrait réglables : fabrication par format, livraison, coût ven
   close(q5.cost!, 5 * 100 * 0.0815 + 7, 1e-9); // lingotin payé au vendeur + sa livraison
   // Coût inconnu si un format sans prime vendeur : pas de coût calculé.
   assert.equal(def.vendor.g10, 0.062);
-  assert.equal(def.vendor.g20, 0.0474);
+  assert.equal(def.vendor.g20, 0.0613);
   assert.equal(def.vendor.oz1, 0.0376);
-  assert.equal(def.vendor.nap20, 0.0283);
-  close(quoteWithdrawal(p, { nap20: 1 }, def).cost!, 5.806 * 100 * 0.0283 + 7, 0.01);
+  assert.equal(def.vendor.nap20, 0.05);
+  close(quoteWithdrawal(p, { nap20: 1 }, def).cost!, 5.806 * 100 * 0.05 + 7, 0.01);
   close(quoteWithdrawal(p, { g5: 1, g10: 1 }, def).cost!, 5 * 100 * 0.0815 + 10 * 100 * 0.062 + 7, 1e-9);
   // Tarifs verrouillés : d'anciens réglages enregistrés (fabrication, primes, livraison, seuil) sont ignorés.
   const ignored = physicalFeesOf({
@@ -302,12 +302,12 @@ test('commande par lots : prix du lot selon sa tranche, prix client indépendant
     ['1 à 9', '10 à 49', '50 à 99', '100 à 499', '500 et plus'],
   );
   assert.equal(vendorTierOff(nap, 9), 0);
-  assert.equal(vendorTierOff(nap, 10), 0.0015);
-  assert.equal(vendorTierOff(nap, 49), 0.0015);
-  assert.equal(vendorTierOff(nap, 50), 0.0023);
-  assert.equal(vendorTierOff(nap, 99), 0.0023);
-  assert.equal(vendorTierOff(nap, 100), 0.0039);
-  assert.equal(vendorTierOff(nap, 500), 0.0062);
+  assert.equal(vendorTierOff(nap, 10), 0.007);
+  assert.equal(vendorTierOff(nap, 49), 0.007);
+  assert.equal(vendorTierOff(nap, 50), 0.0132);
+  assert.equal(vendorTierOff(nap, 99), 0.0132);
+  assert.equal(vendorTierOff(nap, 100), 0.0202);
+  assert.equal(vendorTierOff(nap, 500), 0.0279);
   // Les lingotins et le lingot d'une once : les quatre tranches communes.
   assert.deepEqual(
     QTY_RANGES.map((r) => r.label),

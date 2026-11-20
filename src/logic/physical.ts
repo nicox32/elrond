@@ -172,11 +172,13 @@ export const BAR_PRODUCTS: BarProduct[] = [
     // Relevé du 18/11/2026 (détail du prix) : valeur métal 2 259,61 €, frais 147,57 € = 6,53 % ; 7 € de livraison.
     // Facturée 7,5 % : environ 1 point de marge (≈ 22 €), la livraison étant offerte dès 20 g (7 € à votre charge).
     premium: 0.06,
-    vendorPremium: 0.0474, // Godot & Fils, 18/11/2026 : 2 348 € pour 2 236,16 € d'or
+    // Prix public du 20/11/2026 : 2 295,50 € pour 2 098 € d'or (+9,41 %) ; avec la remise négociée de 3 % (petits lots)
+    // à 5 % (gros lots) : prime nette de 6,13 % pour 1 à 9 pièces.
+    vendorPremium: 0.0613,
     vendorTiers: [
-      { from: 10, off: 0.0027 },
-      { from: 20, off: 0.0054 },
-      { from: 50, off: 0.0105 },
+      { from: 10, off: 0.01 },
+      { from: 20, off: 0.0198 },
+      { from: 50, off: 0.0323 },
     ],
     spec: {
       veriscan: true,
@@ -216,7 +218,9 @@ export const BAR_PRODUCTS: BarProduct[] = [
     label: 'Napoléon 20 F (5,81 g d’or fin)',
     grams: NAPOLEON_FINE_GRAMS,
     premium: 0.04,
-    vendorPremium: 0.0283, // Godot & Fils, 19/11/2026 : prime proposée de 18 € sur 635 € d’or (2,83 %)
+    // Prix public du 20/11/2026 : 659 € pour 608,79 € d'or (+8,25 %) ; avec la remise négociée de 3 % (petits lots) à
+    // 5 % (gros lots) : prime nette de 5,00 % pour 1 à 9 pièces.
+    vendorPremium: 0.05,
     // Tranches de Godot & Fils pour le 20 F (relevé du 19/11/2026, prix unitaire net : 666,50 / 665,50 / 665 / 664 /
     // 662,50 €) : 1 à 9, 10 à 49, 50 à 99, 100 à 499, 500 et plus. Remises en part de la valeur de l'or.
     ranges: [
@@ -227,10 +231,10 @@ export const BAR_PRODUCTS: BarProduct[] = [
       { from: 500, to: null, label: '500 et plus' },
     ],
     vendorTiers: [
-      { from: 10, off: 0.0015 },
-      { from: 50, off: 0.0023 },
-      { from: 100, off: 0.0039 },
-      { from: 500, off: 0.0062 },
+      { from: 10, off: 0.007 },
+      { from: 50, off: 0.0132 },
+      { from: 100, off: 0.0202 },
+      { from: 500, off: 0.0279 },
     ],
     coin: true,
     // Pièce de 6,45 g à 900 ‰, frappée en France (Monnaie de Paris) de 1803 à 1914.
