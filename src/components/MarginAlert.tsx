@@ -26,7 +26,7 @@ export function MarginAlert({
     m.level === 'loss'
       ? `⚠ Vente à perte : ${formatEur(Math.abs(m.eur))} perdus par ${name} (${pt} pt) au prix client de ${formatEur(m.client)}. Négociez ce lot ou commandez ailleurs.`
       : m.level === 'low'
-        ? `⚠ Marge faible : ${formatEur(m.eur)} par ${name} (${pt} pt), sous le minimum de ${MARGIN_ALERT_PT} point.`
+        ? `⚠ Marge faible : ${formatEur(m.eur)} par ${name} (${pt} pt), sous le minimum de ${String(MARGIN_ALERT_PT).replace('.', ',')} point.`
         : `Marge de ce lot : ${formatEur(m.eur)} par ${name} (${pt} pt) au prix client de ${formatEur(m.client)}.`;
   return (
     <Text

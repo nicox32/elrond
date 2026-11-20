@@ -309,7 +309,7 @@ function CompanyDashboard() {
         />
         <ListRow
           title="Commande Godot & Fils"
-          subtitle="Primes, remises par quantité (1 à 9 · 10 à 19 · 20 à 49 · 50 et plus), livraison"
+          subtitle="Calcul de prime par lot (remise de 3 à 5 %), prix du jour, enregistrement des lots"
           onPress={() => setView('godot')}
           testID="open-godot"
         />
