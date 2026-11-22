@@ -421,10 +421,10 @@ test('coffre sécurisé refacturé : 0,04 € par mois et par gramme, en or puis
   assert.equal(off.holdings.gold, a.holdings.gold);
 });
 
-test('assurance du stock : plafond de 250 000 €, lot refusé s’il le fait dépasser', async () => {
+test('assurance du stock : plafond de 500 000 €, lot refusé s’il le fait dépasser', async () => {
   const { insuranceStatus, assertInsuranceRoom, stockInsuredValue, INSURANCE_CAP_EUR } =
     await import('../src/logic/stock.ts');
-  assert.equal(INSURANCE_CAP_EUR, 250_000);
+  assert.equal(INSURANCE_CAP_EUR, 500_000);
   let a = createAccount('T', new Date('2020-01-01'));
   // Deux lots : 20 × 10 g à 1 182 € (prix connu) et 10 × 5 g sans prix (valeur de l'or + prime de base).
   a = addStock(a, { product: 'g10', qty: 20, source: 'maison', unitCost: 1182 });
@@ -433,8 +433,8 @@ test('assurance du stock : plafond de 250 000 €, lot refusé s’il le fait d�
   const expected = 20 * 1182 + 10 * (5 * gold * (1 + 0.0815));
   close(stockInsuredValue(a, gold), expected, 1e-6);
   const st = insuranceStatus(a, gold);
-  assert.equal(st.cap, 250_000);
-  close(st.left, 250_000 - expected, 1e-6);
+  assert.equal(st.cap, 500_000);
+  close(st.left, 500_000 - expected, 1e-6);
   // Un lot qui rentre : accepté. Un lot qui dépasse : refusé avec la place restante.
   assertInsuranceRoom(a, gold, st.left);
   assert.throws(() => assertInsuranceRoom(a, gold, st.left + 1), /dépasse le plafond de l’assurance/);

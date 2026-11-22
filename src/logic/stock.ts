@@ -226,7 +226,7 @@ export function stockCount(account: Pick<Account, 'stock'>, product: string): { 
 }
 
 /** Plafond par défaut de l'assurance du stock de lingotins et de pièces. */
-export const INSURANCE_CAP_EUR = 250_000;
+export const INSURANCE_CAP_EUR = 500_000;
 
 type InsuredAccount = Pick<Account, 'stock' | 'settings'>;
 

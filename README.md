@@ -223,3 +223,7 @@ npm run lint        # lint
 - `src/security.ts` : code d'accès et empreinte
 - `scripts/brand/make_logo.py` : génère le logo (louis d'or) et toutes les icônes
 - `src/components/`, `src/features/` : composants, ouverture de compte et déverrouillage
+
+## Simulateur de clients (Espace DEV)
+
+L'Espace DEV contient un simulateur : 50 clients fictifs achètent, vendent et retirent des lingotins et des pièces aux cours en direct, avec les vraies règles de l'appli (frais, prix tout compris, stock, blocage des formats à perte, assurance). Il affiche les revenus, le coût des lingotins, le résultat estimé, le stock et la valeur assurée ; il est séparé du vrai compte et reste en mémoire. L'assurance du stock par défaut est de 500 000 € (plafond réglable).

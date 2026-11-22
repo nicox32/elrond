@@ -9,6 +9,7 @@ import { History2019 } from '../components/History2019';
 import { History900 } from '../components/History900';
 import { stockSummary } from '../logic/stock';
 import { PhysicalFeesEditor } from '../components/PhysicalFeesEditor';
+import { SimulationPanel } from '../components/SimulationPanel';
 import { InsuranceMeter } from '../components/InsuranceMeter';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
@@ -135,7 +136,7 @@ function CompanyDashboard() {
   const { quote, updateAccount, updateSettings } = useBank();
   const [vaultConfirm, setVaultConfirm] = useState(false);
   const [period, setPeriod] = useState<CompanyPeriod>('year');
-  const [view, setView] = useState<'dashboard' | 'bars' | 'stock' | 'godot'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'bars' | 'stock' | 'godot' | 'sim'>('dashboard');
   const r = companyReport(account, quote.prices, period);
   const years = r.years.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
 
@@ -143,6 +144,14 @@ function CompanyDashboard() {
     return (
       <Screen testID="screen-stock">
         <StockManager onBack={() => setView('dashboard')} />
+      </Screen>
+    );
+  }
+
+  if (view === 'sim') {
+    return (
+      <Screen testID="screen-dev-sim">
+        <SimulationPanel onBack={() => setView('dashboard')} />
       </Screen>
     );
   }
@@ -312,6 +321,12 @@ function CompanyDashboard() {
           subtitle="Calcul de prime par lot (remise de 3 à 5 %), prix du jour, enregistrement des lots"
           onPress={() => setView('godot')}
           testID="open-godot"
+        />
+        <ListRow
+          title="Simulateur de clients"
+          subtitle="50 clients fictifs qui achètent, vendent et retirent des lingotins en direct"
+          onPress={() => setView('sim')}
+          testID="open-sim"
         />
       </Card>
       <PhysicalFeesEditor part="client" />

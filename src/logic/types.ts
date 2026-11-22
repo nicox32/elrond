@@ -162,7 +162,7 @@ export interface Settings {
   homeAlerts?: boolean;
   /** Alertes de l'accueil déjà masquées : celles datées d'avant cet instant (ISO) ne s'affichent plus. */
   homeAlertSeenAt?: string;
-  /** Plafond de l'assurance des lingotins et pièces en stock, en euros (absent : 250 000 €). */
+  /** Plafond de l'assurance des lingotins et pièces en stock, en euros (absent : 500 000 €). */
   insuranceCapEur?: number;
   /** Afficher la carte Orvia sur l'accueil (absent = oui). Masquée, elle reste accessible depuis le profil. */
   homeCard?: boolean;
