@@ -14,7 +14,7 @@ import {
 } from '../logic/cloudSim';
 import { formatEur } from '../logic/format';
 import { HISTORY_PRESETS } from '../logic/historyPrices';
-import { INCOME_BANDS } from '../logic/population';
+import { ASSUMPTIONS, INCOME_BANDS } from '../logic/population';
 import { productOf } from '../logic/physical';
 import { colors } from '../theme';
 import { Segmented } from './Segmented';
@@ -234,10 +234,17 @@ export function CloudSimulation({ onBack }: { onBack: () => void }) {
               <SectionTitle>Résultat</SectionTitle>
               <Card style={{ gap: 6 }}>
                 <KeyValue
-                  label="Durée · clients"
+                  label="Durée · places de clients"
                   value={`${scenario.summary.years} ans · ${scenario.summary.clients.toLocaleString('fr-FR')}`}
                 />
-                <KeyValue label="Clients encore actifs" value={scenario.summary.active.toLocaleString('fr-FR')} />
+                <KeyValue
+                  label="Clients actifs · dormants"
+                  value={`${scenario.summary.active.toLocaleString('fr-FR')} · ${scenario.summary.dormant.toLocaleString('fr-FR')}`}
+                />
+                <KeyValue
+                  label="Départs · dont comptes soldés"
+                  value={`${scenario.summary.churned.toLocaleString('fr-FR')} · ${scenario.summary.liquidated.toLocaleString('fr-FR')}`}
+                />
                 <KeyValue
                   label="Cours de l’or"
                   value={`${scenario.summary.goldStart.toFixed(0)} → ${scenario.summary.goldEnd.toFixed(0)} €/g`}
@@ -249,15 +256,49 @@ export function CloudSimulation({ onBack }: { onBack: () => void }) {
                   label="· garde"
                   value={eur(scenario.summary.revenue.custody + scenario.summary.revenue.vault)}
                 />
-                <KeyValue label="· carte" value={eur(scenario.summary.revenue.card)} />
                 <KeyValue
-                  label="Coûts variables"
-                  value={eur(scenario.summary.costs.total - scenario.summary.costs.fixed)}
+                  label="· frais d’oxydation (comptes dormants)"
+                  value={eur(scenario.summary.revenue.dormancy)}
                 />
-                <KeyValue label="Frais fixes (hypothèse de l’appli)" value={eur(scenario.summary.costs.fixed)} />
-                <KeyValue label="Résultat avant frais fixes" value={eur(scenario.summary.contribution)} />
-                <KeyValue label="Résultat final" value={eur(scenario.summary.result)} strong />
+                <KeyValue label="· carte" value={eur(scenario.summary.revenue.card)} />
+                <KeyValue label="Coûts" value={eur(scenario.summary.costs.total)} strong />
+                <KeyValue label="· lingotins (prime payée à Godot & Fils)" value={eur(scenario.summary.costs.bars)} />
+                <KeyValue
+                  label="· garde chez Godot & Fils"
+                  value={eur(scenario.summary.costs.custody + scenario.summary.costs.vault)}
+                />
+                <KeyValue
+                  label="· fidélité et parrainage"
+                  value={eur(scenario.summary.costs.loyalty + scenario.summary.costs.referral)}
+                />
+                <KeyValue
+                  label="· support, carte, identité"
+                  value={eur(
+                    scenario.summary.costs.support + scenario.summary.costs.cards + scenario.summary.costs.kyc,
+                  )}
+                />
+                <KeyValue label="· frais fixes (hypothèse de l’appli)" value={eur(scenario.summary.costs.fixed)} />
+                <KeyValue label="Résultat opérationnel" value={eur(scenario.summary.result)} strong />
+                <KeyValue
+                  label="Effet du cours de l’or sur le stock"
+                  value={eur(scenario.summary.goldEffect + scenario.summary.goldEffectUnrealized)}
+                />
+                <KeyValue label="Résultat avec l’effet du cours" value={eur(scenario.summary.resultWithGold)} />
                 <KeyValue label="Épargne confiée par les clients" value={eur(scenario.summary.assets)} />
+              </Card>
+
+              <SectionTitle>Fourchette sur {scenario.range.runs} essais</SectionTitle>
+              <Card style={{ gap: 6 }}>
+                <KeyValue label="Résultat opérationnel (médiane)" value={eur(scenario.range.result.median)} strong />
+                <KeyValue
+                  label="· de 10 % à 90 % des essais"
+                  value={`${eur(scenario.range.result.p10)} à ${eur(scenario.range.result.p90)}`}
+                />
+                <KeyValue label="Pic de stock assuré (médiane)" value={eur(scenario.range.peakInsured.median)} />
+                <KeyValue
+                  label="Retraits impossibles (médiane)"
+                  value={Math.round(scenario.range.stockouts.median).toLocaleString('fr-FR')}
+                />
               </Card>
 
               <SectionTitle>Stock et assurance</SectionTitle>
@@ -316,10 +357,16 @@ export function CloudSimulation({ onBack }: { onBack: () => void }) {
                 ))}
               </Card>
               <Hint>
-                Hypothèses : tranches de l’Insee (revenu net mensuel des salariés du privé : 10 % sous 1 SMIC, médiane à
-                1,5 SMIC, 1 % au-dessus de 7 SMIC), clients arrivant sur 24 mois. La part d’épargne (
-                {INCOME_BANDS[0].savingsRate * 100} % à {INCOME_BANDS[6].savingsRate * 100} % selon la tranche), la part
-                placée en métaux, le choix des segments et les départs de clients sont des hypothèses du simulateur.
+                Données : tranches de l’Insee (revenu net mensuel des salariés du privé : 10 % sous 1 SMIC, médiane à
+                1,5 SMIC, 1 % au-dessus de 7 SMIC), cours réels de l’époque, tarifs et règles de l’appli. Hypothèses du
+                simulateur : arrivée des clients en courbe en S sur 24 mois ; épargne de{' '}
+                {INCOME_BANDS[0].savingsRate * 100} % à {INCOME_BANDS[6].savingsRate * 100} % du revenu selon la tranche
+                ; achats le jour de paie pour {ASSUMPTIONS.paydayShare * 100} % des clients ; plus d’achats sur les
+                baisses du cours et plus de ventes en cas de chute ; départs de 6 % à 20 % par an selon le segment, dont{' '}
+                {ASSUMPTIONS.liquidateShare * 100} % soldent leur compte (remplacés par de nouveaux clients) et les
+                autres laissent un compte dormant ; {ASSUMPTIONS.referredShare * 100} % des clients parrainés ; support{' '}
+                {ASSUMPTIONS.supportPerClientYear} € par client et par an. L’effet du cours de l’or sur le stock est le
+                gain ou la perte entre l’achat d’un lot et la sortie de ses pièces.
               </Hint>
             </>
           ) : null}

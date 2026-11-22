@@ -68,7 +68,7 @@ test('simulation cloud : même résultat qu’une exécution d’une traite', ()
 });
 
 test('population cloud : tous les scénarios (périodes × plafonds), valide et reproductible', () => {
-  const pop = buildCloudPopulation(new Date('2026-11-23T08:00:00Z'));
+  const pop = buildCloudPopulation(new Date('2026-11-23T08:00:00Z'), 2);
   assert.equal(pop.modelVersion, POPULATION_MODEL_VERSION);
   assert.deepEqual(
     Object.keys(pop.presets),
@@ -78,7 +78,9 @@ test('population cloud : tous les scénarios (périodes × plafonds), valide et 
     for (const cap of POPULATION_CAPS) {
       const sc = pop.presets[p.id].caps[String(cap)];
       assert.ok(sc.summary.peakInsured <= cap + 1, `${p.id} ${cap}`);
-      assert.equal(sc.summary.clients, 15_000);
+      assert.ok(sc.summary.clients > 14_800);
+      assert.equal(sc.range.runs, 2);
+      assert.ok(sc.range.result.min <= sc.range.result.median && sc.range.result.median <= sc.range.result.max);
       assert.ok(sc.series.length >= 2);
     }
   }

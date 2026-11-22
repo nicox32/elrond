@@ -72,14 +72,26 @@ test('population : trois ans de cours réels, résultats cohérents et reproduct
   const opts = { start: new Date('2023-11-20T08:00:00'), weeks: 156, rampWeeks: 104 };
   const { pop, summary: s } = runPopulation(opts);
   assert.equal(s.weeks, 156);
-  assert.equal(s.clients, 15_000);
-  assert.ok(s.active > 5_000 && s.active < 15_000, 'des clients partent');
+  // Les clients qui soldent leur compte sont remplacés : la base reste à sa taille, avec des comptes dormants en plus.
+  assert.ok(s.clients > 14_800 && s.clients <= 15_000);
+  assert.ok(s.active > 11_000 && s.active < 15_000);
+  assert.ok(s.dormant > 500 && s.liquidated > 500 && s.churned >= s.liquidated);
   // Revenus et coûts : tout est positif, le total est la somme des lignes.
   const r = s.revenue;
-  assert.ok(Math.abs(r.total - (r.buy + r.bars + r.card + r.custody + r.vault)) < 0.05);
-  assert.ok(r.buy > 0 && r.bars > 0 && r.card > 0 && r.custody > 0);
+  assert.ok(Math.abs(r.total - (r.buy + r.bars + r.card + r.custody + r.vault + r.dormancy)) < 0.5);
+  assert.ok(r.buy > 0 && r.bars > 0 && r.card > 0 && r.custody > 0 && r.dormancy > 0);
+  const c = s.costs;
+  assert.ok(
+    Math.abs(
+      c.total - (c.bars + c.kyc + c.custody + c.vault + c.loyalty + c.referral + c.support + c.cards + c.fixed),
+    ) < 0.5,
+  );
+  assert.ok(c.loyalty > 0 && c.referral > 0 && c.support > 0 && c.cards > 0);
   assert.ok(Math.abs(s.result - (s.revenue.total - s.costs.total)) < 0.05);
   assert.ok(Math.abs(s.contribution - (s.result + s.costs.fixed)) < 0.05);
+  // L'effet du cours de l'or sur le stock s'ajoute au résultat opérationnel ; l'or a doublé : l'effet est positif.
+  assert.ok(Math.abs(s.resultWithGold - (s.result + s.goldEffect + s.goldEffectUnrealized)) < 0.05);
+  assert.ok(s.goldEffect > 0);
   // Les frais fixes sur trois ans : 3 × 400 000 €.
   assert.ok(Math.abs(s.costs.fixed - 1_200_000) < 1);
   // Les cours sont ceux de l'histoire : l'or double environ sur la période.
@@ -87,13 +99,11 @@ test('population : trois ans de cours réels, résultats cohérents et reproduct
   // Les soldes ne sont jamais négatifs.
   for (let i = 0; i < pop.n; i++) assert.ok(pop.gold[i] >= -1e-9 && pop.silver[i] >= -1e-9 && pop.plat[i] >= -1e-9);
   // Segments et tranches : les clients se répartissent sans en perdre.
-  assert.equal(
-    s.bySegment.reduce((a, g) => a + g.clients, 0),
-    15_000,
-  );
+  // Clients acquis : les places libérées par un départ sont reprises par un nouveau client.
+  assert.ok(s.bySegment.reduce((a, g) => a + g.clients, 0) >= 15_000);
   assert.equal(
     s.byBand.reduce((a, b) => a + b.clients, 0),
-    15_000,
+    s.bySegment.reduce((a, g) => a + g.clients, 0),
   );
   // L'assurance : le stock assuré ne dépasse jamais le plafond.
   assert.ok(s.peakInsured <= s.insuranceCap + 1);
@@ -110,10 +120,39 @@ test('population : un plafond d’assurance plus haut débloque des commandes et
   assert.ok(low.peakInsured <= 100_000 + 1);
 });
 
-test('population : arrivée progressive, pas à pas', () => {
-  const pop = createPopulation({ start: new Date('2023-11-20T08:00:00'), clients: 1000, rampWeeks: 10 });
+test('population : arrivée progressive en courbe en S', () => {
+  const pop = createPopulation({ start: new Date('2023-11-20T08:00:00'), clients: 1000, rampWeeks: 12 });
   stepWeek(pop);
   assert.ok(pop.series[0].clients < 1000 && pop.series[0].clients > 0);
-  for (let w = 0; w < 12; w++) stepWeek(pop);
-  assert.equal(pop.series[pop.series.length - 1].clients, 1000);
+  // Courbe en S : peu de clients au début et à la fin, beaucoup au milieu.
+  const per = new Array(12).fill(0);
+  for (let i = 0; i < pop.n; i++) per[Math.min(11, pop.joinWeek[i])]++;
+  assert.ok(per[5] > per[0] * 2 && per[6] > per[11] * 2, JSON.stringify(per));
+  for (let w = 0; w < 14; w++) stepWeek(pop);
+  assert.ok(pop.series[pop.series.length - 1].clients > 950);
+});
+test('population : départs, comptes dormants facturés après six mois, stock par tranche', () => {
+  const opts = { start: new Date('2023-11-20T08:00:00'), clients: 3000, rampWeeks: 0 };
+  const pop = createPopulation(opts);
+  for (let w = 0; w < 104; w++) stepWeek(pop);
+  // Des comptes dormants existent et paient des frais d'oxydation ; les comptes soldés n'ont plus rien.
+  let dormant = 0;
+  for (let i = 0; i < pop.n; i++) {
+    if (pop.state[i] === 2) dormant++;
+    if (pop.state[i] === 0 && pop.joinWeek[i] <= pop.week) assert.equal(pop.gold[i] + pop.silver[i] + pop.plat[i], 0);
+  }
+  assert.ok(dormant > 50 && pop.totals.revenue.dormancy > 0);
+  // Les lots commandés sont des débuts de tranche de prix.
+  const sizes = new Set<number>();
+  const tiers = new Set([1, 10, 20, 50, 100, 500]);
+  const p2 = createPopulation(opts);
+  for (let w = 0; w < 60; w++) {
+    stepWeek(p2);
+    for (const k of Object.keys(p2.stock)) for (const o of p2.stock[k].pending) sizes.add(o.qty);
+  }
+  assert.ok(sizes.size > 0 && [...sizes].every((q) => tiers.has(q)), [...sizes].join(','));
+  // Même graine, même résultat ; une autre graine, un autre résultat.
+  const a = runPopulation({ ...opts, weeks: 52 }).summary;
+  assert.deepEqual(runPopulation({ ...opts, weeks: 52 }).summary, a);
+  assert.notDeepEqual(runPopulation({ ...opts, weeks: 52, seed: 99 }).summary.revenue, a.revenue);
 });

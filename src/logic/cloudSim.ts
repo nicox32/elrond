@@ -4,14 +4,9 @@
  * périodes historiques réelles, puis publie des fichiers JSON que l'appli lit en lecture seule (Espace DEV).
  */
 import { HISTORY_PRESETS } from './historyPrices.ts';
+import { percentiles } from './simulation.ts';
 import { runPopulation, type PopSummary } from './population.ts';
-import {
-  type Simulation,
-  type SimSummary,
-  summarize,
-  summarizeBySegment,
-  type SegmentRow,
-} from './simulation.ts';
+import { type Simulation, type SimSummary, summarize, summarizeBySegment, type SegmentRow } from './simulation.ts';
 import type { Prices } from './types.ts';
 
 export const SIMULATION_RELEASE_URL = 'https://github.com/nicox32/elrond/releases/download/simulation';
@@ -19,7 +14,7 @@ export const SUMMARY_URL = `${SIMULATION_RELEASE_URL}/summary.json`;
 export const POPULATION_URL = `${SIMULATION_RELEASE_URL}/population.json`;
 
 /** À changer quand le modèle de la population change : le serveur recalcule alors tous les scénarios. */
-export const POPULATION_MODEL_VERSION = 1;
+export const POPULATION_MODEL_VERSION = 2;
 
 export interface DailyPoint {
   /** Jour simulé (AAAA-MM-JJ). */
@@ -90,8 +85,20 @@ export function buildCloudSummary(
   };
 }
 
+/** Fourchette d'une série d'essais avec des hasards différents : minimum, 10 %, médiane, 90 %, maximum. */
+export interface Range {
+  min: number;
+  p10: number;
+  median: number;
+  p90: number;
+  max: number;
+}
+
 export interface PopulationScenario {
+  /** Détail d'un essai (la première graine). */
   summary: PopSummary;
+  /** Fourchette sur plusieurs essais. */
+  range: { runs: number; result: Range; resultWithGold: Range; peakInsured: Range; stockouts: Range };
   /** Un point tous les 6 mois environ. */
   series: { date: string; clients: number; assets: number; insured: number; gold: number }[];
 }
@@ -106,21 +113,32 @@ export interface CloudPopulation {
 
 export const POPULATION_CAPS = [500_000, 2_000_000] as const;
 
-/** Recalcule tous les scénarios de la population de 15 000 clients (clients arrivant sur 24 mois). */
-export function buildCloudPopulation(now = new Date()): CloudPopulation {
+/** Recalcule tous les scénarios de la population de 15 000 clients (arrivée en courbe en S sur 24 mois), sur `runs` essais. */
+export function buildCloudPopulation(now = new Date(), runs = 8): CloudPopulation {
   const presets: CloudPopulation['presets'] = {};
   for (const p of HISTORY_PRESETS) {
     const caps: Record<string, PopulationScenario> = {};
     for (const cap of POPULATION_CAPS) {
-      const { pop, summary } = runPopulation({
+      const opts = {
         start: new Date(`${p.start}T08:00:00Z`),
         weeks: Math.round(p.years * 52),
         rampWeeks: 104,
-        prices: 'history',
+        prices: 'history' as const,
         insuranceCap: cap,
-      });
+      };
+      const { pop, summary } = runPopulation(opts);
+      const all = [summary];
+      for (let k = 1; k < runs; k++) all.push(runPopulation({ ...opts, seed: 2026 + k }).summary);
+      const pct = (f: (s: PopSummary) => number): Range => percentiles(all.map(f));
       caps[String(cap)] = {
         summary,
+        range: {
+          runs: all.length,
+          result: pct((s) => s.result),
+          resultWithGold: pct((s) => s.resultWithGold),
+          peakInsured: pct((s) => s.peakInsured),
+          stockouts: pct((s) => s.stockouts),
+        },
         series: pop.series
           .filter((_, i) => i % 26 === 0)
           .map((x) => ({ date: x.date, clients: x.clients, assets: x.assets, insured: x.insured, gold: x.gold })),
