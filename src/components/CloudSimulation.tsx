@@ -14,7 +14,7 @@ import {
 } from '../logic/cloudSim';
 import { formatEur } from '../logic/format';
 import { HISTORY_PRESETS } from '../logic/historyPrices';
-import { ASSUMPTIONS, INCOME_BANDS } from '../logic/population';
+import { ASSUMPTIONS, CUSTODY_SCHEMES, type CustodyScheme, INCOME_BANDS } from '../logic/population';
 import { productOf } from '../logic/physical';
 import { colors } from '../theme';
 import { Segmented } from './Segmented';
@@ -37,6 +37,7 @@ export function CloudSimulation({ onBack }: { onBack: () => void }) {
   const [view, setView] = useState<'live' | 'population'>('live');
   const [preset, setPreset] = useState<string>('recent');
   const [cap, setCap] = useState<string>(String(POPULATION_CAPS[0]));
+  const [scheme, setScheme] = useState<CustodyScheme>('current');
 
   const [reload, setReload] = useState(0);
 
@@ -79,7 +80,8 @@ export function CloudSimulation({ onBack }: { onBack: () => void }) {
     };
   }, [reload]);
 
-  const scenario = population?.presets[preset]?.caps[cap];
+  const presetData = population?.presets[preset];
+  const scenario = scheme === 'current' ? presetData?.caps[cap] : presetData?.custody?.[scheme];
   const s = summary;
 
   return (
@@ -220,15 +222,57 @@ export function CloudSimulation({ onBack }: { onBack: () => void }) {
             options={HISTORY_PRESETS.map((p) => ({ value: p.id, label: p.label.split(' : ')[0] }))}
           />
           <Hint>{population.presets[preset]?.label}</Hint>
-          <SectionTitle>Plafond d’assurance du stock</SectionTitle>
+          <SectionTitle>Garde facturée aux clients</SectionTitle>
           <Segmented
-            value={cap}
-            onChange={setCap}
-            options={POPULATION_CAPS.map((c) => ({
-              value: String(c),
-              label: c >= 1_000_000 ? `${c / 1_000_000} M€` : `${c / 1000} k€`,
+            value={scheme}
+            onChange={setScheme}
+            options={(Object.keys(CUSTODY_SCHEMES) as CustodyScheme[]).map((k) => ({
+              value: k,
+              label: CUSTODY_SCHEMES[k].label,
             }))}
           />
+          <Hint>
+            {CUSTODY_SCHEMES[scheme].detail}. Godot & Fils facture 0,48 € par gramme d’or et par an à Orvia.
+            {scheme === 'current'
+              ? ''
+              : ` Plafond d’assurance de ${POPULATION_CAPS[0] / 1000} k€. Une garde plus chère fait partir plus de clients (jusqu’à deux fois plus).`}
+          </Hint>
+          {population ? (
+            <>
+              <SectionTitle>Comparaison des gardes (résultat opérationnel, médiane)</SectionTitle>
+              <Card style={{ gap: 6 }}>
+                {HISTORY_PRESETS.map((p) => {
+                  const d = population.presets[p.id];
+                  const base = d?.caps[String(POPULATION_CAPS[0])]?.range.result.median;
+                  const a = d?.custody?.perGram?.range.result.median;
+                  const m = d?.custody?.mixed?.range.result.median;
+                  if (base === undefined) return null;
+                  return (
+                    <View key={p.id} style={{ gap: 2 }}>
+                      <Text style={styles.title}>{p.label.split(' : ')[0]}</Text>
+                      <Text style={styles.line}>
+                        Actuelle {eur(base)} · Au gramme {a === undefined ? '—' : eur(a)} · Mixte{' '}
+                        {m === undefined ? '—' : eur(m)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </Card>
+            </>
+          ) : null}
+          {scheme === 'current' ? (
+            <>
+              <SectionTitle>Plafond d’assurance du stock</SectionTitle>
+              <Segmented
+                value={cap}
+                onChange={setCap}
+                options={POPULATION_CAPS.map((c) => ({
+                  value: String(c),
+                  label: c >= 1_000_000 ? `${c / 1_000_000} M€` : `${c / 1000} k€`,
+                }))}
+              />
+            </>
+          ) : null}
           {scenario ? (
             <>
               <SectionTitle>Résultat</SectionTitle>

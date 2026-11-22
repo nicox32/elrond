@@ -119,6 +119,8 @@ export const ASSUMPTIONS = {
   supportPerClientYear: 25,
   /** Coût annuel de la carte (fabrication, traitement) par client quotidien actif, en euros. */
   cardPerYear: 3,
+  /** Sensibilité des départs à une garde plus chère : départs × (1 + 0,3 × rapport au tarif actuel − 1), au plus × 2. */
+  custodyElasticity: 0.3,
   /** Réaction des achats et des départs au cours (variation de l'or sur 4 semaines). */
   dipBuying: 2.5,
   rallyChasing: 3,
@@ -169,7 +171,31 @@ function sCurveInverse(x: number): number {
   return (lo + hi) / 2;
 }
 
+/**
+ * Façons de facturer la garde du métal aux clients :
+ * - « current » : 0,15 % par an de la valeur de l'or (0,4 % argent, 0,2 % platine), comme aujourd'hui ;
+ * - « perGram » : au gramme, un peu au-dessus du coût chez Godot & Fils (0,48 € par gramme d'or et par an) ;
+ * - « mixed » : le plus grand de 0,25 % de la valeur et d'un minimum au gramme.
+ */
+export type CustodyScheme = 'current' | 'perGram' | 'mixed';
+
+export const CUSTODY_SCHEMES: Record<CustodyScheme, { label: string; detail: string }> = {
+  current: { label: 'Actuelle', detail: '0,15 % de la valeur par an' },
+  perGram: { label: 'Au gramme', detail: '0,60 € par gramme d’or et par an' },
+  mixed: { label: 'Mixte', detail: 'le plus grand de 0,25 % de la valeur et de 0,50 € par gramme' },
+};
+
+/** Taux annuel de garde facturé à un client, en part de la valeur du métal, pour un cours donné. */
+export function custodyRate(scheme: CustodyScheme, metal: Metal, price: Prices): number {
+  const spot = price[metal];
+  if (scheme === 'current' || metal === 'platinum') return FEES.custodyYearly[metal];
+  if (scheme === 'perGram') return (metal === 'gold' ? 0.6 : 0.075) / spot;
+  return Math.max(metal === 'gold' ? 0.0025 : FEES.custodyYearly.silver, (metal === 'gold' ? 0.5 : 0.07) / spot);
+}
+
 export interface PopOptions {
+  /** Façon de facturer la garde aux clients (par défaut : tarif actuel). */
+  custody?: CustodyScheme;
   clients?: number;
   seed?: number;
   /** Début de la simulation (cours historiques réels à cette date, si `prices` = « history »). */
@@ -226,6 +252,7 @@ export interface Population {
   priceSource: 'history' | Prices;
   insuranceCap: number;
   fixedYearly: number;
+  custody: CustodyScheme;
   band: Uint8Array;
   seg: Uint8Array;
   joinWeek: Uint16Array;
@@ -326,6 +353,7 @@ export function createPopulation(opts: PopOptions): Population {
     priceSource: opts.prices ?? 'history',
     insuranceCap: opts.insuranceCap ?? INSURANCE_CAP_EUR,
     fixedYearly: opts.fixedYearly ?? COMPANY.fixedYearly,
+    custody: opts.custody ?? 'current',
     band,
     seg,
     joinWeek,
@@ -396,7 +424,13 @@ export function stepWeek(pop: Population): Population {
   const gP = prices.gold;
   // Semaine du jour de paie : celle qui contient les sept premiers jours du mois.
   const payWeek = date.getUTCDate() <= 7;
-  const weeklyChurn = SEGMENTS.map((k) => 1 - Math.pow(1 - ASSUMPTIONS.churn[k], 1 / 52));
+  // Une garde plus chère que le tarif actuel pousse des clients à partir.
+  const goldRate = custodyRate(pop.custody, 'gold', prices);
+  const custodyUplift = Math.min(
+    2,
+    1 + ASSUMPTIONS.custodyElasticity * Math.max(0, goldRate / FEES.custodyYearly.gold - 1),
+  );
+  const weeklyChurn = SEGMENTS.map((k) => 1 - Math.pow(1 - ASSUMPTIONS.churn[k] * custodyUplift, 1 / 52));
 
   // Arrivée des commandes de la société.
   for (const p of BAR_PRODUCTS) {
@@ -592,9 +626,9 @@ export function stepWeek(pop: Population): Population {
 
   // Garde hebdomadaire : recette des clients, coût chez Godot & Fils ; lingotins en coffre sécurisé refacturés au coût.
   rev.custody +=
-    (goldGrams * prices.gold * FEES.custodyYearly.gold +
-      silverGrams * prices.silver * FEES.custodyYearly.silver +
-      platGrams * prices.platinum * FEES.custodyYearly.platinum) /
+    (goldGrams * prices.gold * goldRate +
+      silverGrams * prices.silver * custodyRate(pop.custody, 'silver', prices) +
+      platGrams * prices.platinum * custodyRate(pop.custody, 'platinum', prices)) /
     52;
   cost.custody +=
     (goldGrams * (COMPANY.custodyPerGramYear.gold ?? 0) +

@@ -156,3 +156,27 @@ test('population : départs, comptes dormants facturés après six mois, stock p
   assert.deepEqual(runPopulation({ ...opts, weeks: 52 }).summary, a);
   assert.notDeepEqual(runPopulation({ ...opts, weeks: 52, seed: 99 }).summary.revenue, a.revenue);
 });
+
+test('population : garde actuelle, au gramme ou mixte — recettes, coûts et départs', async () => {
+  const { custodyRate, CUSTODY_SCHEMES } = await import('../src/logic/population.ts');
+  const prices = { gold: 100, silver: 1.2, platinum: 40 };
+  // Taux annuels facturés au client pour l'or : 0,15 % ; 0,60 €/g = 0,6 % à 100 €/g ; mixte : max(0,25 %, 0,5 €/g = 0,5 %).
+  assert.equal(custodyRate('current', 'gold', prices), 0.0015);
+  assert.ok(Math.abs(custodyRate('perGram', 'gold', prices) - 0.006) < 1e-12);
+  assert.ok(Math.abs(custodyRate('mixed', 'gold', prices) - 0.005) < 1e-12);
+  // Or cher (500 €/g) : la garde mixte retombe à son pourcentage de 0,25 %.
+  assert.ok(Math.abs(custodyRate('mixed', 'gold', { ...prices, gold: 500 }) - 0.0025) < 1e-12);
+  // Or bas (30 €/g) : le taux au gramme grimpe (2 %), c'est le coût de Godot & Fils qui le dicte.
+  assert.ok(Math.abs(custodyRate('perGram', 'gold', { ...prices, gold: 30 }) - 0.02) < 1e-12);
+  assert.deepEqual(Object.keys(CUSTODY_SCHEMES), ['current', 'perGram', 'mixed']);
+  // Sur une période : la garde au gramme rapporte plus à Orvia, au prix de plus de départs.
+  const base = { start: new Date('2023-11-20T08:00:00'), weeks: 104, rampWeeks: 52, clients: 3000 };
+  const cur = runPopulation({ ...base, custody: 'current' }).summary;
+  const grm = runPopulation({ ...base, custody: 'perGram' }).summary;
+  const mix = runPopulation({ ...base, custody: 'mixed' }).summary;
+  assert.ok(grm.revenue.custody > cur.revenue.custody * 2);
+  assert.ok(mix.revenue.custody > cur.revenue.custody * 2);
+  assert.ok(grm.churned > cur.churned && mix.churned > cur.churned);
+  // Le coût de garde chez Godot & Fils ne dépend pas de ce que paie le client (aux départs près).
+  assert.ok(grm.costs.custody < cur.costs.custody * 1.1 && grm.costs.custody > cur.costs.custody * 0.5);
+});

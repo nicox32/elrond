@@ -5,7 +5,7 @@
  */
 import { HISTORY_PRESETS } from './historyPrices.ts';
 import { percentiles } from './simulation.ts';
-import { runPopulation, type PopSummary } from './population.ts';
+import { type CustodyScheme, runPopulation, type PopSummary } from './population.ts';
 import { type Simulation, type SimSummary, summarize, summarizeBySegment, type SegmentRow } from './simulation.ts';
 import type { Prices } from './types.ts';
 
@@ -14,7 +14,7 @@ export const SUMMARY_URL = `${SIMULATION_RELEASE_URL}/summary.json`;
 export const POPULATION_URL = `${SIMULATION_RELEASE_URL}/population.json`;
 
 /** À changer quand le modèle de la population change : le serveur recalcule alors tous les scénarios. */
-export const POPULATION_MODEL_VERSION = 2;
+export const POPULATION_MODEL_VERSION = 3;
 
 export interface DailyPoint {
   /** Jour simulé (AAAA-MM-JJ). */
@@ -108,7 +108,16 @@ export interface CloudPopulation {
   modelVersion: number;
   updatedAt: string;
   /** Scénarios : période historique puis plafond d'assurance (en euros). */
-  presets: Record<string, { label: string; caps: Record<string, PopulationScenario> }>;
+  presets: Record<
+    string,
+    {
+      label: string;
+      /** Garde actuelle, par plafond d'assurance. */
+      caps: Record<string, PopulationScenario>;
+      /** Autres façons de facturer la garde (plafond d'assurance de 500 000 €). */
+      custody: Partial<Record<CustodyScheme, PopulationScenario>>;
+    }
+  >;
 }
 
 export const POPULATION_CAPS = [500_000, 2_000_000] as const;
@@ -116,35 +125,39 @@ export const POPULATION_CAPS = [500_000, 2_000_000] as const;
 /** Recalcule tous les scénarios de la population de 15 000 clients (arrivée en courbe en S sur 24 mois), sur `runs` essais. */
 export function buildCloudPopulation(now = new Date(), runs = 8): CloudPopulation {
   const presets: CloudPopulation['presets'] = {};
+  const scenario = (opts: Parameters<typeof runPopulation>[0]): PopulationScenario => {
+    const { pop, summary } = runPopulation(opts);
+    const all = [summary];
+    for (let k = 1; k < runs; k++) all.push(runPopulation({ ...opts, seed: 2026 + k }).summary);
+    const pct = (f: (s: PopSummary) => number): Range => percentiles(all.map(f));
+    return {
+      summary,
+      range: {
+        runs: all.length,
+        result: pct((s) => s.result),
+        resultWithGold: pct((s) => s.resultWithGold),
+        peakInsured: pct((s) => s.peakInsured),
+        stockouts: pct((s) => s.stockouts),
+      },
+      series: pop.series
+        .filter((_, i) => i % 26 === 0)
+        .map((x) => ({ date: x.date, clients: x.clients, assets: x.assets, insured: x.insured, gold: x.gold })),
+    };
+  };
   for (const p of HISTORY_PRESETS) {
+    const base = {
+      start: new Date(`${p.start}T08:00:00Z`),
+      weeks: Math.round(p.years * 52),
+      rampWeeks: 104,
+      prices: 'history' as const,
+    };
     const caps: Record<string, PopulationScenario> = {};
-    for (const cap of POPULATION_CAPS) {
-      const opts = {
-        start: new Date(`${p.start}T08:00:00Z`),
-        weeks: Math.round(p.years * 52),
-        rampWeeks: 104,
-        prices: 'history' as const,
-        insuranceCap: cap,
-      };
-      const { pop, summary } = runPopulation(opts);
-      const all = [summary];
-      for (let k = 1; k < runs; k++) all.push(runPopulation({ ...opts, seed: 2026 + k }).summary);
-      const pct = (f: (s: PopSummary) => number): Range => percentiles(all.map(f));
-      caps[String(cap)] = {
-        summary,
-        range: {
-          runs: all.length,
-          result: pct((s) => s.result),
-          resultWithGold: pct((s) => s.resultWithGold),
-          peakInsured: pct((s) => s.peakInsured),
-          stockouts: pct((s) => s.stockouts),
-        },
-        series: pop.series
-          .filter((_, i) => i % 26 === 0)
-          .map((x) => ({ date: x.date, clients: x.clients, assets: x.assets, insured: x.insured, gold: x.gold })),
-      };
+    for (const cap of POPULATION_CAPS) caps[String(cap)] = scenario({ ...base, insuranceCap: cap });
+    const custody: Partial<Record<CustodyScheme, PopulationScenario>> = {};
+    for (const scheme of ['perGram', 'mixed'] as const) {
+      custody[scheme] = scenario({ ...base, insuranceCap: POPULATION_CAPS[0], custody: scheme });
     }
-    presets[p.id] = { label: p.label, caps };
+    presets[p.id] = { label: p.label, caps, custody };
   }
   return { v: 1, modelVersion: POPULATION_MODEL_VERSION, updatedAt: now.toISOString(), presets };
 }

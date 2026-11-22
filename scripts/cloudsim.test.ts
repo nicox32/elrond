@@ -84,6 +84,14 @@ test('population cloud : tous les scénarios (périodes × plafonds), valide et 
       assert.ok(sc.series.length >= 2);
     }
   }
+  // Garde au gramme et garde mixte : les deux sont calculées pour chaque période.
+  for (const p of HISTORY_PRESETS) {
+    assert.ok(pop.presets[p.id].custody.perGram && pop.presets[p.id].custody.mixed, p.id);
+    assert.ok(
+      pop.presets[p.id].custody.perGram!.summary.revenue.custody >
+        pop.presets[p.id].caps['500000'].summary.revenue.custody,
+    );
+  }
   assert.ok(isCloudPopulation(JSON.parse(JSON.stringify(pop))));
   // Le plafond plus haut débloque des commandes.
   const r = pop.presets.recent.caps;
