@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { formatEur } from '../logic/format';
+import { HISTORY_PRESETS, type HistoryPresetId, historyPreset } from '../logic/historyPrices';
 import { BAR_PRODUCTS, stockedPieces } from '../logic/physical';
 import {
   catchUp,
@@ -22,6 +23,7 @@ import {
 import { clearSimulationText, loadSimulationText, saveSimulationText } from '../storage';
 import { useBank } from '../state/BankProvider';
 import { colors } from '../theme';
+import { PopulationPanel } from './PopulationPanel';
 import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, SectionTitle } from './ui';
 
@@ -48,7 +50,9 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState<string>('3600');
   const [mix, setMix] = useState<MixId>('balanced');
-  const [priceMode, setPriceMode] = useState<'sim' | 'live'>('sim');
+  const [priceMode, setPriceMode] = useState<'sim' | 'live' | 'history'>('sim');
+  const [histPreset, setHistPreset] = useState<HistoryPresetId>('covid');
+  const [view, setView] = useState<'detail' | 'population'>('detail');
   const [ramp, setRamp] = useState<'0' | '180'>('0');
   // Série d'essais d'un an avec des graines différentes : donne une fourchette plutôt qu'un seul chiffre.
   const [mc, setMc] = useState<{ done: number; total: number; runs: SimSummary[] } | null>(null);
@@ -113,7 +117,10 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   }, [running, speed]);
 
   function start() {
-    if (!current) current = createSimulation(50, 2026, new Date(), { mix, priceMode, rampDays: Number(ramp) });
+    if (!current) {
+      const startDate = priceMode === 'history' ? new Date(`${historyPreset(histPreset).start}T08:00:00`) : new Date();
+      current = createSimulation(50, 2026, startDate, { mix, priceMode, rampDays: Number(ramp) });
+    }
     setRunning(true);
     setTick((t) => t + 1);
   }
@@ -147,9 +154,31 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   const s = sim ? summarize(sim, shown) : null;
   const segments = sim ? summarizeBySegment(sim, shown) : [];
 
+  const viewSwitch = (
+    <Segmented
+      value={view}
+      onChange={setView}
+      options={[
+        { value: 'detail', label: '50 clients (détail)' },
+        { value: 'population', label: '15 000 clients' },
+      ]}
+    />
+  );
+
+  if (view === 'population') {
+    return (
+      <>
+        <Button title="← Espace DEV" variant="ghost" onPress={onBack} />
+        {viewSwitch}
+        <PopulationPanel />
+      </>
+    );
+  }
+
   return (
     <>
       <Button title="← Espace DEV" variant="ghost" onPress={onBack} />
+      {viewSwitch}
       <Banner icon="🧪" title="Simulateur de clients (fictifs)">
         50 clients inventés (débancarisés, métaux physiques, petits budgets, quotidiens avec la carte) achètent,
         vendent, paient et retirent des lingotins, avec les vraies règles : frais, garde, prix tout compris, stock,
@@ -187,10 +216,21 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
           if (current) current.priceMode = m;
         }}
         options={[
-          { value: 'sim', label: 'Cours simulés' },
-          { value: 'live', label: 'Cours en direct' },
+          { value: 'sim', label: 'Simulés' },
+          { value: 'live', label: 'En direct' },
+          { value: 'history', label: 'Historiques' },
         ]}
       />
+      {priceMode === 'history' && !sim ? (
+        <>
+          <Segmented
+            value={histPreset}
+            onChange={setHistPreset}
+            options={HISTORY_PRESETS.map((p) => ({ value: p.id, label: p.label.split(' : ')[0] }))}
+          />
+          <Hint>{historyPreset(histPreset).label} : les vrais cours de l’époque, à partir de ce jour.</Hint>
+        </>
+      ) : null}
       <Segmented value={speed} onChange={setSpeed} options={SPEEDS.map((x) => ({ value: x.value, label: x.label }))} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}>

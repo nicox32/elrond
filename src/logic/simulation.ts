@@ -4,6 +4,7 @@
  * blocage des formats à perte, assurance). Rien n'est lié au vrai compte : tout est fictif et reste en mémoire.
  */
 import { COMPANY, companyReport } from './company.ts';
+import { priceAtDate } from './historyPrices.ts';
 import { applyDormancy, buy, cardPay, createAccount, creditCash, issueCard, LedgerError, sell } from './ledger.ts';
 import {
   BAR_PRODUCTS,
@@ -71,7 +72,7 @@ export interface Simulation {
   /** Commandes en route : le lot n'entre au stock qu'à sa date d'arrivée (délai de commande de Godot & Fils). */
   pending: PendingOrder[];
   /** « sim » : cours simulés (marche aléatoire autour du cours de départ) ; « live » : cours en direct. */
-  priceMode: 'sim' | 'live';
+  priceMode: 'sim' | 'live' | 'history';
   /** Cours utilisés par la simulation (simulés ou en direct). */
   prices: Prices | null;
   /** État du générateur aléatoire : permet d'enregistrer la simulation et de la reprendre à l'identique. */
@@ -134,7 +135,7 @@ export function createSimulation(
   clients = 50,
   seed = 2026,
   now = new Date(),
-  options: { mix?: MixId; priceMode?: 'sim' | 'live'; rampDays?: number } = {},
+  options: { mix?: MixId; priceMode?: 'sim' | 'live' | 'history'; rampDays?: number } = {},
 ): Simulation {
   const mixId = options.mix ?? 'balanced';
   const mix = MIXES[mixId].mix;
@@ -363,6 +364,11 @@ function oneOperation(sim: Simulation, c: SimClient, prices: Prices) {
 
 /** Cours simulés : marche aléatoire log-normale de chaque métal autour du cours de départ. */
 function walkPrices(sim: Simulation, live: Prices, seconds: number): Prices {
+  // Historique : les vrais cours de la date simulée.
+  if (sim.priceMode === 'history') {
+    sim.prices = priceAtDate(sim.now);
+    return sim.prices;
+  }
   if (sim.priceMode === 'live' || !sim.prices) {
     sim.prices = { ...live };
     return sim.prices;
