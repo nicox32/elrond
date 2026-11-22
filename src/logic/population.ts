@@ -194,6 +194,10 @@ export function custodyRate(scheme: CustodyScheme, metal: Metal, price: Prices):
 }
 
 export interface PopOptions {
+  /** Sensibilité des départs à une garde plus chère (par défaut : hypothèse de l'appli). */
+  custodyElasticity?: number;
+  /** Garde facturée par Godot & Fils en part de la valeur par an (au lieu de 0,48 € par gramme) : scénario de négociation. */
+  custodyCostPct?: number;
   /** Façon de facturer la garde aux clients (par défaut : tarif actuel). */
   custody?: CustodyScheme;
   clients?: number;
@@ -253,6 +257,8 @@ export interface Population {
   insuranceCap: number;
   fixedYearly: number;
   custody: CustodyScheme;
+  custodyElasticity: number;
+  custodyCostPct: number | null;
   band: Uint8Array;
   seg: Uint8Array;
   joinWeek: Uint16Array;
@@ -354,6 +360,8 @@ export function createPopulation(opts: PopOptions): Population {
     insuranceCap: opts.insuranceCap ?? INSURANCE_CAP_EUR,
     fixedYearly: opts.fixedYearly ?? COMPANY.fixedYearly,
     custody: opts.custody ?? 'current',
+    custodyElasticity: opts.custodyElasticity ?? ASSUMPTIONS.custodyElasticity,
+    custodyCostPct: opts.custodyCostPct ?? null,
     band,
     seg,
     joinWeek,
@@ -426,10 +434,7 @@ export function stepWeek(pop: Population): Population {
   const payWeek = date.getUTCDate() <= 7;
   // Une garde plus chère que le tarif actuel pousse des clients à partir.
   const goldRate = custodyRate(pop.custody, 'gold', prices);
-  const custodyUplift = Math.min(
-    2,
-    1 + ASSUMPTIONS.custodyElasticity * Math.max(0, goldRate / FEES.custodyYearly.gold - 1),
-  );
+  const custodyUplift = Math.min(2, 1 + pop.custodyElasticity * Math.max(0, goldRate / FEES.custodyYearly.gold - 1));
   const weeklyChurn = SEGMENTS.map((k) => 1 - Math.pow(1 - ASSUMPTIONS.churn[k] * custodyUplift, 1 / 52));
 
   // Arrivée des commandes de la société.
@@ -631,10 +636,12 @@ export function stepWeek(pop: Population): Population {
       platGrams * prices.platinum * custodyRate(pop.custody, 'platinum', prices)) /
     52;
   cost.custody +=
-    (goldGrams * (COMPANY.custodyPerGramYear.gold ?? 0) +
-      silverGrams * (COMPANY.custodyPerGramYear.silver ?? 0) +
-      platGrams * prices.platinum * COMPANY.custodyYearly.platinum) /
-    52;
+    pop.custodyCostPct !== null
+      ? (assetsEur * pop.custodyCostPct) / 52
+      : (goldGrams * (COMPANY.custodyPerGramYear.gold ?? 0) +
+          silverGrams * (COMPANY.custodyPerGramYear.silver ?? 0) +
+          platGrams * prices.platinum * COMPANY.custodyYearly.platinum) /
+        52;
   rev.vault += (vaultGrams * FEES.vaultPerGramYear) / 52;
   cost.vault += (vaultGrams * FEES.vaultPerGramYear) / 52;
   cost.support += (active * ASSUMPTIONS.supportPerClientYear) / 52;
