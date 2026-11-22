@@ -3,7 +3,17 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { formatEur } from '../logic/format';
 import { BAR_PRODUCTS, stockedPieces } from '../logic/physical';
-import { createSimulation, type Simulation, stepSimulation, summarize } from '../logic/simulation';
+import {
+  catchUp,
+  createSimulation,
+  MAX_CATCH_UP_DAYS,
+  restoreSimulation,
+  serializeSimulation,
+  type Simulation,
+  stepSimulation,
+  summarize,
+} from '../logic/simulation';
+import { clearSimulationText, loadSimulationText, saveSimulationText } from '../storage';
 import { useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Segmented } from './Segmented';
@@ -25,9 +35,47 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState<string>('3600');
   const prices = useRef(quote.prices);
+  const [note, setNote] = useState<string | null>(null);
+  const [tooBig, setTooBig] = useState(false);
   useEffect(() => {
     prices.current = quote.prices;
   }, [quote.prices]);
+
+  // Enregistre la simulation (au plus ~1,8 Mo : au-delà, Android ne sait plus la relire).
+  const persist = () => {
+    if (!current) return;
+    const text = serializeSimulation(current);
+    if (text.length > 1_800_000) {
+      setTooBig(true);
+      return;
+    }
+    void saveSimulationText(text);
+  };
+
+  // À l'ouverture : on reprend la simulation enregistrée et on rattrape le temps passé appli fermée, en temps réel.
+  useEffect(() => {
+    let alive = true;
+    void loadSimulationText().then((text) => {
+      if (!alive) return;
+      const saved = restoreSimulation(text);
+      if (!saved || current) return;
+      const elapsed = (Date.now() - saved.savedAt.getTime()) / 1000;
+      const done = catchUp(saved.sim, prices.current, elapsed);
+      current = saved.sim;
+      if (done > 60) {
+        const days = done / 86_400;
+        setNote(
+          `Rattrapage : ${days >= 1 ? `${days.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} jours` : `${Math.round(done / 3600)} h`} simulés pendant que l’appli était fermée${elapsed > MAX_CATCH_UP_DAYS * 86_400 ? ` (limité à ${MAX_CATCH_UP_DAYS} jours)` : ''}.`,
+        );
+      }
+      setTick((t) => t + 1);
+      persist();
+    });
+    return () => {
+      alive = false;
+      persist();
+    };
+  }, []);
 
   const sim = current;
 
@@ -36,7 +84,10 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
     const id = setInterval(() => {
       if (!current) return;
       stepSimulation(current, prices.current, Number(speed));
-      setTick((t) => t + 1);
+      setTick((t) => {
+        if ((t + 1) % 5 === 0) persist();
+        return t + 1;
+      });
     }, 1000);
     return () => clearInterval(id);
   }, [running, speed]);
@@ -50,6 +101,9 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   function reset() {
     setRunning(false);
     current = null;
+    setNote(null);
+    setTooBig(false);
+    void clearSimulationText();
     setTick((t) => t + 1);
   }
 
@@ -61,14 +115,20 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
       <Banner icon="🧪" title="Simulateur de clients (fictifs)">
         50 clients inventés achètent, vendent et retirent des lingotins aux cours en direct, avec les vraies règles :
         frais, prix tout compris, stock, blocage des formats à perte, assurance. Rien n’est lié à votre vrai compte, et
-        la simulation s’arrête quand l’appli est fermée.
+        la simulation est enregistrée et, appli fermée, elle continue en temps réel : au retour, le temps écoulé est
+        rattrapé d’un coup (90 jours au plus).
       </Banner>
       <Segmented value={speed} onChange={setSpeed} options={SPEEDS.map((x) => ({ value: x.value, label: x.label }))} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}>
           <Button
             title={running ? 'Pause' : sim ? 'Reprendre' : 'Démarrer'}
-            onPress={() => (running ? setRunning(false) : start())}
+            onPress={() => {
+              if (running) {
+                setRunning(false);
+                persist();
+              } else start();
+            }}
           />
         </View>
         <View style={{ flex: 1 }}>
@@ -76,6 +136,12 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
         </View>
       </View>
 
+      {note ? <Banner icon="⏩" title={note} /> : null}
+      {tooBig ? (
+        <Hint>
+          Simulation trop longue pour être enregistrée : remettez-la à zéro pour qu’elle survive à la fermeture.
+        </Hint>
+      ) : null}
       {sim && s ? (
         <>
           <SectionTitle>La société</SectionTitle>

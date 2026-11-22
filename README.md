@@ -226,4 +226,4 @@ npm run lint        # lint
 
 ## Simulateur de clients (Espace DEV)
 
-L'Espace DEV contient un simulateur : 50 clients fictifs achètent, vendent et retirent des lingotins et des pièces aux cours en direct, avec les vraies règles de l'appli (frais, prix tout compris, stock, blocage des formats à perte, assurance). Il affiche les revenus, le coût des lingotins, le résultat estimé, le stock et la valeur assurée ; il est séparé du vrai compte et reste en mémoire. L'assurance du stock par défaut est de 500 000 € (plafond réglable).
+L'Espace DEV contient un simulateur : 50 clients fictifs achètent, vendent et retirent des lingotins et des pièces aux cours en direct, avec les vraies règles de l'appli (frais, prix tout compris, stock, blocage des formats à perte, assurance). Il affiche les revenus, le coût des lingotins, le résultat estimé, le stock et la valeur assurée ; il est séparé du vrai compte ; la simulation est enregistrée et, appli fermée, elle continue en temps réel (le temps écoulé est rattrapé à l’ouverture, 90 jours au plus). L'assurance du stock par défaut est de 500 000 € (plafond réglable).

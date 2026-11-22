@@ -41,3 +41,24 @@ test('simulateur : l’assurance de la société n’est jamais dépassée, rés
   const again = summarize(run(50, 90), prices);
   assert.deepEqual(again, s);
 });
+
+test('simulateur : enregistrée puis reprise, la simulation continue à l’identique (rattrapage appli fermée)', async () => {
+  const { serializeSimulation, restoreSimulation, catchUp } = await import('../src/logic/simulation.ts');
+  // Dix jours d'une traite, contre cinq jours + enregistrement + « fermeture » + cinq jours de rattrapage.
+  const straight = summarize(run(50, 10), prices);
+  const half = run(50, 5);
+  const text = serializeSimulation(half, new Date('2026-11-28T08:00:00'));
+  const back = restoreSimulation(text);
+  assert.ok(back);
+  assert.equal(back!.savedAt.toISOString(), '2026-11-28T08:00:00.000Z');
+  assert.equal(back!.sim.clients.length, 50);
+  const done = catchUp(back!.sim, prices, 5 * 86_400);
+  assert.equal(done, 5 * 86_400);
+  assert.deepEqual(summarize(back!.sim, prices), straight);
+  // Plafond de rattrapage : 90 jours, même après une très longue fermeture.
+  const long = restoreSimulation(serializeSimulation(run(10, 1)))!;
+  assert.equal(catchUp(long.sim, prices, 400 * 86_400), 90 * 86_400);
+  // Texte abîmé ou absent : pas de simulation.
+  assert.equal(restoreSimulation('pas du json'), null);
+  assert.equal(restoreSimulation(null), null);
+});

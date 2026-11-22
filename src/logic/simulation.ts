@@ -36,6 +36,8 @@ export interface SimClient {
 
 export interface Simulation {
   seed: number;
+  /** État du générateur aléatoire : permet d'enregistrer la simulation et de la reprendre à l'identique. */
+  rngState: number;
   rng: () => number;
   now: Date;
   startedAt: Date;
@@ -56,11 +58,11 @@ export interface Simulation {
   events: SimEvent[];
 }
 
-function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
+/** Générateur aléatoire (mulberry32) dont l'état vit dans la simulation, donc enregistrable. */
+function rngOf(sim: { rngState: number }): () => number {
   return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
+    sim.rngState = (sim.rngState + 0x6d2b79f5) >>> 0;
+    let t = sim.rngState;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
@@ -87,7 +89,8 @@ const RESTOCK: Record<string, { below: number; lot: number }> = {
 };
 
 export function createSimulation(clients = 50, seed = 2026, now = new Date()): Simulation {
-  const rng = mulberry32(seed);
+  const holder = { rngState: seed >>> 0 };
+  const rng = rngOf(holder);
   const list: SimClient[] = [];
   for (let i = 1; i <= clients; i++) {
     const profile = pick<Profile>(rng, [
@@ -99,8 +102,9 @@ export function createSimulation(clients = 50, seed = 2026, now = new Date()): S
     const name = `Client ${String(i).padStart(3, '0')} (simulé)`;
     list.push({ name, profile, account: createAccount(name, now) });
   }
-  return {
+  const sim: Simulation = {
     seed,
+    rngState: holder.rngState,
     rng,
     now,
     startedAt: now,
@@ -119,6 +123,10 @@ export function createSimulation(clients = 50, seed = 2026, now = new Date()): S
     peakInsuredEur: 0,
     events: [],
   };
+  // Le générateur doit écrire son état dans la simulation elle-même.
+  holder.rngState = sim.rngState;
+  sim.rng = rngOf(sim);
+  return sim;
 }
 
 function log(sim: Simulation, kind: SimEvent['kind'], text: string) {
@@ -314,4 +322,42 @@ export function summarize(sim: Simulation, prices: Prices): SimSummary {
     insuranceCap: ins.cap,
     peakInsured: r0(sim.peakInsuredEur),
   };
+}
+
+/** Texte enregistrable de la simulation (le générateur aléatoire est reconstruit à la lecture). */
+export function serializeSimulation(sim: Simulation, savedAt = new Date()): string {
+  return JSON.stringify({ v: 1, savedAt: savedAt.toISOString(), sim });
+}
+
+/** Relit une simulation enregistrée, avec la date d'enregistrement ; null si le texte est abîmé. */
+export function restoreSimulation(text: string | null): { sim: Simulation; savedAt: Date } | null {
+  if (!text) return null;
+  try {
+    const d = JSON.parse(text);
+    const s = d?.sim;
+    if (d?.v !== 1 || !s || !Array.isArray(s.clients) || typeof s.rngState !== 'number' || !s.company) return null;
+    const sim: Simulation = { ...s, now: new Date(s.now), startedAt: new Date(s.startedAt) };
+    sim.rng = rngOf(sim);
+    return { sim, savedAt: new Date(d.savedAt) };
+  } catch {
+    return null;
+  }
+}
+
+/** Temps simulé rattrapé au maximum à chaque ouverture (la simulation « tourne » même appli fermée). */
+export const MAX_CATCH_UP_DAYS = 90;
+
+/**
+ * Fait avancer la simulation du temps écoulé appli fermée, en temps réel, par pas d'une heure aux cours donnés.
+ * Rend le nombre de secondes rattrapées (plafonné à 90 jours).
+ */
+export function catchUp(sim: Simulation, prices: Prices, elapsedSeconds: number): number {
+  const total = Math.min(Math.max(0, elapsedSeconds), MAX_CATCH_UP_DAYS * 86_400);
+  let left = total;
+  while (left > 1e-9) {
+    const dt = Math.min(3600, left);
+    stepSimulation(sim, prices, dt);
+    left -= dt;
+  }
+  return total;
 }

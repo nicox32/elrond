@@ -9,6 +9,7 @@ const LEGACY_ACCOUNT_KEY = 'elrond.account.v1';
 const QUOTE_KEY = 'elrond.quote.v1';
 const PRICE_HISTORY_KEY = 'elrond.priceHistory.v1';
 const HOURLY_HISTORY_KEY = 'elrond.priceHourly.v1';
+const SIMULATION_KEY = 'elrond.simulation.v1';
 
 async function readJson(key: string): Promise<unknown> {
   try {
@@ -24,6 +25,31 @@ async function writeJson(key: string, value: unknown): Promise<void> {
     await AsyncStorage.setItem(key, JSON.stringify(value));
   } catch {
     // L’appli continue même si l’enregistrement échoue.
+  }
+}
+
+/** Simulation de clients fictifs (Espace DEV) : texte enregistré, séparé du vrai compte. */
+export async function loadSimulationText(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(SIMULATION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveSimulationText(text: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SIMULATION_KEY, text);
+  } catch {
+    // La simulation continue en mémoire même si l'enregistrement échoue.
+  }
+}
+
+export async function clearSimulationText(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(SIMULATION_KEY);
+  } catch {
+    // ignoré
   }
 }
 
