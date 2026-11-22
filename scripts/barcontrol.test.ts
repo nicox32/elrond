@@ -16,6 +16,14 @@ import {
 import { barQrText } from '../src/logic/homeVaultDoc.ts';
 import { buy, createAccount, creditCash, LedgerError } from '../src/logic/ledger.ts';
 import { receiveBar, withdrawPhysical } from '../src/logic/physical.ts';
+import { addStock } from '../src/logic/stock.ts';
+
+/** Ajoute du stock pour les formats commandés (un format à perte à l'unité ne se sert que sur stock). */
+const stocked = <T extends { stock?: unknown }>(a: T, order: Record<string, number>): T =>
+  Object.entries(order).reduce(
+    (acc, [product, qty]) => addStock(acc as never, { product, qty, source: 'maison' }) as never,
+    a,
+  );
 
 const p = { gold: 100, silver: 1, platinum: 30 };
 
@@ -30,7 +38,7 @@ function withBars() {
     ),
     300,
   );
-  a = withdrawPhysical(a, p, { g5: 1, g10: 1, nap20: 1 }, new Date('2026-11-16T12:00:00'));
+  a = withdrawPhysical(stocked(a, { nap20: 1 }), p, { g5: 1, g10: 1, nap20: 1 }, new Date('2026-11-16T12:00:00'));
   return a;
 }
 const ok5 = {

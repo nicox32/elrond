@@ -349,6 +349,63 @@ export function lotMargin(
   return { eur, pt, level, client: Math.round(client * 100) / 100 };
 }
 
+/** Pièces d'un format disponibles en stock (chez Orvia et chez Godot & Fils). */
+export function stockedPieces(account: Pick<Account, 'stock'>, productId: string): number {
+  return (account.stock ?? []).filter((l) => l.product === productId && l.qty > 0).reduce((s, l) => s + l.qty, 0);
+}
+
+/**
+ * Un format peut-il être commandé à l'unité sans perdre d'argent ? Prix client tout compris contre prix d'une pièce de
+ * 1 à 9 pièces chez Godot & Fils et sa livraison. Sinon, il ne se sert que depuis le stock, et se commande par lots.
+ */
+export function sellableOnDemand(
+  productId: string,
+  goldEurPerGram: number,
+  fees: PhysicalFees = physicalFeesOf(),
+): boolean {
+  const unit = lotUnitCost(productId, 1, goldEurPerGram, fees);
+  return lotMargin(productId, unit, 1, goldEurPerGram, fees).eur >= 0;
+}
+
+/** Plus petite taille de lot (début d'une tranche) qui ne se vend pas à perte ; absente si aucune ne convient. */
+export function minProfitableLot(
+  productId: string,
+  goldEurPerGram: number,
+  fees: PhysicalFees = physicalFeesOf(),
+): number | undefined {
+  for (const r of rangesOf(productId)) {
+    const unit = lotUnitCost(productId, r.from, goldEurPerGram, fees);
+    if (lotMargin(productId, unit, r.from, goldEurPerGram, fees).eur >= 0) return r.from;
+  }
+  return undefined;
+}
+
+/**
+ * Garde-fou à l'enregistrement d'un lot : un petit lot dont le prix réel se revend à perte est refusé, il faut le
+ * commander en plus grande quantité.
+ */
+export function lotGuard(
+  productId: string,
+  unitCost: number,
+  qty: number,
+  goldEurPerGram: number,
+  fees: PhysicalFees = physicalFeesOf(),
+): { blocked: boolean; message: string } {
+  const m = lotMargin(productId, unitCost, qty, goldEurPerGram, fees);
+  if (m.level !== 'loss') return { blocked: false, message: '' };
+  const min = minProfitableLot(productId, goldEurPerGram, fees);
+  if (min !== undefined && qty >= min) return { blocked: false, message: '' };
+  const name = productOf(productId).label.replace(/ \(.*/, '');
+  const eur = Math.abs(m.eur).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+  return {
+    blocked: true,
+    message:
+      min !== undefined
+        ? `Lot trop petit : ${qty} ${name} se revendent à perte (${eur} € par pièce). Commandez-en au moins ${min} pour être rentable.`
+        : `${name} : ce lot se revend à perte (${eur} € par pièce) et aucune taille de lot ne dégage de marge au prix client actuel.`,
+  };
+}
+
 /** Paliers triés, sans doublon, dont le premier commence à 0 € ; à défaut, un seul palier au coût fixe. */
 export function normalizeDeliveryTiers(
   raw: { fromEur: number; cost: number }[] | undefined,
@@ -536,6 +593,20 @@ export function withdrawPhysical(
   const agency = pickupAgency?.trim();
   if (pickupAgency !== undefined && agency!.length < 2) throw new LedgerError('Indiquez l’agence de retrait (ville).');
   const noShipping = pickupAgency !== undefined || vault;
+  // Un format qui ne se commande pas à l'unité sans perte ne se sert que dans la limite du stock.
+  {
+    const fees = physicalFeesOf(account.settings);
+    for (const p of BAR_PRODUCTS) {
+      const want = Math.max(0, Math.floor(order[p.id] ?? 0));
+      if (want === 0 || sellableOnDemand(p.id, prices.gold, fees)) continue;
+      const have = stockedPieces(account, p.id);
+      if (want > have) {
+        throw new LedgerError(
+          `${p.label.replace(/ \(.*/, '')} : disponible seulement dans la limite du stock (${have} en stock). Réapprovisionnement en cours.`,
+        );
+      }
+    }
+  }
   const q = quoteWithdrawal(prices, order, physicalFeesOf(account.settings), noShipping);
   if (!q.lines.length) throw new LedgerError('Choisissez au moins un lingotin.');
   if (q.grams > account.holdings.gold + 1e-9) {

@@ -5,7 +5,15 @@ import test from 'node:test';
 import { buy, createAccount, creditCash, LedgerError } from '../src/logic/ledger.ts';
 import { decodeTicket, receiveTicket, sendBarToMember, sendMetalToMember } from '../src/logic/memberTicket.ts';
 import { withdrawPhysical } from '../src/logic/physical.ts';
+import { addStock } from '../src/logic/stock.ts';
 import { hmacSha256, sha256, toHex, utf8 } from '../src/logic/sha256.ts';
+
+/** Ajoute du stock pour les formats commandés (un format à perte à l'unité ne se sert que sur stock). */
+const stocked = <T extends { stock?: unknown }>(a: T, order: Record<string, number>): T =>
+  Object.entries(order).reduce(
+    (acc, [product, qty]) => addStock(acc as never, { product, qty, source: 'maison' }) as never,
+    a,
+  );
 
 const prices = { gold: 100, silver: 1, platinum: 30 };
 const close = (a: number, b: number, eps = 1e-6) => assert.ok(Math.abs(a - b) <= eps, `${a} ≉ ${b}`);
@@ -79,7 +87,7 @@ test('lingotin envoyé par QR : il quitte le coffre maison de l’expéditeur et
   // Un lingotin de 5 g vaut 500 € ici : au-dessus de la limite. On baisse le cours pour le test (3 g ≈ 150 €).
   const cheap = { gold: 30, silver: 1, platinum: 30 };
   let acc = creditCash(dad, 500);
-  acc = withdrawPhysical(acc, cheap, { g5: 1 }, t0);
+  acc = withdrawPhysical(stocked(acc, { g5: 1 }), cheap, { g5: 1 }, t0);
   const bar = acc.homeVault![0];
   // Pas encore arrivé : refusé ; puis reçu avec son numéro de série.
   assert.throws(() => sendBarToMember(acc, cheap, bar.id, toSon, t0), /pas encore arrivé/);

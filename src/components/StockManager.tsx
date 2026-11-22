@@ -4,7 +4,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { formatDate, formatEur, parseAmount } from '../logic/format';
 import { formatDay, parseDay } from '../logic/godotCalc';
 import { LedgerError } from '../logic/ledger';
-import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, productOf } from '../logic/physical';
+import { BAR_PRODUCTS, lotGuard, lotUnitCost, physicalFeesOf, productOf } from '../logic/physical';
 import {
   assertInsuranceRoom,
   insuranceStatus,
@@ -55,6 +55,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
   // Date de la facture et valeur de l'or de la fiche : le cours du jour de l'achat, pour une prime et une marge justes.
   const [invDate, setInvDate] = useState(() => formatDay(new Date()));
   const [intrinsic, setIntrinsic] = useState('');
+  const [forceLot, setForceLot] = useState(false);
   const [serials, setSerials] = useState('');
   const [note, setNote] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -94,6 +95,10 @@ export function StockManager({ onBack }: { onBack: () => void }) {
       if (total.trim() && unitPaid() === undefined)
         throw new LedgerError('Indiquez un total de facture et un nombre de pièces valides.');
       const unit = unitPaid() ?? expectedLot;
+      if (unitPaid() !== undefined && !forceLot) {
+        const guard = lotGuard(product, unit, n, invGold, physicalFeesOf(account.settings));
+        if (guard.blocked) throw new LedgerError(guard.message);
+      }
       assertInsuranceRoom(account, quote.prices.gold, (Number.isFinite(n) ? n : 0) * unit);
       updateAccount((a) =>
         addStock(
@@ -119,6 +124,7 @@ export function StockManager({ onBack }: { onBack: () => void }) {
       setNote('');
       setTotal('');
       setIntrinsic('');
+      setForceLot(false);
     } catch (e) {
       setMsg({ ok: false, text: e instanceof LedgerError ? e.message : 'Ajout impossible.' });
     }
@@ -329,6 +335,13 @@ export function StockManager({ onBack }: { onBack: () => void }) {
             : ' (cours en direct : saisissez la valeur de la fiche pour être exact)'}
           .
         </Text>
+        {unitPaid() !== undefined &&
+        lotGuard(product, unitPaid() ?? 0, Number.isFinite(n) ? n : 0, invGold, physicalFeesOf(account.settings))
+          .blocked ? (
+          <Pressable onPress={() => setForceLot((v) => !v)} accessibilityRole="switch" testID="force-lot-stock">
+            <Text style={ui.link}>{forceLot ? '☑' : '☐'} Ce lot est déjà acheté : l’ajouter quand même</Text>
+          </Pressable>
+        ) : null}
         <Label>
           {coin ? 'Millésimes connus (un par ligne, facultatif)' : 'Numéros de série connus (un par ligne)'}
         </Label>

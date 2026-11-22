@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { buy, createAccount, creditCash, LedgerError, minOrderError, quoteBuy, sell } from '../src/logic/ledger.ts';
 import { FEES } from '../src/logic/fees.ts';
 import { isWeekendClosed } from '../src/logic/market.ts';
+import { addStock } from '../src/logic/stock.ts';
 import { cancelOrder, placeOrder, runPendingOrders } from '../src/logic/orders.ts';
 import {
   homeVaultTotal,
@@ -28,6 +29,14 @@ import {
   productOf,
   withdrawPhysical,
 } from '../src/logic/physical.ts';
+
+/** Ajoute du stock pour les formats commandés (un format à perte à l'unité ne se sert que sur stock). */
+const stocked = <T extends { stock?: unknown }>(a: T, order: Record<string, number>): T =>
+  Object.entries(order).reduce(
+    (acc, [product, qty]) => addStock(acc as never, { product, qty, source: 'maison' }) as never,
+    a,
+  );
+
 import { holdingLots } from '../src/logic/tax.ts';
 import { companyReport } from '../src/logic/company.ts';
 
@@ -123,7 +132,7 @@ test('Napoléon 20 F : 5,806 g d’or fin, prime indicative, millésime au coffr
   close(q.grams, 23.224);
   assert.equal(q.delivery, 0);
   let a = creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 10 }), 100);
-  a = withdrawPhysical(a, p, { nap20: 1 });
+  a = withdrawPhysical(stocked(a, { nap20: 1 }), p, { nap20: 1 });
   a = receiveBar(a, a.homeVault![0].id, '1910');
   assert.equal(a.homeVault![0].serial, '1910');
   close(a.holdings.gold, 10 - 5.806);
@@ -142,7 +151,7 @@ test('coffre maison : fiche QR de chaque objet et inventaire imprimable', async 
     ),
     300,
   );
-  a = withdrawPhysical(a, p, { g10: 1, nap20: 1 }, new Date('2026-11-16T12:00:00'));
+  a = withdrawPhysical(stocked(a, { g10: 1, nap20: 1 }), p, { g10: 1, nap20: 1 }, new Date('2026-11-16T12:00:00'));
   a = receiveBar(a, a.homeVault![0].id, 'c 841-201', new Date('2026-11-20T12:00:00'));
   const text = barQrText(a.homeVault![0]);
   assert.match(text, /Lingotin 10 g/);
@@ -165,9 +174,11 @@ test('fiche technique : lingotin 5 g PAMP Suisse et Napoléon, dans la fiche QR'
   assert.equal(specLine(productOf('g10').spec), 'PAMP Suisse · or 999,9 · 26,5 × 15,8 × 1,25 mm');
   assert.equal(specLine(productOf('g20').spec), 'PAMP Suisse · or 999,9 · 32 × 18 × 1,88 mm');
   assert.equal(specLine(productOf('oz1').spec), 'PAMP Suisse · or 999,9 · 41 × 24 × 1,66 mm');
-  const a = withdrawPhysical(creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 10 }), 100), p, {
-    g5: 1,
-  });
+  const a = withdrawPhysical(
+    stocked(creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 10 }), 100), { g5: 1 }),
+    p,
+    { g5: 1 },
+  );
   assert.match(barQrText(a.homeVault![0]), /PAMP Suisse · or 999,9 · 23,3 × 14 × 0,79 mm/);
   assert.match(barQrText(a.homeVault![0]), /à vérifier avec PAMP VERISCAN/);
   assert.equal(productOf('nap20').spec?.veriscan, undefined);
@@ -244,7 +255,7 @@ test('inventaire imprimable : chaque objet porte la photo de son format', async 
   const { homeVaultHtml } = await import('../src/logic/homeVaultDoc.ts');
   const { BAR_PHOTOS } = await import('../src/logic/barPhotos.ts');
   let a = creditCash(buy(createAccount('T'), p, 'gold', { unit: 'g', value: 60 }), 900);
-  a = withdrawPhysical(a, p, { g5: 1, g20: 1, oz1: 1 });
+  a = withdrawPhysical(stocked(a, { g20: 1 }), p, { g5: 1, g20: 1, oz1: 1 });
   const html = homeVaultHtml(a, p);
   for (const id of ['g5', 'g20', 'oz1']) assert.ok(html.includes(BAR_PHOTOS[id]), `photo ${id}`);
   assert.ok(!html.includes(BAR_PHOTOS.g10));
@@ -439,7 +450,7 @@ test('retrait d’un lingotin gardé en coffre : à domicile (12 €) ou en agen
   acc = buy(acc, p, 'gold', { unit: 'g', value: 30 }, new Date('2020-03-01T12:00:00'));
   acc = creditCash(acc, 500);
   const t0 = new Date('2026-11-01T10:00:00');
-  acc = withdrawPhysical(acc, p, { g5: 1, g20: 1 }, t0, undefined, true);
+  acc = withdrawPhysical(stocked(acc, { g20: 1 }), p, { g5: 1, g20: 1 }, t0, undefined, true);
   const [b5, b20] = acc.homeVault!.map((b) => b.id);
   // Pas encore entré au coffre : impossible.
   assert.throws(() => requestVaultExit(acc, b5, 'home', undefined, t0), /pas encore entré/);
@@ -641,4 +652,43 @@ test('prime relevée avec le calcul de prime : remplace la prime du code, avec s
   assert.equal(ok.vendor.nap20, 0.04);
   const bad = physicalFeesOf({ vendorQuotes: { nap20: { premium: 0.04, offs: [0.001, 0.002], at } } });
   assert.equal(bad.vendor.nap20, def.vendor.nap20);
+});
+
+test('lots : un format à perte à l’unité ne se sert que sur stock, et un petit lot à perte est refusé', async () => {
+  const { sellableOnDemand, minProfitableLot, lotGuard, stockedPieces } = await import('../src/logic/physical.ts');
+  const { addStock } = await import('../src/logic/stock.ts');
+  const gold = 103.53;
+  // Au cours du jour : 5 g, 10 g, once se commandent à l'unité ; 20 g et Napoléon non (prime de petit lot trop haute).
+  assert.equal(sellableOnDemand('g5', gold), true);
+  assert.equal(sellableOnDemand('g10', gold), true);
+  assert.equal(sellableOnDemand('oz1', gold), true);
+  assert.equal(sellableOnDemand('g20', gold), false);
+  assert.equal(sellableOnDemand('nap20', gold), false);
+  // Plus petit lot rentable : 10 pièces pour le 20 g, 10 pour le Napoléon.
+  assert.equal(minProfitableLot('g20', gold), 10);
+  assert.equal(minProfitableLot('nap20', gold), 10);
+  assert.equal(minProfitableLot('g5', gold), 1);
+  // Garde-fou : un lot de 3 Napoléons au prix de 1 à 9 pièces est refusé, un lot de 10 passe.
+  const unit3 = lotUnitCost('nap20', 3, gold, physicalFeesOf());
+  const g3 = lotGuard('nap20', unit3, 3, gold);
+  assert.equal(g3.blocked, true);
+  assert.match(g3.message, /au moins 10/);
+  const unit10 = lotUnitCost('nap20', 10, gold, physicalFeesOf());
+  assert.equal(lotGuard('nap20', unit10, 10, gold).blocked, false);
+  // Un lot à bon prix, même petit, n'est pas bloqué.
+  assert.equal(lotGuard('g5', lotUnitCost('g5', 1, gold, physicalFeesOf()), 1, gold).blocked, false);
+  // Retrait : sans stock, un Napoléon est refusé ; avec 2 en stock, 2 passent et 3 non.
+  const pr = { gold, silver: 1.2, platinum: 38 };
+  let a = creditCash(buy(createAccount('T'), pr, 'gold', { unit: 'g', value: 100 }), 500);
+  assert.throws(
+    () => withdrawPhysical(a, pr, { nap20: 1 }, new Date('2026-11-22T10:00:00')),
+    /limite du stock \(0 en stock\)/,
+  );
+  a = addStock(a, { product: 'nap20', qty: 2, source: 'maison' });
+  assert.equal(stockedPieces(a, 'nap20'), 2);
+  const ok = withdrawPhysical(a, pr, { nap20: 2 }, new Date('2026-11-22T10:00:00'));
+  assert.equal(ok.homeVault!.length, 2);
+  assert.throws(() => withdrawPhysical(a, pr, { nap20: 3 }, new Date('2026-11-22T10:00:00')), /2 en stock/);
+  // Un format rentable à l'unité reste commandable sans stock.
+  assert.equal(withdrawPhysical(a, pr, { g5: 1 }, new Date('2026-11-22T10:00:00')).homeVault!.length, 1);
 });

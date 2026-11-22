@@ -3,7 +3,7 @@ import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-nat
 
 import { formatEur, parseAmount } from '../logic/format';
 import { formatDay, lotPriceOf, negotiatedPrice, parseDay, sheetResult } from '../logic/godotCalc';
-import { BAR_PRODUCTS, lotUnitCost, physicalFeesOf, PREMIUM_TARGET, rangesOf } from '../logic/physical';
+import { BAR_PRODUCTS, lotGuard, lotUnitCost, physicalFeesOf, PREMIUM_TARGET, rangesOf } from '../logic/physical';
 import { addStock, assertInsuranceRoom } from '../logic/stock';
 import { useAccount, useBank } from '../state/BankProvider';
 import { colors } from '../theme';
@@ -40,6 +40,8 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
   const [lotTotal, setLotTotal] = useState('');
   // Prix saisis = prix publics de la fiche : la remise négociée (3 à 5 % selon le lot) s'applique.
   const [publicSheet, setPublicSheet] = useState(true);
+  // Lot déjà acheté mais trop petit pour être rentable : il peut être enregistré en le confirmant.
+  const [forceLot, setForceLot] = useState(false);
   const calcProduct = BAR_PRODUCTS.find((p) => p.id === calcId) ?? BAR_PRODUCTS[0];
   const calcRanges = rangesOf(calcId);
   const defaultIntrinsic = Math.round(calcProduct.grams * quote.prices.gold * 100) / 100;
@@ -355,6 +357,11 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
               const when = parseDay(calcDate);
               const q = lotQtyN;
               const unit = lotUnit;
+              const guard = lotGuard(calcId, unit, q, calcGold, fees);
+              if (guard.blocked && !forceLot) {
+                setMsg({ ok: false, text: guard.message });
+                return;
+              }
               assertInsuranceRoom(account, quote.prices.gold, q * unit);
               updateAccount((a) =>
                 addStock(
@@ -375,11 +382,17 @@ export function PhysicalFeesEditor({ part }: { part: 'client' | 'vendor' }) {
                 text: `Lot de ${q} enregistré au stock : ${formatEur(unit)} par pièce (${formatEur(q * unit)} au total), or à ${perGram(calcGold)} €/g, le ${formatDay(when)}.`,
               });
               setLotTotal('');
+              setForceLot(false);
             } catch (e) {
               setMsg({ ok: false, text: e instanceof Error ? e.message : 'Impossible d’enregistrer ce lot.' });
             }
           }}
         />
+        {lotUnit > 0 && lotGuard(calcId, lotUnit, lotQtyN, calcGold, fees).blocked ? (
+          <Pressable onPress={() => setForceLot((v) => !v)} accessibilityRole="switch" testID="force-lot">
+            <Text style={styles.link}>{forceLot ? '☑' : '☐'} Ce lot est déjà acheté : l’enregistrer quand même</Text>
+          </Pressable>
+        ) : null}
       </View>
       {msg ? <Message {...msg} /> : null}
     </Card>

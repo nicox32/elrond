@@ -17,6 +17,8 @@ import {
   quoteWithdrawal,
   specLine,
   VERISCAN_NOTE,
+  sellableOnDemand,
+  stockedPieces,
   vatIfWithdrawn,
   withdrawPhysical,
 } from '../logic/physical';
@@ -111,6 +113,10 @@ export default function WithdrawScreen() {
         <Card style={{ paddingVertical: 4 }}>
           {BAR_PRODUCTS.map((p, i) => {
             const n = order[p.id] ?? 0;
+            // Format qui se commande par lots : servi seulement depuis le stock.
+            const onDemand = sellableOnDemand(p.id, quote.prices.gold, fees);
+            const have = stockedPieces(account, p.id);
+            const maxQty = onDemand ? Infinity : have;
             return (
               <View key={p.id} style={[styles.row, i > 0 && styles.border]}>
                 <BarImage product={p.id} size={58} />
@@ -125,6 +131,13 @@ export default function WithdrawScreen() {
                     {p.id === 'g10' ? ' · conseillé' : p.coin ? ' · la pièce la plus facile à revendre en France' : ''}
                   </Text>
                   {specLine(p.spec) ? <Text style={styles.sub}>{specLine(p.spec)}</Text> : null}
+                  {!onDemand ? (
+                    <Text style={[styles.sub, { color: colors.warning }]} testID={`stock-only-${p.id}`}>
+                      {have > 0
+                        ? `Sur stock uniquement : ${have} disponible${have > 1 ? 's' : ''}`
+                        : 'Indisponible pour l’instant : réapprovisionnement en cours'}
+                    </Text>
+                  ) : null}
                 </View>
                 <Pressable
                   onPress={() => set(p.id, n - 1)}
@@ -137,8 +150,9 @@ export default function WithdrawScreen() {
                   {n}
                 </Text>
                 <Pressable
-                  onPress={() => set(p.id, n + 1)}
-                  style={styles.step}
+                  onPress={() => (n + 1 <= maxQty ? set(p.id, n + 1) : undefined)}
+                  disabled={n + 1 > maxQty}
+                  style={[styles.step, n + 1 > maxQty && { opacity: 0.35 }]}
                   accessibilityLabel={`Plus de ${p.label}`}
                 >
                   <Text style={styles.stepText}>+</Text>
