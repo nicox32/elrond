@@ -4,7 +4,7 @@
  * blocage des formats à perte, assurance). Rien n'est lié au vrai compte : tout est fictif et reste en mémoire.
  */
 import { companyReport } from './company.ts';
-import { buy, createAccount, creditCash, LedgerError, sell } from './ledger.ts';
+import { applyDormancy, buy, cardPay, createAccount, creditCash, issueCard, LedgerError, sell } from './ledger.ts';
 import {
   BAR_PRODUCTS,
   lotUnitCost,
@@ -17,25 +17,48 @@ import {
 import { addStock, assertInsuranceRoom, insuranceStatus } from './stock.ts';
 import type { Account, Metal, Prices } from './types.ts';
 
-export type Profile = 'saver' | 'investor' | 'bars' | 'seller';
+/** Segments de clients (cible d'Orvia) : débancarisés, épargnants en métaux physiques, petits budgets, quotidiens. */
+export type Profile = 'debank' | 'physical' | 'small' | 'daily';
 
-/** Opérations par jour et par client, selon le profil. */
-const RATE_PER_DAY: Record<Profile, number> = { saver: 0.3, investor: 0.15, bars: 0.12, seller: 0.2 };
+export const SEGMENTS: Record<Profile, { label: string; ratePerDay: number }> = {
+  debank: { label: 'Débancarisés', ratePerDay: 0.12 },
+  physical: { label: 'Épargnants en métaux physiques', ratePerDay: 0.15 },
+  small: { label: 'Petits budgets (dès 10 €)', ratePerDay: 0.5 },
+  daily: { label: 'Quotidiens et voyageurs (carte)', ratePerDay: 1.2 },
+};
+
+/** Répartitions proposées de la base de clients, en pourcentage par segment. */
+export const MIXES = {
+  balanced: { label: 'Équilibré', mix: { debank: 20, physical: 25, small: 40, daily: 15 } },
+  small: { label: 'Petits budgets', mix: { debank: 10, physical: 10, small: 70, daily: 10 } },
+  physical: { label: 'Épargne physique', mix: { debank: 25, physical: 55, small: 15, daily: 5 } },
+} as const;
+export type MixId = keyof typeof MIXES;
+
+/** Volatilité annuelle des cours simulés. */
+const VOLATILITY: Record<Metal, number> = { gold: 0.15, silver: 0.28, platinum: 0.25 };
 
 export interface SimEvent {
   at: string;
   text: string;
-  kind: 'buy' | 'sell' | 'withdraw' | 'refused' | 'restock';
+  kind: 'buy' | 'sell' | 'withdraw' | 'refused' | 'restock' | 'card';
 }
 
 export interface SimClient {
   name: string;
   profile: Profile;
   account: Account;
+  /** Dernier jour simulé où la garde et l'oxydation ont été prélevées (AAAA-MM-JJ). */
+  chargedDay?: string;
 }
 
 export interface Simulation {
   seed: number;
+  mixId: MixId;
+  /** « sim » : cours simulés (marche aléatoire autour du cours de départ) ; « live » : cours en direct. */
+  priceMode: 'sim' | 'live';
+  /** Cours utilisés par la simulation (simulés ou en direct). */
+  prices: Prices | null;
   /** État du générateur aléatoire : permet d'enregistrer la simulation et de la reprendre à l'identique. */
   rngState: number;
   rng: () => number;
@@ -48,6 +71,8 @@ export interface Simulation {
     buys: number;
     sells: number;
     withdrawals: number;
+    cards: number;
+    cardEur: number;
     refused: number;
     restocks: number;
     boughtEur: number;
@@ -88,22 +113,33 @@ const RESTOCK: Record<string, { below: number; lot: number }> = {
   nap20: { below: 3, lot: 20 },
 };
 
-export function createSimulation(clients = 50, seed = 2026, now = new Date()): Simulation {
+export function createSimulation(
+  clients = 50,
+  seed = 2026,
+  now = new Date(),
+  options: { mix?: MixId; priceMode?: 'sim' | 'live' } = {},
+): Simulation {
+  const mixId = options.mix ?? 'balanced';
+  const mix = MIXES[mixId].mix;
   const holder = { rngState: seed >>> 0 };
   const rng = rngOf(holder);
   const list: SimClient[] = [];
   for (let i = 1; i <= clients; i++) {
-    const profile = pick<Profile>(rng, [
-      ['saver', 50],
-      ['investor', 30],
-      ['bars', 15],
-      ['seller', 5],
-    ]);
+    const profile = pick<Profile>(
+      rng,
+      (Object.keys(mix) as Profile[]).map((k) => [k, mix[k]]),
+    );
     const name = `Client ${String(i).padStart(3, '0')} (simulé)`;
-    list.push({ name, profile, account: createAccount(name, now) });
+    let account = createAccount(name, now);
+    // Les quotidiens ont la carte Orvia, financée par leur or.
+    if (profile === 'daily') account = issueCard(account, now);
+    list.push({ name, profile, account });
   }
   const sim: Simulation = {
     seed,
+    mixId,
+    priceMode: options.priceMode ?? 'sim',
+    prices: null,
     rngState: holder.rngState,
     rng,
     now,
@@ -114,6 +150,8 @@ export function createSimulation(clients = 50, seed = 2026, now = new Date()): S
       buys: 0,
       sells: 0,
       withdrawals: 0,
+      cards: 0,
+      cardEur: 0,
       refused: 0,
       restocks: 0,
       boughtEur: 0,
@@ -134,8 +172,8 @@ function log(sim: Simulation, kind: SimEvent['kind'], text: string) {
   if (sim.events.length > 40) sim.events.length = 40;
 }
 
-/** Retrait physique d'un client, servi depuis le stock de la société quand il y en a. */
-function withdraw(sim: Simulation, c: SimClient, prices: Prices) {
+/** Retrait physique d'un client (à domicile ou en coffre sécurisé), servi depuis le stock de la société. */
+function withdraw(sim: Simulation, c: SimClient, prices: Prices, vault: boolean) {
   const fees = physicalFeesOf();
   const product = pick<string>(sim.rng, [
     ['g10', 30],
@@ -155,12 +193,12 @@ function withdraw(sim: Simulation, c: SimClient, prices: Prices) {
   a = creditCash(a, Math.ceil(f), 'transfer', sim.now);
   // Le stock appartient à la société : on le prête au compte du client le temps du retrait.
   const tmp: Account = { ...a, stock: sim.company.stock, stockLog: sim.company.stockLog };
-  const out = withdrawPhysical(tmp, prices, { [product]: qty }, sim.now);
+  const out = withdrawPhysical(tmp, prices, { [product]: qty }, sim.now, undefined, vault);
   const { stock, stockLog, ...rest } = out;
   sim.company = { ...sim.company, stock, stockLog };
   c.account = rest as Account;
   sim.counters.withdrawals += 1;
-  log(sim, 'withdraw', `${c.name} retire ${qty} × ${p.label.replace(/ \(.*/, '')}`);
+  log(sim, 'withdraw', `${c.name} ${vault ? 'met en coffre' : 'retire'} ${qty} × ${p.label.replace(/ \(.*/, '')}`);
 }
 
 /** La société commande un lot quand le stock d'un format est bas, dans la limite de son assurance. */
@@ -196,47 +234,68 @@ function restock(sim: Simulation, prices: Prices) {
   }
 }
 
+/** Ce que fait un client à chaque opération, selon son segment : [opération, poids]. */
+const OPERATIONS: Record<Profile, [string, number][]> = {
+  debank: [
+    ['buy', 65],
+    ['sell', 5],
+    ['withdraw', 30],
+  ],
+  physical: [
+    ['buy', 40],
+    ['sell', 3],
+    ['withdraw', 57],
+  ],
+  small: [['buy', 100]],
+  daily: [
+    ['card', 75],
+    ['buy', 20],
+    ['sell', 5],
+  ],
+};
+
+/** Part des retraits mis en coffre sécurisé chez Godot & Fils, par segment. */
+const VAULT_SHARE: Record<Profile, number> = { debank: 0.7, physical: 0.5, small: 0, daily: 0 };
+
+const METAL_NAME: Record<Metal, string> = { gold: 'or', silver: 'argent', platinum: 'platine' };
+
 function oneOperation(sim: Simulation, c: SimClient, prices: Prices) {
-  const w: Record<Profile, [string, number][]> = {
-    saver: [
-      ['buy', 85],
-      ['sell', 5],
-      ['withdraw', 10],
-    ],
-    investor: [
-      ['buy', 70],
-      ['sell', 10],
-      ['withdraw', 20],
-    ],
-    bars: [
-      ['buy', 40],
-      ['sell', 5],
-      ['withdraw', 55],
-    ],
-    seller: [
-      ['buy', 50],
-      ['sell', 45],
-      ['withdraw', 5],
-    ],
-  };
-  const op = pick<string>(sim.rng, w[c.profile]);
+  const op = pick<string>(sim.rng, OPERATIONS[c.profile]);
   try {
     if (op === 'buy') {
-      const big = c.profile === 'investor' || c.profile === 'bars';
-      const amount = Math.round(big ? 200 + sim.rng() * 1800 : 30 + sim.rng() * 170);
-      const metal = pick<Metal>(sim.rng, [
-        ['gold', 70],
-        ['silver', 20],
-        ['platinum', 10],
-      ]);
+      const amount = Math.round(
+        c.profile === 'debank'
+          ? 500 + sim.rng() * 4500
+          : c.profile === 'physical'
+            ? 100 + sim.rng() * 700
+            : c.profile === 'small'
+              ? 10 + sim.rng() * 50
+              : 100 + sim.rng() * 200,
+      );
+      const metal =
+        c.profile === 'daily'
+          ? 'gold'
+          : pick<Metal>(sim.rng, [
+              ['gold', 70],
+              ['silver', 20],
+              ['platinum', 10],
+            ]);
       c.account = buy(c.account, prices, metal, { unit: 'eur', value: amount }, sim.now);
       sim.counters.buys += 1;
       sim.counters.boughtEur += amount;
-      log(
-        sim,
-        'buy',
-        `${c.name} achète ${amount} € de ${metal === 'gold' ? 'or' : metal === 'silver' ? 'argent' : 'platine'}`,
-      );
+      log(sim, 'buy', `${c.name} achète ${amount} € de ${METAL_NAME[metal]}`);
+    } else if (op === 'card') {
+      const amount = Math.round((5 + sim.rng() * 75) * 100) / 100;
+      // La carte vend de l'or : on en rachète un peu si le compte est vide.
+      if (c.account.holdings.gold * prices.gold < amount * 1.2 + 5) {
+        c.account = buy(c.account, prices, 'gold', { unit: 'eur', value: 200 }, sim.now);
+        sim.counters.buys += 1;
+        sim.counters.boughtEur += 200;
+      }
+      c.account = cardPay(c.account, prices, 'Commerce simulé', amount, sim.now);
+      sim.counters.cards += 1;
+      sim.counters.cardEur += amount;
+      log(sim, 'card', `${c.name} paie ${amount.toLocaleString('fr-FR')} € par carte`);
     } else if (op === 'sell') {
       const metal: Metal = c.account.holdings.gold > 0 ? 'gold' : c.account.holdings.silver > 0 ? 'silver' : 'platinum';
       const grams = Math.round(c.account.holdings[metal] * (0.1 + sim.rng() * 0.4) * 1000) / 1000;
@@ -246,13 +305,9 @@ function oneOperation(sim: Simulation, c: SimClient, prices: Prices) {
       const eur = c.account.transactions.length > before ? c.account.transactions[0].eur : 0;
       sim.counters.sells += 1;
       sim.counters.soldEur += eur;
-      log(
-        sim,
-        'sell',
-        `${c.name} vend ${grams} g de ${metal === 'gold' ? 'or' : metal === 'silver' ? 'argent' : 'platine'}`,
-      );
+      log(sim, 'sell', `${c.name} vend ${grams} g de ${METAL_NAME[metal]}`);
     } else {
-      withdraw(sim, c, prices);
+      withdraw(sim, c, prices, sim.rng() < VAULT_SHARE[c.profile]);
     }
   } catch (e) {
     if (!(e instanceof LedgerError)) throw e;
@@ -261,12 +316,42 @@ function oneOperation(sim: Simulation, c: SimClient, prices: Prices) {
   }
 }
 
-/** Fait avancer la simulation de `seconds` secondes (temps simulé) aux cours donnés. */
-export function stepSimulation(sim: Simulation, prices: Prices, seconds: number): Simulation {
+/** Cours simulés : marche aléatoire log-normale de chaque métal autour du cours de départ. */
+function walkPrices(sim: Simulation, live: Prices, seconds: number): Prices {
+  if (sim.priceMode === 'live' || !sim.prices) {
+    sim.prices = { ...live };
+    return sim.prices;
+  }
+  const next = { ...sim.prices };
+  for (const m of ['gold', 'silver', 'platinum'] as Metal[]) {
+    const u1 = Math.max(sim.rng(), 1e-12);
+    const u2 = sim.rng();
+    const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    const sigma = (VOLATILITY[m] * Math.sqrt(seconds)) / Math.sqrt(365 * 86_400);
+    next[m] = Math.max(0.01, next[m] * Math.exp(sigma * z - (sigma * sigma) / 2));
+  }
+  sim.prices = next;
+  return next;
+}
+
+const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+
+/**
+ * Fait avancer la simulation de `seconds` secondes (temps simulé). `live` : cours en direct, utilisés tels quels en
+ * mode « live » et comme point de départ des cours simulés.
+ */
+export function stepSimulation(sim: Simulation, live: Prices, seconds: number): Simulation {
   sim.now = new Date(sim.now.getTime() + seconds * 1000);
+  const prices = walkPrices(sim, live, seconds);
+  const today = dayKey(sim.now);
   for (const c of sim.clients) {
-    const p = (RATE_PER_DAY[c.profile] * seconds) / 86_400;
+    const p = (SEGMENTS[c.profile].ratePerDay * seconds) / 86_400;
     if (sim.rng() < p) oneOperation(sim, c, prices);
+    // Une fois par jour simulé : garde en coffre, frais d'oxydation, garde des lingotins en coffre sécurisé.
+    if (c.chargedDay !== today) {
+      c.account = applyDormancy(c.account, prices, sim.now);
+      c.chargedDay = today;
+    }
   }
   restock(sim, prices);
   const insured = insuranceStatus(sim.company, prices.gold).value;
@@ -307,7 +392,7 @@ export function summarize(sim: Simulation, prices: Prices): SimSummary {
   return {
     clients: sim.clients.length,
     days: Math.max(0, Math.floor((sim.now.getTime() - sim.startedAt.getTime()) / 86_400_000)),
-    operations: sim.counters.buys + sim.counters.sells + sim.counters.withdrawals,
+    operations: sim.counters.buys + sim.counters.sells + sim.counters.withdrawals + sim.counters.cards,
     revenue: {
       buy: r0(sum.buy),
       sale: r0(sum.sale),
@@ -326,7 +411,7 @@ export function summarize(sim: Simulation, prices: Prices): SimSummary {
 
 /** Texte enregistrable de la simulation (le générateur aléatoire est reconstruit à la lecture). */
 export function serializeSimulation(sim: Simulation, savedAt = new Date()): string {
-  return JSON.stringify({ v: 1, savedAt: savedAt.toISOString(), sim });
+  return JSON.stringify({ v: 2, savedAt: savedAt.toISOString(), sim });
 }
 
 /** Relit une simulation enregistrée, avec la date d'enregistrement ; null si le texte est abîmé. */
@@ -335,7 +420,7 @@ export function restoreSimulation(text: string | null): { sim: Simulation; saved
   try {
     const d = JSON.parse(text);
     const s = d?.sim;
-    if (d?.v !== 1 || !s || !Array.isArray(s.clients) || typeof s.rngState !== 'number' || !s.company) return null;
+    if (d?.v !== 2 || !s || !Array.isArray(s.clients) || typeof s.rngState !== 'number' || !s.company) return null;
     const sim: Simulation = { ...s, now: new Date(s.now), startedAt: new Date(s.startedAt) };
     sim.rng = rngOf(sim);
     return { sim, savedAt: new Date(d.savedAt) };
@@ -360,4 +445,36 @@ export function catchUp(sim: Simulation, prices: Prices, elapsedSeconds: number)
     left -= dt;
   }
   return total;
+}
+
+export interface SegmentRow {
+  segment: Profile;
+  label: string;
+  clients: number;
+  operations: number;
+  revenue: number;
+  /** Coût des lingotins et de la garde, estimé. */
+  costs: number;
+  margin: number;
+}
+
+/** Revenus, coûts et résultat de chaque segment de clients. */
+export function summarizeBySegment(sim: Simulation, prices: Prices): SegmentRow[] {
+  const rows = new Map<Profile, SegmentRow>();
+  for (const k of Object.keys(SEGMENTS) as Profile[]) {
+    rows.set(k, { segment: k, label: SEGMENTS[k].label, clients: 0, operations: 0, revenue: 0, costs: 0, margin: 0 });
+  }
+  for (const c of sim.clients) {
+    const r = companyReport(c.account, prices, 'all', sim.now);
+    const row = rows.get(c.profile)!;
+    row.clients += 1;
+    row.operations += r.operations;
+    row.revenue += r.revenue.total;
+    row.costs += r.costs.total;
+    row.margin += r.margin;
+  }
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  return [...rows.values()]
+    .filter((r) => r.clients > 0)
+    .map((r) => ({ ...r, revenue: r2(r.revenue), costs: r2(r.costs), margin: r2(r.margin) }));
 }

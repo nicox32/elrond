@@ -7,17 +7,27 @@ import {
   catchUp,
   createSimulation,
   MAX_CATCH_UP_DAYS,
+  MIXES,
+  type MixId,
   restoreSimulation,
   serializeSimulation,
   type Simulation,
   stepSimulation,
   summarize,
+  summarizeBySegment,
 } from '../logic/simulation';
 import { clearSimulationText, loadSimulationText, saveSimulationText } from '../storage';
 import { useBank } from '../state/BankProvider';
 import { colors } from '../theme';
 import { Segmented } from './Segmented';
 import { Banner, Button, Card, Hint, KeyValue, SectionTitle } from './ui';
+
+const SEGMENT_SHORT = {
+  debank: 'débancarisés',
+  physical: 'métaux physiques',
+  small: 'petits budgets',
+  daily: 'quotidiens',
+} as const;
 
 // La simulation vit hors de l'écran : en le quittant puis en revenant, elle reprend où elle en était.
 let current: Simulation | null = null;
@@ -34,6 +44,8 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   const [, setTick] = useState(0);
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState<string>('3600');
+  const [mix, setMix] = useState<MixId>('balanced');
+  const [priceMode, setPriceMode] = useState<'sim' | 'live'>('sim');
   const prices = useRef(quote.prices);
   const [note, setNote] = useState<string | null>(null);
   const [tooBig, setTooBig] = useState(false);
@@ -93,7 +105,7 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   }, [running, speed]);
 
   function start() {
-    if (!current) current = createSimulation(50, 2026, new Date());
+    if (!current) current = createSimulation(50, 2026, new Date(), { mix, priceMode });
     setRunning(true);
     setTick((t) => t + 1);
   }
@@ -107,17 +119,46 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
     setTick((t) => t + 1);
   }
 
-  const s = sim ? summarize(sim, quote.prices) : null;
+  const shown = sim?.prices ?? quote.prices;
+  const s = sim ? summarize(sim, shown) : null;
+  const segments = sim ? summarizeBySegment(sim, shown) : [];
 
   return (
     <>
       <Button title="← Espace DEV" variant="ghost" onPress={onBack} />
       <Banner icon="🧪" title="Simulateur de clients (fictifs)">
-        50 clients inventés achètent, vendent et retirent des lingotins aux cours en direct, avec les vraies règles :
-        frais, prix tout compris, stock, blocage des formats à perte, assurance. Rien n’est lié à votre vrai compte, et
-        la simulation est enregistrée et, appli fermée, elle continue en temps réel : au retour, le temps écoulé est
-        rattrapé d’un coup (90 jours au plus).
+        50 clients inventés (débancarisés, métaux physiques, petits budgets, quotidiens avec la carte) achètent,
+        vendent, paient et retirent des lingotins, avec les vraies règles : frais, garde, prix tout compris, stock,
+        blocage des formats à perte, assurance. Rien n’est lié à votre vrai compte, et la simulation est enregistrée et,
+        appli fermée, elle continue en temps réel : au retour, le temps écoulé est rattrapé d’un coup (90 jours au
+        plus).
       </Banner>
+      {!sim ? (
+        <>
+          <SectionTitle>Base de clients</SectionTitle>
+          <Segmented
+            value={mix}
+            onChange={setMix}
+            options={(Object.keys(MIXES) as MixId[]).map((k) => ({ value: k, label: MIXES[k].label }))}
+          />
+          <Hint>
+            {Object.entries(MIXES[mix].mix)
+              .map(([k, v]) => `${v} % ${SEGMENT_SHORT[k as keyof typeof SEGMENT_SHORT]}`)
+              .join(' · ')}
+          </Hint>
+        </>
+      ) : null}
+      <Segmented
+        value={priceMode}
+        onChange={(m) => {
+          setPriceMode(m);
+          if (current) current.priceMode = m;
+        }}
+        options={[
+          { value: 'sim', label: 'Cours simulés' },
+          { value: 'live', label: 'Cours en direct' },
+        ]}
+      />
       <Segmented value={speed} onChange={setSpeed} options={SPEEDS.map((x) => ({ value: x.value, label: x.label }))} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}>
@@ -144,6 +185,11 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
       ) : null}
       {sim && s ? (
         <>
+          <Hint>
+            Cours {sim.priceMode === 'sim' ? 'simulés' : 'en direct'} : or {shown.gold.toFixed(2).replace('.', ',')} €/g
+            · argent {shown.silver.toFixed(2).replace('.', ',')} €/g · platine{' '}
+            {shown.platinum.toFixed(2).replace('.', ',')} €/g
+          </Hint>
           <SectionTitle>La société</SectionTitle>
           <Card style={{ gap: 6 }}>
             <KeyValue label="Temps simulé" value={`${s.days} jour${s.days > 1 ? 's' : ''}`} />
@@ -156,10 +202,27 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
             <KeyValue label="Or et argent des clients" value={formatEur(s.assets)} />
           </Card>
 
+          <SectionTitle>Par segment de clients</SectionTitle>
+          <Card style={{ gap: 8 }}>
+            {segments.map((g) => (
+              <View key={g.segment} style={{ gap: 2 }}>
+                <Text style={styles.segTitle}>{g.label}</Text>
+                <Text style={styles.event}>
+                  {g.clients} clients · {g.operations} opérations · revenus {formatEur(g.revenue)} · résultat{' '}
+                  {formatEur(g.margin)}
+                </Text>
+              </View>
+            ))}
+          </Card>
+
           <SectionTitle>Activité</SectionTitle>
           <Card style={{ gap: 6 }}>
             <KeyValue label="Achats · ventes" value={`${sim.counters.buys} · ${sim.counters.sells}`} />
             <KeyValue label="Retraits de lingotins" value={String(sim.counters.withdrawals)} />
+            <KeyValue
+              label="Paiements par carte"
+              value={`${sim.counters.cards} · ${formatEur(sim.counters.cardEur)}`}
+            />
             <KeyValue label="Opérations refusées" value={String(sim.counters.refused)} />
             <KeyValue
               label="Commandes à Godot & Fils"
@@ -220,5 +283,6 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  segTitle: { color: colors.text, fontSize: 13.5, fontWeight: '700' },
   event: { color: colors.textMuted, fontSize: 12 },
 });

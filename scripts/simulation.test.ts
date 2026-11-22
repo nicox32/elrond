@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createSimulation, stepSimulation, summarize } from '../src/logic/simulation.ts';
+import {
+  createSimulation,
+  MIXES,
+  SEGMENTS,
+  stepSimulation,
+  summarize,
+  summarizeBySegment,
+} from '../src/logic/simulation.ts';
 import { INSURANCE_CAP_EUR, insuranceStatus } from '../src/logic/stock.ts';
 
 const prices = { gold: 103.53, silver: 1.24, platinum: 38.33 };
@@ -35,7 +42,7 @@ test('simulateur : l’assurance de la société n’est jamais dépassée, rés
   assert.ok(insuranceStatus(sim.company, prices.gold).value <= INSURANCE_CAP_EUR + 0.01);
   assert.ok(s.peakInsured <= INSURANCE_CAP_EUR + 0.01);
   assert.ok(s.revenue.total > 0 && s.revenue.buy > 0 && s.revenue.physical > 0);
-  assert.equal(s.operations, sim.counters.buys + sim.counters.sells + sim.counters.withdrawals);
+  assert.equal(s.operations, sim.counters.buys + sim.counters.sells + sim.counters.withdrawals + sim.counters.cards);
   assert.equal(s.days, 90);
   // Même graine : même simulation.
   const again = summarize(run(50, 90), prices);
@@ -61,4 +68,55 @@ test('simulateur : enregistrée puis reprise, la simulation continue à l’iden
   // Texte abîmé ou absent : pas de simulation.
   assert.equal(restoreSimulation('pas du json'), null);
   assert.equal(restoreSimulation(null), null);
+});
+
+test('simulateur : quatre segments, répartition choisie, carte, coffre sécurisé et garde', () => {
+  const sim = run(100, 60);
+  const by = summarizeBySegment(sim, sim.prices!);
+  assert.deepEqual(by.map((r) => r.segment).sort(), ['daily', 'debank', 'physical', 'small']);
+  assert.equal(
+    by.reduce((s, r) => s + r.clients, 0),
+    100,
+  );
+  // Répartition « Équilibré » : environ 20 / 25 / 40 / 15 %.
+  const share = (k: string) => by.find((r) => r.segment === k)!.clients;
+  assert.ok(share('small') > share('daily') && share('small') > share('debank'));
+  // Les quotidiens ont la carte et paient avec ; les petits budgets n'ont que des achats.
+  assert.ok(sim.counters.cards > 50);
+  assert.ok(sim.clients.filter((c) => c.profile === 'daily').every((c) => !!c.account.card));
+  assert.ok(
+    sim.clients
+      .filter((c) => c.profile === 'small')
+      .every(
+        (c) =>
+          !c.account.transactions.some(
+            (t) => t.kind !== 'buy' && t.kind !== 'fee_custody' && t.kind !== 'fee_dormancy',
+          ),
+      ),
+  );
+  // Lingotins en coffre sécurisé chez Godot & Fils, et garde prélevée chaque mois.
+  assert.ok(sim.clients.some((c) => (c.account.homeVault ?? []).some((b) => b.vault)));
+  const s = summarize(sim, sim.prices!);
+  assert.ok(s.revenue.custody > 0);
+  assert.ok(SEGMENTS.small.ratePerDay > SEGMENTS.debank.ratePerDay);
+  // Une autre répartition change la composition de la base.
+  const small = createSimulation(100, 7, new Date('2026-11-23T08:00:00'), { mix: 'small' });
+  const smallShare = small.clients.filter((c) => c.profile === 'small').length;
+  assert.ok(smallShare > share('small') && MIXES.small.mix.small === 70);
+});
+
+test('simulateur : cours simulés (marche aléatoire) ou en direct', () => {
+  const start = new Date('2026-11-23T08:00:00');
+  const walk = createSimulation(10, 3, start);
+  for (let h = 0; h < 24 * 30; h++) stepSimulation(walk, prices, 3600);
+  assert.notEqual(walk.prices!.gold, prices.gold);
+  assert.ok(walk.prices!.gold > prices.gold * 0.7 && walk.prices!.gold < prices.gold * 1.4, 'marche modérée');
+  // Mode direct : les cours donnés sont utilisés tels quels.
+  const live = createSimulation(10, 3, start, { priceMode: 'live' });
+  for (let h = 0; h < 48; h++) stepSimulation(live, prices, 3600);
+  assert.deepEqual(live.prices, prices);
+  // Même graine : même marche.
+  const again = createSimulation(10, 3, start);
+  for (let h = 0; h < 24 * 30; h++) stepSimulation(again, prices, 3600);
+  assert.deepEqual(again.prices, walk.prices);
 });
