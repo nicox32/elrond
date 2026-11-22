@@ -9,7 +9,7 @@ import { History2019 } from '../components/History2019';
 import { History900 } from '../components/History900';
 import { stockSummary } from '../logic/stock';
 import { PhysicalFeesEditor } from '../components/PhysicalFeesEditor';
-import { SimulationPanel } from '../components/SimulationPanel';
+import { CloudSimulation } from '../components/CloudSimulation';
 import { InsuranceMeter } from '../components/InsuranceMeter';
 import { PinConfirm } from '../components/PinConfirm';
 import { Button, Card, Hint, KeyValue, ListRow, Message, Screen, SectionTitle, styles as ui } from '../components/ui';
@@ -151,7 +151,7 @@ function CompanyDashboard() {
   if (view === 'sim') {
     return (
       <Screen testID="screen-dev-sim">
-        <SimulationPanel onBack={() => setView('dashboard')} />
+        <CloudSimulation onBack={() => setView('dashboard')} />
       </Screen>
     );
   }
@@ -323,8 +323,8 @@ function CompanyDashboard() {
           testID="open-godot"
         />
         <ListRow
-          title="Simulateur de clients"
-          subtitle="50 clients fictifs qui achètent, vendent et retirent des lingotins en direct"
+          title="Simulation de clients (GitHub)"
+          subtitle="50 clients en temps réel et 15 000 sur l’histoire, calculés dans le cloud"
           onPress={() => setView('sim')}
           testID="open-sim"
         />

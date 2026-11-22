@@ -1,0 +1,77 @@
+# Simulation de clients fictifs d'Orvia, exécutée dans le cloud (Espace DEV de l'appli, lecture seule) :
+#  - 50 clients en temps réel, aux cours réels : état repris à chaque exécution, temps écoulé rattrapé (90 jours au plus) ;
+#  - 15 000 clients par tranche de revenu (Insee) sur des périodes historiques réelles.
+# Publié dans la release « simulation » (pré-version : ne compte pas comme une version de l'appli) :
+#   https://github.com/nicox32/elrond/releases/download/simulation/summary.json (et population.json)
+# Lancement manuel : « reset » repart de zéro ; « mix » et « ramp_days » règlent la base de clients.
+name: Simulation de clients
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+    inputs:
+      reset:
+        description: 'Repartir de zéro (nouvelle simulation de 50 clients)'
+        type: boolean
+        default: false
+      mix:
+        description: 'Répartition des clients'
+        type: choice
+        options: [balanced, small, physical]
+        default: balanced
+      ramp_days:
+        description: 'Jours sur lesquels les clients arrivent'
+        type: string
+        default: '180'
+      force_population:
+        description: 'Recalculer la population de 15 000 clients'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Une seule exécution à la fois, pour ne pas écraser l'état.
+concurrency:
+  group: simulation
+  cancel-in-progress: false
+
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            server
+            src/logic
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Faire avancer la simulation
+        env:
+          SIM_RESET: ${{ inputs.reset }}
+          SIM_MIX: ${{ inputs.mix }}
+          SIM_RAMP_DAYS: ${{ inputs.ramp_days }}
+          SIM_FORCE_POPULATION: ${{ inputs.force_population }}
+        run: node server/simulation-cloud.ts
+
+      - name: Publier les résultats
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: simulation
+          name: Simulation de clients (données de l'appli)
+          prerelease: true
+          make_latest: false
+          files: |
+            out/state.json
+            out/summary.json
+            out/population.json
+          body: |
+            Simulation de clients fictifs d'Orvia (aucun vrai compte), mise à jour toutes les heures. summary.json :
+            50 clients en temps réel. population.json : 15 000 clients par tranche de revenu sur des périodes
+            historiques. state.json : état de la simulation. Ce n'est pas une version de l'appli.
