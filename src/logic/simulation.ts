@@ -3,7 +3,7 @@
  * lingotins et des pièces aux cours en direct, avec les vraies règles de l'appli (frais, prix tout compris, stock,
  * blocage des formats à perte, assurance). Rien n'est lié au vrai compte : tout est fictif et reste en mémoire.
  */
-import { companyReport } from './company.ts';
+import { COMPANY, companyReport } from './company.ts';
 import { applyDormancy, buy, cardPay, createAccount, creditCash, issueCard, LedgerError, sell } from './ledger.ts';
 import {
   BAR_PRODUCTS,
@@ -50,11 +50,26 @@ export interface SimClient {
   account: Account;
   /** Dernier jour simulé où la garde et l'oxydation ont été prélevées (AAAA-MM-JJ). */
   chargedDay?: string;
+  /** Date d'arrivée du client (montée en charge progressive) ; absent : présent dès le départ. */
+  joinAt?: string;
+}
+
+/** Commande passée à Godot & Fils, en route vers le stock de la société. */
+export interface PendingOrder {
+  product: string;
+  qty: number;
+  unitCost: number;
+  goldPrice: number;
+  arrivesAt: string;
 }
 
 export interface Simulation {
   seed: number;
   mixId: MixId;
+  /** Jours sur lesquels les clients arrivent (0 : tous présents dès le départ). */
+  rampDays: number;
+  /** Commandes en route : le lot n'entre au stock qu'à sa date d'arrivée (délai de commande de Godot & Fils). */
+  pending: PendingOrder[];
   /** « sim » : cours simulés (marche aléatoire autour du cours de départ) ; « live » : cours en direct. */
   priceMode: 'sim' | 'live';
   /** Cours utilisés par la simulation (simulés ou en direct). */
@@ -75,6 +90,8 @@ export interface Simulation {
     cardEur: number;
     refused: number;
     restocks: number;
+    /** Retraits impossibles faute de stock (formats servis seulement sur stock). */
+    stockouts: number;
     boughtEur: number;
     soldEur: number;
     supplierEur: number;
@@ -117,10 +134,11 @@ export function createSimulation(
   clients = 50,
   seed = 2026,
   now = new Date(),
-  options: { mix?: MixId; priceMode?: 'sim' | 'live' } = {},
+  options: { mix?: MixId; priceMode?: 'sim' | 'live'; rampDays?: number } = {},
 ): Simulation {
   const mixId = options.mix ?? 'balanced';
   const mix = MIXES[mixId].mix;
+  const rampDays = Math.max(0, options.rampDays ?? 0);
   const holder = { rngState: seed >>> 0 };
   const rng = rngOf(holder);
   const list: SimClient[] = [];
@@ -130,14 +148,19 @@ export function createSimulation(
       (Object.keys(mix) as Profile[]).map((k) => [k, mix[k]]),
     );
     const name = `Client ${String(i).padStart(3, '0')} (simulé)`;
-    let account = createAccount(name, now);
+    // Montée en charge : les clients arrivent régulièrement sur la période, le premier dès le départ.
+    const joinAt =
+      rampDays > 0 ? new Date(now.getTime() + ((i - 1) / Math.max(1, clients - 1)) * rampDays * 86_400_000) : now;
+    let account = createAccount(name, joinAt);
     // Les quotidiens ont la carte Orvia, financée par leur or.
-    if (profile === 'daily') account = issueCard(account, now);
-    list.push({ name, profile, account });
+    if (profile === 'daily') account = issueCard(account, joinAt);
+    list.push({ name, profile, account, ...(rampDays > 0 ? { joinAt: joinAt.toISOString() } : {}) });
   }
   const sim: Simulation = {
     seed,
     mixId,
+    rampDays,
+    pending: [],
     priceMode: options.priceMode ?? 'sim',
     prices: null,
     rngState: holder.rngState,
@@ -154,6 +177,7 @@ export function createSimulation(
       cardEur: 0,
       refused: 0,
       restocks: 0,
+      stockouts: 0,
       boughtEur: 0,
       soldEur: 0,
       supplierEur: 0,
@@ -201,16 +225,40 @@ function withdraw(sim: Simulation, c: SimClient, prices: Prices, vault: boolean)
   log(sim, 'withdraw', `${c.name} ${vault ? 'met en coffre' : 'retire'} ${qty} × ${p.label.replace(/ \(.*/, '')}`);
 }
 
-/** La société commande un lot quand le stock d'un format est bas, dans la limite de son assurance. */
+/** Pièces d'un format déjà commandées et en route. */
+const inTransit = (sim: Simulation, product: string) =>
+  sim.pending.filter((o) => o.product === product).reduce((n, o) => n + o.qty, 0);
+
+/** Les commandes arrivées entrent au stock de la société. */
+function deliver(sim: Simulation) {
+  const due = sim.pending.filter((o) => new Date(o.arrivesAt).getTime() <= sim.now.getTime());
+  if (!due.length) return;
+  sim.pending = sim.pending.filter((o) => !due.includes(o));
+  for (const o of due) {
+    sim.company = addStock(
+      sim.company,
+      { product: o.product, qty: o.qty, source: 'maison', unitCost: o.unitCost, goldPrice: o.goldPrice },
+      new Date(o.arrivesAt),
+      sim.rng,
+    );
+  }
+}
+
+/**
+ * La société commande un lot quand le stock d'un format (commandes en route comprises) est bas, dans la limite de son
+ * assurance ; le lot arrive après le délai de commande de Godot & Fils.
+ */
 function restock(sim: Simulation, prices: Prices) {
   const fees = physicalFeesOf();
   for (const p of BAR_PRODUCTS) {
     const rule = RESTOCK[p.id];
-    if (!rule || stockedPieces(sim.company, p.id) >= rule.below) continue;
+    if (!rule || stockedPieces(sim.company, p.id) + inTransit(sim, p.id) >= rule.below) continue;
     const qty = Math.max(rule.lot, minProfitableLot(p.id, prices.gold, fees) ?? 1);
     const unit = lotUnitCost(p.id, qty, prices.gold, fees);
+    // Assurance : le stock plus ce qui est déjà en route plus ce lot.
+    const onTheWay = sim.pending.reduce((s, o) => s + o.qty * o.unitCost, 0);
     try {
-      assertInsuranceRoom(sim.company, prices.gold, qty * unit);
+      assertInsuranceRoom(sim.company, prices.gold, onTheWay + qty * unit);
     } catch (e) {
       if (e instanceof LedgerError) {
         log(sim, 'refused', `Commande de ${qty} × ${p.label.replace(/ \(.*/, '')} reportée : assurance pleine`);
@@ -218,18 +266,14 @@ function restock(sim: Simulation, prices: Prices) {
       }
       throw e;
     }
-    sim.company = addStock(
-      sim.company,
-      { product: p.id, qty, source: 'maison', unitCost: unit, goldPrice: prices.gold },
-      sim.now,
-      sim.rng,
-    );
+    const arrivesAt = new Date(sim.now.getTime() + fees.leadDays.commande * 86_400_000).toISOString();
+    sim.pending.push({ product: p.id, qty, unitCost: unit, goldPrice: prices.gold, arrivesAt });
     sim.counters.restocks += 1;
     sim.counters.supplierEur += qty * unit;
     log(
       sim,
       'restock',
-      `Commande Godot & Fils : ${qty} × ${p.label.replace(/ \(.*/, '')} à ${Math.round(unit)} € pièce`,
+      `Commande Godot & Fils : ${qty} × ${p.label.replace(/ \(.*/, '')} à ${Math.round(unit)} € pièce, livraison dans ${fees.leadDays.commande} jours`,
     );
   }
 }
@@ -311,6 +355,7 @@ function oneOperation(sim: Simulation, c: SimClient, prices: Prices) {
     }
   } catch (e) {
     if (!(e instanceof LedgerError)) throw e;
+    if (/limite du stock/.test(e.message)) sim.counters.stockouts += 1;
     sim.counters.refused += 1;
     log(sim, 'refused', `${c.name} : ${e.message}`);
   }
@@ -344,7 +389,9 @@ export function stepSimulation(sim: Simulation, live: Prices, seconds: number): 
   sim.now = new Date(sim.now.getTime() + seconds * 1000);
   const prices = walkPrices(sim, live, seconds);
   const today = dayKey(sim.now);
+  deliver(sim);
   for (const c of sim.clients) {
+    if (c.joinAt && new Date(c.joinAt).getTime() > sim.now.getTime()) continue;
     const p = (SEGMENTS[c.profile].ratePerDay * seconds) / 86_400;
     if (sim.rng() < p) oneOperation(sim, c, prices);
     // Une fois par jour simulé : garde en coffre, frais d'oxydation, garde des lingotins en coffre sécurisé.
@@ -370,6 +417,11 @@ export interface SimSummary {
   insured: number;
   insuranceCap: number;
   peakInsured: number;
+  stockouts: number;
+  /** Résultat estimé ramené à un an. */
+  marginPerYear: number;
+  /** Clients comme ceux-ci nécessaires pour couvrir les frais fixes annuels de la société (hypothèse). */
+  breakEvenClients: number | null;
 }
 
 /** Chiffres de la société d'après les opérations de tous les clients simulés. */
@@ -389,6 +441,10 @@ export function summarize(sim: Simulation, prices: Prices): SimSummary {
   }
   const ins = insuranceStatus(sim.company, prices.gold);
   const r0 = (n: number) => Math.round(n * 100) / 100;
+  const years = Math.max(1 / 12, (sim.now.getTime() - sim.startedAt.getTime()) / (365.25 * 86_400_000));
+  const joined = sim.clients.filter((c) => !c.joinAt || new Date(c.joinAt).getTime() <= sim.now.getTime()).length;
+  const marginPerYear = sum.margin / years;
+  const marginPerClient = joined > 0 ? marginPerYear / joined : 0;
   return {
     clients: sim.clients.length,
     days: Math.max(0, Math.floor((sim.now.getTime() - sim.startedAt.getTime()) / 86_400_000)),
@@ -406,12 +462,15 @@ export function summarize(sim: Simulation, prices: Prices): SimSummary {
     insured: r0(ins.value),
     insuranceCap: ins.cap,
     peakInsured: r0(sim.peakInsuredEur),
+    stockouts: sim.counters.stockouts,
+    marginPerYear: r0(marginPerYear),
+    breakEvenClients: marginPerClient > 0 ? Math.ceil(COMPANY.fixedYearly / marginPerClient) : null,
   };
 }
 
 /** Texte enregistrable de la simulation (le générateur aléatoire est reconstruit à la lecture). */
 export function serializeSimulation(sim: Simulation, savedAt = new Date()): string {
-  return JSON.stringify({ v: 2, savedAt: savedAt.toISOString(), sim });
+  return JSON.stringify({ v: 3, savedAt: savedAt.toISOString(), sim });
 }
 
 /** Relit une simulation enregistrée, avec la date d'enregistrement ; null si le texte est abîmé. */
@@ -420,7 +479,7 @@ export function restoreSimulation(text: string | null): { sim: Simulation; saved
   try {
     const d = JSON.parse(text);
     const s = d?.sim;
-    if (d?.v !== 2 || !s || !Array.isArray(s.clients) || typeof s.rngState !== 'number' || !s.company) return null;
+    if (d?.v !== 3 || !s || !Array.isArray(s.clients) || typeof s.rngState !== 'number' || !s.company) return null;
     const sim: Simulation = { ...s, now: new Date(s.now), startedAt: new Date(s.startedAt) };
     sim.rng = rngOf(sim);
     return { sim, savedAt: new Date(d.savedAt) };
@@ -477,4 +536,24 @@ export function summarizeBySegment(sim: Simulation, prices: Prices): SegmentRow[
   return [...rows.values()]
     .filter((r) => r.clients > 0)
     .map((r) => ({ ...r, revenue: r2(r.revenue), costs: r2(r.costs), margin: r2(r.margin) }));
+}
+
+/** Valeurs repères d'une série de résultats : minimum, 10 %, médiane, 90 %, maximum. */
+export function percentiles(values: number[]) {
+  const v = [...values].sort((a, b) => a - b);
+  const at = (q: number) => v[Math.min(v.length - 1, Math.max(0, Math.round(q * (v.length - 1))))];
+  return { min: v[0], p10: at(0.1), median: at(0.5), p90: at(0.9), max: v[v.length - 1] };
+}
+
+/** Une simulation complète d'une durée donnée, sans l'écran : sert aux séries d'essais. */
+export function simulateRun(
+  seed: number,
+  options: { clients?: number; mix?: MixId; rampDays?: number; days?: number },
+  live: Prices,
+  now = new Date('2026-01-05T08:00:00'),
+): SimSummary {
+  const sim = createSimulation(options.clients ?? 50, seed, now, { mix: options.mix, rampDays: options.rampDays });
+  const hours = Math.round((options.days ?? 365) * 24);
+  for (let h = 0; h < hours; h++) stepSimulation(sim, live, 3600);
+  return summarize(sim, sim.prices ?? live);
 }

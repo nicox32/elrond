@@ -9,7 +9,10 @@ import {
   MAX_CATCH_UP_DAYS,
   MIXES,
   type MixId,
+  percentiles,
   restoreSimulation,
+  simulateRun,
+  type SimSummary,
   serializeSimulation,
   type Simulation,
   stepSimulation,
@@ -46,6 +49,10 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   const [speed, setSpeed] = useState<string>('3600');
   const [mix, setMix] = useState<MixId>('balanced');
   const [priceMode, setPriceMode] = useState<'sim' | 'live'>('sim');
+  const [ramp, setRamp] = useState<'0' | '180'>('0');
+  // Série d'essais d'un an avec des graines différentes : donne une fourchette plutôt qu'un seul chiffre.
+  const [mc, setMc] = useState<{ done: number; total: number; runs: SimSummary[] } | null>(null);
+  const mcStop = useRef(false);
   const prices = useRef(quote.prices);
   const [note, setNote] = useState<string | null>(null);
   const [tooBig, setTooBig] = useState(false);
@@ -85,6 +92,7 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
     });
     return () => {
       alive = false;
+      mcStop.current = true;
       persist();
     };
   }, []);
@@ -105,12 +113,28 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
   }, [running, speed]);
 
   function start() {
-    if (!current) current = createSimulation(50, 2026, new Date(), { mix, priceMode });
+    if (!current) current = createSimulation(50, 2026, new Date(), { mix, priceMode, rampDays: Number(ramp) });
     setRunning(true);
     setTick((t) => t + 1);
   }
 
+  function runSeries(total = 8) {
+    mcStop.current = false;
+    const runs: SimSummary[] = [];
+    setMc({ done: 0, total, runs });
+    const next = (i: number) => {
+      if (mcStop.current) return;
+      if (i >= total) return;
+      const run = simulateRun(1000 + i, { clients: 50, mix, rampDays: Number(ramp), days: 365 }, prices.current);
+      runs.push(run);
+      setMc({ done: i + 1, total, runs: [...runs] });
+      setTimeout(() => next(i + 1), 30);
+    };
+    setTimeout(() => next(0), 30);
+  }
+
   function reset() {
+    mcStop.current = true;
     setRunning(false);
     current = null;
     setNote(null);
@@ -140,6 +164,14 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
             value={mix}
             onChange={setMix}
             options={(Object.keys(MIXES) as MixId[]).map((k) => ({ value: k, label: MIXES[k].label }))}
+          />
+          <Segmented
+            value={ramp}
+            onChange={setRamp}
+            options={[
+              { value: '0', label: 'Tous dès le départ' },
+              { value: '180', label: 'Arrivée sur 6 mois' },
+            ]}
           />
           <Hint>
             {Object.entries(MIXES[mix].mix)
@@ -199,6 +231,14 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
             <KeyValue label="· retraits de lingotins et pièces" value={formatEur(s.revenue.physical)} />
             <KeyValue label="Coût des lingotins (Godot & Fils)" value={formatEur(s.physicalCost)} />
             <KeyValue label="Résultat estimé" value={formatEur(s.margin)} strong />
+            <KeyValue
+              label="Résultat ramené à un an"
+              value={s.days >= 30 ? formatEur(s.marginPerYear) : 'après 30 jours'}
+            />
+            <KeyValue
+              label="Clients pour couvrir 400 000 € de frais fixes par an"
+              value={s.days >= 30 && s.breakEvenClients ? `≈ ${s.breakEvenClients.toLocaleString('fr-FR')}` : '—'}
+            />
             <KeyValue label="Or et argent des clients" value={formatEur(s.assets)} />
           </Card>
 
@@ -223,6 +263,8 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
               label="Paiements par carte"
               value={`${sim.counters.cards} · ${formatEur(sim.counters.cardEur)}`}
             />
+            <KeyValue label="Retraits impossibles (stock épuisé)" value={String(sim.counters.stockouts)} />
+            <KeyValue label="Commandes en route" value={String(sim.pending.length)} />
             <KeyValue label="Opérations refusées" value={String(sim.counters.refused)} />
             <KeyValue
               label="Commandes à Godot & Fils"
@@ -278,6 +320,36 @@ export function SimulationPanel({ onBack }: { onBack: () => void }) {
       ) : (
         <Hint>Touchez « Démarrer » : la simulation avance toute seule, chaque seconde.</Hint>
       )}
+      <SectionTitle>Série d’essais d’un an</SectionTitle>
+      <Hint>
+        Lance 8 simulations d’un an (50 clients, avec la répartition et l’arrivée choisies) avec des hasards différents
+        : vous obtenez une fourchette de résultat, de pic d’assurance et de ruptures de stock plutôt qu’un seul chiffre.
+        Compter une dizaine de secondes.
+      </Hint>
+      <Button
+        title={mc && mc.done < mc.total ? `Essai ${mc.done + 1} sur ${mc.total}…` : 'Lancer 8 essais d’un an'}
+        variant="ghost"
+        disabled={!!mc && mc.done < mc.total}
+        onPress={() => runSeries(8)}
+      />
+      {mc && mc.runs.length > 0 ? (
+        <Card style={{ gap: 6 }}>
+          {(() => {
+            const m = percentiles(mc.runs.map((x) => x.margin));
+            const pk = percentiles(mc.runs.map((x) => x.peakInsured));
+            const so = percentiles(mc.runs.map((x) => x.stockouts));
+            return (
+              <>
+                <KeyValue label="Essais terminés" value={`${mc.runs.length} sur ${mc.total}`} />
+                <KeyValue label="Résultat estimé sur un an (médiane)" value={formatEur(m.median)} strong />
+                <KeyValue label="· fourchette (de 10 % à 90 %)" value={`${formatEur(m.p10)} à ${formatEur(m.p90)}`} />
+                <KeyValue label="Pic de stock assuré (médiane)" value={formatEur(pk.median)} />
+                <KeyValue label="Retraits impossibles par an (médiane)" value={String(Math.round(so.median))} />
+              </>
+            );
+          })()}
+        </Card>
+      ) : null}
     </>
   );
 }

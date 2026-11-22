@@ -120,3 +120,42 @@ test('simulateur : cours simulés (marche aléatoire) ou en direct', () => {
   for (let h = 0; h < 24 * 30; h++) stepSimulation(again, prices, 3600);
   assert.deepEqual(again.prices, walk.prices);
 });
+
+test('simulateur : montée en charge, délai de livraison des commandes, ruptures de stock', async () => {
+  const { percentiles, simulateRun } = await import('../src/logic/simulation.ts');
+  const start = new Date('2026-11-23T08:00:00');
+  // Arrivée progressive : le premier client est là dès le départ, le dernier à la fin de la période.
+  const ramp = createSimulation(40, 5, start, { rampDays: 120 });
+  const joins = ramp.clients.map((c) => new Date(c.joinAt!).getTime());
+  assert.equal(joins[0], start.getTime());
+  assert.ok(Math.abs(joins[39] - (start.getTime() + 120 * 86_400_000)) < 1000);
+  for (let h = 0; h < 24 * 20; h++) stepSimulation(ramp, prices, 3600);
+  const active = ramp.clients.filter((c) => c.account.transactions.length > 0).length;
+  assert.ok(active < 40, 'tous les clients ne sont pas encore arrivés');
+  // Les comptes sont ouverts à leur date d'arrivée.
+  assert.ok(ramp.clients.every((c, i) => new Date(c.account.createdAt).getTime() === joins[i]));
+  // Une commande arrive après le délai de Godot & Fils (8 jours), pas avant.
+  const sim = createSimulation(20, 9, start);
+  stepSimulation(sim, prices, 3600);
+  assert.ok(sim.pending.length > 0, 'des commandes sont en route');
+  const first = sim.pending[0];
+  assert.equal(new Date(first.arrivesAt).getTime() - sim.now.getTime() > 7 * 86_400_000, true);
+  const stockBefore = (sim.company.stock ?? []).filter((l) => l.qty > 0).length;
+  assert.equal(stockBefore, 0, 'rien en stock avant l’arrivée');
+  for (let h = 0; h < 24 * 9; h++) stepSimulation(sim, prices, 3600);
+  assert.ok(
+    (sim.company.stock ?? []).some((l) => l.qty > 0),
+    'les commandes sont arrivées',
+  );
+  // Pendant le délai, les formats servis seulement sur stock sont en rupture.
+  const rupture = createSimulation(60, 11, start);
+  for (let h = 0; h < 24 * 8; h++) stepSimulation(rupture, prices, 3600);
+  assert.ok(rupture.counters.stockouts >= 0);
+  // Série d'essais : mêmes graines, mêmes résultats ; fourchette ordonnée.
+  const a = simulateRun(1, { clients: 20, days: 60 }, prices);
+  const b = simulateRun(1, { clients: 20, days: 60 }, prices);
+  assert.deepEqual(a, b);
+  const p = percentiles([5, 1, 9, 3, 7]);
+  assert.deepEqual(p, { min: 1, p10: 1, median: 5, p90: 9, max: 9 });
+  assert.ok(a.marginPerYear > 0 && (a.breakEvenClients ?? 0) > 20);
+});
