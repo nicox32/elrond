@@ -819,10 +819,10 @@ test('tableau de bord Société Orvia : revenus des frais, coûts estimés, seui
   close(r.revenue.buy, 1000 * FEES.buy.silver + 500 * FEES.buy.gold, 0.02);
   close(r.revenue.sale, 100 * FEES.sale, 0.02);
   assert.ok(r.costs.custody > 0 && r.costs.kyc === COMPANY.kycPerAccount);
-  // Garde chez Godot & Fils : au gramme, pas en pourcentage de la valeur (0,48 € par gramme d'or, 0,06 € d'argent).
-  close(r.costs.custody, acc.holdings.gold * 0.48 + acc.holdings.silver * 0.06, 0.02);
+  // Garde chez Godot & Fils : tarif négocié, 0,12 % de la valeur gardée par an.
+  close(r.costs.custody, r.assets * 0.0012, 0.02);
   const dear = companyReport(acc, { gold: 200, silver: 1, platinum: 30 }, 'year', new Date('2026-11-01'));
-  close(dear.costs.custody, r.costs.custody, 0.02); // si l'or double, le coût de garde ne bouge pas
+  assert.ok(dear.costs.custody > r.costs.custody); // si l'or double, la garde suit la valeur
   close(r.margin, r.revenue.total - r.costs.total, 0.02);
   assert.ok(r.breakEvenClients! > 1000);
 });

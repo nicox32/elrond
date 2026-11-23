@@ -5,16 +5,17 @@
  */
 import { loyalty, LOYALTY } from './loyalty.ts';
 import { accountValue } from './ledger.ts';
-import { type Account, type Metal, METALS, type Prices, type Transaction } from './types.ts';
+import type { Account, Prices, Transaction } from './types.ts';
 
 export const COMPANY = {
   /**
-   * Garde chez Godot & Fils (GardienOr, stockage en France) : 0,04 € par mois et par gramme d'or (0,48 € par an),
-   * 0,005 € par mois pour l'argent (0,06 € par an). Tarif public : un tarif professionnel est à négocier.
+   * Garde chez Godot & Fils (stockage en France) : tarif professionnel accepté, 0,12 % de la valeur du métal gardé
+   * par an (au lieu du tarif public de 0,48 € par gramme d'or). À réviser tous les 3 mois, avec l'appli.
    */
-  custodyPerGramYear: { gold: 0.48, silver: 0.06 } as Partial<Record<Metal, number>>,
-  /** Garde des métaux sans tarif au gramme connu (platine), par an, en part de leur valeur. */
-  custodyYearly: { gold: 0, silver: 0, platinum: 0.0012 } as Record<Metal, number>,
+  custodyCostYearly: 0.0012,
+  /** Date de la dernière révision des tarifs, et rythme de révision en mois. */
+  tariffsReviewedOn: '2026-11-23',
+  tariffsReviewEveryMonths: 3,
   /** Commission versée par le commerçant sur un paiement par carte (plafond européen d'une carte de débit). */
   interchange: 0.002,
   /** Vérification d'identité et anti-blanchiment, par compte ouvert. */
@@ -22,6 +23,13 @@ export const COMPANY = {
   /** Frais fixes d'une petite fintech (équipe, conformité, audit, appli), par an. */
   fixedYearly: 400_000,
 } as const;
+
+/** Prochaine révision des tarifs (appli et fournisseur), à date fixe tous les `tariffsReviewEveryMonths` mois. */
+export function nextTariffReview(): string {
+  const d = new Date(`${COMPANY.tariffsReviewedOn}T12:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + COMPANY.tariffsReviewEveryMonths);
+  return d.toISOString().slice(0, 10);
+}
 
 export type CompanyPeriod = 'year' | 'all';
 
@@ -95,24 +103,11 @@ export function companyReport(
   const costs = {
     custody:
       // Lingotins gardés en coffre chez Godot & Fils : leur garde est facturée à Orvia, au gramme.
-      (account.homeVault ?? [])
+      ((account.homeVault ?? [])
         .filter((b) => b.vault || /godot/i.test(b.placeNote ?? '') || b.origin === 'pro')
-        .reduce((s, b) => s + b.grams * (COMPANY.custodyPerGramYear.gold ?? 0), 0) *
-        years +
-      wallets.reduce(
-        (s, w) =>
-          s +
-          METALS.reduce(
-            (m, metal) =>
-              m +
-              (COMPANY.custodyPerGramYear[metal] !== undefined
-                ? w.holdings[metal] * (COMPANY.custodyPerGramYear[metal] ?? 0)
-                : accountValue(w, prices).byMetal[metal] * COMPANY.custodyYearly[metal]),
-            0,
-          ),
-        0,
-      ) *
-        years,
+        .reduce((s, b) => s + b.grams * prices.gold * COMPANY.custodyCostYearly, 0) +
+        wallets.reduce((s, w) => s + accountValue(w, prices).total * COMPANY.custodyCostYearly, 0)) *
+      years,
     kyc: accountsOpened * COMPANY.kycPerAccount,
     loyalty: loyaltyCost,
     referral: sum((t) => (t.kind === 'referral_bonus' ? t.eur : 0)),

@@ -7,11 +7,11 @@
  * (achats sur les baisses, ventes en cas de chute), départs avec liquidation ou compte dormant (frais d'oxydation),
  * fidélité, parrainage, coûts par client, et effet du cours de l'or sur le stock de la société.
  */
-import { COMPANY } from "./company.ts";
-import { FEES } from "./fees.ts";
-import { priceAtDate } from "./historyPrices.ts";
-import { REFERRAL } from "./ledger.ts";
-import { LOYALTY } from "./loyalty.ts";
+import { COMPANY } from './company.ts';
+import { FEES } from './fees.ts';
+import { priceAtDate } from './historyPrices.ts';
+import { REFERRAL } from './ledger.ts';
+import { LOYALTY } from './loyalty.ts';
 import {
   BAR_PRODUCTS,
   lotUnitCost,
@@ -20,18 +20,18 @@ import {
   PHYSICAL,
   rangesOf,
   sellableOnDemand,
-} from "./physical.ts";
-import { INSURANCE_CAP_EUR } from "./stock.ts";
-import type { Metal, Prices } from "./types.ts";
+} from './physical.ts';
+import { INSURANCE_CAP_EUR } from './stock.ts';
+import type { Metal, Prices } from './types.ts';
 
-export type Segment = "debank" | "physical" | "small" | "daily";
-const SEGMENTS: Segment[] = ["debank", "physical", "small", "daily"];
+export type Segment = 'debank' | 'physical' | 'small' | 'daily';
+const SEGMENTS: Segment[] = ['debank', 'physical', 'small', 'daily'];
 
 export const SEGMENT_LABEL: Record<Segment, string> = {
-  debank: "Débancarisés",
-  physical: "Métaux physiques",
-  small: "Petits budgets",
-  daily: "Quotidiens (carte)",
+  debank: 'Débancarisés',
+  physical: 'Métaux physiques',
+  small: 'Petits budgets',
+  daily: 'Quotidiens (carte)',
 };
 
 /**
@@ -41,8 +41,8 @@ export const SEGMENT_LABEL: Record<Segment, string> = {
  */
 export const INCOME_BANDS = [
   {
-    id: "b0",
-    label: "Moins de 1 SMIC",
+    id: 'b0',
+    label: 'Moins de 1 SMIC',
     share: 0.1,
     incomeEur: 1300,
     savingsRate: 0.03,
@@ -50,8 +50,8 @@ export const INCOME_BANDS = [
     segs: [2, 3, 55, 40],
   },
   {
-    id: "b1",
-    label: "1 à 1,5 SMIC",
+    id: 'b1',
+    label: '1 à 1,5 SMIC',
     share: 0.4,
     incomeEur: 1850,
     savingsRate: 0.05,
@@ -59,8 +59,8 @@ export const INCOME_BANDS = [
     segs: [7, 8, 50, 35],
   },
   {
-    id: "b2",
-    label: "1,5 à 2 SMIC",
+    id: 'b2',
+    label: '1,5 à 2 SMIC',
     share: 0.225,
     incomeEur: 2550,
     savingsRate: 0.07,
@@ -68,8 +68,8 @@ export const INCOME_BANDS = [
     segs: [15, 20, 40, 25],
   },
   {
-    id: "b3",
-    label: "2 à 3 SMIC",
+    id: 'b3',
+    label: '2 à 3 SMIC',
     share: 0.17,
     incomeEur: 3500,
     savingsRate: 0.1,
@@ -77,8 +77,8 @@ export const INCOME_BANDS = [
     segs: [30, 30, 25, 15],
   },
   {
-    id: "b4",
-    label: "3 à 5 SMIC",
+    id: 'b4',
+    label: '3 à 5 SMIC',
     share: 0.08,
     incomeEur: 5600,
     savingsRate: 0.12,
@@ -86,8 +86,8 @@ export const INCOME_BANDS = [
     segs: [45, 35, 10, 10],
   },
   {
-    id: "b5",
-    label: "5 à 7 SMIC",
+    id: 'b5',
+    label: '5 à 7 SMIC',
     share: 0.015,
     incomeEur: 8700,
     savingsRate: 0.15,
@@ -95,8 +95,8 @@ export const INCOME_BANDS = [
     segs: [50, 40, 5, 5],
   },
   {
-    id: "b6",
-    label: "Plus de 7 SMIC",
+    id: 'b6',
+    label: 'Plus de 7 SMIC',
     share: 0.01,
     incomeEur: 14000,
     savingsRate: 0.18,
@@ -108,10 +108,7 @@ export const INCOME_BANDS = [
 /** Hypothèses de comportement et de coûts (pas des données de l'Insee), affichées dans l'appli. */
 export const ASSUMPTIONS = {
   /** Part des clients qui quittent Orvia chaque année, par segment. */
-  churn: { debank: 0.06, physical: 0.08, small: 0.2, daily: 0.18 } as Record<
-    Segment,
-    number
-  >,
+  churn: { debank: 0.06, physical: 0.08, small: 0.2, daily: 0.18 } as Record<Segment, number>,
   /** Part des départs qui liquident tout ; les autres laissent un compte dormant (frais d'oxydation). */
   liquidateShare: 0.7,
   /** Part des clients qui achètent chaque mois le jour de paie (les autres, chaque semaine). */
@@ -151,8 +148,7 @@ function mulberry32(seed: number): () => number {
 
 function poisson(rng: () => number, lambda: number): number {
   if (lambda <= 0) return 0;
-  if (lambda > 30)
-    return Math.max(0, Math.round(lambda + Math.sqrt(lambda) * gauss(rng)));
+  if (lambda > 30) return Math.max(0, Math.round(lambda + Math.sqrt(lambda) * gauss(rng)));
   const l = Math.exp(-lambda);
   let k = 0;
   let p = 1;
@@ -186,40 +182,23 @@ function sCurveInverse(x: number): number {
  * - « perGram » : au gramme, un peu au-dessus du coût chez Godot & Fils (0,48 € par gramme d'or et par an) ;
  * - « mixed » : le plus grand de 0,25 % de la valeur et d'un minimum au gramme.
  */
-export type CustodyScheme = "current" | "perGram" | "mixed" | "negotiated";
+export type CustodyScheme = 'current' | 'perGram' | 'mixed';
 
-export const CUSTODY_SCHEMES: Record<
-  CustodyScheme,
-  { label: string; detail: string }
-> = {
-  current: { label: "Actuelle", detail: "0,15 % de la valeur par an" },
-  perGram: { label: "Au gramme", detail: "0,60 € par gramme d’or et par an" },
+export const CUSTODY_SCHEMES: Record<CustodyScheme, { label: string; detail: string }> = {
+  current: { label: 'Actuelle', detail: '0,15 % de la valeur par an' },
+  perGram: { label: 'Au gramme', detail: '0,60 € par gramme d’or et par an' },
   mixed: {
-    label: "Mixte",
-    detail: "le plus grand de 0,25 % de la valeur et de 0,50 € par gramme",
-  },
-  negotiated: {
-    label: "Recommandé",
-    detail:
-      "garde mixte pour les clients, et garde Godot & Fils négociée à 0,12 % de la valeur par an",
+    label: 'Mixte',
+    detail: 'le plus grand de 0,25 % de la valeur et de 0,50 € par gramme',
   },
 };
 
 /** Taux annuel de garde facturé à un client, en part de la valeur du métal, pour un cours donné. */
-export function custodyRate(
-  scheme: CustodyScheme,
-  metal: Metal,
-  price: Prices,
-): number {
+export function custodyRate(scheme: CustodyScheme, metal: Metal, price: Prices): number {
   const spot = price[metal];
-  if (scheme === "current" || metal === "platinum")
-    return FEES.custodyYearly[metal];
-  if (scheme === "perGram") return (metal === "gold" ? 0.6 : 0.075) / spot;
-  // « negotiated » : mêmes tarifs clients que le mixte.
-  return Math.max(
-    metal === "gold" ? 0.0025 : FEES.custodyYearly.silver,
-    (metal === "gold" ? 0.5 : 0.07) / spot,
-  );
+  if (scheme === 'current' || metal === 'platinum') return FEES.custodyYearly[metal];
+  if (scheme === 'perGram') return (metal === 'gold' ? 0.6 : 0.075) / spot;
+  return Math.max(metal === 'gold' ? 0.0025 : FEES.custodyYearly.silver, (metal === 'gold' ? 0.5 : 0.07) / spot);
 }
 
 export interface PopOptions {
@@ -235,7 +214,7 @@ export interface PopOptions {
   start: Date;
   /** Semaines sur lesquelles les clients arrivent, en courbe en S (0 : tous dès le départ). */
   rampWeeks?: number;
-  prices?: "history" | Prices;
+  prices?: 'history' | Prices;
   /** Plafond de l'assurance du stock, en euros. */
   insuranceCap?: number;
   /** Frais fixes annuels de la société, en euros (par défaut : hypothèse de l'appli). */
@@ -282,7 +261,7 @@ export interface Population {
   start: Date;
   week: number;
   rampWeeks: number;
-  priceSource: "history" | Prices;
+  priceSource: 'history' | Prices;
   insuranceCap: number;
   fixedYearly: number;
   custody: CustodyScheme;
@@ -336,10 +315,7 @@ export interface Population {
     /** Effet du cours de l'or sur le stock de lingotins, déjà réalisé à la sortie des pièces. */
     goldEffectRealized: number;
   };
-  bySegment: Record<
-    Segment,
-    { clients: number; revenue: number; costs: number }
-  >;
+  bySegment: Record<Segment, { clients: number; revenue: number; costs: number }>;
   byBand: { clients: number; revenue: number }[];
   peakInsured: number;
   series: PopPoint[];
@@ -362,13 +338,7 @@ function drawClient(rng: () => number) {
   }
   // Budget mensuel en métaux : revenu × taux d'épargne × part en métaux, avec une forte dispersion (queue épaisse).
   const B = INCOME_BANDS[b];
-  const budget = Math.max(
-    10,
-    B.incomeEur *
-      B.savingsRate *
-      B.metalShare *
-      Math.exp(0.5 * gauss(rng) - 0.125),
-  );
+  const budget = Math.max(10, B.incomeEur * B.savingsRate * B.metalShare * Math.exp(0.5 * gauss(rng) - 0.125));
   return {
     band: b,
     seg,
@@ -393,10 +363,7 @@ export function createPopulation(opts: PopOptions): Population {
     seg[i] = d.seg;
     budget[i] = d.budget;
     payday[i] = d.payday;
-    joinWeek[i] =
-      rampWeeks > 0
-        ? Math.floor(sCurveInverse(i / Math.max(1, n - 1)) * rampWeeks)
-        : 0;
+    joinWeek[i] = rampWeeks > 0 ? Math.floor(sCurveInverse(i / Math.max(1, n - 1)) * rampWeeks) : 0;
   }
   const stock: Record<string, FormatStock> = {};
   for (const p of BAR_PRODUCTS) {
@@ -416,13 +383,12 @@ export function createPopulation(opts: PopOptions): Population {
     start: opts.start,
     week: 0,
     rampWeeks,
-    priceSource: opts.prices ?? "history",
+    priceSource: opts.prices ?? 'history',
     insuranceCap: opts.insuranceCap ?? INSURANCE_CAP_EUR,
     fixedYearly: opts.fixedYearly ?? COMPANY.fixedYearly,
-    custody: opts.custody ?? "current",
+    custody: opts.custody ?? 'current',
     custodyElasticity: opts.custodyElasticity ?? ASSUMPTIONS.custodyElasticity,
-    custodyCostPct:
-      opts.custodyCostPct ?? (opts.custody === "negotiated" ? 0.0012 : null),
+    custodyCostPct: opts.custodyCostPct ?? null,
     band,
     seg,
     joinWeek,
@@ -467,21 +433,18 @@ export function createPopulation(opts: PopOptions): Population {
   };
 }
 
-const dateOfWeek = (pop: Population, w: number) =>
-  new Date(pop.start.getTime() + w * 7 * 86_400_000);
+const dateOfWeek = (pop: Population, w: number) => new Date(pop.start.getTime() + w * 7 * 86_400_000);
 
 /** Valeur assurée du stock : pièces en stock au prix payé au vendeur. */
 function insuredValue(pop: Population): number {
   let v = 0;
-  for (const k of Object.keys(pop.stock))
-    v += pop.stock[k].qty * pop.stock[k].insuredEach;
+  for (const k of Object.keys(pop.stock)) v += pop.stock[k].qty * pop.stock[k].insuredEach;
   return v;
 }
 
 function pendingValue(pop: Population): number {
   let v = 0;
-  for (const k of Object.keys(pop.stock))
-    for (const o of pop.stock[k].pending) v += o.qty * o.insuredEach;
+  for (const k of Object.keys(pop.stock)) for (const o of pop.stock[k].pending) v += o.qty * o.insuredEach;
   return v;
 }
 
@@ -490,18 +453,15 @@ export function stepWeek(pop: Population): Population {
   const { rng } = pop;
   const w = pop.week;
   const date = dateOfWeek(pop, w);
-  const live = pop.priceSource !== "history";
+  const live = pop.priceSource !== 'history';
   const prices = live ? (pop.priceSource as Prices) : priceAtDate(date);
   pop.prices = prices;
   // Variation de l'or sur quatre semaines : les clients achètent sur les baisses, courent après les hausses, vendent en cas de chute.
-  const before = live
-    ? prices
-    : priceAtDate(new Date(date.getTime() - 28 * 86_400_000));
+  const before = live ? prices : priceAtDate(new Date(date.getTime() - 28 * 86_400_000));
   const r4 = before.gold > 0 ? prices.gold / before.gold - 1 : 0;
   const dip = Math.max(0, -r4);
   const rally = Math.max(0, r4);
-  const buyBoost =
-    1 + ASSUMPTIONS.dipBuying * dip + ASSUMPTIONS.rallyChasing * rally;
+  const buyBoost = 1 + ASSUMPTIONS.dipBuying * dip + ASSUMPTIONS.rallyChasing * rally;
   const sellBoost = 1 + ASSUMPTIONS.panicSelling * dip;
   const fees = physicalFeesOf();
   const rev = pop.totals.revenue;
@@ -510,16 +470,9 @@ export function stepWeek(pop: Population): Population {
   // Semaine du jour de paie : celle qui contient les sept premiers jours du mois.
   const payWeek = date.getUTCDate() <= 7;
   // Une garde plus chère que le tarif actuel pousse des clients à partir.
-  const goldRate = custodyRate(pop.custody, "gold", prices);
-  const custodyUplift = Math.min(
-    2,
-    1 +
-      pop.custodyElasticity *
-        Math.max(0, goldRate / FEES.custodyYearly.gold - 1),
-  );
-  const weeklyChurn = SEGMENTS.map(
-    (k) => 1 - Math.pow(1 - ASSUMPTIONS.churn[k] * custodyUplift, 1 / 52),
-  );
+  const goldRate = custodyRate(pop.custody, 'gold', prices);
+  const custodyUplift = Math.min(2, 1 + pop.custodyElasticity * Math.max(0, goldRate / FEES.custodyYearly.gold - 1));
+  const weeklyChurn = SEGMENTS.map((k) => 1 - Math.pow(1 - ASSUMPTIONS.churn[k] * custodyUplift, 1 / 52));
 
   // Arrivée des commandes de la société.
   for (const p of BAR_PRODUCTS) {
@@ -546,8 +499,7 @@ export function stepWeek(pop: Population): Population {
   let vaultGrams = 0;
   let cardHolders = 0;
   const onDemandOk: Record<string, boolean> = {};
-  for (const p of BAR_PRODUCTS)
-    onDemandOk[p.id] = sellableOnDemand(p.id, gP, fees);
+  for (const p of BAR_PRODUCTS) onDemandOk[p.id] = sellableOnDemand(p.id, gP, fees);
   // Taux de frais d'oxydation d'une semaine de compte dormant (0,02 % par jour).
   const dormancyWeek = FEES.dormancyDaily * 7;
 
@@ -574,10 +526,7 @@ export function stepWeek(pop: Population): Population {
       // Compte dormant : après six mois sans mouvement, frais d'oxydation prélevés en métal.
       if (w - pop.dormantSince[i] >= 26) {
         const fee =
-          (pop.gold[i] * prices.gold +
-            pop.silver[i] * prices.silver +
-            pop.plat[i] * prices.platinum) *
-          dormancyWeek;
+          (pop.gold[i] * prices.gold + pop.silver[i] * prices.silver + pop.plat[i] * prices.platinum) * dormancyWeek;
         pop.gold[i] *= 1 - dormancyWeek;
         pop.silver[i] *= 1 - dormancyWeek;
         pop.plat[i] *= 1 - dormancyWeek;
@@ -615,30 +564,25 @@ export function stepWeek(pop: Population): Population {
           if (amount < FEES.minOrder) return;
           const fee = amount * FEES.buy[metal];
           const grams = (amount - fee) / prices[metal];
-          if (metal === "gold") pop.gold[i] += grams;
-          else if (metal === "silver") pop.silver[i] += grams;
+          if (metal === 'gold') pop.gold[i] += grams;
+          else if (metal === 'silver') pop.silver[i] += grams;
           else pop.plat[i] += grams;
           rev.buy += fee;
-          cost.loyalty +=
-            amount * (1 / LOYALTY.buyEurPerLou) * LOYALTY.eurPerLou;
+          cost.loyalty += amount * (1 / LOYALTY.buyEurPerLou) * LOYALTY.eurPerLou;
           pop.bySegment[segKey].revenue += fee;
           pop.byBand[bi].revenue += fee;
           pop.totals.boughtEur += amount;
         };
         const pickMetal = (): Metal => {
           const x = rng();
-          return x < 0.75 ? "gold" : x < 0.92 ? "silver" : "platinum";
+          return x < 0.75 ? 'gold' : x < 0.92 ? 'silver' : 'platinum';
         };
         // Achat programmé : le jour de paie (une fois par mois) ou chaque semaine.
         const dca = (perMonth: number) => {
           if (pop.payday[i]) {
-            if (payWeek)
-              buyEur(perMonth * Math.exp(0.2 * gauss(rng) - 0.02), pickMetal());
+            if (payWeek) buyEur(perMonth * Math.exp(0.2 * gauss(rng) - 0.02), pickMetal());
           } else {
-            buyEur(
-              ((perMonth * 12) / 52) * Math.exp(0.25 * gauss(rng) - 0.03),
-              pickMetal(),
-            );
+            buyEur(((perMonth * 12) / 52) * Math.exp(0.25 * gauss(rng) - 0.03), pickMetal());
           }
         };
         // Retrait de lingotins ou de pièces pour une valeur voulue d'or.
@@ -661,10 +605,7 @@ export function stepWeek(pop: Population): Population {
               pop.totals.goldEffectRealized += p.grams * (gP - st.goldEntry);
             } else if (onDemandOk[p.id]) {
               // Commandée à l'unité à Godot & Fils, au prix de 1 à 9 pièces, livraison comprise.
-              pc =
-                lotUnitCost(p.id, 1, gP, fees) -
-                value +
-                PHYSICAL.vendorDelivery;
+              pc = lotUnitCost(p.id, 1, gP, fees) - value + PHYSICAL.vendorDelivery;
               pop.totals.onDemandOrders++;
             } else {
               pop.totals.stockouts++;
@@ -681,9 +622,9 @@ export function stepWeek(pop: Population): Population {
             if (rng() < VAULT_SHARE[segKey]) pop.vaultG[i] += p.grams;
           }
         };
-        if (segKey === "small") {
+        if (segKey === 'small') {
           dca(monthly);
-        } else if (segKey === "daily") {
+        } else if (segKey === 'daily') {
           // Paiements par carte (vente d'or sans frais, commission du commerçant) financés par un achat hebdomadaire.
           cardHolders++;
           const spendWeek = (monthly * 12) / 52;
@@ -701,23 +642,18 @@ export function stepWeek(pop: Population): Population {
           pop.bySegment[segKey].revenue += spent * COMPANY.interchange;
           pop.byBand[bi].revenue += spent * COMPANY.interchange;
           pop.totals.cardEur += spent;
-          buyEur(spendWeek * 1.05, "gold");
-        } else if (segKey === "physical") {
+          buyEur(spendWeek * 1.05, 'gold');
+        } else if (segKey === 'physical') {
           dca(monthly * buyBoost);
-          if (rng() < 0.035 * buyBoost)
-            withdrawBars(pop.gold[i] * gP * (0.3 + rng() * 0.5));
+          if (rng() < 0.035 * buyBoost) withdrawBars(pop.gold[i] * gP * (0.3 + rng() * 0.5));
         } else {
           // Débancarisés : achats groupés, tous les deux mois en moyenne, plus gros sur les baisses.
-          if (rng() < (1 / 8) * Math.min(2.5, buyBoost))
-            buyEur(monthly * 8 * (0.6 + rng() * 0.8), pickMetal());
-          if (rng() < 0.03 * Math.min(2.5, buyBoost))
-            withdrawBars(pop.gold[i] * gP * (0.4 + rng() * 0.5));
+          if (rng() < (1 / 8) * Math.min(2.5, buyBoost)) buyEur(monthly * 8 * (0.6 + rng() * 0.8), pickMetal());
+          if (rng() < 0.03 * Math.min(2.5, buyBoost)) withdrawBars(pop.gold[i] * gP * (0.4 + rng() * 0.5));
         }
         // Fidélité mensuelle : un louis par mois avec au moins 50 € investis, plus la série annuelle.
         if (payWeek && monthly >= LOYALTY.monthMinEur) {
-          cost.loyalty +=
-            (LOYALTY.monthLou + LOYALTY.streakLou / LOYALTY.streakMonths) *
-            LOYALTY.eurPerLou;
+          cost.loyalty += (LOYALTY.monthLou + LOYALTY.streakLou / LOYALTY.streakMonths) * LOYALTY.eurPerLou;
         }
         // Revente occasionnelle d'un peu d'or, bien plus fréquente en cas de chute du cours.
         if (rng() < 0.004 * sellBoost) pop.gold[i] *= 0.8;
@@ -728,26 +664,15 @@ export function stepWeek(pop: Population): Population {
     platGrams += pop.plat[i];
     vaultGrams += pop.vaultG[i];
   }
-  const assetsEur =
-    goldGrams * prices.gold +
-    silverGrams * prices.silver +
-    platGrams * prices.platinum;
+  const assetsEur = goldGrams * prices.gold + silverGrams * prices.silver + platGrams * prices.platinum;
 
   // Garde hebdomadaire : recette des clients, coût chez Godot & Fils ; lingotins en coffre sécurisé refacturés au coût.
   rev.custody +=
     (goldGrams * prices.gold * goldRate +
-      silverGrams * prices.silver * custodyRate(pop.custody, "silver", prices) +
-      platGrams *
-        prices.platinum *
-        custodyRate(pop.custody, "platinum", prices)) /
+      silverGrams * prices.silver * custodyRate(pop.custody, 'silver', prices) +
+      platGrams * prices.platinum * custodyRate(pop.custody, 'platinum', prices)) /
     52;
-  cost.custody +=
-    pop.custodyCostPct !== null
-      ? (assetsEur * pop.custodyCostPct) / 52
-      : (goldGrams * (COMPANY.custodyPerGramYear.gold ?? 0) +
-          silverGrams * (COMPANY.custodyPerGramYear.silver ?? 0) +
-          platGrams * prices.platinum * COMPANY.custodyYearly.platinum) /
-        52;
+  cost.custody += (assetsEur * (pop.custodyCostPct ?? COMPANY.custodyCostYearly)) / 52;
   rev.vault += (vaultGrams * FEES.vaultPerGramYear) / 52;
   cost.vault += (vaultGrams * FEES.vaultPerGramYear) / 52;
   cost.support += (active * ASSUMPTIONS.supportPerClientYear) / 52;
@@ -763,10 +688,7 @@ export function stepWeek(pop: Population): Population {
     // Point de commande : la demande de la durée de livraison plus une semaine de marge ; première commande au lancement.
     const cover = st.demand * (leadWeeks + 1);
     // Stock de sécurité pour un taux de service d'environ 95 % (la demande hebdomadaire est aléatoire).
-    const reorderPoint = Math.max(
-      w === 0 ? 1 : 0,
-      Math.ceil(cover + 1.65 * Math.sqrt(cover)),
-    );
+    const reorderPoint = Math.max(w === 0 ? 1 : 0, Math.ceil(cover + 1.65 * Math.sqrt(cover)));
     if (st.qty + inTransit > reorderPoint) continue;
     const minLot = minProfitableLot(p.id, gP, fees) ?? 1;
     // Lot visé : six semaines de demande, arrondi à la tranche de prix la plus proche (au moins le lot rentable).
@@ -782,9 +704,7 @@ export function stepWeek(pop: Population): Population {
     let unit = lotUnitCost(p.id, qty, gP, fees);
     const room = pop.insuranceCap - insuredValue(pop) - pendingValue(pop);
     if (qty * unit > room) {
-      const smaller = tiers.filter(
-        (q) => q * lotUnitCost(p.id, q, gP, fees) <= room,
-      );
+      const smaller = tiers.filter((q) => q * lotUnitCost(p.id, q, gP, fees) <= room);
       if (!smaller.length) {
         pop.totals.insuranceBlocked++;
         continue;
@@ -806,8 +726,7 @@ export function stepWeek(pop: Population): Population {
   if (insured > pop.peakInsured) pop.peakInsured = insured;
   // Un point par mois : pour suivre la montée du résultat.
   if (w % 4 === 0) {
-    const revenue =
-      rev.buy + rev.bars + rev.card + rev.custody + rev.vault + rev.dormancy;
+    const revenue = rev.buy + rev.bars + rev.card + rev.custody + rev.vault + rev.dormancy;
     const costs = Object.values(cost).reduce((a, b) => a + b, 0);
     pop.series.push({
       week: w,
@@ -832,8 +751,8 @@ export interface PopSummary {
   clients: number;
   active: number;
   dormant: number;
-  revenue: Population["totals"]["revenue"] & { total: number };
-  costs: Population["totals"]["costs"] & { total: number };
+  revenue: Population['totals']['revenue'] & { total: number };
+  costs: Population['totals']['costs'] & { total: number };
   /** Résultat avant frais fixes (revenus moins coûts variables). */
   contribution: number;
   /** Résultat opérationnel après les frais fixes de la société. */
@@ -911,9 +830,7 @@ export function summarizePopulation(pop: Population): PopSummary {
     goldEffect: r2(pop.totals.goldEffectRealized),
     goldEffectUnrealized: r2(unrealized),
     resultWithGold: r2(result + pop.totals.goldEffectRealized + unrealized),
-    assets: r2(
-      g * pop.prices.gold + s * pop.prices.silver + p * pop.prices.platinum,
-    ),
+    assets: r2(g * pop.prices.gold + s * pop.prices.silver + p * pop.prices.platinum),
     insured: r2(insuredValue(pop)),
     peakInsured: r2(pop.peakInsured),
     insuranceCap: pop.insuranceCap,
@@ -942,10 +859,7 @@ export function summarizePopulation(pop: Population): PopSummary {
   };
 }
 
-function mapValues<T extends Record<string, number>>(
-  o: T,
-  f: (n: number) => number,
-): T {
+function mapValues<T extends Record<string, number>>(o: T, f: (n: number) => number): T {
   return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, f(v)])) as T;
 }
 

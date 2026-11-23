@@ -168,7 +168,7 @@ test('population : garde actuelle, au gramme ou mixte — recettes, coûts et d�
   assert.ok(Math.abs(custodyRate('mixed', 'gold', { ...prices, gold: 500 }) - 0.0025) < 1e-12);
   // Or bas (30 €/g) : le taux au gramme grimpe (2 %), c'est le coût de Godot & Fils qui le dicte.
   assert.ok(Math.abs(custodyRate('perGram', 'gold', { ...prices, gold: 30 }) - 0.02) < 1e-12);
-  assert.deepEqual(Object.keys(CUSTODY_SCHEMES), ['current', 'perGram', 'mixed', 'negotiated']);
+  assert.deepEqual(Object.keys(CUSTODY_SCHEMES), ['current', 'perGram', 'mixed']);
   // Sur une période : la garde au gramme rapporte plus à Orvia, au prix de plus de départs.
   const base = { start: new Date('2023-11-20T08:00:00'), weeks: 104, rampWeeks: 52, clients: 3000 };
   const cur = runPopulation({ ...base, custody: 'current' }).summary;

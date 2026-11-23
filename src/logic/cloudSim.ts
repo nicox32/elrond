@@ -3,29 +3,18 @@
  * serveur fait avancer la simulation de 50 clients en temps réel et recalcule la population de 15 000 clients sur des
  * périodes historiques réelles, puis publie des fichiers JSON que l'appli lit en lecture seule (Espace DEV).
  */
-import { HISTORY_PRESETS } from "./historyPrices.ts";
-import { percentiles } from "./simulation.ts";
-import {
-  type CustodyScheme,
-  runPopulation,
-  type PopSummary,
-} from "./population.ts";
-import {
-  type Simulation,
-  type SimSummary,
-  summarize,
-  summarizeBySegment,
-  type SegmentRow,
-} from "./simulation.ts";
-import type { Prices } from "./types.ts";
+import { HISTORY_PRESETS } from './historyPrices.ts';
+import { percentiles } from './simulation.ts';
+import { type CustodyScheme, runPopulation, type PopSummary } from './population.ts';
+import { type Simulation, type SimSummary, summarize, summarizeBySegment, type SegmentRow } from './simulation.ts';
+import type { Prices } from './types.ts';
 
-export const SIMULATION_RELEASE_URL =
-  "https://github.com/nicox32/elrond/releases/download/simulation";
+export const SIMULATION_RELEASE_URL = 'https://github.com/nicox32/elrond/releases/download/simulation';
 export const SUMMARY_URL = `${SIMULATION_RELEASE_URL}/summary.json`;
 export const POPULATION_URL = `${SIMULATION_RELEASE_URL}/population.json`;
 
 /** À changer quand le modèle de la population change : le serveur recalcule alors tous les scénarios. */
-export const POPULATION_MODEL_VERSION = 4;
+export const POPULATION_MODEL_VERSION = 5;
 
 export interface DailyPoint {
   /** Jour simulé (AAAA-MM-JJ). */
@@ -46,7 +35,7 @@ export interface CloudSummary {
   prices: Prices;
   summary: SimSummary;
   segments: SegmentRow[];
-  counters: Simulation["counters"];
+  counters: Simulation['counters'];
   stock: { product: string; qty: number; inTransit: number }[];
   events: { at: string; text: string; kind: string }[];
   series: DailyPoint[];
@@ -71,8 +60,7 @@ export function buildCloudSummary(
     insured: summary.insured,
     gold: Math.round(prices.gold * 100) / 100,
   };
-  if (series.length && series[series.length - 1].date === day)
-    series[series.length - 1] = point;
+  if (series.length && series[series.length - 1].date === day) series[series.length - 1] = point;
   else series.push(point);
   const products = new Set<string>();
   for (const l of sim.company.stock ?? []) products.add(l.product);
@@ -94,16 +82,10 @@ export function buildCloudSummary(
     counters: sim.counters,
     stock: [...products].map((product) => ({
       product,
-      qty: (sim.company.stock ?? [])
-        .filter((l) => l.product === product)
-        .reduce((n, l) => n + l.qty, 0),
-      inTransit: sim.pending
-        .filter((o) => o.product === product)
-        .reduce((n, o) => n + o.qty, 0),
+      qty: (sim.company.stock ?? []).filter((l) => l.product === product).reduce((n, l) => n + l.qty, 0),
+      inTransit: sim.pending.filter((o) => o.product === product).reduce((n, o) => n + o.qty, 0),
     })),
-    events: sim.events
-      .slice(0, 20)
-      .map((e) => ({ at: e.at, text: e.text, kind: e.kind })),
+    events: sim.events.slice(0, 20).map((e) => ({ at: e.at, text: e.text, kind: e.kind })),
     series: series.slice(-400),
   };
 }
@@ -158,20 +140,13 @@ export interface CloudPopulation {
 export const POPULATION_CAPS = [500_000, 2_000_000] as const;
 
 /** Recalcule tous les scénarios de la population de 15 000 clients (arrivée en courbe en S sur 24 mois), sur `runs` essais. */
-export function buildCloudPopulation(
-  now = new Date(),
-  runs = 8,
-): CloudPopulation {
-  const presets: CloudPopulation["presets"] = {};
-  const scenario = (
-    opts: Parameters<typeof runPopulation>[0],
-  ): PopulationScenario => {
+export function buildCloudPopulation(now = new Date(), runs = 8): CloudPopulation {
+  const presets: CloudPopulation['presets'] = {};
+  const scenario = (opts: Parameters<typeof runPopulation>[0]): PopulationScenario => {
     const { pop, summary } = runPopulation(opts);
     const all = [summary];
-    for (let k = 1; k < runs; k++)
-      all.push(runPopulation({ ...opts, seed: 2026 + k }).summary);
-    const pct = (f: (s: PopSummary) => number): Range =>
-      percentiles(all.map(f));
+    for (let k = 1; k < runs; k++) all.push(runPopulation({ ...opts, seed: 2026 + k }).summary);
+    const pct = (f: (s: PopSummary) => number): Range => percentiles(all.map(f));
     return {
       summary,
       range: {
@@ -197,13 +172,12 @@ export function buildCloudPopulation(
       start: new Date(`${p.start}T08:00:00Z`),
       weeks: Math.round(p.years * 52),
       rampWeeks: 104,
-      prices: "history" as const,
+      prices: 'history' as const,
     };
     const caps: Record<string, PopulationScenario> = {};
-    for (const cap of POPULATION_CAPS)
-      caps[String(cap)] = scenario({ ...base, insuranceCap: cap });
+    for (const cap of POPULATION_CAPS) caps[String(cap)] = scenario({ ...base, insuranceCap: cap });
     const custody: Partial<Record<CustodyScheme, PopulationScenario>> = {};
-    for (const scheme of ["perGram", "mixed", "negotiated"] as const) {
+    for (const scheme of ['perGram', 'mixed'] as const) {
       custody[scheme] = scenario({
         ...base,
         insuranceCap: POPULATION_CAPS[0],
@@ -222,27 +196,18 @@ export function buildCloudPopulation(
 
 export function isCloudSummary(x: unknown): x is CloudSummary {
   const s = x as CloudSummary | null;
-  return (
-    !!s &&
-    s.v === 1 &&
-    typeof s.updatedAt === "string" &&
-    !!s.summary &&
-    Array.isArray(s.segments)
-  );
+  return !!s && s.v === 1 && typeof s.updatedAt === 'string' && !!s.summary && Array.isArray(s.segments);
 }
 
 export function isCloudPopulation(x: unknown): x is CloudPopulation {
   const p = x as CloudPopulation | null;
-  return !!p && p.v === 1 && !!p.presets && typeof p.updatedAt === "string";
+  return !!p && p.v === 1 && !!p.presets && typeof p.updatedAt === 'string';
 }
 
 /** « il y a 3 h », « il y a 2 jours » : ancienneté d'une mise à jour. */
 export function ageLabel(iso: string, now = new Date()): string {
-  const min = Math.max(
-    0,
-    Math.round((now.getTime() - new Date(iso).getTime()) / 60_000),
-  );
-  if (min < 2) return "à l’instant";
+  const min = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 60_000));
+  if (min < 2) return 'à l’instant';
   if (min < 90) return `il y a ${min} min`;
   const h = Math.round(min / 60);
   if (h < 48) return `il y a ${h} h`;

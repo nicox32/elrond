@@ -404,9 +404,9 @@ test('garde en coffre chez Godot & Fils : ni livraison ni agence, lingotin marqu
     fabricationProgress(bar.orderedAt, new Date('2026-12-01T10:00:00'), true, true).label,
     'Entré au coffre',
   );
-  // Garde de ce lingotin : coût pour Orvia, au gramme.
+  // Garde de ce lingotin : coût pour Orvia, 0,12 % de sa valeur par an.
   const r = companyReport(out, p, 'year', new Date('2027-11-18T10:00:00'));
-  assert.ok(r.costs.custody >= 5 * 0.48 - 1e-6);
+  assert.ok(r.costs.custody >= 5 * p.gold * 0.0012 - 1e-6);
 });
 
 test('ancien revendeur : les comptes enregistrés citant Gold Avenue passent à Godot & Fils', async () => {

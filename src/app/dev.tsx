@@ -17,7 +17,7 @@ import { barSummary } from '../logic/barControl';
 import { reopenChildParents } from '../logic/childRules';
 import { registerTap, type TapState } from '../logic/devTap';
 import { resetVaults } from '../logic/ledger';
-import { COMPANY, type CompanyPeriod, companyReport } from '../logic/company';
+import { COMPANY, type CompanyPeriod, companyReport, nextTariffReview } from '../logic/company';
 import { formatEur } from '../logic/format';
 import { createSecret, isValidPinFormat, verifySecret } from '../security';
 import { useAccount, useBank } from '../state/BankProvider';
@@ -235,9 +235,14 @@ function CompanyDashboard() {
       </Card>
 
       <SectionTitle>Coûts</SectionTitle>
+      <Hint>
+        Tarifs Godot & Fils révisés le {COMPANY.tariffsReviewedOn.split('-').reverse().join('/')}. Prochaine révision de
+        l’appli et des tarifs : {nextTariffReview().split('-').reverse().join('/')} (tous les{' '}
+        {COMPANY.tariffsReviewEveryMonths} mois, au besoin).
+      </Hint>
       <Card style={{ gap: 6 }}>
         <Row
-          label={`Garde chez Godot & Fils (or ${COMPANY.custodyPerGramYear.gold} € par gramme et par an, argent ${COMPANY.custodyPerGramYear.silver} €, platine ${pct(COMPANY.custodyYearly.platinum)} de sa valeur, sur ${formatEur(r.assets)})`}
+          label={`Garde chez Godot & Fils (${pct(COMPANY.custodyCostYearly)} de la valeur par an, sur ${formatEur(r.assets)})`}
           value={formatEur(r.costs.custody)}
         />
         <Row
