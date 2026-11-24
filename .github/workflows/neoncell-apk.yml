@@ -1,0 +1,85 @@
+# Construit l'APK Android de NeonCell (dossier vice-phone/) et le publie dans une release GitHub.
+# La release n'est pas marquée « dernière » : le lien de téléchargement d'Orvia reste inchangé.
+name: APK NeonCell
+
+on:
+  push:
+    branches: [ccr-eec2a2ed-7j7n0t, main]
+    paths:
+      - 'vice-phone/**'
+      - '.github/workflows/neoncell-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: neoncell-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: vice-phone
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: vice-phone/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Tests, typage et lint
+        run: |
+          npm test
+          npm run typecheck
+          npm run lint
+
+      - name: Numéro de version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const c = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            c.expo.version = '1.0.${{ github.run_number }}';
+            c.expo.android = { ...c.expo.android, versionCode: ${{ github.run_number }} };
+            fs.writeFileSync('app.json', JSON.stringify(c, null, 2));
+          "
+
+      - name: Générer le projet Android
+        run: npx expo prebuild --platform android --no-install
+
+      # Signé avec la clé de test d'Android : suffisant pour l'installer soi-même, pas pour le Play Store.
+      - name: Compiler l'APK
+        working-directory: vice-phone/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Renommer l'APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk "neoncell-1.0.${{ github.run_number }}.apk"
+
+      - name: Publier la release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: neoncell-v1.0.${{ github.run_number }}
+          name: NeonCell v1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: false
+          files: vice-phone/neoncell-1.0.${{ github.run_number }}.apk
+          body: |
+            NeonCell 1.0.${{ github.run_number }} : simulateur de téléphone dans la ville fictive de Port Corail.
+            Téléchargez **neoncell-1.0.${{ github.run_number }}.apk** depuis votre téléphone Android pour l'installer
+            (autorisez l'installation d'applications inconnues si Android le demande).
