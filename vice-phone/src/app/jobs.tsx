@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Button } from '../components/phone';
 import { JOBS } from '../data/world';
@@ -17,6 +18,16 @@ export default function Jobs() {
   return (
     <AppScreen title="Boulots" color={colors.green}>
       <ScrollView contentContainerStyle={{ padding: 14, gap: 12 }}>
+        {state.story.mission && (
+          <Pressable onPress={() => router.push('/story')} style={styles.mission} accessibilityLabel="Mission La Cavale">
+            <Ionicons name="flame" size={22} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.missionKicker}>MISSION LA CAVALE</Text>
+              <Text style={styles.missionTitle}>{state.story.mission.def.title}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </Pressable>
+        )}
         <Text style={styles.intro}>Agence Soleil · {total} boulot{total > 1 ? 's' : ''} terminé{total > 1 ? 's' : ''}. Un seul boulot à la fois ; la paie arrive sur votre compte Banque Flamant.</Text>
         {JOBS.map((j) => {
           const isActive = active?.id === j.id;
@@ -66,6 +77,9 @@ export default function Jobs() {
 }
 
 const styles = StyleSheet.create({
+  mission: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 18, backgroundColor: colors.pink },
+  missionKicker: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  missionTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
   intro: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   card: { backgroundColor: colors.surface, borderRadius: 18, padding: 14, gap: 10, borderWidth: 1.5, borderColor: 'transparent' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },

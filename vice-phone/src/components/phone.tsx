@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -6,13 +7,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { clock } from '../logic/format';
 import { useNow, usePhone } from '../state/PhoneProvider';
-import { colors, wallpapers } from '../theme';
+import { colors, skies, skyPhase, wallpapers } from '../theme';
+import { Skyline } from './Skyline';
 
 /** Fond d’écran choisi dans les réglages, en plein écran. */
-export function Wallpaper({ children, dim = 0 }: { children?: ReactNode; dim?: number }) {
+export function Wallpaper({ children, dim = 0, skyline = false }: { children?: ReactNode; dim?: number; skyline?: boolean }) {
   const { state } = usePhone();
+  const now = useNow(60_000);
+  // « Selon l’heure » : aube, jour, coucher de soleil ou nuit, comme dehors.
+  const phase = state.wallpaper === 'auto' ? skyPhase(new Date(now).getHours()) : state.wallpaper === 'midnight' ? 'nuit' : 'couchant';
+  const gradient = state.wallpaper === 'auto' ? skies[phase] : (wallpapers[state.wallpaper] ?? wallpapers.sunset).colors;
   return (
-    <LinearGradient colors={wallpapers[state.wallpaper].colors} style={{ flex: 1 }} start={{ x: 0, y: 0 }} end={{ x: 0.6, y: 1 }}>
+    <LinearGradient colors={gradient} style={{ flex: 1 }} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }}>
+      {skyline && <Skyline phase={phase} />}
       {dim > 0 && <View style={[StyleSheet.absoluteFill, { backgroundColor: `rgba(0,0,0,${dim})` }]} />}
       {children}
     </LinearGradient>
@@ -23,9 +30,20 @@ export function Wallpaper({ children, dim = 0 }: { children?: ReactNode; dim?: n
 export function PhoneStatusBar({ tint = colors.text }: { tint?: string }) {
   const now = useNow(10_000);
   const insets = useSafeAreaInsets();
+  const { state } = usePhone();
+  const wanted = state.story.wanted;
   return (
     <View style={[styles.status, { paddingTop: insets.top + 6 }]}>
-      <Text style={[styles.statusText, { color: tint }]}>{clock(now)}</Text>
+      <View style={styles.statusLeft}>
+        <Text style={[styles.statusText, { color: tint }]}>{clock(now)}</Text>
+        {wanted > 0 && (
+          <View style={styles.stars} accessibilityLabel={`Recherché : ${wanted} étoile${wanted > 1 ? 's' : ''}`}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Ionicons key={i} name={i <= wanted ? 'star' : 'star-outline'} size={11} color={i <= wanted ? '#FFD166' : 'rgba(255,255,255,0.35)'} />
+            ))}
+          </View>
+        )}
+      </View>
       <View style={styles.statusRight}>
         <View style={styles.signal}>
           {[5, 8, 11, 14].map((h) => (
@@ -47,13 +65,14 @@ export function AppScreen({
   color,
   children,
   right,
-  back = 'home',
+  back = 'auto',
 }: {
   title: string;
   color: string;
   children: ReactNode;
   right?: ReactNode;
-  back?: 'home' | 'pop';
+  /** Retour : à l’écran précédent s’il existe (par défaut), ou toujours à l’accueil. */
+  back?: 'auto' | 'pop' | 'home';
 }) {
   const insets = useSafeAreaInsets();
   return (
@@ -62,11 +81,11 @@ export function AppScreen({
       <View style={styles.header}>
         <Pressable
           hitSlop={12}
-          onPress={() => (back === 'pop' && router.canGoBack() ? router.back() : router.navigate('/home'))}
+          onPress={() => (back !== 'home' && router.canGoBack() ? router.back() : router.navigate('/home'))}
           accessibilityRole="button"
           accessibilityLabel="Retour"
         >
-          <Text style={[styles.back, { color }]}>‹</Text>
+          <Ionicons name="chevron-back" size={28} color={color} />
         </Pressable>
         <Text style={styles.title} numberOfLines={1}>
           {title}
@@ -97,12 +116,26 @@ export function HomeIndicator({ bottom }: { bottom: number }) {
   );
 }
 
-export function Avatar({ emoji, color, size = 44 }: { emoji: string; color: string; size?: number }) {
+/** Initiales (« Tonton Vince » → « TV ») pour les avatars. */
+export function initials(name: string) {
+  const words = name.replace(/[«»"]/g, '').split(/\s+/).filter((w) => /^[\p{L}]/u.test(w));
+  return ((words[0]?.[0] ?? '?') + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase();
+}
+
+/** Avatar rond en dégradé avec les initiales du contact. */
+export function Avatar({ name, color, size = 44, icon }: { name: string; color: string; size?: number; icon?: keyof typeof Ionicons.glyphMap }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: `${color}33`, borderWidth: 1.5, borderColor: color, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: size * 0.5 }}>{emoji}</Text>
-    </View>
+    <LinearGradient colors={[color, shade(color)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}>
+      {icon ? <Ionicons name={icon} size={size * 0.5} color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '800', fontSize: size * 0.38, letterSpacing: 0.5 }}>{initials(name)}</Text>}
+    </LinearGradient>
   );
+}
+
+/** Version plus sombre d’une couleur #RRGGBB, pour les dégradés. */
+export function shade(hex: string, k = 0.55) {
+  const n = parseInt(hex.slice(1, 7), 16);
+  const c = (v: number) => Math.round(v * k).toString(16).padStart(2, '0');
+  return `#${c((n >> 16) & 255)}${c((n >> 8) & 255)}${c(n & 255)}`;
 }
 
 export function Badge({ count, style }: { count: number; style?: ViewStyle }) {
@@ -159,7 +192,7 @@ export function NotificationBanner() {
         }}
       >
         <View style={[styles.bannerIcon, { backgroundColor: banner.color }]}>
-          <Text style={{ fontSize: 18 }}>{banner.icon}</Text>
+          <Ionicons name={banner.icon as keyof typeof Ionicons.glyphMap} size={20} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.bannerApp}>{banner.app.toUpperCase()} · maintenant</Text>
@@ -178,6 +211,8 @@ export function NotificationBanner() {
 export const styles = StyleSheet.create({
   status: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 6 },
   statusText: { fontSize: 13, fontWeight: '600' },
+  statusLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stars: { flexDirection: 'row', gap: 1, backgroundColor: 'rgba(0,0,0,0.35)', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 8 },
   statusRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   signal: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
   battery: { width: 24, height: 12, borderWidth: 1.5, borderRadius: 3, padding: 1 },

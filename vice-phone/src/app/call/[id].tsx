@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar, PhoneStatusBar, Wallpaper } from '../../components/phone';
 import { contactById } from '../../data/world';
 import { duration } from '../../logic/format';
+import { playSound, stopSound } from '../../logic/sfx';
 import { usePhone } from '../../state/PhoneProvider';
 import { useRadio } from '../../state/RadioProvider';
 import { colors } from '../../theme';
@@ -16,7 +17,10 @@ type Phase = 'ringing' | 'calling' | 'active' | 'ended';
 export default function Call() {
   const { id, incoming, number } = useLocalSearchParams<{ id: string; incoming?: string; number?: string }>();
   const contact = contactById(id);
-  const { logCall, buzz, setInCall } = usePhone();
+  const { logCall, buzz, setInCall, state, storyCallDone } = usePhone();
+  // Appel de l’histoire : ses répliques remplacent les répliques habituelles du contact.
+  const [storyLines] = useState(() => (state.story.call?.from === id ? state.story.call.lines.map((l) => l.replaceAll('{name}', state.name)) : null));
+  const lines = storyLines ?? contact?.call ?? [];
   const { duck } = useRadio();
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>(incoming ? 'ringing' : 'calling');
@@ -45,12 +49,16 @@ export default function Call() {
     return () => loop.stop();
   }, [phase, pulse]);
 
-  // Vibration à chaque sonnerie entrante.
+  // Sonnerie et vibration tant que l’appel entrant sonne.
   useEffect(() => {
     if (phase !== 'ringing') return;
+    playSound('ring', true);
     buzz('notify');
     const t = setInterval(() => buzz('notify'), 1800);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      stopSound('ring');
+    };
   }, [phase, buzz]);
 
   // Appel sortant : le contact décroche après quelques sonneries ; un numéro inconnu n’aboutit pas.
@@ -69,23 +77,24 @@ export default function Call() {
 
   useEffect(() => {
     if (phase !== 'active' || !contact) return;
-    if (line >= contact.call.length - 1) {
+    if (line >= lines.length - 1) {
       const t = setTimeout(() => setPhase('ended'), 2500);
       return () => clearTimeout(t);
     }
     const t = setTimeout(() => setLine((l) => l + 1), line < 0 ? 600 : 2800);
     return () => clearTimeout(t);
-  }, [phase, line, contact]);
+  }, [phase, line, contact, lines.length]);
 
   useEffect(() => {
     if (phase !== 'ended') return;
     if (contact && !logged.current) {
       logged.current = true;
       logCall(contact.id, seconds, seconds === 0 && !!incoming);
+      if (storyLines) storyCallDone(seconds > 0);
     }
     const t = setTimeout(() => (router.canGoBack() ? router.back() : router.replace('/home')), 1400);
     return () => clearTimeout(t);
-  }, [phase, contact, seconds, incoming, logCall]);
+  }, [phase, contact, seconds, incoming, logCall, storyLines, storyCallDone]);
 
   const hangUp = () => {
     buzz();
@@ -115,7 +124,7 @@ export default function Call() {
           {(phase === 'ringing' || phase === 'calling') && (
             <Animated.View style={[styles.halo, { borderColor: contact?.color ?? colors.textMuted, transform: [{ scale }], opacity }]} />
           )}
-          <Avatar emoji={contact?.avatar ?? '☎️'} color={contact?.color ?? colors.textMuted} size={110} />
+          <Avatar name={contact?.name ?? '?'} icon={contact ? undefined : 'call'} color={contact?.color ?? colors.textMuted} size={110} />
         </View>
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.status}>{statusText}</Text>
@@ -124,7 +133,7 @@ export default function Call() {
       <View style={styles.subtitles}>
         {phase === 'active' && contact && line >= 0 && (
           <Text style={styles.subtitle}>
-            « {contact.call[line]} »{muted ? '\n(micro coupé)' : ''}
+            « {lines[line]} »{muted ? '\n(micro coupé)' : ''}
           </Text>
         )}
       </View>

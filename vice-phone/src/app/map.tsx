@@ -1,9 +1,11 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, type GestureResponderEvent, type LayoutChangeEvent, PanResponder, type PanResponderInstance, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, G, LinearGradient, Polygon, Polyline, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 import { AppScreen, Button } from '../components/phone';
+import { StateMap } from '../components/StateMap';
 import { DISTRICTS, ISLAND, LAND, MAP_H, MAP_W, NODES, type Poi, type PoiCategory, poiById, POIS, type Pt, ROADS } from '../data/map';
 import { JOBS } from '../data/world';
 import { formatDistance, route } from '../logic/map';
@@ -23,14 +25,18 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 3.5;
 
 export default function MapScreen() {
-  const params = useLocalSearchParams<{ poi?: string }>();
+  const params = useLocalSearchParams<{ poi?: string; view?: string }>();
+  const [view, setView] = useState<'city' | 'state'>(params.view === 'state' ? 'state' : 'city');
   const { state, buzz } = usePhone();
   const home = poiById('maison')!;
-  const [selected, setSelected] = useState<Poi | null>(() => (params.poi ? (poiById(params.poi) ?? null) : null));
-  const [gps, setGps] = useState<string | null>(params.poi ?? null);
+  const cityPoi = params.view === 'state' ? undefined : params.poi;
+  const [selected, setSelected] = useState<Poi | null>(() => (cityPoi ? (poiById(cityPoi) ?? null) : null));
+  const [gps, setGps] = useState<string | null>(cityPoi ?? null);
   const [cat, setCat] = useState<PoiCategory | 'tout'>('tout');
   const [box, setBox] = useState({ w: 0, h: 0 });
 
+  const storyMission = state.story.mission?.def;
+  const missionPoi = storyMission?.map === 'city' ? storyMission.poi : undefined;
   const activeJob = state.activeJob ? JOBS.find((j) => j.id === state.activeJob!.id) : undefined;
   const target = gps ? poiById(gps) : undefined;
   const itinerary = useMemo(() => (target ? route(home.at, target.at) : null), [target, home.at]);
@@ -49,7 +55,7 @@ export default function MapScreen() {
     cam.resize(width, height);
     setBox({ w: width, h: height });
     // Premier affichage : centré sur le lieu demandé ou sur votre appartement.
-    if (first) cam.centerOn((params.poi && poiById(params.poi)?.at) || home.at, 1.6, false);
+    if (first) cam.centerOn((cityPoi && poiById(cityPoi)?.at) || home.at, 1.6, false);
   };
   const centerOn = (p: Pt, z?: number) => cam.centerOn(p, z);
   const zoomBy = (f: number) => cam.zoomBy(f);
@@ -72,8 +78,23 @@ export default function MapScreen() {
     return () => loop.stop();
   }, [pulse]);
 
+  const toggle = (
+    <Pressable onPress={() => setView((v) => (v === 'city' ? 'state' : 'city'))} hitSlop={10} style={styles.toggle} accessibilityLabel={view === 'city' ? 'Carte de l’État' : 'Plan de la ville'}>
+      <Ionicons name={view === 'city' ? 'earth' : 'business'} size={16} color={colors.background} />
+      <Text style={styles.toggleText}>{view === 'city' ? 'État' : 'Ville'}</Text>
+    </Pressable>
+  );
+
+  if (view === 'state') {
+    return (
+      <AppScreen title="Carte · Solenne" color={colors.cyan} right={toggle}>
+        <StateMap initial={params.view === 'state' ? params.poi : undefined} missionPoi={storyMission?.map === 'state' ? storyMission.poi : undefined} onOpenCity={() => setView('city')} />
+      </AppScreen>
+    );
+  }
+
   return (
-    <AppScreen title="Carte · Port Corail" color={colors.cyan}>
+    <AppScreen title="Carte · Port Corail" color={colors.cyan} right={toggle}>
       <View style={{ flex: 1 }}>
         <View style={styles.mapBox} onLayout={onLayout} {...pan.panHandlers}>
           {base > 0 && (
@@ -148,7 +169,7 @@ export default function MapScreen() {
               {visible
                 .filter((p) => p.id !== 'maison')
                 .map((p) => {
-                  const isTarget = p.id === gps;
+                  const isTarget = p.id === gps || p.id === missionPoi;
                   const isSel = selected?.id === p.id;
                   return (
                     <Pressable
@@ -214,6 +235,7 @@ export default function MapScreen() {
             </View>
             <Text style={styles.sheetDesc}>{selected.description}</Text>
             {activeJob && activeJob.poi === selected.id && <Text style={styles.jobHint}>💼 Votre boulot en cours se passe ici.</Text>}
+            {missionPoi === selected.id && <Text style={[styles.jobHint, { color: colors.pink }]}>🚩 Mission La Cavale : {storyMission?.title}</Text>}
             <View style={styles.sheetActions}>
               {selected.id !== 'maison' && (
                 <View style={{ flex: 1 }}>
@@ -351,6 +373,8 @@ function inside([x, y]: Pt, poly: Pt[]) {
 }
 
 const styles = StyleSheet.create({
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.cyan, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5 },
+  toggleText: { color: colors.background, fontWeight: '800', fontSize: 13 },
   mapBox: { flex: 1, overflow: 'hidden', backgroundColor: '#062238' },
   halo: { position: 'absolute', width: 40, height: 40, borderRadius: 20, backgroundColor: '#2DE2E6' },
   marker: { position: 'absolute', width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(11,7,22,0.85)', borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },

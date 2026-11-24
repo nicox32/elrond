@@ -65,6 +65,14 @@ export default function Settings() {
           <Switch value={state.haptics} onValueChange={(v) => updateSettings({ haptics: v })} trackColor={{ true: colors.pink, false: colors.border }} />
         </View>
 
+        <View style={[styles.section, styles.row]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>Sons</Text>
+            <Text style={styles.hint}>Notifications, sonnerie, missions.</Text>
+          </View>
+          <Switch value={state.sound} onValueChange={(v) => updateSettings({ sound: v })} trackColor={{ true: colors.pink, false: colors.border }} />
+        </View>
+
         <Button
           label="Verrouiller l’écran"
           color={colors.purple}
@@ -76,7 +84,7 @@ export default function Settings() {
         <Button label="Réinitialiser le téléphone" color={colors.red} outline onPress={confirmReset} />
 
         <Text style={styles.about}>
-          NeonCell 1.0 · Corail OS{'\n'}Simulateur de téléphone dans un univers fictif inspiré des jeux en monde ouvert. Application de fan non officielle, sans lien avec un éditeur de jeux vidéo. Tous les personnages, lieux et marques sont inventés.
+          NeonCell 2.0 · Corail OS{'\n'}Simulateur de téléphone dans un univers fictif inspiré des jeux en monde ouvert. Application de fan non officielle, sans lien avec un éditeur de jeux vidéo. Tous les personnages, lieux et marques sont inventés.
         </Text>
       </ScrollView>
     </AppScreen>

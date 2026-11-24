@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Avatar } from '../components/phone';
-import { CONTACTS, contactById } from '../data/world';
+import { contactById } from '../data/world';
 import { ago, duration } from '../logic/format';
-import { useNow, usePhone } from '../state/PhoneProvider';
+import { knownContacts, useNow, usePhone } from '../state/PhoneProvider';
 import { colors } from '../theme';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
@@ -30,10 +30,10 @@ export default function Phone() {
 }
 
 function Keypad() {
-  const { buzz } = usePhone();
+  const { buzz, state } = usePhone();
   const [digits, setDigits] = useState('');
   const shown = formatNumber(digits);
-  const match = CONTACTS.find((c) => c.number === shown);
+  const match = knownContacts(state).find((c) => c.number === shown);
 
   const call = () => {
     if (!digits) return;
@@ -90,7 +90,7 @@ function Recents() {
         if (!c) return null;
         return (
           <Pressable style={styles.recent} onPress={() => router.push(`/call/${c.id}`)}>
-            <Avatar emoji={c.avatar} color={c.color} size={42} />
+            <Avatar name={c.name} color={c.color} size={42} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.recentName, item.missed && { color: colors.red }]}>{c.name}</Text>
               <Text style={styles.recentInfo}>{item.missed ? 'Appel manqué' : `Durée ${duration(item.seconds)}`}</Text>

@@ -5,7 +5,10 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { Platform } from 'react-native';
 
 import { CONTACTS, contactById, FEED_AUTHORS, FEED_POOL, FEED_SEED, JOBS, START_BALANCE } from '../data/world';
+import { CHAPTERS, ENDINGS } from '../data/story';
 import { pick, replyFor, typingDelay } from '../logic/chat';
+import { playSound, setSoundEnabled } from '../logic/sfx';
+import { callDone, chooseStory, newStory, type Out, restartStory, runStory, startMission, type StoryState } from '../logic/story';
 import type { FilterId } from '../components/FilteredPhoto';
 import type { WallpaperId } from '../theme';
 
@@ -30,6 +33,8 @@ export type PhoneState = {
   newsRead: string[];
   calls: { id: string; contactId: string; at: number; seconds: number; missed: boolean }[];
   photos: Photo[];
+  sound: boolean;
+  story: StoryState;
 };
 
 export type Banner = { id: string; app: string; icon: string; color: string; title: string; body: string; route: string };
@@ -39,13 +44,14 @@ export const newId = () => `${Date.now().toString(36)}-${(counter++).toString(36
 
 function initialState(now = Date.now()): PhoneState {
   const threads: Record<string, Thread> = {};
-  CONTACTS.forEach((c, i) => {
+  CONTACTS.filter((c) => !c.story).forEach((c, i) => {
     threads[c.id] = { messages: [{ id: newId(), from: 'them', text: c.opening, at: now - (i + 1) * 7 * 60_000 }], unread: 1 };
   });
   return {
     name: 'Alex',
-    wallpaper: 'sunset',
+    wallpaper: 'auto',
     haptics: true,
+    sound: true,
     threads,
     posts: FEED_SEED.map((p) => ({ id: newId(), author: p.author, text: p.text, at: now - p.minutesAgo * 60_000, likes: p.likes, liked: false })),
     balance: START_BALANCE,
@@ -55,6 +61,7 @@ function initialState(now = Date.now()): PhoneState {
     newsRead: [],
     calls: [],
     photos: [],
+    story: newStory(),
   };
 }
 
@@ -75,7 +82,8 @@ type Action =
   | { type: 'addPhoto'; photo: Photo }
   | { type: 'photoFilter'; id: string; filter: FilterId }
   | { type: 'deletePhoto'; id: string }
-  | { type: 'settings'; patch: Partial<Pick<PhoneState, 'name' | 'wallpaper' | 'haptics'>> };
+  | { type: 'story'; story: StoryState }
+  | { type: 'settings'; patch: Partial<Pick<PhoneState, 'name' | 'wallpaper' | 'haptics' | 'sound'>> };
 
 function reducer(s: PhoneState, a: Action): PhoneState {
   switch (a.type) {
@@ -144,6 +152,8 @@ function reducer(s: PhoneState, a: Action): PhoneState {
       return { ...s, photos: s.photos.map((p) => (p.id === a.id ? { ...p, filter: a.filter } : p)) };
     case 'deletePhoto':
       return { ...s, photos: s.photos.filter((p) => p.id !== a.id) };
+    case 'story':
+      return { ...s, story: a.story };
     case 'settings':
       return { ...s, ...a.patch };
   }
@@ -176,7 +186,11 @@ type Ctx = {
   cancelJob: () => void;
   readNews: (id: string) => void;
   logCall: (contactId: string, seconds: number, missed?: boolean) => void;
-  updateSettings: (patch: Partial<Pick<PhoneState, 'name' | 'wallpaper' | 'haptics'>>) => void;
+  updateSettings: (patch: Partial<Pick<PhoneState, 'name' | 'wallpaper' | 'haptics' | 'sound'>>) => void;
+  storyChoose: (index: number) => void;
+  storyStartMission: () => void;
+  storyCallDone: (answered: boolean) => void;
+  storyRestart: () => void;
   reset: () => void;
   buzz: (kind?: 'light' | 'success' | 'notify') => void;
 };
@@ -241,6 +255,7 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
   const notify = useCallback(
     (b: Omit<Banner, 'id'>) => {
       setBanner({ ...b, id: newId() });
+      playSound('notif');
       buzz('notify');
     },
     [buzz],
@@ -251,10 +266,12 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
     (contactId: string, text: string) => {
       const c = contactById(contactId);
       const isOpen = openThread.current === contactId;
-      dispatch({ type: 'message', contactId, from: 'them', text, unread: !isOpen });
+      const body = text.replaceAll('{name}', stateRef.current.name);
+      dispatch({ type: 'message', contactId, from: 'them', text: body, unread: !isOpen });
       if (!isOpen && c) {
-        notify({ app: 'Messages', icon: '💬', color: '#3DDC97', title: c.name, body: text, route: `/messages/${contactId}` });
+        notify({ app: 'Messages', icon: 'chatbubbles', color: '#2DE2E6', title: c.name, body, route: `/messages/${contactId}` });
       } else if (isOpen) {
+        playSound('notif');
         buzz();
       }
     },
@@ -266,6 +283,7 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       const c = contactById(contactId);
       if (!c || !text.trim()) return;
       dispatch({ type: 'message', contactId, from: 'me', text: text.trim(), unread: false });
+      playSound('sent');
       buzz();
       const reply = replyFor(c, text);
       later(500 + Math.random() * 700, () => setTyping((t) => ({ ...t, [contactId]: true })));
@@ -314,6 +332,98 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
     [buzz, later, receive],
   );
 
+  const storyStart = useRef<number | null>(null);
+
+  /** Exécute ce que l’histoire demande au téléphone. */
+  const applyOut = useCallback(
+    (out: Out[]) => {
+      for (const o of out) {
+        switch (o.k) {
+          case 'msg':
+            setTyping((t) => ({ ...t, [o.from]: true }));
+            later(1400, () => {
+              setTyping((t) => ({ ...t, [o.from]: false }));
+              receive(o.from, o.text);
+            });
+            break;
+          case 'sent':
+            dispatch({ type: 'message', contactId: o.to, from: 'me', text: o.text, unread: false });
+            playSound('sent');
+            break;
+          case 'money':
+            dispatch({ type: 'money', label: o.label, amount: o.amount });
+            break;
+          case 'call':
+            if (!inCall.current) router.push(`/call/${o.from}?incoming=1`);
+            else notify({ app: 'Téléphone', icon: 'call', color: '#3DDC97', title: `${contactById(o.from)?.name ?? 'Inconnu'} essaie de vous joindre`, body: 'Rappelez depuis Contacts.', route: '/contacts' });
+            break;
+          case 'notify':
+            notify({ app: 'La Cavale', icon: 'flame', color: '#FF3D8B', title: o.title, body: o.body, route: o.route });
+            break;
+          case 'mission':
+            playSound(o.win ? 'win' : 'fail');
+            if (o.def.wanted > 0 || !o.win) later(1500, () => playSound('siren'));
+            notify({
+              app: 'La Cavale',
+              icon: o.win ? 'trophy' : 'alert-circle',
+              color: o.win ? '#3DDC97' : '#FF5C6C',
+              title: o.win ? `Mission réussie : ${o.def.title}` : `Mission ratée : ${o.def.title}`,
+              body: o.win ? (o.def.reward ? `+${o.def.reward} $ sur votre compte.` : 'Bien joué.') : 'La police vous a repérés. Faites profil bas.',
+              route: '/story',
+            });
+            break;
+          case 'ending': {
+            const e = ENDINGS.find((x) => x.id === o.id);
+            playSound('win');
+            notify({ app: 'La Cavale', icon: 'film', color: '#FFB347', title: `FIN : ${e?.title ?? ''}`, body: 'Ouvrez l’appli La Cavale.', route: '/story' });
+            break;
+          }
+        }
+      }
+    },
+    [later, receive, notify],
+  );
+
+  const storyChoose = useCallback(
+    (index: number) => {
+      const r = chooseStory(stateRef.current.story, index, Date.now());
+      stateRef.current = { ...stateRef.current, story: r.s };
+      dispatch({ type: 'story', story: r.s });
+      applyOut(r.out);
+      buzz();
+    },
+    [applyOut, buzz],
+  );
+  const storyStartMission = useCallback(() => {
+    const st = startMission(stateRef.current.story, Date.now());
+    stateRef.current = { ...stateRef.current, story: st };
+    dispatch({ type: 'story', story: st });
+    buzz('success');
+  }, [buzz]);
+  const storyCallDone = useCallback(
+    (answered: boolean) => {
+      const st = stateRef.current.story;
+      if (!st.call) return;
+      if (answered) {
+        const next = callDone(st, Date.now());
+        stateRef.current = { ...stateRef.current, story: next };
+        dispatch({ type: 'story', story: next });
+      } else {
+        later(3000, () => receive(st.call!.from, 'Tu ne réponds pas ? Rappelle-moi.'));
+      }
+    },
+    [later, receive],
+  );
+  const storyRestart = useCallback(() => {
+    const st = restartStory(stateRef.current.story, Date.now());
+    stateRef.current = { ...stateRef.current, story: st };
+    dispatch({ type: 'story', story: st });
+  }, []);
+
+  useEffect(() => {
+    setSoundEnabled(state.sound);
+  }, [state.sound]);
+
   // Horloge de la simulation : fin des boulots, likes, messages et publications spontanés.
   useEffect(() => {
     if (!ready) return;
@@ -325,8 +435,20 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
         const job = JOBS.find((j) => j.id === s.activeJob!.id);
         if (job && now - s.activeJob.startedAt >= job.durationSec * 1000) {
           dispatch({ type: 'finishJob' });
-          notify({ app: 'Banque Flamant', icon: '🦩', color: '#FF8FB1', title: `+${job.reward} $ reçus`, body: `${job.client} a payé « ${job.title} ».`, route: '/bank' });
+          notify({ app: 'Banque Flamant', icon: 'card', color: '#FF8FB1', title: `+${job.reward} $ reçus`, body: `${job.client} a payé « ${job.title} ».`, route: '/bank' });
         }
+      }
+      // L’histoire démarre 12 s après le premier déverrouillage, puis avance toute seule.
+      if (unlockedRef.current && !s.story.started) {
+        storyStart.current ??= now + 12_000;
+        if (now >= storyStart.current) dispatch({ type: 'story', story: { ...s.story, started: true, nextAt: now } });
+      } else if (s.story.started) {
+        const r = runStory(s.story, now, s.balance);
+        if (r.s !== s.story) {
+          stateRef.current = { ...s, story: r.s };
+          dispatch({ type: 'story', story: r.s });
+        }
+        applyOut(r.out);
       }
       if (Math.random() < 0.3) dispatch({ type: 'tickLikes' });
       if (unlockedRef.current && now >= nextEvent) {
@@ -334,21 +456,21 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
         const roll = Math.random();
         if (roll < 0.12 && !inCall.current) {
           // Appel entrant d’un proche (jamais du numéro masqué… ou presque).
-          const c = pick(CONTACTS.filter((x) => x.id !== 'agence'));
+          const c = pick(CONTACTS.filter((x) => x.id !== 'agence' && !x.story));
           router.push(`/call/${c.id}?incoming=1`);
         } else if (roll < 0.65) {
-          const c = pick(CONTACTS);
+          const c = pick(CONTACTS.filter((x) => !x.story));
           receive(c.id, pick(c.spontaneous));
         } else {
           const p = pick(FEED_POOL);
           const a = FEED_AUTHORS[p.author];
           dispatch({ type: 'post', post: { id: newId(), author: p.author, text: p.text, at: now, likes: Math.floor(Math.random() * 300), liked: false } });
-          notify({ app: 'Palmfeed', icon: '🌴', color: '#FF3D8B', title: a.name, body: p.text, route: '/feed' });
+          notify({ app: 'Palmfeed', icon: 'sparkles', color: '#FF3D8B', title: a.name, body: p.text, route: '/feed' });
         }
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [ready, notify, receive]);
+  }, [ready, notify, receive, applyOut]);
 
   const addPhoto = useCallback((uri: string, filter: FilterId) => {
     const id = newId();
@@ -403,6 +525,10 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       readNews,
       logCall,
       updateSettings: (patch) => dispatch({ type: 'settings', patch }),
+      storyChoose,
+      storyStartMission,
+      storyCallDone,
+      storyRestart,
       reset: () => {
         timers.current.forEach(clearTimeout);
         timers.current = [];
@@ -412,7 +538,7 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       },
       buzz,
     }),
-    [state, ready, unlocked, typing, banner, sendMessage, publish, transfer, buzz, addPhoto, setPhotoFilter, deletePhoto, unlock, lock, setOpenThread, setInCall, readThread, readNews, logCall],
+    [state, ready, unlocked, typing, banner, sendMessage, publish, transfer, buzz, addPhoto, setPhotoFilter, deletePhoto, unlock, lock, setOpenThread, setInCall, readThread, readNews, logCall, storyChoose, storyStartMission, storyCallDone, storyRestart],
   );
 
   return <PhoneContext.Provider value={value}>{children}</PhoneContext.Provider>;
@@ -423,6 +549,13 @@ export function usePhone() {
   if (!ctx) throw new Error('usePhone doit être utilisé dans <PhoneProvider>.');
   return ctx;
 }
+
+/** Contacts visibles : les personnages de l’histoire n’apparaissent qu’après leur premier message. */
+export function knownContacts(s: PhoneState) {
+  return CONTACTS.filter((c) => !c.story || s.threads[c.id]);
+}
+
+export const chapterName = (n: number) => CHAPTERS[n] ?? '';
 
 export function unreadMessages(s: PhoneState) {
   return Object.values(s.threads).reduce((n, t) => n + t.unread, 0);

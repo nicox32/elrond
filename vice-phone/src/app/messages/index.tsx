@@ -2,15 +2,14 @@ import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Avatar, Badge } from '../../components/phone';
-import { CONTACTS } from '../../data/world';
 import { ago } from '../../logic/format';
-import { useNow, usePhone } from '../../state/PhoneProvider';
+import { knownContacts, useNow, usePhone } from '../../state/PhoneProvider';
 import { colors } from '../../theme';
 
 export default function Messages() {
   const { state, typing } = usePhone();
   const now = useNow(30_000);
-  const rows = CONTACTS.map((c) => {
+  const rows = knownContacts(state).map((c) => {
     const t = state.threads[c.id];
     return { c, t, last: t?.messages[t.messages.length - 1] };
   }).sort((a, b) => (b.last?.at ?? 0) - (a.last?.at ?? 0));
@@ -23,7 +22,7 @@ export default function Messages() {
         ItemSeparatorComponent={() => <View style={styles.sep} />}
         renderItem={({ item: { c, t, last } }) => (
           <Pressable style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.surface }]} onPress={() => router.push(`/messages/${c.id}`)}>
-            <Avatar emoji={c.avatar} color={c.color} size={50} />
+            <Avatar name={c.name} color={c.color} size={50} />
             <View style={{ flex: 1 }}>
               <View style={styles.line}>
                 <Text style={[styles.name, (t?.unread ?? 0) > 0 && { color: colors.cyan }]}>{c.name}</Text>

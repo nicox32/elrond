@@ -22,7 +22,7 @@ export default function Feed() {
         keyExtractor={(p) => p.id}
         ListHeaderComponent={
           <View style={styles.composer}>
-            <Avatar emoji={me.avatar} color={me.color} size={40} />
+            <Avatar name={state.name} color={me.color} size={40} />
             <View style={{ flex: 1, gap: 8 }}>
               <TextInput
                 value={draft}
@@ -57,7 +57,7 @@ export default function Feed() {
           const a = item.author === 'me' ? me : FEED_AUTHORS[item.author];
           return (
             <View style={styles.post}>
-              <Avatar emoji={a.avatar} color={a.color} size={42} />
+              <Avatar name={a.name} color={a.color} size={42} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.author}>
                   {a.name} <Text style={styles.handle}>{a.handle} · {ago(item.at, now)}</Text>

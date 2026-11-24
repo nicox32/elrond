@@ -79,3 +79,48 @@ test('GPS : le chemin suit les routes et passe par le pont pour l’île', async
   assert.equal(formatDistance(1234), '1,2 km');
   assert.equal(formatDistance(234), '230 m');
 });
+
+test('histoire : chaque passage se termine et mène à un passage existant', async () => {
+  const { NODES, ENDINGS } = await import('../src/data/story.ts');
+  const ends = new Set(ENDINGS.map((e) => e.id));
+  for (const [id, beats] of Object.entries(NODES)) {
+    const last = beats[beats.length - 1];
+    assert.ok(['choice', 'mission', 'goto', 'if', 'end'].includes(last.t), `${id} se termine par ${last.t}`);
+    for (const b of beats) {
+      const targets = b.t === 'choice' ? b.options.map((o) => o.go) : b.t === 'mission' ? [b.mission.win, b.mission.fail] : b.t === 'goto' ? [b.go] : b.t === 'if' ? [b.then, b.else] : [];
+      for (const t of targets) assert.ok(NODES[t], `${id} → ${t} introuvable`);
+      if (b.t === 'end') assert.ok(ends.has(b.ending), b.ending);
+    }
+  }
+});
+
+test('histoire : une partie complète jusqu’à une fin', async () => {
+  const { newStory, runStory, chooseStory, startMission, callDone } = await import('../src/logic/story.ts');
+  let s = { ...newStory(), started: true };
+  let now = 0;
+  let money = 0;
+  const seen: string[] = [];
+  for (let step = 0; step < 400 && !s.ending; step++) {
+    now += 5000;
+    const r = runStory(s, now, money, () => 0); // toutes les missions réussissent
+    s = r.s;
+    for (const o of r.out) {
+      if (o.k === 'money') money += o.amount;
+      if (o.k === 'msg') seen.push(o.from);
+    }
+    if (s.choice) s = chooseStory(s, 0, now).s;
+    if (s.mission && !s.mission.startedAt) s = startMission(s, now);
+    if (s.call) s = callDone(s, now);
+    if (s.gate) money += 1000; // le joueur fait des boulots
+  }
+  assert.ok(s.ending, 'une fin est atteinte');
+  assert.ok(seen.includes('mara') && seen.includes('santos') && seen.includes('vera'));
+  assert.ok(s.chapter === 5);
+});
+
+test('histoire : le niveau de recherche fait baisser les chances', async () => {
+  const { missionChance } = await import('../src/logic/story.ts');
+  const def = { risk: 0.3 } as never;
+  assert.ok(missionChance(def, { wanted: 0, rep: 0 }) > missionChance(def, { wanted: 4, rep: 0 }));
+  assert.ok(Math.abs(missionChance(def, { wanted: 5, rep: 0 }) - 0.35) < 1e-9);
+});

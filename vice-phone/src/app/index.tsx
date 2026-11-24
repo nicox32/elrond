@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -50,11 +51,11 @@ export default function LockScreen() {
     .slice(0, 4);
 
   return (
-    <Wallpaper dim={0.25}>
+    <Wallpaper dim={0.12} skyline>
       <Animated.View style={{ flex: 1, transform: [{ translateY: dy }] }} {...pan.panHandlers}>
         <PhoneStatusBar />
         <View style={styles.top}>
-          <Text style={styles.lockIcon}>🔒</Text>
+          <Ionicons name="lock-closed" size={18} color={colors.text} />
           <Text style={styles.date}>{longDate(now).replace(/^./, (c) => c.toUpperCase())}</Text>
           <Text style={styles.time}>{clock(now)}</Text>
         </View>
@@ -63,7 +64,7 @@ export default function LockScreen() {
           {radio.station && (
             <View style={[styles.notif, { alignItems: 'center' }]}>
               <View style={[styles.notifIcon, { backgroundColor: radio.station.colors[0] }]}>
-                <Text>📻</Text>
+                <Ionicons name="radio" size={18} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.notifTitle}>{radio.station.name}</Text>
@@ -77,7 +78,7 @@ export default function LockScreen() {
           {pending.map((p) => (
             <View key={p.id} style={styles.notif}>
               <View style={styles.notifIcon}>
-                <Text>💬</Text>
+                <Ionicons name="chatbubbles" size={18} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.notifTitle}>
@@ -93,7 +94,7 @@ export default function LockScreen() {
         </View>
 
         <Pressable onPress={open} style={[styles.unlock, { paddingBottom: insets.bottom + 24 }]} accessibilityRole="button" accessibilityLabel="Déverrouiller">
-          <Text style={styles.chevron}>︿</Text>
+          <Ionicons name="chevron-up" size={24} color={colors.text} style={{ opacity: 0.85 }} />
           <Text style={styles.hint}>Glisser vers le haut ou toucher pour déverrouiller</Text>
         </Pressable>
       </Animated.View>
@@ -103,15 +104,13 @@ export default function LockScreen() {
 
 const styles = StyleSheet.create({
   top: { alignItems: 'center', marginTop: 24 },
-  lockIcon: { fontSize: 18 },
   date: { color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 8 },
   time: { color: colors.text, fontSize: 88, fontWeight: '200', letterSpacing: -2, marginTop: -6 },
   list: { flex: 1, paddingHorizontal: 14, gap: 8, marginTop: 16 },
   notif: { flexDirection: 'row', gap: 10, padding: 12, borderRadius: 18, backgroundColor: 'rgba(20,12,40,0.6)' },
-  notifIcon: { width: 34, height: 34, borderRadius: 9, backgroundColor: colors.green, alignItems: 'center', justifyContent: 'center' },
+  notifIcon: { width: 34, height: 34, borderRadius: 9, backgroundColor: '#1C9FD6', alignItems: 'center', justifyContent: 'center' },
   notifTitle: { color: colors.text, fontWeight: '700', fontSize: 14 },
   notifBody: { color: colors.text, opacity: 0.85, fontSize: 14, marginTop: 1 },
   unlock: { alignItems: 'center', paddingTop: 12 },
-  chevron: { color: colors.text, fontSize: 22, opacity: 0.8 },
   hint: { color: colors.text, opacity: 0.8, fontSize: 13 },
 });

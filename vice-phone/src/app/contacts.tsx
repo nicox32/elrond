@@ -2,11 +2,12 @@ import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Avatar } from '../components/phone';
-import { CONTACTS } from '../data/world';
+import { knownContacts, usePhone } from '../state/PhoneProvider';
 import { colors } from '../theme';
 
 export default function Contacts() {
-  const sorted = [...CONTACTS].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  const { state } = usePhone();
+  const sorted = [...knownContacts(state)].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   return (
     <AppScreen title="Contacts" color={colors.sun}>
       <FlatList
@@ -15,7 +16,7 @@ export default function Contacts() {
         contentContainerStyle={{ padding: 12, gap: 10 }}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Avatar emoji={item.avatar} color={item.color} size={48} />
+            <Avatar name={item.name} color={item.color} size={48} />
             <View style={{ flex: 1 }}>
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.num}>{item.number}</Text>

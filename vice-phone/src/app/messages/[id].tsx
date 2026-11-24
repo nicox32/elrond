@@ -13,7 +13,8 @@ const QUICK = ['Salut ! 👋', 'Oui', 'Non', 'Merci !', 'T’es où ?', '😂'];
 export default function Conversation() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const contact = contactById(id);
-  const { state, typing, sendMessage, readThread, setOpenThread } = usePhone();
+  const { state, typing, sendMessage, readThread, setOpenThread, storyChoose } = usePhone();
+  const storyChoice = state.story.choice?.from === id ? state.story.choice : null;
   const [text, setText] = useState('');
   const list = useRef<FlatList>(null);
   const messages = state.threads[id]?.messages ?? [];
@@ -64,7 +65,7 @@ export default function Conversation() {
           onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
           ListHeaderComponent={
             <View style={styles.head}>
-              <Avatar emoji={contact.avatar} color={contact.color} size={64} />
+              <Avatar name={contact.name} color={contact.color} size={64} />
               <Text style={styles.headName}>{contact.name}</Text>
               <Text style={styles.headNum}>{contact.number}</Text>
             </View>
@@ -77,13 +78,24 @@ export default function Conversation() {
           )}
           ListFooterComponent={typing[contact.id] ? <TypingDots /> : undefined}
         />
-        <View style={styles.quick}>
-          {QUICK.map((q) => (
-            <Pressable key={q} style={styles.chip} onPress={() => send(q)}>
-              <Text style={styles.chipText}>{q}</Text>
-            </Pressable>
-          ))}
-        </View>
+        {storyChoice ? (
+          <View style={styles.choices}>
+            <Text style={styles.choiceTitle}>LA CAVALE · VOTRE RÉPONSE</Text>
+            {storyChoice.options.map((o, i) => (
+              <Pressable key={o.label} style={({ pressed }) => [styles.choice, pressed && { opacity: 0.75 }]} onPress={() => storyChoose(i)} accessibilityLabel={o.label}>
+                <Text style={styles.choiceText}>{o.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.quick}>
+            {QUICK.map((q) => (
+              <Pressable key={q} style={styles.chip} onPress={() => send(q)}>
+                <Text style={styles.chipText}>{q}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
         <View style={styles.inputRow}>
           <TextInput
             value={text}
@@ -131,6 +143,10 @@ const styles = StyleSheet.create({
   quick: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 10, paddingTop: 6 },
   chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   chipText: { color: colors.text, fontSize: 13 },
+  choices: { paddingHorizontal: 10, paddingTop: 8, gap: 6 },
+  choiceTitle: { color: colors.pink, fontSize: 11, fontWeight: '800', letterSpacing: 1, marginLeft: 4 },
+  choice: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: 'rgba(255,61,139,0.14)', borderWidth: 1.5, borderColor: colors.pink },
+  choiceText: { color: colors.text, fontSize: 15, fontWeight: '600' },
   inputRow: { flexDirection: 'row', gap: 8, padding: 10, alignItems: 'center' },
   input: { flex: 1, color: colors.text, backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, borderWidth: 1, borderColor: colors.border },
   send: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.pink, alignItems: 'center', justifyContent: 'center' },

@@ -3,9 +3,8 @@ import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen, Avatar, Button } from '../components/phone';
-import { CONTACTS } from '../data/world';
 import { ago, money } from '../logic/format';
-import { useNow, usePhone } from '../state/PhoneProvider';
+import { knownContacts, useNow, usePhone } from '../state/PhoneProvider';
 import { colors } from '../theme';
 
 export default function Bank() {
@@ -44,9 +43,9 @@ export default function Bank() {
             <View style={styles.box}>
               <Text style={styles.boxTitle}>Faire un virement</Text>
               <View style={styles.contacts}>
-                {CONTACTS.map((c) => (
+                {knownContacts(state).map((c) => (
                   <Pressable key={c.id} onPress={() => setTo(c.id)} style={[styles.contact, to === c.id && { borderColor: c.color, backgroundColor: `${c.color}22` }]}>
-                    <Avatar emoji={c.avatar} color={c.color} size={36} />
+                    <Avatar name={c.name} color={c.color} size={36} />
                     <Text style={styles.contactName} numberOfLines={1}>
                       {c.name.split(' ')[0]}
                     </Text>

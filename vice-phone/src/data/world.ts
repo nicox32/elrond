@@ -17,6 +17,8 @@ export type Contact = {
   spontaneous: string[];
   /** Répliques entendues pendant un appel. */
   call: string[];
+  /** Personnage de l’histoire : n’apparaît qu’à son premier message. */
+  story?: true;
 };
 
 export const CONTACTS: Contact[] = [
@@ -111,6 +113,75 @@ export const CONTACTS: Contact[] = [
     generic: ['…', 'Regarde derrière toi. Non, je rigole.', 'On se reverra.'],
     spontaneous: ['Le phare. Minuit. Apporte des chips.', 'Tu ne me connais pas, mais moi je connais ton historique Palmfeed.'],
     call: ['…', 'Respiration mystérieuse', 'Tu as faux pour la pizza.', 'Bip… bip… bip…'],
+  },
+  {
+    id: 'mara',
+    name: 'Mara',
+    avatar: '💋',
+    color: '#FF3D8B',
+    number: '555-0313',
+    story: true,
+    opening: '',
+    triggers: [
+      { words: ['aime', 'love', '❤', 'coeur'], replies: ['Moi aussi. Même quand tu conduis mal.', 'Toi et moi, contre tout Solenne. ❤️'] },
+      { words: ['argent', 'thune', 'fric', '$'], replies: ['L’argent, on va en trouver. Fais-moi confiance.', 'Regarde l’appli Boulots en attendant.'] },
+      { words: ['peur', 'police', 'flic', 'dussart'], replies: ['Respire. Tant qu’on reste ensemble, on s’en sort.', 'Si les étoiles montent, on fait profil bas un moment.'] },
+    ],
+    generic: ['Je suis là.', 'On en parle ce soir ?', 'T’inquiète, j’ai un plan. Enfin, presque.'],
+    spontaneous: ['Tu sais ce qui me manquait le plus en prison ? Le bruit de la mer.', 'J’ai vu une décapotable rouge… un jour, elle sera à nous.'],
+    call: ['C’est moi.', 'Je voulais juste entendre ta voix.', 'Fais attention à toi, d’accord ?'],
+  },
+  {
+    id: 'boyd',
+    name: 'Boyd « le Pélican »',
+    avatar: '🦅',
+    color: '#4CC9F0',
+    number: '555-0471',
+    story: true,
+    opening: '',
+    triggers: [{ words: ['bateau', 'caisse', 'colis'], replies: ['On ne parle pas affaires par message.', 'Viens au ponton si tu veux parler.'] }],
+    generic: ['Hmm.', 'Les Îles ont des oreilles.', 'Pas au téléphone.'],
+    spontaneous: ['La marée est bonne ce soir.'],
+    call: ['Boyd.', 'Les Îles sont calmes. Trop calmes.', 'Raccroche, et efface ce numéro.'],
+  },
+  {
+    id: 'santos',
+    name: 'Santos Vidal',
+    avatar: '🎩',
+    color: '#FFB347',
+    number: '555-0644',
+    story: true,
+    opening: '',
+    triggers: [{ words: ['plan', 'banque', 'coffre'], replies: ['Le plan est simple. Ce sont les gens qui sont compliqués.', 'Patience. Le bon moment arrive toujours.'] }],
+    generic: ['Je n’aime pas les bavards.', 'On se voit quand tout est prêt.'],
+    spontaneous: ['Un coup réussi, c’est 90 % de préparation et 10 % de chance.'],
+    call: ['Santos.', 'Tout est prêt de mon côté.', 'Ne me décevez pas.'],
+  },
+  {
+    id: 'vera',
+    name: 'Véra Lenz',
+    avatar: '💼',
+    color: '#B5179E',
+    number: '555-0900',
+    story: true,
+    opening: '',
+    triggers: [{ words: ['motel', 'argent', 'investir'], replies: ['Tout est parfaitement légal. Presque.', 'Mon assistante vous enverra les documents.'] }],
+    generic: ['Je suis en réunion.', 'Le temps, c’est de l’argent. Le vôtre, surtout.'],
+    spontaneous: ['Bellerive va renaître. Et vous avec.'],
+    call: ['Véra Lenz.', 'Je vous écoute… brièvement.', 'À bientôt.'],
+  },
+  {
+    id: 'dussart',
+    name: 'Inspectrice Dussart',
+    avatar: '🛡️',
+    color: '#4361EE',
+    number: '555-0110',
+    story: true,
+    opening: '',
+    triggers: [{ words: ['innocent', 'rien fait', 'pas nous'], replies: ['C’est ce qu’ils disent tous.', 'Alors vous n’avez rien à craindre.'] }],
+    generic: ['Je prends note.', 'Ne quittez pas l’État de Solenne.'],
+    spontaneous: ['Je vous ai à l’œil.'],
+    call: ['Inspectrice Dussart.', 'Simple appel de courtoisie.', 'Bonne journée.'],
   },
 ];
 
