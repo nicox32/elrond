@@ -53,8 +53,9 @@ npm run typecheck
 npm run lint
 ```
 
-APK : le workflow GitHub **APK NeonCell** le construit à chaque modification de `vice-phone/`
-et le publie dans une release `neoncell-v1.0.<n>`.
+APK (usage personnel) : le workflow GitHub **APK NeonCell** le construit à chaque modification de
+`vice-phone/`. Il n'est pas publié en release : on le télécharge depuis la page du build
+(onglet **Actions › APK NeonCell › le dernier build › Artifacts**), connecté à GitHub. Il est conservé 30 jours.
 
 ## Musique des radios
 

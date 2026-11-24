@@ -1,5 +1,6 @@
-# Construit l'APK Android de NeonCell (dossier vice-phone/) et le publie dans une release GitHub.
-# La release n'est pas marquée « dernière » : le lien de téléchargement d'Orvia reste inchangé.
+# Construit l'APK Android de NeonCell (dossier vice-phone/) pour un usage personnel.
+# Aucune release publique : l'APK se télécharge depuis la page du build (Actions › APK NeonCell),
+# en étant connecté à GitHub.
 name: APK NeonCell
 
 on:
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: neoncell-apk-${{ github.ref }}
@@ -74,21 +75,11 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release.apk "neoncell-1.0.${{ github.run_number }}.apk"
           ls -la *.apk
 
-      - name: Publier la release
-        uses: softprops/action-gh-release@v2
+      # Pas de release publique : l'APK est rangé dans les fichiers du build (onglet Actions),
+      # téléchargeable seulement en étant connecté à GitHub, et effacé au bout de 30 jours.
+      - uses: actions/upload-artifact@v4
         with:
-          tag_name: neoncell-v1.0.${{ github.run_number }}
-          name: NeonCell v1.0.${{ github.run_number }}
-          target_commitish: ${{ github.sha }}
-          make_latest: false
-          files: vice-phone/neoncell-1.0.${{ github.run_number }}.apk
-          body: |
-            NeonCell 1.0.${{ github.run_number }} : simulateur de téléphone dans la ville fictive de Port Corail.
-            Version arm64 (Android 7 et plus, téléphones 64 bits), adaptée au Xiaomi Mi 11i sous HyperOS.
-
-            **Installation sur un Xiaomi (HyperOS)**
-            1. Depuis le téléphone, touchez **neoncell-1.0.${{ github.run_number }}.apk** ci-dessous pour le télécharger.
-            2. Ouvrez-le depuis la notification ou l'appli **Gestionnaire de fichiers** › Téléchargements.
-            3. Si HyperOS le demande, autorisez « Installer des applis inconnues » pour cette appli, puis revenez en arrière.
-            4. HyperOS peut proposer une analyse de sécurité : touchez **Continuer l'installation** (l'APK n'est pas sur le Play Store).
-            5. Pour une version déjà installée, l'APK la met à jour sans effacer vos messages ni vos photos.
+          name: neoncell-1.0.${{ github.run_number }}
+          path: vice-phone/neoncell-1.0.${{ github.run_number }}.apk
+          retention-days: 30
+          compression-level: 0
