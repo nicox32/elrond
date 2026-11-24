@@ -191,14 +191,14 @@ export const ARTICLES: Article[] = [
   },
 ];
 
-export type Job = { id: string; title: string; description: string; emoji: string; durationSec: number; reward: number; client: string };
+export type Job = { id: string; title: string; description: string; emoji: string; durationSec: number; reward: number; client: string; /** Lieu sur la carte. */ poi: string };
 
 export const JOBS: Job[] = [
-  { id: 'tacos', title: 'Livraison de tacos', description: 'Livrer 12 tacos encore chauds au port avant qu’ils refroidissent.', emoji: '🌮', durationSec: 20, reward: 80, client: 'Chef Bruno' },
-  { id: 'chien', title: 'Promener les chiens', description: 'Promener trois caniches (avec leurs lunettes de soleil) sur la plage.', emoji: '🐩', durationSec: 30, reward: 120, client: 'Tonton Vince' },
-  { id: 'convoyage', title: 'Convoyage de décapotable', description: 'Ramener une décapotable du garage de Rico jusqu’à la marina, sans une rayure.', emoji: '🚗', durationSec: 45, reward: 250, client: 'Rico Garage' },
-  { id: 'club', title: 'Installer la sono', description: 'Aider Jade à monter les enceintes du Flamingo Club.', emoji: '🔊', durationSec: 60, reward: 320, client: 'Jade' },
-  { id: 'bateau', title: 'Décorer un bateau', description: 'Accrocher 300 guirlandes lumineuses pour la parade de dimanche.', emoji: '🛥️', durationSec: 90, reward: 500, client: 'Mairie de Port Corail' },
+  { id: 'tacos', title: 'Livraison de tacos', description: 'Livrer 12 tacos encore chauds au port avant qu’ils refroidissent.', emoji: '🌮', durationSec: 20, reward: 80, client: 'Chef Bruno', poi: 'tacos' },
+  { id: 'chien', title: 'Promener les chiens', description: 'Promener trois caniches (avec leurs lunettes de soleil) sur la plage.', emoji: '🐩', durationSec: 30, reward: 120, client: 'Tonton Vince', poi: 'plage' },
+  { id: 'convoyage', title: 'Convoyage de décapotable', description: 'Ramener une décapotable du garage de Rico jusqu’à la marina, sans une rayure.', emoji: '🚗', durationSec: 45, reward: 250, client: 'Rico Garage', poi: 'marina' },
+  { id: 'club', title: 'Installer la sono', description: 'Aider Jade à monter les enceintes du Flamingo Club.', emoji: '🔊', durationSec: 60, reward: 320, client: 'Jade', poi: 'flamingo' },
+  { id: 'bateau', title: 'Décorer un bateau', description: 'Accrocher 300 guirlandes lumineuses pour la parade de dimanche.', emoji: '🛥️', durationSec: 90, reward: 500, client: 'Mairie de Port Corail', poi: 'marina' },
 ];
 
 export const START_BALANCE = 1500;

@@ -1,6 +1,8 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { FilteredPhoto } from '../components/FilteredPhoto';
 import { AppScreen, Avatar } from '../components/phone';
 import { FEED_AUTHORS } from '../data/world';
 import { ago, compact } from '../logic/format';
@@ -32,6 +34,9 @@ export default function Feed() {
                 maxLength={280}
               />
               <View style={styles.composerRow}>
+                <Pressable onPress={() => router.push('/camera')} hitSlop={8} style={{ marginRight: 'auto' }} accessibilityLabel="Ajouter une photo">
+                  <Text style={{ fontSize: 20 }}>📷</Text>
+                </Pressable>
                 <Text style={styles.count}>{280 - draft.length}</Text>
                 <Pressable
                   style={[styles.publish, { opacity: draft.trim() ? 1 : 0.4 }]}
@@ -57,7 +62,8 @@ export default function Feed() {
                 <Text style={styles.author}>
                   {a.name} <Text style={styles.handle}>{a.handle} · {ago(item.at, now)}</Text>
                 </Text>
-                <Text style={styles.text}>{item.text}</Text>
+                {!!item.text && <Text style={styles.text}>{item.text}</Text>}
+                {item.image && <FilteredPhoto uri={item.image.uri} filter={item.image.filter} style={styles.image} />}
                 <Pressable onPress={() => like(item.id)} style={styles.likeRow} hitSlop={8} accessibilityLabel="J’aime">
                   <Text style={[styles.like, item.liked && { color: colors.pink }]}>{item.liked ? '♥' : '♡'}</Text>
                   <Text style={[styles.likeCount, item.liked && { color: colors.pink }]}>{compact(item.likes)}</Text>
@@ -83,6 +89,7 @@ const styles = StyleSheet.create({
   author: { color: colors.text, fontWeight: '700', fontSize: 15 },
   handle: { color: colors.textMuted, fontWeight: '400', fontSize: 13 },
   text: { color: colors.text, fontSize: 15, lineHeight: 21, marginTop: 3 },
+  image: { width: '100%', aspectRatio: 0.75, borderRadius: 14, marginTop: 8 },
   likeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, alignSelf: 'flex-start' },
   like: { color: colors.textMuted, fontSize: 18 },
   likeCount: { color: colors.textMuted, fontSize: 13 },

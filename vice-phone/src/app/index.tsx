@@ -7,11 +7,13 @@ import { PhoneStatusBar, Wallpaper } from '../components/phone';
 import { contactById } from '../data/world';
 import { clock, longDate } from '../logic/format';
 import { useNow, usePhone } from '../state/PhoneProvider';
+import { useRadio } from '../state/RadioProvider';
 import { colors } from '../theme';
 
 /** Écran de verrouillage : heure, notifications en attente, glisser vers le haut pour ouvrir. */
 export default function LockScreen() {
   const { state, unlock, buzz } = usePhone();
+  const radio = useRadio();
   const now = useNow(1000);
   const insets = useSafeAreaInsets();
   const [dy] = useState(() => new Animated.Value(0));
@@ -58,6 +60,20 @@ export default function LockScreen() {
         </View>
 
         <View style={styles.list}>
+          {radio.station && (
+            <View style={[styles.notif, { alignItems: 'center' }]}>
+              <View style={[styles.notifIcon, { backgroundColor: radio.station.colors[0] }]}>
+                <Text>📻</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.notifTitle}>{radio.station.name}</Text>
+                <Text style={styles.notifBody}>{radio.playing ? `En direct · ${radio.station.genre}` : 'En pause'}</Text>
+              </View>
+              <Pressable onPress={radio.toggle} hitSlop={10} accessibilityLabel={radio.playing ? 'Pause' : 'Lecture'}>
+                <Text style={{ color: colors.text, fontSize: 20 }}>{radio.playing ? '❚❚' : '▶'}</Text>
+              </Pressable>
+            </View>
+          )}
           {pending.map((p) => (
             <View key={p.id} style={styles.notif}>
               <View style={styles.notifIcon}>

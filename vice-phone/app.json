@@ -29,6 +29,32 @@
       "resizeMode": "contain",
       "backgroundColor": "#14082B"
     },
-    "plugins": ["expo-router"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NeonCell utilise l’appareil photo pour prendre des photos avec les filtres de Port Corail.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "NeonCell enregistre vos photos filtrées dans la galerie.",
+          "savePhotosPermission": "NeonCell enregistre vos photos filtrées dans la galerie.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
+    ]
   }
 }

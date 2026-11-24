@@ -51,3 +51,31 @@ test('formats', () => {
   assert.equal(ago(0, 30_000), 'à l’instant');
   assert.equal(ago(0, 5 * 60_000), 'il y a 5 min');
 });
+
+test('onAir alterne titres et animateur', async () => {
+  const { onAir } = await import('../src/logic/radio.ts');
+  const s = { host: 'DJ', dj: ['salut'], tracks: [['A', 'B']] as [string, string][] };
+  assert.equal(onAir(s, 0).kind, 'track');
+  assert.equal(onAir(s, 2 * 28_000 + 1000).kind, 'dj');
+  assert.equal(onAir(s, 2 * 28_000 + 9000).kind, 'track');
+});
+
+test('GPS : le chemin suit les routes et passe par le pont pour l’île', async () => {
+  const { shortestPath, route, nearestNode, formatDistance } = await import('../src/logic/map.ts');
+  const { poiById, ROADS } = await import('../src/data/map.ts');
+  assert.deepEqual(shortestPath('A', 'A'), ['A']);
+  const p = shortestPath('A', 'Q');
+  assert.equal(p[0], 'A');
+  assert.equal(p[p.length - 1], 'Q');
+  // Chaque étape est une vraie route.
+  for (let i = 1; i < p.length; i++) {
+    assert.ok(ROADS.some((r) => (r.a === p[i - 1] && r.b === p[i]) || (r.b === p[i - 1] && r.a === p[i])), `${p[i - 1]}-${p[i]}`);
+  }
+  assert.ok(p.includes('L') && p.includes('P'), 'passe par le pont L-P');
+  const r = route(poiById('maison')!.at, poiById('flamingo')!.at);
+  assert.ok(r.meters > 1500 && r.meters < 6000, String(r.meters));
+  assert.ok(r.minutes >= 1);
+  assert.equal(nearestNode([0, 0]), 'A');
+  assert.equal(formatDistance(1234), '1,2 km');
+  assert.equal(formatDistance(234), '230 m');
+});

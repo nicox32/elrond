@@ -6,11 +6,14 @@ import { Platform } from 'react-native';
 
 import { CONTACTS, contactById, FEED_AUTHORS, FEED_POOL, FEED_SEED, JOBS, START_BALANCE } from '../data/world';
 import { pick, replyFor, typingDelay } from '../logic/chat';
+import type { FilterId } from '../components/FilteredPhoto';
 import type { WallpaperId } from '../theme';
 
 export type Message = { id: string; from: 'me' | 'them'; text: string; at: number };
 export type Thread = { messages: Message[]; unread: number };
-export type Post = { id: string; author: number | 'me'; text: string; at: number; likes: number; liked: boolean };
+export type PhotoRef = { uri: string; filter: FilterId };
+export type Photo = PhotoRef & { id: string; at: number };
+export type Post = { id: string; author: number | 'me'; text: string; at: number; likes: number; liked: boolean; image?: PhotoRef };
 export type Transaction = { id: string; label: string; amount: number; at: number };
 export type ActiveJob = { id: string; startedAt: number };
 
@@ -26,6 +29,7 @@ export type PhoneState = {
   jobsDone: Record<string, number>;
   newsRead: string[];
   calls: { id: string; contactId: string; at: number; seconds: number; missed: boolean }[];
+  photos: Photo[];
 };
 
 export type Banner = { id: string; app: string; icon: string; color: string; title: string; body: string; route: string };
@@ -50,6 +54,7 @@ function initialState(now = Date.now()): PhoneState {
     jobsDone: {},
     newsRead: [],
     calls: [],
+    photos: [],
   };
 }
 
@@ -67,6 +72,9 @@ type Action =
   | { type: 'cancelJob' }
   | { type: 'readNews'; id: string }
   | { type: 'call'; contactId: string; seconds: number; missed: boolean }
+  | { type: 'addPhoto'; photo: Photo }
+  | { type: 'photoFilter'; id: string; filter: FilterId }
+  | { type: 'deletePhoto'; id: string }
   | { type: 'settings'; patch: Partial<Pick<PhoneState, 'name' | 'wallpaper' | 'haptics'>> };
 
 function reducer(s: PhoneState, a: Action): PhoneState {
@@ -130,6 +138,12 @@ function reducer(s: PhoneState, a: Action): PhoneState {
       return s.newsRead.includes(a.id) ? s : { ...s, newsRead: [...s.newsRead, a.id] };
     case 'call':
       return { ...s, calls: [{ id: newId(), contactId: a.contactId, at: Date.now(), seconds: a.seconds, missed: a.missed }, ...s.calls].slice(0, 50) };
+    case 'addPhoto':
+      return { ...s, photos: [a.photo, ...s.photos].slice(0, 60) };
+    case 'photoFilter':
+      return { ...s, photos: s.photos.map((p) => (p.id === a.id ? { ...p, filter: a.filter } : p)) };
+    case 'deletePhoto':
+      return { ...s, photos: s.photos.filter((p) => p.id !== a.id) };
     case 'settings':
       return { ...s, ...a.patch };
   }
@@ -152,7 +166,10 @@ type Ctx = {
   setInCall: (v: boolean) => void;
   sendMessage: (contactId: string, text: string) => void;
   readThread: (contactId: string) => void;
-  publish: (text: string) => void;
+  publish: (text: string, image?: PhotoRef) => void;
+  addPhoto: (uri: string, filter: FilterId) => string;
+  setPhotoFilter: (id: string, filter: FilterId) => void;
+  deletePhoto: (id: string) => void;
   like: (postId: string) => void;
   transfer: (contactId: string, amount: number) => boolean;
   startJob: (id: string) => void;
@@ -261,14 +278,14 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
   );
 
   const publish = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
-      dispatch({ type: 'post', post: { id: newId(), author: 'me', text: text.trim(), at: Date.now(), likes: 0, liked: false } });
+    (text: string, image?: PhotoRef) => {
+      if (!text.trim() && !image) return;
+      dispatch({ type: 'post', post: { id: newId(), author: 'me', text: text.trim(), at: Date.now(), likes: 0, liked: false, image } });
       buzz('success');
       // Un ami réagit à la publication en message privé.
       const friend = pick(['jade', 'rico', 'maman']);
       const comments: Record<string, string[]> = {
-        jade: ['Trop bien ta publi 🔥', 'Je like direct !'],
+        jade: image ? ['Trop belle ta photo 😍', 'Ce filtre ! Tu me l’envoies ?'] : ['Trop bien ta publi 🔥', 'Je like direct !'],
         rico: ['Haha je valide 🤙', 'Légende.'],
         maman: ['C’est toi qui as écrit ça ? Fais attention à ce que tu publies.', 'J’ai mis un j’aime, c’est bien comme ça ?'],
       };
@@ -333,6 +350,13 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(id);
   }, [ready, notify, receive]);
 
+  const addPhoto = useCallback((uri: string, filter: FilterId) => {
+    const id = newId();
+    dispatch({ type: 'addPhoto', photo: { id, uri, filter, at: Date.now() } });
+    return id;
+  }, []);
+  const setPhotoFilter = useCallback((id: string, filter: FilterId) => dispatch({ type: 'photoFilter', id, filter }), []);
+  const deletePhoto = useCallback((id: string) => dispatch({ type: 'deletePhoto', id }), []);
   const unlock = useCallback(() => setUnlocked(true), []);
   const lock = useCallback(() => setUnlocked(false), []);
   const setOpenThread = useCallback((id: string | null) => {
@@ -363,6 +387,9 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       sendMessage,
       readThread,
       publish,
+      addPhoto,
+      setPhotoFilter,
+      deletePhoto,
       like: (postId) => {
         dispatch({ type: 'like', postId });
         buzz();
@@ -385,7 +412,7 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       },
       buzz,
     }),
-    [state, ready, unlocked, typing, banner, sendMessage, publish, transfer, buzz, unlock, lock, setOpenThread, setInCall, readThread, readNews, logCall],
+    [state, ready, unlocked, typing, banner, sendMessage, publish, transfer, buzz, addPhoto, setPhotoFilter, deletePhoto, unlock, lock, setOpenThread, setInCall, readThread, readNews, logCall],
   );
 
   return <PhoneContext.Provider value={value}>{children}</PhoneContext.Provider>;

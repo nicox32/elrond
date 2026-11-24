@@ -7,12 +7,14 @@ import { Badge, PhoneStatusBar, Wallpaper } from '../components/phone';
 import { ARTICLES, JOBS } from '../data/world';
 import { duration, money } from '../logic/format';
 import { unreadMessages, useNow, usePhone } from '../state/PhoneProvider';
+import { useRadio } from '../state/RadioProvider';
 import { colors } from '../theme';
 
 type AppDef = { route: string; label: string; icon: string; colors: readonly [string, string]; badge?: number };
 
 export default function Home() {
   const { state, buzz } = usePhone();
+  const radio = useRadio();
   const now = useNow(1000);
   const insets = useSafeAreaInsets();
   const missed = state.calls.filter((c) => c.missed).length;
@@ -22,6 +24,10 @@ export default function Home() {
     { route: '/news', label: 'Corail Info', icon: '📰', colors: ['#FF5C6C', '#B3123A'], badge: ARTICLES.length - state.newsRead.length },
     { route: '/bank', label: 'Banque', icon: '🦩', colors: ['#FF8FB1', '#C2447A'] },
     { route: '/jobs', label: 'Boulots', icon: '💼', colors: ['#3DDC97', '#11876A'], badge: state.activeJob ? 1 : 0 },
+    { route: '/radio', label: 'Radio', icon: '📻', colors: ['#8A4DFF', '#3A0CA3'] },
+    { route: '/camera', label: 'Appareil photo', icon: '📷', colors: ['#5B5F73', '#22252E'] },
+    { route: '/photos', label: 'Photos', icon: '🖼️', colors: ['#FFD166', '#FF8A3D'] },
+    { route: '/map', label: 'Carte', icon: '🗺️', colors: ['#2DE2E6', '#05668D'] },
   ];
   const dock: AppDef[] = [
     { route: '/phone', label: 'Téléphone', icon: '📞', colors: ['#3DDC97', '#1E9E6A'], badge: missed },
@@ -68,6 +74,23 @@ export default function Home() {
           </Pressable>
         </View>
 
+        {radio.station && (
+          <Pressable style={styles.mini} onPress={() => open('/radio')} accessibilityLabel="Ouvrir la radio">
+            <LinearGradient colors={radio.station.colors} style={styles.miniIcon}>
+              <Text style={{ fontSize: 20 }}>{radio.station.emoji}</Text>
+            </LinearGradient>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.widgetLabel}>{radio.playing ? 'EN DIRECT' : 'EN PAUSE'}</Text>
+              <Text style={styles.miniName}>
+                {radio.station.name} · {radio.station.freq}
+              </Text>
+            </View>
+            <Pressable onPress={radio.toggle} hitSlop={10} style={styles.miniBtn} accessibilityLabel={radio.playing ? 'Pause' : 'Lecture'}>
+              <Text style={styles.miniBtnText}>{radio.playing ? '❚❚' : '▶'}</Text>
+            </Pressable>
+          </Pressable>
+        )}
+
         <View style={styles.grid}>
           {apps.map((a) => (
             <AppIcon key={a.route} app={a} onPress={() => open(a.route)} />
@@ -113,5 +136,10 @@ const styles = StyleSheet.create({
   iconGlyph: { fontSize: 30 },
   label: { color: colors.text, fontSize: 12, marginTop: 6, fontWeight: '500', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
   badge: { position: 'absolute', top: -6, right: '12%' },
+  mini: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, padding: 10, borderRadius: 20, backgroundColor: 'rgba(15,8,30,0.45)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  miniIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  miniName: { color: colors.text, fontSize: 15, fontWeight: '700', marginTop: 2 },
+  miniBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  miniBtnText: { color: colors.background, fontWeight: '900' },
   dock: { flexDirection: 'row', marginHorizontal: 12, paddingVertical: 14, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.14)' },
 });

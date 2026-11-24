@@ -17,6 +17,10 @@ logo, image ni son d’un jeu existant n’est utilisé.
 | Corail Info | Actualités parodiques de Port Corail |
 | Banque Flamant | Solde, opérations, virements aux contacts (qui réagissent) |
 | Boulots | Petits boulots chronométrés, payés sur le compte en banque |
+| Radio | 5 stations (synthwave, lo-fi, latino, trap, plage) avec musique **originale**, animateurs et titres fictifs ; la musique continue d’une appli à l’autre et baisse pendant les appels |
+| Appareil photo | Vraie caméra (avant/arrière) avec 7 filtres : coucher de soleil, néon, océan, noir & blanc, VHS 86, carte postale |
+| Photos | Galerie, filtre modifiable après coup, publication sur Palmfeed, enregistrement dans la galerie du téléphone |
+| Carte | Plan dessiné de Port Corail : 7 quartiers, route côtière, pont, 13 lieux, GPS qui suit les routes, zoom à deux doigts, lieu du boulot en cours |
 | Réglages | Prénom, fond d’écran, vibrations, verrouillage, réinitialisation |
 
 Le téléphone « vit » tout seul : messages spontanés, publications et appels entrants arrivent
@@ -35,6 +39,14 @@ npm run lint
 
 APK : le workflow GitHub **APK NeonCell** le construit à chaque modification de `vice-phone/`
 et le publie dans une release `neoncell-v1.0.<n>`.
+
+## Musique des radios
+
+Les boucles de `assets/radio/` sont composées par synthèse (aucun échantillon, aucune musique existante) :
+
+```bash
+python3 scripts/make_radio.py assets/radio   # nécessite numpy et ffmpeg
+```
 
 ## Structure
 

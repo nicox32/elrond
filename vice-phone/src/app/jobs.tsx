@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen, Button } from '../components/phone';
@@ -42,10 +43,19 @@ export default function Jobs() {
                     <View style={[styles.fill, { width: `${progress * 100}%` }]} />
                   </View>
                   <Text style={styles.time}>{progress < 1 ? `${duration(j.durationSec - elapsed)} restantes` : 'Paiement en cours…'}</Text>
+                  <Button label="🗺️ Voir sur la carte" onPress={() => router.push(`/map?poi=${j.poi}`)} color={colors.cyan} outline />
                   <Button label="Abandonner" onPress={cancelJob} color={colors.red} outline />
                 </>
               ) : (
-                <Button label={`Accepter · ${duration(j.durationSec)}`} onPress={() => startJob(j.id)} color="#11876A" disabled={!!active} />
+                <Button
+                  label={`Accepter · ${duration(j.durationSec)}`}
+                  onPress={() => {
+                    startJob(j.id);
+                    router.push(`/map?poi=${j.poi}`);
+                  }}
+                  color="#11876A"
+                  disabled={!!active}
+                />
               )}
             </View>
           );

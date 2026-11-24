@@ -7,6 +7,7 @@ import { Avatar, PhoneStatusBar, Wallpaper } from '../../components/phone';
 import { contactById } from '../../data/world';
 import { duration } from '../../logic/format';
 import { usePhone } from '../../state/PhoneProvider';
+import { useRadio } from '../../state/RadioProvider';
 import { colors } from '../../theme';
 
 type Phase = 'ringing' | 'calling' | 'active' | 'ended';
@@ -16,6 +17,7 @@ export default function Call() {
   const { id, incoming, number } = useLocalSearchParams<{ id: string; incoming?: string; number?: string }>();
   const contact = contactById(id);
   const { logCall, buzz, setInCall } = usePhone();
+  const { duck } = useRadio();
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>(incoming ? 'ringing' : 'calling');
   const [seconds, setSeconds] = useState(0);
@@ -25,10 +27,15 @@ export default function Call() {
   const [pulse] = useState(() => new Animated.Value(0));
   const logged = useRef(false);
 
+  // Pendant l’appel, la radio baisse et aucun autre appel n’arrive.
   useEffect(() => {
     setInCall(true);
-    return () => setInCall(false);
-  }, [setInCall]);
+    duck(true);
+    return () => {
+      setInCall(false);
+      duck(false);
+    };
+  }, [setInCall, duck]);
 
   // Halo animé autour de l’avatar tant que ça sonne.
   useEffect(() => {

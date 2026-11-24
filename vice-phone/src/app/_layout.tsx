@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { NotificationBanner } from '../components/phone';
 import { PhoneProvider, usePhone } from '../state/PhoneProvider';
+import { RadioProvider } from '../state/RadioProvider';
 import { colors } from '../theme';
 
 function Root() {
@@ -35,6 +36,7 @@ function Root() {
         <Stack.Screen name="index" options={{ animation: 'fade' }} />
         <Stack.Screen name="home" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="call/[id]" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="camera" options={{ animation: 'fade' }} />
       </Stack>
       <NotificationBanner />
     </View>
@@ -46,7 +48,9 @@ export default function Layout() {
     <SafeAreaProvider>
       <StatusBar style="light" hidden />
       <PhoneProvider>
-        <Root />
+        <RadioProvider>
+          <Root />
+        </RadioProvider>
       </PhoneProvider>
     </SafeAreaProvider>
   );
