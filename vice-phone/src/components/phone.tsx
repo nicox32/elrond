@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { type ReactNode, useEffect, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Animated, KeyboardAvoidingView, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { clock } from '../logic/format';
@@ -74,8 +74,11 @@ export function AppScreen({
         <View style={{ minWidth: 28, alignItems: 'flex-end' }}>{right}</View>
       </View>
       <View style={[styles.accent, { backgroundColor: color }]} />
-      <View style={{ flex: 1 }}>{children}</View>
-      <HomeIndicator bottom={insets.bottom} />
+      {/* Android 14 affiche l’appli en plein écran : le clavier ne la redimensionne plus, on lui laisse donc la place. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+        <View style={{ flex: 1 }}>{children}</View>
+        <HomeIndicator bottom={insets.bottom} />
+      </KeyboardAvoidingView>
     </View>
   );
 }

@@ -63,13 +63,16 @@ jobs:
       - name: Générer le projet Android
         run: npx expo prebuild --platform android --no-install
 
+      # arm64 seulement : le format des téléphones récents (dont le Xiaomi Mi 11i / Snapdragon 888), APK plus léger.
       # Signé avec la clé de test d'Android : suffisant pour l'installer soi-même, pas pour le Play Store.
       - name: Compiler l'APK
         working-directory: vice-phone/android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
 
       - name: Renommer l'APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk "neoncell-1.0.${{ github.run_number }}.apk"
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "neoncell-1.0.${{ github.run_number }}.apk"
+          ls -la *.apk
 
       - name: Publier la release
         uses: softprops/action-gh-release@v2
@@ -81,5 +84,11 @@ jobs:
           files: vice-phone/neoncell-1.0.${{ github.run_number }}.apk
           body: |
             NeonCell 1.0.${{ github.run_number }} : simulateur de téléphone dans la ville fictive de Port Corail.
-            Téléchargez **neoncell-1.0.${{ github.run_number }}.apk** depuis votre téléphone Android pour l'installer
-            (autorisez l'installation d'applications inconnues si Android le demande).
+            Version arm64 (Android 7 et plus, téléphones 64 bits), adaptée au Xiaomi Mi 11i sous HyperOS.
+
+            **Installation sur un Xiaomi (HyperOS)**
+            1. Depuis le téléphone, touchez **neoncell-1.0.${{ github.run_number }}.apk** ci-dessous pour le télécharger.
+            2. Ouvrez-le depuis la notification ou l'appli **Gestionnaire de fichiers** › Téléchargements.
+            3. Si HyperOS le demande, autorisez « Installer des applis inconnues » pour cette appli, puis revenez en arrière.
+            4. HyperOS peut proposer une analyse de sécurité : touchez **Continuer l'installation** (l'APK n'est pas sur le Play Store).
+            5. Pour une version déjà installée, l'APK la met à jour sans effacer vos messages ni vos photos.

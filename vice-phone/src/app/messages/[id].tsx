@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppScreen, Avatar } from '../../components/phone';
 import { contactById } from '../../data/world';
@@ -55,7 +55,7 @@ export default function Conversation() {
         </Pressable>
       }
     >
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1 }}>
         <FlatList
           ref={list}
           data={messages}
@@ -99,7 +99,7 @@ export default function Conversation() {
             <Text style={styles.sendText}>↑</Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </AppScreen>
   );
 }

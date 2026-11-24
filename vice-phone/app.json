@@ -52,7 +52,10 @@
         {
           "photosPermission": "NeonCell enregistre vos photos filtrées dans la galerie.",
           "savePhotosPermission": "NeonCell enregistre vos photos filtrées dans la galerie.",
-          "isAccessMediaLocationEnabled": false
+          "isAccessMediaLocationEnabled": false,
+          "granularPermissions": [
+            "photo"
+          ]
         }
       ]
     ]
