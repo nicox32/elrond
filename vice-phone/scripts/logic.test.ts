@@ -135,3 +135,23 @@ test('histoire : le niveau de recherche fait baisser les chances', async () => {
   assert.ok(missionChance(def, { wanted: 0, rep: 0 }) > missionChance(def, { wanted: 4, rep: 0 }));
   assert.ok(Math.abs(missionChance(def, { wanted: 5, rep: 0 }) - 0.35) < 1e-9);
 });
+
+test('histoire : chaque choix a sa propre réaction, et chaque personnage a ses réponses libres', async () => {
+  const { NODES, CAST, STORY_REPLIES, STORY_NUDGE } = await import('../src/data/story.ts');
+  for (const [id, beats] of Object.entries(NODES)) {
+    for (const b of beats) {
+      if (b.t !== 'choice') continue;
+      const targets = b.options.map((o) => o.go);
+      // Les choix de fin (chapitre 5) mènent à des chemins différents ; ailleurs, chaque option a sa réaction.
+      if (!id.startsWith('c5')) assert.equal(new Set(targets).size, targets.length, `${id} : une réaction par option`);
+      for (const t of targets) {
+        const first = NODES[t][0];
+        assert.ok(first.t === 'msg' || first.t === 'gate' || first.t === 'if' || first.t === 'mission', `${id} → ${t} commence par ${first.t}`);
+      }
+    }
+  }
+  for (const c of CAST) {
+    assert.ok(STORY_REPLIES[c.id] && Object.keys(STORY_REPLIES[c.id]).length > 0, c.id);
+    assert.ok(STORY_NUDGE[c.id], c.id);
+  }
+});

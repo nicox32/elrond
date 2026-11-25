@@ -5,7 +5,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { Platform } from 'react-native';
 
 import { CONTACTS, contactById, FEED_AUTHORS, FEED_POOL, FEED_SEED, JOBS, START_BALANCE } from '../data/world';
-import { CHAPTERS, ENDINGS } from '../data/story';
+import { CHAPTERS, ENDINGS, STORY_NUDGE, STORY_REPLIES } from '../data/story';
 import { pick, replyFor, typingDelay } from '../logic/chat';
 import { playSound, setSoundEnabled } from '../logic/sfx';
 import { scheduleStoryNotification, setupNotifications } from '../logic/notifications';
@@ -293,7 +293,10 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'message', contactId, from: 'me', text: text.trim(), unread: false });
       playSound('sent');
       buzz();
-      const reply = replyFor(c, text);
+      // Personnage de l’histoire : réponse dans le ton du chapitre en cours (ou rappel s’il attend un choix).
+      const st = stateRef.current.story;
+      const pool = c.story ? STORY_REPLIES[c.id]?.[st.ending ? 6 : st.chapter] : undefined;
+      const reply = c.story && st.choice?.from === c.id ? STORY_NUDGE[c.id] ?? replyFor(c, text) : pool ? pick(pool) : replyFor(c, text);
       later(500 + Math.random() * 700, () => setTyping((t) => ({ ...t, [contactId]: true })));
       later(1200 + typingDelay(reply), () => {
         setTyping((t) => ({ ...t, [contactId]: false }));
