@@ -57,6 +57,12 @@
             "photo"
           ]
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#FF3D8B"
+        }
       ]
     ]
   }

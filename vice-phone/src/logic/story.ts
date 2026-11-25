@@ -1,6 +1,11 @@
-import { type Effects, type MissionDef, NODES } from '../data/story.ts';
+import { type Effects, type MissionDef, NODES, STORY_VERSION } from '../data/story.ts';
+
+export type Pace = 'reel' | 'rapide';
 
 export type StoryState = {
+  version: number;
+  /** « reel » : environ 60 h en temps réel. « rapide » : les attentes et missions sont 60 fois plus courtes. */
+  pace: Pace;
   started: boolean;
   node: string;
   i: number;
@@ -32,15 +37,32 @@ export type Out =
 
 export function newStory(): StoryState {
   return {
-    started: false, node: 'start', i: 0, nextAt: 0, chapter: 0, flags: {}, rep: 0, trust: 0, wanted: 0, wantedAt: 0,
+    version: STORY_VERSION, pace: 'reel', started: false, node: 'start', i: 0, nextAt: 0, chapter: 0, flags: {}, rep: 0, trust: 0, wanted: 0, wantedAt: 0,
     choice: null, gate: null, mission: null, call: null, ending: null, endings: [],
   };
 }
 
 /** Recommence l’histoire en gardant la liste des fins déjà vues. */
 export function restartStory(s: StoryState, now: number): StoryState {
-  return { ...newStory(), endings: s.endings, started: true, nextAt: now + 3000 };
+  return { ...newStory(), endings: s.endings, pace: s.pace, started: true, nextAt: now + 3000 };
 }
+
+/** Une sauvegarde d’un ancien scénario repart du début (en gardant les fins vues et le rythme). */
+export function migrateStory(s: StoryState | undefined): StoryState {
+  if (!s) return newStory();
+  if (s.version === STORY_VERSION && NODES[s.node]) return s;
+  return { ...newStory(), endings: s.endings ?? [], pace: s.pace ?? 'reel' };
+}
+
+/** Attente réelle, selon le rythme choisi : en rapide, les attentes de plus d’une minute sont divisées par 60. */
+export function paced(sec: number, pace: Pace): number {
+  return pace === 'rapide' && sec > 60 ? Math.max(20, sec / 60) : sec;
+}
+
+export const missionDuration = (def: MissionDef, pace: Pace) => (pace === 'rapide' ? Math.max(20, def.durationSec / 60) : def.durationSec);
+
+/** Une étoile de recherche disparaît après ce délai sans mission : 20 min (2 min 30 en rapide). */
+export const wantedDecay = (pace: Pace) => (pace === 'rapide' ? 150 : 1200);
 
 const clampWanted = (w: number) => Math.max(0, Math.min(5, w));
 
@@ -60,7 +82,7 @@ export function missionChance(def: MissionDef, s: Pick<StoryState, 'wanted' | 'r
   return Math.max(0.15, Math.min(0.97, 1 - def.risk - s.wanted * 0.07 + s.rep * 0.03));
 }
 
-const jump = (s: StoryState, node: string, now: number, wait: number): StoryState => ({ ...s, node, i: 0, nextAt: now + wait * 1000 });
+const jump = (s: StoryState, node: string, now: number, wait: number): StoryState => ({ ...s, node, i: 0, nextAt: now + paced(wait, s.pace) * 1000 });
 
 /**
  * Fait avancer l’histoire jusqu’à ce qu’elle attende quelque chose (un délai, un choix, une mission,
@@ -71,15 +93,15 @@ export function runStory(input: StoryState, now: number, balance: number, rand: 
   const out: Out[] = [];
   if (!s.started || s.ending) return { s, out };
 
-  // Le niveau de recherche baisse d’une étoile toutes les 2 min 30, hors mission en cours.
-  if (s.wanted > 0 && !s.mission?.startedAt && now - s.wantedAt > 150_000) {
+  // Le niveau de recherche baisse d’une étoile à intervalle régulier, hors mission en cours.
+  if (s.wanted > 0 && !s.mission?.startedAt && now - s.wantedAt > wantedDecay(s.pace) * 1000) {
     s = { ...s, wanted: s.wanted - 1, wantedAt: now };
   }
 
   // Mission en cours : résultat à la fin du chrono.
   if (s.mission?.startedAt) {
     const def = s.mission.def;
-    if (now - s.mission.startedAt < def.durationSec * 1000) return { s, out };
+    if (now - s.mission.startedAt < missionDuration(def, s.pace) * 1000) return { s, out };
     const win = rand() < missionChance(def, s);
     out.push({ k: 'mission', win, def });
     if (win && def.reward) out.push({ k: 'money', amount: def.reward, label: `Mission : ${def.title}` });
@@ -102,7 +124,7 @@ export function runStory(input: StoryState, now: number, balance: number, rand: 
     switch (beat.t) {
       case 'msg':
         out.push({ k: 'msg', from: beat.from, text: beat.text });
-        s = { ...s, i: s.i + 1, nextAt: now + waitBefore(s.node, s.i + 1) * 1000 };
+        s = { ...s, i: s.i + 1, nextAt: now + paced(waitBefore(s.node, s.i + 1), s.pace) * 1000 };
         break;
       case 'chapter':
         s = { ...s, chapter: beat.n, i: s.i + 1 };
@@ -174,6 +196,32 @@ export function startMission(s: StoryState, now: number): StoryState {
 export function callDone(s: StoryState, now: number): StoryState {
   if (!s.call) return s;
   return { ...s, call: null, i: s.i + 1, nextAt: now + 3000 };
+}
+
+/**
+ * Prochain événement de l’histoire qui mérite une notification quand l’appli est fermée :
+ * fin d’une mission, ou prochain message / appel. `null` si l’histoire attend le joueur.
+ */
+export function nextEvent(s: StoryState): { at: number; kind: 'mission' | 'msg' | 'call'; from?: string } | null {
+  if (!s.started || s.ending || s.choice || s.call || s.gate) return null;
+  if (s.mission) return s.mission.startedAt ? { at: s.mission.startedAt + missionDuration(s.mission.def, s.pace) * 1000, kind: 'mission' } : null;
+  // On cherche le prochain message ou appel, en suivant les sauts simples.
+  let node = s.node;
+  let i = s.i;
+  for (let guard = 0; guard < 20; guard++) {
+    const b = NODES[node]?.[i];
+    if (!b) return null;
+    if (b.t === 'msg' || b.t === 'call') return { at: s.nextAt, kind: b.t, from: b.from };
+    if (b.t === 'goto') {
+      node = b.go;
+      i = 0;
+    } else if (b.t === 'chapter' || b.t === 'effects') {
+      i++;
+    } else {
+      return null;
+    }
+  }
+  return null;
 }
 
 /** Objectif affiché dans l’appli Histoire. */

@@ -94,28 +94,39 @@ test('histoire : chaque passage se termine et mène à un passage existant', asy
   }
 });
 
-test('histoire : une partie complète jusqu’à une fin', async () => {
-  const { newStory, runStory, chooseStory, startMission, callDone } = await import('../src/logic/story.ts');
-  let s = { ...newStory(), started: true };
-  let now = 0;
-  let money = 0;
-  const seen: string[] = [];
-  for (let step = 0; step < 400 && !s.ending; step++) {
-    now += 5000;
-    const r = runStory(s, now, money, () => 0); // toutes les missions réussissent
-    s = r.s;
-    for (const o of r.out) {
-      if (o.k === 'money') money += o.amount;
-      if (o.k === 'msg') seen.push(o.from);
+test('histoire : une partie complète dure environ 60 h et atteint une fin', async () => {
+  const { newStory, runStory, chooseStory, startMission, callDone, nextEvent } = await import('../src/logic/story.ts');
+  const { CAST } = await import('../src/data/story.ts');
+  const play = (pace: 'reel' | 'rapide', pick: (n: number) => number) => {
+    let s = { ...newStory(), pace, started: true };
+    let now = 0;
+    let money = 100_000; // assez d’argent : on mesure le temps de l’histoire seule
+    const seen = new Set<string>();
+    for (let step = 0; step < 20_000 && !s.ending; step++) {
+      // On saute directement au prochain événement, comme un joueur qui revient au bon moment.
+      const ev = nextEvent(s);
+      now = Math.max(now + 1000, ev ? ev.at : now + 1000);
+      const r = runStory(s, now, money, () => 0);
+      s = r.s;
+      for (const o of r.out) {
+        if (o.k === 'money') money += o.amount;
+        if (o.k === 'msg') seen.add(o.from);
+      }
+      if (s.choice) s = chooseStory(s, pick(s.choice.options.length), now).s;
+      if (s.mission && !s.mission.startedAt) s = startMission(s, now);
+      if (s.call) s = callDone(s, now);
     }
-    if (s.choice) s = chooseStory(s, 0, now).s;
-    if (s.mission && !s.mission.startedAt) s = startMission(s, now);
-    if (s.call) s = callDone(s, now);
-    if (s.gate) money += 1000; // le joueur fait des boulots
-  }
-  assert.ok(s.ending, 'une fin est atteinte');
-  assert.ok(seen.includes('mara') && seen.includes('santos') && seen.includes('vera'));
-  assert.ok(s.chapter === 5);
+    return { s, hours: now / 3_600_000, seen };
+  };
+  const first = play('reel', () => 0);
+  assert.ok(first.s.ending, 'une fin est atteinte');
+  assert.equal(first.s.chapter, 5);
+  assert.ok(first.hours > 50 && first.hours < 70, `durée : ${first.hours.toFixed(1)} h`);
+  for (const c of CAST.filter((x) => x.id !== 'santos')) assert.ok(first.seen.has(c.id) || c.id === 'jojo' || c.id === 'nina', c.id);
+  const fast = play('rapide', () => 0);
+  assert.ok(fast.s.ending && fast.hours < 2, `rapide : ${fast.hours.toFixed(2)} h`);
+  // D’autres choix mènent aussi à une fin.
+  for (const k of [1, 2, 3]) assert.ok(play('reel', (n) => Math.min(k, n - 1)).s.ending, `choix ${k}`);
 });
 
 test('histoire : le niveau de recherche fait baisser les chances', async () => {

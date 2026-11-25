@@ -8,7 +8,8 @@ import { CONTACTS, contactById, FEED_AUTHORS, FEED_POOL, FEED_SEED, JOBS, START_
 import { CHAPTERS, ENDINGS } from '../data/story';
 import { pick, replyFor, typingDelay } from '../logic/chat';
 import { playSound, setSoundEnabled } from '../logic/sfx';
-import { callDone, chooseStory, newStory, type Out, restartStory, runStory, startMission, type StoryState } from '../logic/story';
+import { scheduleStoryNotification, setupNotifications } from '../logic/notifications';
+import { callDone, chooseStory, migrateStory, newStory, nextEvent, type Out, type Pace, restartStory, runStory, startMission, type StoryState } from '../logic/story';
 import type { FilterId } from '../components/FilteredPhoto';
 import type { WallpaperId } from '../theme';
 
@@ -191,6 +192,7 @@ type Ctx = {
   storyStartMission: () => void;
   storyCallDone: (answered: boolean) => void;
   storyRestart: () => void;
+  storySetPace: (pace: Pace) => void;
   reset: () => void;
   buzz: (kind?: 'light' | 'success' | 'notify') => void;
 };
@@ -227,7 +229,13 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
-        if (raw) dispatch({ type: 'load', state: { ...initialState(), ...(JSON.parse(raw) as PhoneState) } });
+        if (!raw) return;
+        const saved = JSON.parse(raw) as PhoneState;
+        // Ancien scénario : l’histoire repart du début, et les conversations des anciens personnages disparaissent.
+        const threads = Object.fromEntries(Object.entries(saved.threads ?? {}).filter(([id]) => contactById(id)));
+        const story = migrateStory(saved.story);
+        if (story !== saved.story) for (const c of CONTACTS) if (c.story) delete threads[c.id];
+        dispatch({ type: 'load', state: { ...initialState(), ...saved, threads, story } });
       })
       .catch(() => {})
       .finally(() => setReady(true));
@@ -420,9 +428,33 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'story', story: st });
   }, []);
 
+  const storySetPace = useCallback((pace: Pace) => {
+    const st = { ...stateRef.current.story, pace };
+    stateRef.current = { ...stateRef.current, story: st };
+    dispatch({ type: 'story', story: st });
+  }, []);
+
   useEffect(() => {
     setSoundEnabled(state.sound);
   }, [state.sound]);
+
+  // Dès que l’histoire commence, on demande le droit d’envoyer des notifications.
+  useEffect(() => {
+    if (state.story.started) setupNotifications();
+  }, [state.story.started]);
+
+  // Notification système pour le prochain événement de l’histoire, utile quand l’appli est fermée.
+  useEffect(() => {
+    const ev = nextEvent(state.story);
+    if (!ev) {
+      scheduleStoryNotification(null, '', '');
+      return;
+    }
+    const who = ev.from ? contactById(ev.from)?.name : undefined;
+    const title = ev.kind === 'mission' ? 'Mission terminée' : ev.kind === 'call' ? `${who ?? 'Quelqu’un'} vous appelle` : (who ?? 'Nouveau message');
+    const body = ev.kind === 'mission' ? 'Ouvrez NeonCell pour découvrir le résultat.' : ev.kind === 'call' ? 'Ouvrez NeonCell pour répondre.' : 'Vous avez reçu un message.';
+    scheduleStoryNotification(ev.at, title, body);
+  }, [state.story]);
 
   // Horloge de la simulation : fin des boulots, likes, messages et publications spontanés.
   useEffect(() => {
@@ -529,6 +561,7 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       storyStartMission,
       storyCallDone,
       storyRestart,
+      storySetPace,
       reset: () => {
         timers.current.forEach(clearTimeout);
         timers.current = [];
@@ -538,7 +571,7 @@ export function PhoneProvider({ children }: { children: ReactNode }) {
       },
       buzz,
     }),
-    [state, ready, unlocked, typing, banner, sendMessage, publish, transfer, buzz, addPhoto, setPhotoFilter, deletePhoto, unlock, lock, setOpenThread, setInCall, readThread, readNews, logCall, storyChoose, storyStartMission, storyCallDone, storyRestart],
+    [state, ready, unlocked, typing, banner, sendMessage, publish, transfer, buzz, addPhoto, setPhotoFilter, deletePhoto, unlock, lock, setOpenThread, setInCall, readThread, readNews, logCall, storyChoose, storyStartMission, storyCallDone, storyRestart, storySetPace],
   );
 
   return <PhoneContext.Provider value={value}>{children}</PhoneContext.Provider>;

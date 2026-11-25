@@ -8,18 +8,17 @@ logo, image ni son d’un jeu existant n’est utilisé.
 
 ## La Cavale : l’histoire
 
-Une histoire en 5 chapitres, jouée par SMS, appels et missions, dans l’**État de Solenne** (fictif) :
-toi et Mara, tout juste sortie du pénitencier de Canneville, contre tout l’État.
+Une histoire en **5 chapitres** et **≈ 60 heures en temps réel**, jouée par SMS, appels et missions,
+dans l’**État de Solenne** (fictif). Les messages arrivent au fil des heures, avec une notification
+quand l’appli est fermée. Un rythme **rapide** (≈ 1 h) est proposé dans l’appli La Cavale.
 
-- **Choix** dans les conversations, qui changent la suite (confiance de Mara, réputation, alliés).
-- **Missions** chronométrées sur la carte, avec des chances de réussite.
-- **Avis de recherche** de 0 à 5 étoiles : il baisse les chances et redescend si l’on fait profil bas.
-- **Objectifs d’argent** à réunir avec les petits boulots.
-- **5 fins différentes** à collectionner.
+**9 personnages importants** : toi, Mara (ta partenaire, tout juste libérée), Teo (ton meilleur ami
+complotiste), Boyd « le Pélican » (contrebandier des Îles Coquillages), Santos Vidal (braqueur),
+Big Momo (figure du Vieux Port), Kenzo (producteur) et les Sirènes, Nina et Jojo (duo de rappeuses).
 
-Personnages : Mara, Boyd « le Pélican » (contrebandier des Îles Coquillages), Santos Vidal (braqueur),
-Véra Lenz (femme d’affaires), l’inspectrice Dussart. Régions : Port Corail, Îles Coquillages,
-Marais des Sauriens, Canneville, Bellerive, Monts Ardents. Tout est inventé.
+Chapitres : 1. Sortie de cellule · 2. Les Îles · 3. Néons et Sirènes · 4. Le coup · 5. La dernière marée.
+Choix qui comptent (confiance de Mara, réputation, alliances), missions chronométrées, avis de
+recherche (0 à 5 étoiles), objectifs d’argent, **5 fins**. Tout est inventé.
 
 ## Applis du téléphone
 

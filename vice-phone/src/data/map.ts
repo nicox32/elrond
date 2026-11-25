@@ -71,6 +71,7 @@ export const POIS: Poi[] = [
   { id: 'garage', name: 'Garage de Rico', emoji: '🔧', category: 'services', at: [215, 190], description: 'Réparations, néons et conseils pas toujours demandés.', contactId: 'rico' },
   { id: 'agence', name: 'Agence Soleil', emoji: '💼', category: 'services', at: [510, 355], description: 'Petits boulots payés le jour même.', contactId: 'agence' },
   { id: 'banque', name: 'Banque Flamant', emoji: '🦩', category: 'services', at: [375, 450], description: 'Le siège de la banque la plus rose de la côte.' },
+  { id: 'club', name: 'Club Néon 23', emoji: '🍸', category: 'sorties', at: [610, 395], description: 'Le club le plus bruyant du Quartier Néon. Propriétaire des murs : Big Momo.', contactId: 'momo' },
   { id: 'mairie', name: 'Mairie', emoji: '🏛️', category: 'lieux', at: [590, 300], description: 'Le maire y fait la sieste de 13 h à 15 h.' },
   { id: 'studio', name: 'Studio de Jade', emoji: '🎧', category: 'sorties', at: [640, 450], description: 'Le studio insonorisé (enfin) où Jade prépare ses sets.', contactId: 'jade' },
   { id: 'marina', name: 'Marina', emoji: '⛵', category: 'lieux', at: [690, 730], description: 'Yachts, mouettes et le demi-bateau de Tonton Vince.', contactId: 'vince' },
